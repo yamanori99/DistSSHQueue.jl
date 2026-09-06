@@ -4,6 +4,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SSH_CONFIG="${ROOT}/.generated/ssh_config"
+KNOWN_HOSTS="${ROOT}/.generated/known_hosts"
 HOSTS=(distsshqueue-w1 distsshqueue-w2)
 MAX_ATTEMPTS="${DISTSSHQUEUE_SSH_WAIT_ATTEMPTS:-60}"
 SLEEP_SEC="${DISTSSHQUEUE_SSH_WAIT_SLEEP:-2}"
@@ -12,6 +13,11 @@ if [[ ! -f "${SSH_CONFIG}" ]]; then
   echo "missing ${SSH_CONFIG}; run scripts/gen-keys.sh first" >&2
   exit 1
 fi
+
+# Workers get new host keys every create. Stale IPs in known_hosts fail
+# BatchMode (`Host key verification failed`) while sshd is already up.
+: > "${KNOWN_HOSTS}"
+chmod 600 "${KNOWN_HOSTS}"
 
 ssh_ok() {
   local host="$1"
