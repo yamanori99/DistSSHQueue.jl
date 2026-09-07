@@ -5,6 +5,11 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
+## 0.4.1
+
+Patch after `0.4.0`. DistSSHKit **0.6.x**.
+`ride`, `plan`, and `pool` on the queue host.
+
 - `submit ride` / `ride` (experimental DistSSHKit `execute!` kind). A `.jl`
   with no Queue verb is still not implicit `go`.
 - `plan` inspects a script on the queue host (same type as `size`). Does
