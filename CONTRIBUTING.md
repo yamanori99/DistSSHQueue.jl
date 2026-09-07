@@ -16,7 +16,7 @@ macOS, Linux, or WSL2 Ubuntu. Not native Windows (the kit shells out to `ssh` / 
 | What | Need |
 | --- | --- |
 | Library, `Pkg.test()`, `julia -m DistSSHQueue`, docs | Julia **1.12+** |
-| DistSSHKit | **0.5.x** (≥0.5.4) from General (`execute!`, `job_id`, `kit.pid` / `kit.result`). Not a git sibling. |
+| DistSSHKit | **0.6.x** from General (`execute!`, `job_id`, `kit.pid` / `kit.result`). Not a git sibling. |
 
 Prefer [juliaup](https://github.com/JuliaLang/juliaup). Details: [Requirements](https://yamanori99.github.io/DistSSHQueue.jl/dev/requirements/).
 
@@ -165,9 +165,9 @@ On a breaking line bump `x` in `0.x.y`; otherwise bump `y`. Do not ship an empty
 
 ### DistSSHKit cuts
 
-Queue pins DistSSHKit **0.5.x** (≥0.5.4) from General. Ordinary Queue work does not `Pkg.develop` Kit and does not, by itself, trigger a DistSSHKit General patch. Docs, opt-in flags, and CI on the kit wait.
+Queue pins DistSSHKit **0.6.x** from General. Ordinary Queue work does not `Pkg.develop` Kit and does not, by itself, trigger a DistSSHKit General patch. Docs, opt-in flags, and CI on the kit wait.
 
-If Queue cannot implement something without a kit hook, open a DistSSHKit Enhancement, land the small PR, then cut DistSSHKit (`0.5.y`) so Queue can pin General. `Pkg.develop` a Kit checkout only until that cut is on General. Kit freeze and cut rules: [DistSSHKit CONTRIBUTING.md](https://github.com/yamanori99/DistSSHKit.jl/blob/main/CONTRIBUTING.md#when-to-cut).
+If Queue cannot implement something without a kit hook, open a DistSSHKit Enhancement, land the small PR, then cut DistSSHKit (`0.6.y`) so Queue can pin General. `Pkg.develop` a Kit checkout only until that cut is on General. Kit freeze and cut rules: [DistSSHKit CONTRIBUTING.md](https://github.com/yamanori99/DistSSHKit.jl/blob/main/CONTRIBUTING.md#when-to-cut).
 
 ### When to cut
 

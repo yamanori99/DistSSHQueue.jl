@@ -202,6 +202,7 @@ end
                 @test DistSSHQueue.main([
                     "qhost:qbox",
                     "--remote-julia", JULIA,
+                    "go",
                     "--hosts",
                     "child:w:2",
                     "hello.jl",
