@@ -4,14 +4,24 @@ Cores / RAM / slot hint. No RSS (`size` does that). Does not enqueue.
 No tokens: pool every name on config `hosts`. From a client: `qhost:HOST pool …`.
 """
 
-function print_queue_pool_submit(pool)
+function clamp_pool_slots(slots::Int, allow::Union{Nothing, HostAllow}, host::AbstractString)::Int
+    allow === nothing && return slots
+    name = DistSSHKit.is_parent_host_name(host) ? DistSSHKit.PARENT_HOST_NAME : String(host)
+    cap = get(allow, name, nothing)
+    cap === nothing && return slots
+    return min(slots, cap)
+end
+
+function print_queue_pool_submit(pool, allow::Union{Nothing, HostAllow}=nothing)
     parts = String[]
     for row in pool.hosts
-        row.ok && row.slots > 0 || continue
+        row.ok || continue
+        slots = clamp_pool_slots(row.slots, allow, row.host)
+        slots > 0 || continue
         if DistSSHKit.is_parent_host_name(row.host)
-            push!(parts, "parent:$(row.slots)")
+            push!(parts, "parent:$(slots)")
         else
-            push!(parts, "child:$(row.host):$(row.slots)")
+            push!(parts, "child:$(row.host):$(slots)")
         end
     end
     println("Queue submit:")
@@ -37,10 +47,11 @@ function pool_cli(args::Vector{String})::Cint
         return 0
     end
     opts.show_version && (DistSSHKit.println_kit_version(); return 0)
+    allow = config_host_names(load_config())
     include_parent, hosts = size_hosts_from_allow(
         opts.include_parent,
         opts.hosts,
-        config_host_names(load_config()),
+        allow,
     )
     tokens = String[]
     include_parent && push!(tokens, "parent")
@@ -69,6 +80,7 @@ function pool_cli(args::Vector{String})::Cint
         parent_gb=opts.parent_gb,
     )
     DistSSHKit.print_pool(result)
-    any(row -> row.ok && row.slots > 0, result.hosts) && print_queue_pool_submit(result)
+    any(row -> row.ok && clamp_pool_slots(row.slots, allow, row.host) > 0, result.hosts) &&
+        print_queue_pool_submit(result, allow)
     return result.ok ? 0 : 1
 end
