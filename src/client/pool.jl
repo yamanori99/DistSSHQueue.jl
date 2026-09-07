@@ -69,6 +69,6 @@ function pool_cli(args::Vector{String})::Cint
         parent_gb=opts.parent_gb,
     )
     DistSSHKit.print_pool(result)
-    result.ok && print_queue_pool_submit(result)
+    any(row -> row.ok && row.slots > 0, result.hosts) && print_queue_pool_submit(result)
     return result.ok ? 0 : 1
 end
