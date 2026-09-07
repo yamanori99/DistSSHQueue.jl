@@ -15,7 +15,7 @@ Kit `go` / `ride` / `drive` / `size` flags stay in the
 | [submit](@ref Manual-submit) | Enqueue DistSSHKit `go` / `ride` / `drive` |
 | [status](@ref Manual-status) | `status` / `watch` / `cancel` |
 | [fetch](@ref Manual-fetch) | Copy a finished Kit leaf onto this job tree |
-| [hosts](@ref Manual-hosts) | `add-host` / `remove-host` / `list-host` / `size` |
+| [hosts](@ref Manual-hosts) | `add-host` / `remove-host` / `list-host` / `size` / `plan` |
 | [serve](@ref Manual-serve) | `serve` / `stop` / `enable` / `disable` |
 | [setup](@ref Manual-setup) | `setup` / `teardown` / `config.toml` |
 
@@ -26,6 +26,7 @@ host, omit it.
 
 Refuse `qhost:`: `setup`, `serve`, `enable`, `disable`, `add-host`,
 `remove-host`. Forward: `submit`, `status`, `list-host`, `size`,
+`plan`,
 `watch`, `cancel`, `stop`, `teardown`. Client (not forwarded as a
 whole): `fetch` (inverse of stage).
 

@@ -121,6 +121,7 @@ function print_queue_usage(io::IO=stdout)
         "  status [-q]           Snapshot; --interval is live",
         "  list-host             Host tokens on the queue host",
         "  size                  Kit size on the queue host",
+        "  plan                  Kit plan on the queue host",
         "  watch [-q]            Same as status --interval",
         "  submit go|ride|drive … Enqueue DistSSHKit",
         "  cancel <id>           Drop queued or stop running",

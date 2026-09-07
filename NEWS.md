@@ -7,6 +7,8 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 - `submit ride` / `ride` (experimental DistSSHKit `execute!` kind). A `.jl`
   with no Queue verb is still not implicit `go`.
+- `plan` inspects a script on the queue host (same type as `size`). Does
+  not enqueue.
 
 ## 0.4.0
 
