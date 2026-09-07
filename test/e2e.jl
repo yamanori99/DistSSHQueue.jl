@@ -7,7 +7,9 @@
 # DistSSHKit `execute!(…; detached=true)`.
 #
 # Also: `julia -m DistSSHQueue` on the queue host (omit `qhost:HOST`) and as a
-# client (`qhost:HOST` over loopback OpenSSH, including `fetch`). Kit slots on docker-ssh (`child:distsshqueue-w1:1`).
+# client (`qhost:HOST` over loopback OpenSSH, including `fetch`). Inspect verbs
+# (`size` / `plan` / `pool`) are Queue chrome only (header + submit footer).
+# Kit slots on docker-ssh (`child:distsshqueue-w1:1`).
 # Three roles, one suite: client = loopback, qhost = this host, child = containers.
 # Do not treat a container as qhost. `parent:1` only occupies FIFO here.
 # Not a laptop + `parent:N` topology. `enable` / `disable` / `teardown` use
@@ -560,13 +562,30 @@ end
 
                     # Glue only: header + Queue submit footer. Table layout is Kit E2E.
                     size_env = merge(env, Dict("DISTSSHKIT_QUIET" => "0"))
+                    inspect_hosts = ["parent", "child:$(HOSTS[1])"]
                     size_out = read_cli(addenv(
-                        qcmd(["size", "--gb-per-worker", "1.5", "parent", "child:$(HOSTS[1])"]),
+                        qcmd(["size", "--gb-per-worker", "1.5", inspect_hosts...]),
                         size_env...,
                     ))
                     @test occursin("DistSSHQueue size", size_out)
                     @test occursin("Queue submit:", size_out)
                     @test occursin("child:$(HOSTS[1]):", size_out)
+
+                    plan_out = read_cli(addenv(qcmd(["plan", inspect_hosts..., script]), size_env...))
+                    @test occursin("DistSSHQueue plan", plan_out)
+                    @test occursin("Queue submit:", plan_out)
+                    @test occursin("submit go", plan_out) || occursin("submit ride", plan_out) ||
+                        occursin("submit drive", plan_out)
+                    @test occursin("child:$(HOSTS[1]):", plan_out)
+
+                    pool_out = read_cli(addenv(
+                        qcmd(["pool", "--gb-per-worker", "1.5", inspect_hosts...]),
+                        size_env...,
+                    ))
+                    @test occursin("DistSSHQueue pool", pool_out)
+                    @test occursin("Queue submit:", pool_out)
+                    @test occursin("child:$(HOSTS[1]):", pool_out)
+                    @test !isfile(store)
 
                     serve_proc = run(pipeline(addenv(qcmd(["serve", "--interval", "0.2"]), env...); stdout=devnull, stderr=devnull); wait=false)
                     try
