@@ -571,11 +571,12 @@ end
                     @test occursin("Queue submit:", size_out)
                     @test occursin("child:$(HOSTS[1]):", size_out)
 
-                    plan_out = read_cli(addenv(qcmd(["plan", script]), size_env...))
+                    plan_out = read_cli(addenv(qcmd(["plan", inspect_hosts..., script]), size_env...))
                     @test occursin("DistSSHQueue plan", plan_out)
                     @test occursin("Queue submit:", plan_out)
                     @test occursin("submit go", plan_out) || occursin("submit ride", plan_out) ||
                         occursin("submit drive", plan_out)
+                    @test occursin("child:$(HOSTS[1]):", plan_out)
 
                     pool_out = read_cli(addenv(
                         qcmd(["pool", "--gb-per-worker", "1.5", inspect_hosts...]),
