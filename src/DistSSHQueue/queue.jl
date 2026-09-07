@@ -242,7 +242,7 @@ end
 """Set Kit `output_dir` before spawn so `:running` cancel and restart adopt need no submitter path.
 
 Uses DistSSHKit `allocate_output_dir` when the bag omitted `output_dir`. That is
-`{script}/.distsshkit/{go|drive}/<stem>_<UTC>_<id>/` (unique drive leaf; do not
+`{script}/.distsshkit/{go|ride|drive}/<stem>_<UTC>_<id>/` (unique leaf; do not
 reuse shared `.distsshkit/drive` or a demo `output/`). Kit `init_output_dir!`
 keeps this path when `DISTRIBUTED_OUTPUT_DIR` is already set. No-op if the
 script is not on disk (unit stubs)."""
@@ -438,7 +438,7 @@ function _submit!(q::Queue, kind::Symbol, script::AbstractString, hosts; kwargs.
     end
 end
 
-"""Enqueue. `kind=:go` or `:drive` (DistSSHKit `execute!`).
+"""Enqueue. `kind` is a DistSSHKit `execute!` kind (`:go`, `:ride`, `:drive`).
 
 `hosts` must be DistSSHKit 0.4 placement tokens (`parent[:N]` / `child:NAME[:N]`).
 Missing `project` uses `job_project()` (cwd / `DISTRIBUTED_PROJECT_ROOT`), not the

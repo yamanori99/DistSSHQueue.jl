@@ -1,20 +1,22 @@
 # [submit](@id Manual-submit)
 
-Enqueue a DistSSHKit `go` or `drive`. Starts `serve` if none is
+Enqueue a DistSSHKit `go`, `ride`, or `drive`. Starts `serve` if none is
 running.
 
 ```bash
 julia --project=. -m DistSSHQueue [qhost:HOST] submit go [Kit go argv]
+julia --project=. -m DistSSHQueue [qhost:HOST] submit ride [Kit ride argv]
 julia --project=. -m DistSSHQueue [qhost:HOST] submit drive [Kit drive argv]
 ```
 
-Bare `go` / `drive` alias `submit go` / `submit drive`. A `.jl` with no
-Queue verb is not implicit `go` (same as Kit).
+Bare `go` / `ride` / `drive` alias `submit` of that kind. A `.jl` with no
+Queue verb is not implicit `go` (same as Kit). `ride` is experimental.
 
 Also: [First job](@ref Tutorial-Client), [Walkthrough](@ref Tutorial-Walkthrough),
 [hosts](@ref Manual-hosts),
 `julia -m DistSSHQueue --help`. Kit flags:
 [go](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/go/),
+[ride](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/ride/),
 [drive](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/drive/).
 
 CLI `submit` uses `Queue(; follow_config=true)` so each enqueue
@@ -36,16 +38,16 @@ rename, no `setup --delete`). The same project may be submitted again.
 
 ## Flags
 
-Kit `go` / `drive` argv is forwarded as-is. Queue does not add a second
+Kit `go` / `ride` / `drive` argv is forwarded as-is. Queue does not add a second
 flag set. A drive row is `:done` when Kit `ok` is true (listed hosts
 must join unless `--best-effort`).
 
 | Flag | Meaning |
 | --- | --- |
-| `go` / `drive` | DistSSHKit kind (`execute!`) |
+| `go` / `ride` / `drive` | DistSSHKit kind (`execute!`) |
 | Kit tokens | `parent[:N]` / `child:NAME[:N]` (not a Queue ceiling) |
 | `--hosts` / `--julia` | Kit's. Queue-host Julia is `--remote-julia` / `JULIA_DISTRIBUTED_EXE` |
-| `-v` / `--version` | On `submit go` / `submit drive`: Kit only |
+| `-v` / `--version` | On `submit go` / `ride` / `drive`: Kit only |
 | `-h` / `--help` | Kit help for that kind |
 
 Opt out of auto `serve`: `DISTSSHQUEUE_NO_AUTOSERVE=1`. A prior

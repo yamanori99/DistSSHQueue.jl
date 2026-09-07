@@ -1,4 +1,4 @@
-"""Client `submit go` / `submit drive` (Kit parsers). After `qhost:` ssh, on the staged tree."""
+"""Client `submit go` / `submit ride` / `submit drive` (Kit parsers). After `qhost:` ssh, on the staged tree."""
 
 function drop_nothing(d::Dict{String,Any})
     out = Dict{String,Any}()
@@ -53,37 +53,50 @@ function script_arg(path::AbstractString, ::AbstractString)::String
     ))
 end
 
-function submit_go(args::Vector{String})::Cint
-    parsed = DistSSHKit.parse_go_args(args)
-    parsed.help && (DistSSHKit.show_go_usage(); return 0)
+"""Parse Kit execute argv. One table: add a kind here, in `KIT_EXECUTE_KINDS`, and in `main`."""
+function kit_parse_args(kind::Symbol, args::Vector{String})
+    kind === :go && return DistSSHKit.parse_go_args(args)
+    kind === :drive && return DistSSHKit.parse_drive_args(args)
+    kind === :ride && return DistSSHKit.parse_ride_args(args)
+    throw(ArgumentError("submit: unknown kit command $(repr(kind))"))
+end
+
+function kit_show_usage(kind::Symbol)
+    kind === :go && return DistSSHKit.show_go_usage()
+    kind === :drive && return DistSSHKit.show_drive_usage()
+    kind === :ride && return DistSSHKit.show_ride_usage()
+    throw(ArgumentError("submit: unknown kit command $(repr(kind))"))
+end
+
+function kit_kind_from_cli(name::AbstractString)::Symbol
+    k = Symbol(String(name))
+    is_kit_execute_kind(k) || throw(ArgumentError(
+        "submit: unknown kit command $(repr(name)) (want go, ride, or drive)",
+    ))
+    return k
+end
+
+function submit_kind(kind::Symbol, args::Vector{String})::Cint
+    parsed = kit_parse_args(kind, args)
+    parsed.help && (kit_show_usage(kind); return 0)
     parsed.show_version && (DistSSHKit.println_kit_version(); return 0)
+    verb = String(kind)
     return submit_cli(
         store_path(),
-        :go,
-        script_arg(parsed.script_path, "go"),
-        submit_hosts(parsed; kind=:go),
-        submit_kit_bag(parsed; kind=:go),
+        kind,
+        script_arg(parsed.script_path, verb),
+        submit_hosts(parsed; kind=kind),
+        submit_kit_bag(parsed; kind=kind),
     )
 end
 
-function submit_drive(args::Vector{String})::Cint
-    parsed = DistSSHKit.parse_drive_args(args)
-    parsed.help && (DistSSHKit.show_drive_usage(); return 0)
-    parsed.show_version && (DistSSHKit.println_kit_version(); return 0)
-    return submit_cli(
-        store_path(),
-        :drive,
-        script_arg(parsed.script_path, "drive"),
-        submit_hosts(parsed; kind=:drive),
-        submit_kit_bag(parsed; kind=:drive),
-    )
-end
+submit_go(args::Vector{String})::Cint = submit_kind(:go, args)
+submit_drive(args::Vector{String})::Cint = submit_kind(:drive, args)
+submit_ride(args::Vector{String})::Cint = submit_kind(:ride, args)
 
 function submit_main(args::Vector{String})::Cint
-    isempty(args) && throw(ArgumentError("submit: need `go` or `drive`"))
+    isempty(args) && throw(ArgumentError("submit: need `go`, `ride`, or `drive`"))
     kit, rest = String(args[1]), String[String(a) for a in args[2:end]]
     kit in ("-h", "--help") && (show_usage(); return 0)
-    kit == "go" && return submit_go(rest)
-    kit == "drive" && return submit_drive(rest)
-    throw(ArgumentError("submit: unknown kit command $(repr(kit)) (want go or drive)"))
+    return submit_kind(kit_kind_from_cli(kit), rest)
 end

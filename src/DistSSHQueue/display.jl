@@ -122,7 +122,7 @@ function print_queue_usage(io::IO=stdout)
         "  list-host             Host tokens on the queue host",
         "  size                  Kit size on the queue host",
         "  watch [-q]            Same as status --interval",
-        "  submit go|drive …     Enqueue DistSSHKit",
+        "  submit go|ride|drive … Enqueue DistSSHKit",
         "  cancel <id>           Drop queued or stop running",
         "  fetch <id>            Copy a finished Kit leaf here",
         "  teardown -y           Stop serve and remove queue-host files",

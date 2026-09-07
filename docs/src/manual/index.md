@@ -7,12 +7,12 @@ Command reference. For a hands-on path, use First Steps
 Root `--help` is a short table (Kit-shaped). Flags and FAQ:
 `julia --project=. -m DistSSHQueue <command> -h` and the pages below.
 Each command page starts with a **Flags** table for that command.
-Kit `go` / `drive` / `size` flags stay in the
+Kit `go` / `ride` / `drive` / `size` flags stay in the
 [kit User Guide](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/).
 
 | | |
 | --- | --- |
-| [submit](@ref Manual-submit) | Enqueue DistSSHKit `go` / `drive` |
+| [submit](@ref Manual-submit) | Enqueue DistSSHKit `go` / `ride` / `drive` |
 | [status](@ref Manual-status) | `status` / `watch` / `cancel` |
 | [fetch](@ref Manual-fetch) | Copy a finished Kit leaf onto this job tree |
 | [hosts](@ref Manual-hosts) | `add-host` / `remove-host` / `list-host` / `size` |
@@ -29,7 +29,7 @@ Refuse `qhost:`: `setup`, `serve`, `enable`, `disable`, `add-host`,
 `watch`, `cancel`, `stop`, `teardown`. Client (not forwarded as a
 whole): `fetch` (inverse of stage).
 
-`--hosts` / `--julia` belong to Kit `go` / `drive`. Queue-host Julia is
+`--hosts` / `--julia` belong to Kit `go` / `ride` / `drive`. Queue-host Julia is
 `--remote-julia` / `JULIA_DISTRIBUTED_EXE`. `--queue-env DIR` is
 `julia --project=` on the queue host (default `~/.distsshqueue/env` if
 you created that dir), not the client's `--project=.`. `--queue-env @`
@@ -44,7 +44,7 @@ is the opposite of `enable`, not of `serve`.
 
 ## [Job record](@id Manual-job-record)
 
-Each row: `id` (UUID), `kind` (`:go` / `:drive`), `script`, `hosts`,
+Each row: `id` (UUID), `kind` (`:go` / `:ride` / `:drive`), `script`, `hosts`,
 `state` (`:queued` / `:running` / `:done` / `:failed` / `:cancelled`),
 `queued_at` / `started_at` / `finished_at`, `error`, and `result_path`
 — Kit's output directory. If submit omitted `--output-dir`, `serve`
