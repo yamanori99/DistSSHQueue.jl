@@ -293,6 +293,8 @@ end
     g = job(q, gid)
     @test g.kind === :go
     @test !haskey(g.kwargs, "path_anchor")
+    rid = submit!(q, "m.jl", "parent:1"; kind=:ride)
+    @test job(q, rid).kind === :ride
 end
 
 @testset "drive allocate_output_dir is .distsshkit/drive with the job id" begin
@@ -479,6 +481,11 @@ end
     @test DistSSHQueue.execute_kwargs(job(q, rid)).repeat == 8
     didr = submit!(q, "rd.jl", "parent:1"; kind=:drive, repeat=8)
     @test !haskey(DistSSHQueue.execute_kwargs(job(q, didr)), :repeat)
+    ride = submit!(q, "m.jl", "parent:2"; kind=:ride, spi_check=false, repeat=8)
+    rkw = DistSSHQueue.execute_kwargs(job(q, ride))
+    @test rkw.spi_check === false
+    @test !haskey(rkw, :repeat)
+    @test_throws ArgumentError submit!(q, "x.jl", "parent:1"; kind=:pipeline)
 end
 
 @testset "result_path from runner and kwargs" begin
@@ -537,6 +544,7 @@ end
         write(joinpath(jobdir, "job.jl"), "1\n")
         write(joinpath(jobdir, "alias.jl"), "1\n")
         write(joinpath(jobdir, "drv.jl"), "1\n")
+        write(joinpath(jobdir, "map.jl"), "1\n")
         withenv(
             "DISTSSHQUEUE_STORE" => p,
             "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
@@ -559,6 +567,7 @@ end
                 @test occursin("enable", help)
                 @test occursin("disable", help)
                 @test occursin("fetch <id>", help)
+                @test occursin("ride", help)
                 @test occursin("julia -m DistSSHQueue <command> -h", help)
                 @test !occursin("Notes", help)
                 @test !occursin("[--size]", help)
@@ -669,6 +678,13 @@ end
                 @test rows[3].script == DistSSHKit.canonical_local_path(joinpath(pwd(), "drv.jl"))
                 @test rows[3].hosts == ["parent:2"]
                 @test rows[3].kwargs["project"] == proj
+                code_ride, _, _ = capture_stdio() do
+                    DistSSHQueue.main(["ride", "--no-spi-check", "parent:1", "map.jl"])
+                end
+                @test code_ride == 0
+                rows = DistSSHQueue.read_jobs(p)
+                @test rows[end].kind === :ride
+                @test DistSSHQueue.execute_kwargs(rows[end]).spi_check === false
                 code_w, _, _ = capture_stdio() do
                     DistSSHQueue.main(["submit", "drive", "--workers", "4", "child:host1", "drv.jl"])
                 end

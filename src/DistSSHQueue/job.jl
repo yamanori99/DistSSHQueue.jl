@@ -1,4 +1,4 @@
-"""One table row. `hosts` are DistSSHKit 0.4 tokens (`parent[:N]` / `child:NAME[:N]`).
+"""One table row. `hosts` are DistSSHKit placement tokens (`parent[:N]` / `child:NAME[:N]`).
 `kwargs` is an opaque bag for DistSSHKit `execute!` (`project` is the Kit project)."""
 mutable struct Job
     id::String
@@ -14,6 +14,11 @@ mutable struct Job
     kwargs::Dict{String,Any}
 end
 
+"""DistSSHKit `execute!` kinds Queue can enqueue. Inspect verbs (`size`) are not this list."""
+const KIT_EXECUTE_KINDS = (:go, :drive, :ride)
+
+is_kit_execute_kind(k::Symbol)::Bool = k === :go || k === :drive || k === :ride
+
 function Job(;
     id::AbstractString=string(Base.UUID(rand(UInt128))),
     kind::Symbol,
@@ -27,7 +32,7 @@ function Job(;
     result_path=nothing,
     kwargs::Dict{String,Any}=Dict{String,Any}(),
 )
-    kind in (:go, :drive) || throw(ArgumentError("kind must be :go or :drive"))
+    is_kit_execute_kind(kind) || throw(ArgumentError("kind must be one of $KIT_EXECUTE_KINDS"))
     state in (:queued, :running, :done, :failed, :cancelled) ||
         throw(ArgumentError("bad job state $state"))
     isempty(hosts) && throw(ArgumentError("job needs at least one host token"))

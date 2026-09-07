@@ -1,6 +1,6 @@
 """Client `qhost:NAME` / `--remote-julia` / `--queue-env`: peel flags and `run_on_host`.
 
-Kit `--hosts` / `--julia` stay on `go` / `drive`. `setup` / `serve` /
+Kit `--hosts` / `--julia` stay on `go` / `ride` / `drive`. `setup` / `serve` /
 `enable` / `disable` / `add-host` / `remove-host` are not forwarded.
 Not a Kit placement token. Queue-host Julia is `julia --startup-file=no
 --project=<queue-env> -m DistSSHQueue` (not the client's `--project=`).
@@ -277,7 +277,7 @@ function _remote_submit_ticket(
         script = nothing
         try
             kit, kitargs = kit_verb_and_args(sub, payload)
-            parsed = kit == "go" ? DistSSHKit.parse_go_args(kitargs) : DistSSHKit.parse_drive_args(kitargs)
+            parsed = kit_parse_args(kit_kind_from_cli(kit), kitargs)
             parsed.script_path !== nothing && (script = String(parsed.script_path))
         catch
         end

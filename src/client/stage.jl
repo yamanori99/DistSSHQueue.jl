@@ -81,9 +81,9 @@ function staging_enabled()::Bool
     return true
 end
 
-"""`qhost:` `submit` / `go` / `drive` (not help). Ticket even when staging is off."""
+"""`qhost:` `submit` / execute kinds (not help). Ticket even when staging is off."""
 function should_submit_ticket(sub::AbstractString, payload::Vector{String})::Bool
-    sub in ("submit", "go", "drive") || return false
+    (sub == "submit" || is_kit_execute_kind(Symbol(sub))) || return false
     any(a -> a in ("-h", "--help", "-v", "--version", "-V"), payload) && return false
     if sub == "submit"
         isempty(payload) && return false
@@ -99,9 +99,9 @@ end
 
 function kit_verb_and_args(sub::AbstractString, payload::Vector{String})
     if sub == "submit"
-        isempty(payload) && throw(ArgumentError("submit: need `go` or `drive`"))
+        isempty(payload) && throw(ArgumentError("submit: need `go`, `ride`, or `drive`"))
         kit = String(payload[1])
-        kit in ("go", "drive") || throw(ArgumentError("submit: unknown kit command $(repr(kit))"))
+        kit_kind_from_cli(kit)
         return kit, String[String(a) for a in payload[2:end]]
     end
     return String(sub), String[String(a) for a in payload]
@@ -120,7 +120,7 @@ end
 function rewrite_one_path(arg::AbstractString, local_proj::AbstractString, remote_root::AbstractString)::String
     a = String(arg)
     startswith(a, "-") && return a
-    a in ("go", "drive", "submit") && return a
+    a in ("go", "drive", "ride", "submit") && return a
     looks_like_host_token(a) && return a
     lp = abspath(local_proj)
     in_proj = joinpath(lp, a)
@@ -266,7 +266,7 @@ function stage_job_tree!(
     payload::Vector{String},
 )::Tuple{Vector{String},Dict{String,String}}
     kit, kitargs = kit_verb_and_args(sub, payload)
-    parsed = kit == "go" ? DistSSHKit.parse_go_args(kitargs) : DistSSHKit.parse_drive_args(kitargs)
+    parsed = kit_parse_args(kit_kind_from_cli(kit), kitargs)
     parsed.help && return (String[String(a) for a in payload], Dict{String,String}())
     parsed.show_version && return (String[String(a) for a in payload], Dict{String,String}())
     local_script = script_arg(parsed.script_path, kit)

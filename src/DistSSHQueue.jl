@@ -1,5 +1,5 @@
 """
-DistSSHQueue — FIFO `serve` for DistSSHKit (`go` / `drive`).
+DistSSHQueue — FIFO `serve` for DistSSHKit (`go` / `ride` / `drive`).
 
 Package entry: exports, `include`s, `main` (`@main` on Julia 1.12+).
 FIFO: `src/DistSSHQueue/`. Client CLI: `src/client/`. Queue host CLI: `src/qhost/`.
@@ -107,14 +107,10 @@ function main(args::Vector{String}=copy(ARGS))::Cint
             r === nothing || return r
             _, _, _, payload = extract_remote_opts(rest)
             return submit_main(payload)
-        elseif sub == "go"
-            r = maybe_remote(qhost, gjulia, "go", rest; queue_env=gqenv)
+        elseif is_kit_execute_kind(Symbol(sub))
+            r = maybe_remote(qhost, gjulia, sub, rest; queue_env=gqenv)
             r === nothing || return r
-            return submit_go(rest)
-        elseif sub == "drive"
-            r = maybe_remote(qhost, gjulia, "drive", rest; queue_env=gqenv)
-            r === nothing || return r
-            return submit_drive(rest)
+            return submit_kind(Symbol(sub), rest)
         elseif sub == "fetch"
             return fetch_cli(qhost, gjulia, gqenv, rest)
         elseif sub == "cancel"
