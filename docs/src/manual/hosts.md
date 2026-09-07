@@ -1,8 +1,8 @@
 # [hosts](@id Manual-hosts)
 
-Lab inventory and DistSSHKit `size` on the queue host. These verbs do
+Lab inventory and DistSSHKit `size` / `plan` on the queue host. These verbs do
 not enqueue. Not Kit `--hosts` (that still names workers on `go` /
-`drive`).
+`ride` / `drive`).
 
 ```bash
 julia -m DistSSHQueue add-host parent child:host1
@@ -11,11 +11,12 @@ julia -m DistSSHQueue size
 julia -m DistSSHQueue remove-host child:host1
 ```
 
-From a **client**, `list-host` and `size` are forwarded like `status`.
+From a **client**, `list-host`, `size`, and `plan` are forwarded like `status`.
 `add-host` / `remove-host` run on the queue host only (like `setup`).
 
 Also: [Prepare](@ref Tutorial-Prepare), [submit](@ref Manual-submit),
-[kit size](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/size/).
+[kit size](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/size/),
+[kit plan](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/plan/).
 
 ## add-host / remove-host
 
@@ -60,3 +61,17 @@ julia -m DistSSHQueue qhost:mini size --gb-per-worker 1.5 parent child:host1
 Kit flags (`--probe`, `--gb-per-worker`, …):
 [kit size](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/size/).
 `size --help` adds a Queue note under the Kit help.
+
+## plan
+
+DistSSHKit `plan` on the queue host (cwd / project). Inspects a script
+and suggests `go` / `ride` / `drive`. Does not enqueue. Prints a
+`submit` template for that kind.
+
+```bash
+julia -m DistSSHQueue qhost:mini plan SCRIPT.jl
+```
+
+Kit flags:
+[kit plan](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/plan/).
+`plan --help` adds a Queue note under the Kit help.

@@ -567,6 +567,8 @@ end
                 @test occursin("enable", help)
                 @test occursin("disable", help)
                 @test occursin("fetch <id>", help)
+                @test occursin("size", help)
+                @test occursin("plan", help)
                 @test occursin("ride", help)
                 @test occursin("julia -m DistSSHQueue <command> -h", help)
                 @test !occursin("Notes", help)
@@ -942,6 +944,41 @@ end
     @test occursin("Queue", out)
     @test occursin("qhost:HOST", out)
     @test occursin("Does not enqueue", out)
+end
+
+@testset "plan inspects a script and does not enqueue" begin
+    code, out, _ = capture_stdio() do
+        DistSSHQueue.main(["plan", "-h"])
+    end
+    @test code == 0
+    @test occursin("DistSSHKit plan", out)
+    @test occursin("Queue", out)
+    @test occursin("Does not enqueue", out)
+    mktempdir() do d
+        jobdir = joinpath(d, "job")
+        mkpath(jobdir)
+        write(joinpath(jobdir, "Project.toml"), "[deps]\n")
+        write(joinpath(jobdir, "echo.jl"), "println(1)\n")
+        p = joinpath(d, "jobs.toml")
+        withenv(
+            "DISTSSHQUEUE_STORE" => p,
+            "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
+            "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
+            "DISTRIBUTED_PROJECT_ROOT" => nothing,
+        ) do
+            cd(jobdir) do
+                code_p, out_p, _ = capture_stdio() do
+                    DistSSHQueue.main(["plan", "echo.jl"])
+                end
+                @test code_p == 0
+                @test occursin("suggest:", out_p)
+                @test occursin("Queue submit:", out_p)
+                @test occursin("submit go", out_p) || occursin("submit ride", out_p) ||
+                    occursin("submit drive", out_p)
+                @test !isfile(p)
+            end
+        end
+    end
 end
 
 @testset "watch reprints status then exits on DISTSSHQUEUE_WATCH_TICKS" begin
