@@ -5,6 +5,9 @@
 #   julia --project=. -e 'using Pkg; Pkg.test()'
 #
 # Top-level `include`s (inside `@testset`s, not functions) so JETLS follows them.
+# Each file already has a `@testset`; do not wrap another around `include`.
+# Keep `include(joinpath(@__DIR__, …))` at this top level (JETLS). Only the
+# banner is counted. Update `_RUNTEST_N` when adding a file below.
 
 using Test
 using DistSSHQueue
@@ -12,14 +15,28 @@ using DistSSHQueue
 include(joinpath(@__DIR__, "support.jl"))
 install_serve_reaper!()
 
+const _RUNTEST_N = 5
+const _RUNTEST_I = Ref(0)
+function _runtest_announce(rel::AbstractString)
+    _RUNTEST_I[] += 1
+    println("[$(_RUNTEST_I[])/$_RUNTEST_N]  $rel")
+    flush(stdout)
+    return nothing
+end
+
 @testset "DistSSHQueue" verbose=true begin
     @testset "unit" verbose=true begin
+        _runtest_announce("unit/queue.jl")
         include(joinpath(@__DIR__, "unit", "queue.jl"))
+        _runtest_announce("unit/config.jl")
         include(joinpath(@__DIR__, "unit", "config.jl"))
+        _runtest_announce("unit/stage.jl")
         include(joinpath(@__DIR__, "unit", "stage.jl"))
+        _runtest_announce("unit/fetch.jl")
         include(joinpath(@__DIR__, "unit", "fetch.jl"))
     end
     @testset "integration" verbose=true begin
+        _runtest_announce("integration/cli.jl")
         include(joinpath(@__DIR__, "integration", "cli.jl"))
     end
 end

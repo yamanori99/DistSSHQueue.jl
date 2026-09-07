@@ -10,7 +10,7 @@ From the Queue checkout root:
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-That is `test/runtests.jl` (unit + integration). It tags autoserve `serve` pids and SIGTERMs them on exit or if `Pkg.test`'s parent dies, so Ctrl-C does not leave `nohup` `serve` on the laptop. `Pkg.test()` must pass on a Registry install (no Queue `Manifest.toml`, often mode 444): real `ssh` spawn runs only when that binary is on `PATH` (tests inject a fake `ssh` when they need `-G`); real SSH clusters stay in `e2e.jl`. Occasional copy recipe: [Registry tree](#registry-tree). Real SSH:
+That is `test/runtests.jl` (unit + integration). Each included file prints `[i/N]` at start (update `_RUNTEST_N` when adding one). It tags autoserve `serve` pids and SIGTERMs them on exit or if `Pkg.test`'s parent dies, so Ctrl-C does not leave `nohup` `serve` on the laptop. `Pkg.test()` must pass on a Registry install (no Queue `Manifest.toml`, often mode 444): real `ssh` spawn runs only when that binary is on `PATH` (tests inject a fake `ssh` when they need `-G`); real SSH clusters stay in `e2e.jl`. Occasional copy recipe: [Registry tree](#registry-tree). Real SSH:
 
 ```bash
 testenv/docker-ssh/scripts/up.sh --e2e
@@ -40,7 +40,7 @@ Green on one layer does not imply the others. `Pkg.test()` does not run `e2e.jl`
 | Aqua | ambiguities, exports, compat | CLI / workers |
 | unit | in-process queue / config | child julia, SSH |
 | integration | child CLI (`-m DistSSHQueue`) and **parent:1** | real SSH / rsync |
-| e2e | docker-ssh workers, `serve` API, and `-m DistSSHQueue` (`qhost:` over loopback OpenSSH) | local-only CLI wiring |
+| e2e | docker-ssh workers, `serve` API, and `-m DistSSHQueue` (`qhost:` over loopback OpenSSH). Prints `[i/N]` at the start of each inner `@testset` (SSH can sit silent for minutes otherwise); update `_E2E_N` when adding a case | local-only CLI wiring |
 | e2e weekly | same `e2e.jl` from Linux, macOS Intel, or WSL2 (not a PR check) | macOS workers |
 
 `enable` / `disable` / `teardown` in SSH E2E use `--write-only` (no runner systemd / LaunchAgent). Coverage: `Pkg.test` max slot flag `pkgtest` on main push; `DISTSSHQUEUE_CODE_COVERAGE=1` on `up.sh --e2e` flag `e2e` (cut PRs and E2E weekly Linux).
