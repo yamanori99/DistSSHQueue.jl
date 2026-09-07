@@ -21,6 +21,8 @@
 # Also: FIFO one-at-a-time, cancel queued (skip that row), cancel running
 # (`terminate_run!`, then the next queued row).
 #
+# Inner `@testset`s print `[i/N]` (see `_E2E_N`) so CI logs are not a long stall.
+#
 #   testenv/docker-ssh/scripts/up.sh --e2e
 #   testenv/apple-container-ssh/scripts/up.sh --e2e   # macOS Apple silicon, not CI
 #   DISTSSHQUEUE_SSH_E2E=1 julia --project=test test/e2e.jl
@@ -326,10 +328,22 @@ exec $(DistSSHQueue.sh_single_quote(E2E_JULIA)) "\$@"
     return path
 end
 
+# Same banner idea as `test/runtests.jl`. Inner `@testset`s can take minutes
+# of SSH with no Test output until they finish. Update `_E2E_N` when adding one.
+const _E2E_N = 11
+const _E2E_I = Ref(0)
+function _e2e_announce(label::AbstractString)
+    _E2E_I[] += 1
+    println("[$(_E2E_I[])/$_E2E_N]  $label")
+    flush(stdout)
+    return nothing
+end
+
 @testset "Queue SSH E2E (docker-ssh)" verbose = true begin
     withenv(SSH_ENV...) do
         kit = kit_root()
         @testset "pipeline_* demos are Kit API scripts, not Queue jobs" begin
+            _e2e_announce("pipeline_* demos are Kit API scripts, not Queue jobs")
             @test isfile(joinpath(kit, "demos", "without_kit", "pipeline_pi.jl"))
             @test isfile(joinpath(kit, "demos", "with_kit", "pipeline_square.jl"))
             pi_src = read(joinpath(kit, "demos", "without_kit", "pipeline_pi.jl"), String)
@@ -341,6 +355,7 @@ end
         stage_kit_demos!(JOB_PROJECT)
 
         @testset "setup! deploys example job (Kit demos + DistSSHKit)" begin
+            _e2e_announce("setup! deploys example job (Kit demos + DistSSHKit)")
             session = KitSession(
                 project = JOB_PROJECT,
                 workers = ["child:$(h)" for h in HOSTS],
@@ -395,6 +410,7 @@ end
                 )
                 for (kind, script, label, args, artifact, needle) in cases
                     @testset "$label" begin
+                        _e2e_announce(label)
                         case_store = joinpath(d, "store_$label.toml")
                         out = joinpath(JOB_PROJECT, "e2e_kit_out", label)
                         isdir(out) && rm(out; recursive = true)
@@ -420,6 +436,7 @@ end
             end
 
             @testset "FIFO one Kit job at a time" begin
+                _e2e_announce("FIFO one Kit job at a time")
                 store_fifo = joinpath(d, "fifo.toml")
                 echo = joinpath(JOB_PROJECT, "demos", "without_kit", "pi_echo.jl")
                 q = Queue(; store = store_fifo)
@@ -442,6 +459,7 @@ end
             end
 
             @testset "cancel queued skips that row" begin
+                _e2e_announce("cancel queued skips that row")
                 store_c = joinpath(d, "cancel.toml")
                 echo = joinpath(JOB_PROJECT, "demos", "without_kit", "pi_echo.jl")
                 h = Queue(; store = store_c)
@@ -465,6 +483,7 @@ end
             end
 
             @testset "cancel running then the next queued row" begin
+                _e2e_announce("cancel running then the next queued row")
                 store_r = joinpath(d, "cancel-running.toml")
                 echo = joinpath(JOB_PROJECT, "demos", "without_kit", "pi_echo.jl")
                 hold = joinpath(d, "hold_cancel.jl")
@@ -536,6 +555,7 @@ end
                 )
 
                 @testset "queue-host verbs (logged in; omit qhost:)" begin
+                    _e2e_announce("queue-host verbs (logged in; omit qhost:)")
                     env = merge(host_env, Dict("DISTSSHQUEUE_NO_AUTOSERVE" => "1"))
                     @test run_cli(addenv(qcmd(["setup"]), env...)).exitcode == 0
                     @test isfile(cfg)
@@ -613,6 +633,7 @@ end
                 end
 
                 @testset "client qhost: (real ssh to loopback queue host)" begin
+                    _e2e_announce("client qhost: (real ssh to loopback queue host)")
                     sshd_dir = joinpath(d, "sshd")
                     mkpath(sshd_dir)
                     port = free_loopback_port()
