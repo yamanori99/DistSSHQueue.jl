@@ -687,6 +687,7 @@ end
                 end
                 @test code_sh == 1
                 @test occursin("unknown subcommand", err_sh)
+                @test length(DistSSHQueue.read_jobs(p)) == length(rows)
                 code_jl, _, _ = capture_stdio() do
                     DistSSHQueue.main(["submit", "go", "--julia", "/opt/queue-kit-julia", "job.jl"])
                 end

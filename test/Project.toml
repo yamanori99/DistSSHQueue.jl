@@ -4,7 +4,6 @@ DistSSHQueue = "24254401-70d8-4a51-8ea4-cfab19f5bc73"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
-DistSSHKit = {path = "/Users/tak/GitHub/DistSSHKit.jl"}
 DistSSHQueue = {path = ".."}
 
 [compat]
