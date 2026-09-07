@@ -18,11 +18,9 @@ function print_queue_pool_submit(pool, allow::Union{Nothing, HostAllow}=nothing)
         row.ok || continue
         slots = clamp_pool_slots(row.slots, allow, row.host)
         slots > 0 || continue
-        if DistSSHKit.is_parent_host_name(row.host)
-            push!(parts, "parent:$(slots)")
-        else
-            push!(parts, "child:$(row.host):$(slots)")
-        end
+        role = DistSSHKit.is_parent_host_name(row.host) ? :parent : :child
+        name = role === :parent ? DistSSHKit.PARENT_HOST_NAME : String(row.host)
+        push!(parts, DistSSHKit.format_placement_token(role, name, slots))
     end
     println("Queue submit:")
     if isempty(parts)
@@ -54,9 +52,13 @@ function pool_cli(args::Vector{String})::Cint
         allow,
     )
     tokens = String[]
-    include_parent && push!(tokens, "parent")
+    include_parent && push!(tokens, DistSSHKit.format_placement_token(:parent, DistSSHKit.PARENT_HOST_NAME))
     for h in hosts
-        push!(tokens, startswith(h, "child:") || DistSSHKit.is_parent_host_name(h) ? h : "child:$h")
+        if startswith(h, "child:") || DistSSHKit.is_parent_host_name(h)
+            push!(tokens, h)
+        else
+            push!(tokens, DistSSHKit.format_placement_token(:child, h))
+        end
     end
     if isempty(tokens)
         DistSSHKit.show_pool_usage()
