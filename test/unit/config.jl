@@ -303,14 +303,6 @@ end
     @test host4 === nothing
     @test payload4 == String[]
 
-    @test DistSSHQueue.looks_like_kit_go_argv(["--hosts", "child:w:2", "S.jl"])
-    @test DistSSHQueue.looks_like_kit_go_argv(["--julia", "/opt/julia", "S.jl"])
-    @test DistSSHQueue.looks_like_kit_go_argv(["child:w:2", "S.jl"])
-    @test !DistSSHQueue.looks_like_kit_go_argv(["go", "--hosts", "child:w:2", "S.jl"])
-    @test !DistSSHQueue.looks_like_kit_go_argv(["submit", "go", "--hosts", "child:w:2", "S.jl"])
-    @test !DistSSHQueue.looks_like_kit_go_argv(["enable", "--julia", "/opt/julia"])
-    @test !DistSSHQueue.looks_like_kit_go_argv(["status"])
-    @test !DistSSHQueue.looks_like_kit_go_argv(["--hosts", "child:w:2"])
     withenv("DISTSSHQUEUE_HOST" => "qbox") do
         hd, _, _, pd = DistSSHQueue.extract_remote_opts(["status"])
         @test hd == "qbox"

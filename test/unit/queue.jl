@@ -682,12 +682,12 @@ end
                 @test code_hf == 0
                 rows = DistSSHQueue.read_jobs(p)
                 @test rows[end].hosts == ["child:w:2"]
-                code_sh, _, _ = capture_stdio() do
+                code_sh, _, err_sh = capture_stdio() do
                     DistSSHQueue.main(["--hosts", "child:w:2", "job.jl"])
                 end
-                @test code_sh == 0
-                rows = DistSSHQueue.read_jobs(p)
-                @test rows[end].hosts == ["child:w:2"]
+                @test code_sh == 1
+                @test occursin("unknown subcommand", err_sh)
+                @test length(DistSSHQueue.read_jobs(p)) == length(rows)
                 code_jl, _, _ = capture_stdio() do
                     DistSSHQueue.main(["submit", "go", "--julia", "/opt/queue-kit-julia", "job.jl"])
                 end

@@ -8,9 +8,8 @@ julia --project=. -m DistSSHQueue [qhost:HOST] submit go [Kit go argv]
 julia --project=. -m DistSSHQueue [qhost:HOST] submit drive [Kit drive argv]
 ```
 
-Bare `go` / `drive` alias `submit go` / `submit drive`. A Kit-shaped
-line with a `.jl` and no Queue verb is `go`
-(`--hosts child:NAME:N SCRIPT.jl`).
+Bare `go` / `drive` alias `submit go` / `submit drive`. A `.jl` with no
+Queue verb is not implicit `go` (same as Kit).
 
 Also: [First job](@ref Tutorial-Client), [Walkthrough](@ref Tutorial-Walkthrough),
 [hosts](@ref Manual-hosts),

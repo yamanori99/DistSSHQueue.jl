@@ -31,7 +31,7 @@ runs jobs.
     usual OS path ([Checks](@ref)) or set `--remote-julia` /
     `JULIA_DISTRIBUTED_EXE`. Missing path or a related bug:
     [open an Issue](https://github.com/yamanori99/DistSSHQueue.jl/issues).
-- **DistSSHKit 0.5.x** (≥0.5.4) from General. Do not `Pkg.develop` Kit (or
+- **DistSSHKit 0.6.x** from General. Do not `Pkg.develop` Kit (or
   Queue) in a job project whose Manifest is copied to workers — that path
   is absolute and the workers do not have it. Separate env for package
   work.
@@ -147,7 +147,7 @@ julia -m DistSSHKit setup --check child:USER@HOST
 ### Align Julia with juliaup
 
 Queue has no `--juliaup` verb. Use DistSSHKit `setup --juliaup` (Kit
-0.5.4+: same `child:NAME` / `parent` tokens as go / drive). That changes
+0.6: same `child:NAME` / `parent` tokens as go / drive). That changes
 each target's **juliaup default** only — it does not change a Julia
 process that is already running.
 

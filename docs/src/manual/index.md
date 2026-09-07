@@ -73,7 +73,7 @@ will not start the next FIFO job). A `:running` row with no live
 `kit.pid` is `:done` or `:failed` from DistSSHKit `ok` in `kit.result`
 when that file exists, otherwise `:failed`. Drive listed `parent` /
 `child` hosts must join, stay, and collect unless the job passed
-`--best-effort` (Kit 0.5;
+`--best-effort` (Kit 0.6;
 [kit drive](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/drive/)).
 Kit results stay under that project (`.distsshkit/`).
 

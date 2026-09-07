@@ -56,8 +56,8 @@ this job tree (inverse of the `qhost:` rsync). Run it from the same
 directory as `submit`. Drive CSV (Kit `square_file.jl`) is in that
 `.distsshkit/drive/<stem>_<UTC>_<id>/` leaf, not `output/`.
 
-Bare `go` / `drive` alias `submit go` / `submit drive`. A Kit-shaped
-line with a `.jl` and no Queue verb is `go`.
+Bare `go` / `drive` alias `submit go` / `submit drive`. A `.jl` with no
+Queue verb is not implicit `go` (same as Kit).
 
 There is no `--via`. Do not pass `qhost:` to `setup` / `serve` /
 `enable` / `disable` / `add-host` / `remove-host`.

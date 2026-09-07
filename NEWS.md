@@ -5,6 +5,13 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
+## 0.4.0
+
+Breaking cut after `0.3.2`. DistSSHKit **0.6.x**.
+
+- DistSSHKit **0.6.x**. A line with a `.jl` and no Queue verb is no
+  longer implicit `go`. Use `go` / `submit go` (same as Kit).
+
 ## 0.3.2
 
 Patch after `0.3.1`. DistSSHKit **0.5.x** (≥0.5.4).

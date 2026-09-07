@@ -65,11 +65,7 @@ function main(args::Vector{String}=copy(ARGS))::Cint
         end
         sub, rest = String(after[1]), String[String(a) for a in after[2:end]]
         reject_qhost_on_local(sub, qhost)
-        if looks_like_kit_go_argv(after)
-            r = maybe_remote(qhost, gjulia, "go", after; queue_env=gqenv)
-            r === nothing || return r
-            return submit_go(after)
-        elseif sub == "serve"
+        if sub == "serve"
             return serve_cli(rest)
         elseif sub == "stop"
             r = maybe_remote(qhost, gjulia, "stop", rest; queue_env=gqenv)

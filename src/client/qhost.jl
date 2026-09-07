@@ -148,31 +148,6 @@ end
 
 const QHOST_LOCAL_VERBS = ("setup", "serve", "enable", "disable", "service", "add-host", "remove-host")
 
-"""Queue CLI verbs. Anything else with a `.jl` is Kit `go` argv (DistSSHKit shorthand)."""
-const QUEUE_CLI_VERBS = (
-    QHOST_LOCAL_VERBS...,
-    "stop",
-    "status",
-    "list-host",
-    "size",
-    "watch",
-    "submit",
-    "go",
-    "drive",
-    "cancel",
-    "fetch",
-    "teardown",
-)
-
-"""True when `after` is DistSSHKit go argv, not a Queue verb (`--hosts … SCRIPT.jl`)."""
-function looks_like_kit_go_argv(after::Vector{String})::Bool
-    isempty(after) && return false
-    a = after[1]
-    a in QUEUE_CLI_VERBS && return false
-    a in ("-h", "--help", "help") && return false
-    return any(endswith(String(x), ".jl") for x in after)
-end
-
 function reject_qhost_on_local(sub::AbstractString, host::Union{Nothing,AbstractString})
     host === nothing && return nothing
     sub in QHOST_LOCAL_VERBS || return nothing
