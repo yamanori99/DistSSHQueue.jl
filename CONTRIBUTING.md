@@ -169,7 +169,7 @@ Queue pins DistSSHKit **0.6.x** from General. Ordinary Queue work does not `Pkg.
 
 If Queue cannot implement something without a kit hook, open a DistSSHKit Enhancement, land the small PR, then cut DistSSHKit (`0.6.y`) so Queue can pin General. `Pkg.develop` a Kit checkout only until that cut is on General. Kit freeze and cut rules: [DistSSHKit CONTRIBUTING.md](https://github.com/yamanori99/DistSSHKit.jl/blob/main/CONTRIBUTING.md#when-to-cut).
 
-FIFO enqueue is DistSSHKit `execute!` kinds only (`KIT_EXECUTE_KINDS` / `kit_parse_args`). A new execute kind is one row there plus the Queue CLI. Inspect verbs (`size` / `plan`) do not enqueue; copy [src/client/size.jl](src/client/size.jl). Do not add `plan!` in Kit to queue `plan`.
+FIFO enqueue is DistSSHKit `execute!` kinds only (`KIT_EXECUTE_KINDS` / `kit_parse_args`). A new execute kind is one row there plus the Queue CLI. Inspect verbs (`size` / `plan` / `pool`) do not enqueue; copy [src/client/size.jl](src/client/size.jl). Do not add `plan!` in Kit to queue `plan`.
 
 ### When to cut
 

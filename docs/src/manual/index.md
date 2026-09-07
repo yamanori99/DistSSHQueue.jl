@@ -7,7 +7,7 @@ Command reference. For a hands-on path, use First Steps
 Root `--help` is a short table (Kit-shaped). Flags and FAQ:
 `julia --project=. -m DistSSHQueue <command> -h` and the pages below.
 Each command page starts with a **Flags** table for that command.
-Kit `go` / `ride` / `drive` / `size` flags stay in the
+Kit `go` / `ride` / `drive` / `size` / `plan` / `pool` flags stay in the
 [kit User Guide](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/).
 
 | | |
@@ -15,7 +15,7 @@ Kit `go` / `ride` / `drive` / `size` flags stay in the
 | [submit](@ref Manual-submit) | Enqueue DistSSHKit `go` / `ride` / `drive` |
 | [status](@ref Manual-status) | `status` / `watch` / `cancel` |
 | [fetch](@ref Manual-fetch) | Copy a finished Kit leaf onto this job tree |
-| [hosts](@ref Manual-hosts) | `add-host` / `remove-host` / `list-host` / `size` / `plan` |
+| [hosts](@ref Manual-hosts) | `add-host` / `remove-host` / `list-host` / `size` / `plan` / `pool` |
 | [serve](@ref Manual-serve) | `serve` / `stop` / `enable` / `disable` |
 | [setup](@ref Manual-setup) | `setup` / `teardown` / `config.toml` |
 
@@ -25,9 +25,8 @@ Kit `go` / `ride` / `drive` / `size` flags stay in the
 host, omit it.
 
 Refuse `qhost:`: `setup`, `serve`, `enable`, `disable`, `add-host`,
-`remove-host`. Forward: `submit`, `status`, `list-host`, `size`,
-`plan`,
-`watch`, `cancel`, `stop`, `teardown`. Client (not forwarded as a
+`remove-host`. Forward: `submit`, `status`, `list-host`, `size`, `plan`,
+`pool`, `watch`, `cancel`, `stop`, `teardown`. Client (not forwarded as a
 whole): `fetch` (inverse of stage).
 
 `--hosts` / `--julia` belong to Kit `go` / `ride` / `drive`. Queue-host Julia is

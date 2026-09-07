@@ -14,7 +14,7 @@ mutable struct Job
     kwargs::Dict{String,Any}
 end
 
-"""DistSSHKit `execute!` kinds Queue can enqueue. Inspect verbs (`size` / `plan`) are not this list."""
+"""DistSSHKit `execute!` kinds Queue can enqueue. Inspect verbs (`size` / `plan` / `pool`) are not this list."""
 const KIT_EXECUTE_KINDS = (:go, :drive, :ride)
 
 is_kit_execute_kind(k::Symbol)::Bool = k === :go || k === :drive || k === :ride

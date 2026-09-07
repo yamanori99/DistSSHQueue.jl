@@ -569,6 +569,7 @@ end
                 @test occursin("fetch <id>", help)
                 @test occursin("size", help)
                 @test occursin("plan", help)
+                @test occursin("pool", help)
                 @test occursin("ride", help)
                 @test occursin("julia -m DistSSHQueue <command> -h", help)
                 @test !occursin("Notes", help)
@@ -979,6 +980,48 @@ end
             end
         end
     end
+end
+
+@testset "pool help does not enqueue" begin
+    mktempdir() do d
+        p = joinpath(d, "jobs.toml")
+        withenv(
+            "DISTSSHQUEUE_STORE" => p,
+            "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
+            "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
+            "DISTRIBUTED_PROJECT_ROOT" => nothing,
+        ) do
+            code, out, _ = capture_stdio() do
+                DistSSHQueue.main(["pool", "-h"])
+            end
+            @test code == 0
+            @test occursin("DistSSHKit pool", out)
+            @test occursin("Queue", out)
+            @test occursin("Does not enqueue", out)
+            @test !isfile(p)
+        end
+    end
+end
+
+@testset "pool submit template respects Queue host caps" begin
+    pool = DistSSHKit.ResourcePool(
+        true,
+        [
+            DistSSHKit.HostInventory(DistSSHKit.PARENT_HOST_NAME, true, 8, 64.0, 8, ""),
+            DistSSHKit.HostInventory("host1", true, 8, 64.0, 8, ""),
+        ],
+        16,
+        128.0,
+        16,
+    )
+    allow = DistSSHQueue.HostAllow("parent" => 2, "host1" => 4)
+    _, out, _ = capture_stdio() do
+        DistSSHQueue.print_queue_pool_submit(pool, allow)
+    end
+    @test occursin("parent:2", out)
+    @test occursin("child:host1:4", out)
+    @test !occursin("parent:8", out)
+    @test !occursin("child:host1:8", out)
 end
 
 @testset "watch reprints status then exits on DISTSSHQUEUE_WATCH_TICKS" begin
