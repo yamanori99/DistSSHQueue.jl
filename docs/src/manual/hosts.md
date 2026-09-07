@@ -1,6 +1,6 @@
 # [hosts](@id Manual-hosts)
 
-Lab inventory and DistSSHKit `size` / `plan` on the queue host. These verbs do
+Lab inventory and DistSSHKit `size` / `plan` / `pool` on the queue host. These verbs do
 not enqueue. Not Kit `--hosts` (that still names workers on `go` /
 `ride` / `drive`).
 
@@ -11,12 +11,13 @@ julia -m DistSSHQueue size
 julia -m DistSSHQueue remove-host child:host1
 ```
 
-From a **client**, `list-host`, `size`, and `plan` are forwarded like `status`.
+From a **client**, `list-host`, `size`, `plan`, and `pool` are forwarded like `status`.
 `add-host` / `remove-host` run on the queue host only (like `setup`).
 
 Also: [Prepare](@ref Tutorial-Prepare), [submit](@ref Manual-submit),
 [kit size](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/size/),
-[kit plan](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/plan/).
+[kit plan](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/plan/),
+[kit pool](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/pool/).
 
 ## add-host / remove-host
 
@@ -75,3 +76,18 @@ julia -m DistSSHQueue qhost:mini plan SCRIPT.jl
 Kit flags:
 [kit plan](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/plan/).
 `plan --help` adds a Queue note under the Kit help.
+
+## pool
+
+DistSSHKit `pool` on the queue host (cwd / project). Cores / RAM / slot
+hint (no RSS). Omit tokens to pool config `hosts`. Does not enqueue.
+Prints a `submit drive` template.
+
+```bash
+julia -m DistSSHQueue qhost:mini pool
+julia -m DistSSHQueue qhost:mini pool parent child:host1
+```
+
+Kit flags:
+[kit pool](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/pool/).
+`pool --help` adds a Queue note under the Kit help.

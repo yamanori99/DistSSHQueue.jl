@@ -42,6 +42,7 @@ include("client/status.jl")
 include("client/list_host.jl")
 include("client/size.jl")
 include("client/plan.jl")
+include("client/pool.jl")
 include("client/edit_hosts.jl")
 include("client/cancel.jl")
 include("qhost/service.jl")
@@ -99,6 +100,11 @@ function main(args::Vector{String}=copy(ARGS))::Cint
             r === nothing || return r
             _, _, _, payload = extract_remote_opts(rest)
             return plan_cli(payload)
+        elseif sub == "pool"
+            r = maybe_remote(qhost, gjulia, "pool", rest; queue_env=gqenv)
+            r === nothing || return r
+            _, _, _, payload = extract_remote_opts(rest)
+            return pool_cli(payload)
         elseif sub == "add-host"
             return add_host_cli(rest)
         elseif sub == "remove-host"

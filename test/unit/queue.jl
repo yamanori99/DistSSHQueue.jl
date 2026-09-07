@@ -569,6 +569,7 @@ end
                 @test occursin("fetch <id>", help)
                 @test occursin("size", help)
                 @test occursin("plan", help)
+                @test occursin("pool", help)
                 @test occursin("ride", help)
                 @test occursin("julia -m DistSSHQueue <command> -h", help)
                 @test !occursin("Notes", help)
@@ -979,6 +980,16 @@ end
             end
         end
     end
+end
+
+@testset "pool help does not enqueue" begin
+    code, out, _ = capture_stdio() do
+        DistSSHQueue.main(["pool", "-h"])
+    end
+    @test code == 0
+    @test occursin("DistSSHKit pool", out)
+    @test occursin("Queue", out)
+    @test occursin("Does not enqueue", out)
 end
 
 @testset "watch reprints status then exits on DISTSSHQUEUE_WATCH_TICKS" begin

@@ -9,6 +9,8 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
   with no Queue verb is still not implicit `go`.
 - `plan` inspects a script on the queue host (same type as `size`). Does
   not enqueue.
+- `pool` shows cores / RAM / slot hint on the queue host (same type as
+  `size`). Does not enqueue.
 
 ## 0.4.0
 
