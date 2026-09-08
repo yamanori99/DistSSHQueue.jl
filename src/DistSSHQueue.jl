@@ -57,7 +57,7 @@ show_usage(; io::IO=stdout) = print_queue_usage(io)
 function main(args::Vector{String}=copy(ARGS))::Cint
     apply_config_env!(load_config())
     try
-        qhost, gjulia, gqenv, after = extract_remote_opts(args)
+        qhost, gjulia, gqenv, after, explicit = extract_remote_opts(args)
         if isempty(after) || after[1] in ("-h", "--help", "help")
             show_usage()
             return 0
@@ -68,74 +68,70 @@ function main(args::Vector{String}=copy(ARGS))::Cint
         end
         sub, rest = String(after[1]), String[String(a) for a in after[2:end]]
         reject_qhost_on_local(sub, qhost)
+        require_queue_target!(sub; explicit=explicit)
+        hop = explicit ? qhost : nothing
+        _rest() = let
+            _, _, _, payload, _ = extract_remote_opts(rest)
+            payload
+        end
         if sub == "serve"
             return serve_cli(rest)
         elseif sub == "stop"
-            r = maybe_remote(qhost, gjulia, "stop", rest; queue_env=gqenv)
+            r = maybe_remote(hop, gjulia, "stop", rest; queue_env=gqenv, explicit=explicit)
             r === nothing || return r
-            _, _, _, payload = extract_remote_opts(rest)
-            return stop_cli(payload)
+            return stop_cli(_rest())
         elseif sub == "status"
             r = maybe_remote(
-                qhost, gjulia, "status", rest;
+                hop, gjulia, "status", rest;
                 tty=any(isequal("--interval"), rest) && stdout isa Base.TTY,
-                label_qhost=true, queue_env=gqenv,
+                label_qhost=true, queue_env=gqenv, explicit=explicit,
             )
             r === nothing || return r
-            _, _, _, payload = extract_remote_opts(rest)
-            return status_cli(payload)
+            return status_cli(_rest())
         elseif sub == "list-host"
             r = maybe_remote(
-                qhost, gjulia, "list-host", rest; label_qhost=true, queue_env=gqenv,
+                hop, gjulia, "list-host", rest; label_qhost=true, queue_env=gqenv, explicit=explicit,
             )
             r === nothing || return r
-            _, _, _, payload = extract_remote_opts(rest)
-            return list_host_cli(payload)
+            return list_host_cli(_rest())
         elseif sub == "size"
-            r = maybe_remote(qhost, gjulia, "size", rest; queue_env=gqenv)
+            r = maybe_remote(hop, gjulia, "size", rest; queue_env=gqenv, explicit=explicit)
             r === nothing || return r
-            _, _, _, payload = extract_remote_opts(rest)
-            return size_cli(payload)
+            return size_cli(_rest())
         elseif sub == "plan"
-            r = maybe_remote(qhost, gjulia, "plan", rest; queue_env=gqenv)
+            r = maybe_remote(hop, gjulia, "plan", rest; queue_env=gqenv, explicit=explicit)
             r === nothing || return r
-            _, _, _, payload = extract_remote_opts(rest)
-            return plan_cli(payload)
+            return plan_cli(_rest())
         elseif sub == "pool"
-            r = maybe_remote(qhost, gjulia, "pool", rest; queue_env=gqenv)
+            r = maybe_remote(hop, gjulia, "pool", rest; queue_env=gqenv, explicit=explicit)
             r === nothing || return r
-            _, _, _, payload = extract_remote_opts(rest)
-            return pool_cli(payload)
+            return pool_cli(_rest())
         elseif sub == "add-host"
             return add_host_cli(rest)
         elseif sub == "remove-host"
             return remove_host_cli(rest)
         elseif sub == "watch"
-            r = maybe_remote(qhost, gjulia, "watch", rest; tty=stdout isa Base.TTY, label_qhost=true, queue_env=gqenv)
+            r = maybe_remote(hop, gjulia, "watch", rest; tty=stdout isa Base.TTY, label_qhost=true, queue_env=gqenv, explicit=explicit)
             r === nothing || return r
-            _, _, _, payload = extract_remote_opts(rest)
-            return watch_cli(payload)
+            return watch_cli(_rest())
         elseif sub == "submit"
-            r = maybe_remote(qhost, gjulia, "submit", rest; queue_env=gqenv)
+            r = maybe_remote(hop, gjulia, "submit", rest; queue_env=gqenv, explicit=explicit)
             r === nothing || return r
-            _, _, _, payload = extract_remote_opts(rest)
-            return submit_main(payload)
+            return submit_main(_rest())
         elseif is_kit_execute_kind(Symbol(sub))
-            r = maybe_remote(qhost, gjulia, sub, rest; queue_env=gqenv)
+            r = maybe_remote(hop, gjulia, sub, rest; queue_env=gqenv, explicit=explicit)
             r === nothing || return r
             return submit_kind(Symbol(sub), rest)
         elseif sub == "fetch"
-            return fetch_cli(qhost, gjulia, gqenv, rest)
+            return fetch_cli(hop, gjulia, gqenv, rest; explicit=explicit)
         elseif sub == "cancel"
-            r = maybe_remote(qhost, gjulia, "cancel", rest; queue_env=gqenv)
+            r = maybe_remote(hop, gjulia, "cancel", rest; queue_env=gqenv, explicit=explicit)
             r === nothing || return r
-            _, _, _, payload = extract_remote_opts(rest)
-            return cancel_cli(payload)
+            return cancel_cli(_rest())
         elseif sub == "teardown"
-            r = maybe_remote(qhost, gjulia, "teardown", rest; queue_env=gqenv)
+            r = maybe_remote(hop, gjulia, "teardown", rest; queue_env=gqenv, explicit=explicit)
             r === nothing || return r
-            _, _, _, payload = extract_remote_opts(rest)
-            return teardown_main(payload)
+            return teardown_main(_rest())
         elseif sub == "enable"
             return enable_main(rest)
         elseif sub == "disable"

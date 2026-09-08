@@ -765,6 +765,7 @@ end
                 end
                 @test code_ok == 0
                 @test occursin(r"Queued\s+1\b", err_ok)
+                @test occursin("queue: local", err_ok)
                 @test !occursin("Queued", out_ok)
                 id1 = strip(out_ok)
                 @test !isempty(id1)
@@ -780,6 +781,7 @@ end
                     end
                     @test code_q == 0
                     @test !occursin("Queued", err_q)
+                    @test !occursin("queue: local", err_q)
                     @test !isempty(strip(out_q))
                 end
                 code_bad, _, err = capture_stdio() do

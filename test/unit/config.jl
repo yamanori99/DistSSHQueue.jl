@@ -236,46 +236,54 @@ end
 @testset "extract_remote_opts" begin
     withenv("DISTSSHQUEUE_HOST" => nothing) do
     withenv("JULIA_DISTRIBUTED_EXE" => nothing) do
-        host, rjulia, qenv, payload = DistSSHQueue.extract_remote_opts(["qhost:qbox", "status"])
+        host, rjulia, qenv, payload, explicit = DistSSHQueue.extract_remote_opts(["qhost:qbox", "status"])
         @test host == "qbox"
         @test rjulia === nothing
         @test qenv === nothing
         @test payload == ["status"]
+        @test explicit === true
         dest, spec = DistSSHQueue.coalesce_remote(host, rjulia, nothing, nothing)
         @test dest == "qbox"
         @test spec == "auto"
-        h2, j2, q2, p2 = DistSSHQueue.extract_remote_opts(["--hosts", "other", "status"])
+        h2, j2, q2, p2, e2 = DistSSHQueue.extract_remote_opts(["--hosts", "other", "status"])
         @test h2 === nothing
         @test j2 === nothing
         @test q2 === nothing
         @test p2 == ["--hosts", "other", "status"]
-        h3, _, _, p3 = DistSSHQueue.extract_remote_opts(["go", "--hosts", "child:w:2", "S.jl"])
+        @test e2 === false
+        h3, _, _, p3, e3 = DistSSHQueue.extract_remote_opts(["go", "--hosts", "child:w:2", "S.jl"])
         @test h3 === nothing
         @test p3 == ["go", "--hosts", "child:w:2", "S.jl"]
-        h4, j4, _, p4 = DistSSHQueue.extract_remote_opts(["go", "--julia", "/opt/julia", "S.jl"])
+        @test e3 === false
+        h4, j4, _, p4, _ = DistSSHQueue.extract_remote_opts(["go", "--julia", "/opt/julia", "S.jl"])
         @test h4 === nothing
         @test j4 === nothing
         @test p4 == ["go", "--julia", "/opt/julia", "S.jl"]
+        hv, _, _, pv, ev = DistSSHQueue.extract_remote_opts(["status", "qhost:qbox"])
+        @test hv == "qbox"
+        @test pv == ["status"]
+        @test ev === true
     end
     withenv("JULIA_DISTRIBUTED_EXE" => "/opt/from-env/julia") do
-        h, j, _, p = DistSSHQueue.extract_remote_opts(["qhost:qbox", "status"])
+        h, j, _, p, _ = DistSSHQueue.extract_remote_opts(["qhost:qbox", "status"])
         _, spec = DistSSHQueue.coalesce_remote(h, j, nothing, nothing)
         @test spec == "/opt/from-env/julia"
         @test p == ["status"]
     end
 
-    host2, rjulia2, qenv2, payload2 = DistSSHQueue.extract_remote_opts([
+    host2, rjulia2, qenv2, payload2, ex2 = DistSSHQueue.extract_remote_opts([
         "qhost:qbox", "--remote-julia", "/opt/julia", "go", "parent:1", "S.jl",
     ])
     @test host2 == "qbox"
     @test rjulia2 == "/opt/julia"
     @test qenv2 === nothing
     @test payload2 == ["go", "parent:1", "S.jl"]
+    @test ex2 === true
     @test_throws ArgumentError DistSSHQueue.extract_remote_opts(["--qhost", "qbox", "status"])
     @test DistSSHQueue.parse_qhost_token("qhost:user@box") == "user@box"
     @test_throws ArgumentError DistSSHQueue.parse_qhost_token("child:w:2")
 
-    host_go, julia_go, _, payload_go = DistSSHQueue.extract_remote_opts(["go", "child:w1:2", "S.jl"])
+    host_go, julia_go, _, payload_go, _ = DistSSHQueue.extract_remote_opts(["go", "child:w1:2", "S.jl"])
     @test host_go === nothing
     @test julia_go === nothing
     @test payload_go == ["go", "child:w1:2", "S.jl"]
@@ -299,23 +307,27 @@ end
     @test code2 == 1
     @test occursin("runs on the queue host", err2)
 
-    host4, _, _, payload4 = DistSSHQueue.extract_remote_opts(String[])
+    host4, _, _, payload4, e4 = DistSSHQueue.extract_remote_opts(String[])
     @test host4 === nothing
     @test payload4 == String[]
+    @test e4 === false
 
     withenv("DISTSSHQUEUE_HOST" => "qbox") do
-        hd, _, _, pd = DistSSHQueue.extract_remote_opts(["status"])
+        hd, _, _, pd, ed = DistSSHQueue.extract_remote_opts(["status"])
         @test hd == "qbox"
         @test pd == ["status"]
-        ht, _, _, _ = DistSSHQueue.extract_remote_opts(["qhost:other", "status"])
+        @test ed === false
+        ht, _, _, _, et = DistSSHQueue.extract_remote_opts(["qhost:other", "status"])
         @test ht == "other"
+        @test et === true
     end
     withenv("DISTSSHQUEUE_HOST" => "qhost:qbox") do
-        hp, _, _, _ = DistSSHQueue.extract_remote_opts(["status"])
+        hp, _, _, _, ep = DistSSHQueue.extract_remote_opts(["status"])
         @test hp == "qbox"
+        @test ep === false
     end
 
-    _, _, qe, pl = DistSSHQueue.extract_remote_opts([
+    _, _, qe, pl, _ = DistSSHQueue.extract_remote_opts([
         "qhost:qbox", "--queue-env", "~/test-queue", "list-host",
     ])
     @test qe == "~/test-queue"
