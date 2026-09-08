@@ -13,6 +13,8 @@ julia -m DistSSHQueue remove-host child:host1
 
 From a **client**, `list-host`, `size`, `plan`, and `pool` are forwarded like `status`.
 `add-host` / `remove-host` run on the queue host only (like `setup`).
+A major.minor Julia mismatch vs this process is a warning only
+(`DISTSSHKIT_QUIET` silences it). Fix: `setup --juliaup`.
 
 Also: [Prepare](@ref Tutorial-Prepare), [submit](@ref Manual-submit),
 [kit size](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/size/),
@@ -87,6 +89,7 @@ Prints sizing notes and a `Suggested submit (template):` footer (always
 ```bash
 julia -m DistSSHQueue qhost:mini pool
 julia -m DistSSHQueue qhost:mini pool parent child:host1
+julia -m DistSSHQueue qhost:mini submit pool:8 drive SCRIPT.jl
 ```
 
 Kit flags:

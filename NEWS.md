@@ -14,6 +14,8 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
   8-character status prefix.
 - `setup --juliaup` wraps Kit `juliaup_align_remotes`. Do not combine with
   `--force`.
+- `add-host` / `pool` warn on Julia major.minor mismatch. Quiet if
+  `DISTSSHKIT_QUIET`. Fix: `setup --juliaup`.
 
 - Inspect verbs (`size` / `plan` / `pool`) print `Suggested submit (template):`
   instead of `Queue submit:`. `pool` adds notes that counts are sizing hints
