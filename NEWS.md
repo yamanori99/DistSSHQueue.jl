@@ -8,6 +8,10 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 - DistSSHKit **0.7.x**. Listed `parent` / `child:NAME` need `:N`. No
   host token is still one slot. Queue does not rewrite a bare token to
   `:1`. Empty `submit` hosts stay empty (`execute!` one slot).
+- Client verbs need `qhost:HOST` on the command line. `DISTSSHQUEUE_HOST`
+  alone does not hop. Queue host: omit `qhost:`. Local trial:
+  `DISTSSHQUEUE_LOCAL=1`. Failed jobs are fetchable. Id may be the
+  8-character status prefix.
 
 - Inspect verbs (`size` / `plan` / `pool`) print `Suggested submit (template):`
   instead of `Queue submit:`. `pool` adds notes that counts are sizing hints

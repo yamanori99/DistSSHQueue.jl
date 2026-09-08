@@ -5,6 +5,9 @@ function cancel_cli(args::Vector{String})::Cint
     args[1] in ("-h", "--help") && (show_usage(); return 0)
     length(args) == 1 || throw(ArgumentError("cancel: extra arguments"))
     id = String(args[1])
+    length(id) < 8 && throw(ArgumentError(
+        "cancel: job id needs 8 characters (status prefix) or the full UUID",
+    ))
     q = Queue(; store=store_path())
     cancelled = try
         cancel!(q, id)

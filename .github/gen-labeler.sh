@@ -104,6 +104,7 @@ EOF
           - "src/client/**"
           - "test/unit/stage.jl"
           - "test/unit/fetch.jl"
+          - "test/unit/local_queue.jl"
           - "test/e2e.jl"
 
 "area:qhost":

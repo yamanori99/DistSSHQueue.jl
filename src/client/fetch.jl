@@ -11,11 +11,15 @@ function path_has_distsshkit(path::AbstractString)::Bool
     return any(p -> p == ".distsshkit", split(posix_dir(path), '/'; keepempty=false))
 end
 
-"""`result_path` relative to `root` (stage or local project). Refuses `..` and off-tree paths.
+function path_has_queue_leaf(path::AbstractString)::Bool
+    parts = split(posix_dir(path), '/'; keepempty=false)
+    length(parts) >= 3 || return false
+    kind = parts[end-1]
+    bag = parts[end-2]
+    return kind in ("go", "ride", "drive") && bag in (".distsshqueue", ".distsshkit")
+end
 
-`canonicalize`: local omit-`qhost:` paths (macOS `/var` vs `/private/var`). Do not
-canonicalize a queue-host stage path on the client.
-"""
+"""`result_path` relative to `root`. Refuses `..` and off-tree paths."""
 function fetch_relpath(
     result_path::AbstractString,
     root::AbstractString;
@@ -26,7 +30,7 @@ function fetch_relpath(
     p = posix_dir(raw_p)
     r = posix_dir(raw_r)
     (p == r || startswith(p, path_inside_prefix(r))) || throw(ArgumentError(
-        "result is not under this client tree's stage; run fetch from the same job project as submit",
+        "result is not under the queue store directory",
     ))
     rel = p == r ? "." : String(chopprefix(p, path_inside_prefix(r)))
     any(part -> part == ".." || part == ".", split(rel, '/'; keepempty=false)) && throw(ArgumentError(
@@ -35,25 +39,24 @@ function fetch_relpath(
     return rel
 end
 
-function fetch_dest(local_proj::AbstractString, rel::AbstractString)::String
-    rel == "." && throw(ArgumentError("fetch: result path is the project root"))
-    dest = DistSSHKit.canonical_local_path(joinpath(local_proj, rel))
+function fetch_dest(local_proj::AbstractString, kind::AbstractString, leaf::AbstractString)::String
+    k = String(kind)
+    k in ("go", "ride", "drive") || throw(ArgumentError("fetch: bad kind $(repr(k))"))
+    dest = DistSSHKit.canonical_local_path(joinpath(local_proj, ".distsshqueue", k, String(leaf)))
     path_under_project(dest, local_proj) || throw(ArgumentError(
         "fetch dest escapes the job project",
-    ))
-    path_has_distsshkit(dest) || throw(ArgumentError(
-        "fetch only copies Kit .distsshkit leaves",
     ))
     return dest
 end
 
 function require_fetchable_leaf(id::AbstractString, result_path::AbstractString)
     leaf = basename(posix_dir(result_path))
-    occursin(String(id), leaf) || throw(ArgumentError(
+    needle = _job_id8(id)
+    occursin(needle, leaf) || throw(ArgumentError(
         "result leaf does not contain the job id (submit --output-dir is not fetchable)",
     ))
-    path_has_distsshkit(result_path) || throw(ArgumentError(
-        "fetch only copies Kit .distsshkit leaves",
+    path_has_queue_leaf(result_path) || throw(ArgumentError(
+        "fetch only copies Queue leaves under go/ride/drive",
     ))
     return nothing
 end
@@ -137,45 +140,49 @@ end
 function local_fetch_dest(
     id::AbstractString,
     result_path::AbstractString,
-    root::AbstractString;
+    store_root::AbstractString;
     canonicalize::Bool=false,
 )::String
     require_fetchable_leaf(id, result_path)
-    rel = fetch_relpath(result_path, root; canonicalize=canonicalize)
-    return fetch_dest(job_project(), rel)
+    fetch_relpath(result_path, store_root; canonicalize=canonicalize)
+    kind = basename(dirname(posix_dir(result_path)))
+    leaf = basename(posix_dir(result_path))
+    return fetch_dest(job_project(), kind, leaf)
 end
 
 function fetch_cli(
     qhost::Union{Nothing,AbstractString},
     gjulia::Union{Nothing,AbstractString},
     gqenv::Union{Nothing,AbstractString},
-    rest::Vector{String},
+    rest::Vector{String};
+    explicit::Bool=false,
 )::Cint
-    host, rjulia, qenv, payload = extract_remote_opts(rest)
+    host, rjulia, qenv, payload, rest_explicit = extract_remote_opts(rest)
     dest, spec = coalesce_remote(qhost, gjulia, host, rjulia)
+    hop = (explicit || rest_explicit) ? dest : nothing
     qe = coalesce_queue_env(gqenv, qenv)
     isempty(payload) && throw(ArgumentError("fetch: need a job id"))
     payload[1] in ("-h", "--help") && (show_usage(); return 0)
     length(payload) == 1 || throw(ArgumentError("fetch: extra arguments"))
     id = String(payload[1])
-    local_proj = job_project()
-    if dest === nothing
+    length(id) < 8 && throw(ArgumentError(
+        "fetch: job id needs 8 characters (status prefix) or the full UUID",
+    ))
+    if hop === nothing
         st, path = parse_fetch_source(fetch_source(id))
         st in FETCH_READY || throw(ArgumentError("job $(repr(id)) is $(st)"))
-        out = local_fetch_dest(id, path, local_proj; canonicalize=true)
-        println(out)
+        println(path)
         return 0
     end
     staging_enabled() || throw(ArgumentError(
         "qhost fetch needs rsync (unset DISTSSHQUEUE_NO_STAGE / DISTSSHKIT_TEST_SSH)",
     ))
-    home = queue_host_homedir(dest, spec)
-    stage_root = remote_stage_root(client_stage_key(local_proj); home=home)
     expr = "using DistSSHQueue; print(DistSSHQueue.fetch_source($(repr(id))))"
-    st, path = parse_fetch_source(hop_print(dest, spec, expr; queue_env=qe))
+    st, path = parse_fetch_source(hop_print(hop, spec, expr; queue_env=qe))
     st in FETCH_READY || throw(ArgumentError("job $(repr(id)) is $(st)"))
-    out = local_fetch_dest(id, path, stage_root)
-    rsync_from_qhost!(dest, path, out)
+    qroot = dirname(dirname(posix_dir(path)))
+    out = local_fetch_dest(id, path, qroot)
+    rsync_from_qhost!(hop, path, out)
     println(out)
     return 0
 end

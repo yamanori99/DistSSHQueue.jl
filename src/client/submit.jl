@@ -30,6 +30,7 @@ function submit_cli(store::AbstractString, kind::Symbol, script::AbstractString,
     id = submit!(q, String(script), String[String(x) for x in hosts]; kind=kind, nt...)
     println(id)
     if !_kit_env_on("DISTSSHKIT_QUIET")
+        println(stderr, "queue: local ($(gethostname()))")
         nq = count(j -> j.state === :queued, q.jobs)
         nr = count(j -> j.state === :running, q.jobs)
         if nr > 0

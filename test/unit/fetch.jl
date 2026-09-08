@@ -10,23 +10,26 @@ function _wait_fetch_state(q, id, want::Symbol; tries::Int=200)
     error("job $(id) did not reach $(want) (have $(job(q, id).state))")
 end
 
-@testset "fetch relpath is the inverse of stage" begin
-    stage = "/qh/.distsshqueue/stage/abc"
-    id = "96392aaa-4387-5ffe-07ee-8f69406890bb"
-    remote = stage * "/src/.distsshkit/go/S_20260101T000000_" * id
-    rel = DistSSHQueue.fetch_relpath(remote, stage)
-    @test rel == "src/.distsshkit/go/S_20260101T000000_" * id
+@testset "fetch dest is project .distsshqueue/kind/leaf" begin
     mktempdir() do d
         proj = joinpath(d, "job")
         mkpath(proj)
-        dest = DistSSHQueue.fetch_dest(proj, rel)
-        @test dest == DistSSHKit.canonical_local_path(joinpath(proj, rel))
-        @test DistSSHQueue.path_has_distsshkit(dest)
+        dest = DistSSHQueue.fetch_dest(proj, "go", "demo_807e3753")
+        @test dest == DistSSHKit.canonical_local_path(
+            joinpath(proj, ".distsshqueue", "go", "demo_807e3753"),
+        )
+        @test DistSSHQueue.path_has_queue_leaf(dest)
     end
-    @test_throws ArgumentError DistSSHQueue.fetch_relpath("/tmp/other", stage)
-    @test DistSSHQueue.fetch_relpath("/a/.distsshkit/go/S", "/") == "a/.distsshkit/go/S"
-    @test DistSSHQueue._rel_under("/a/b.jl", "/") == "a/b.jl"
-    @test_throws ArgumentError DistSSHQueue.fetch_dest("/tmp/job", "out/custom")
+    @test_throws ArgumentError DistSSHQueue.fetch_dest("/tmp/job", "out", "custom")
+    root = "/qh/.distsshqueue"
+    rel = DistSSHQueue.fetch_relpath(root * "/go/demo_807e3753", root)
+    @test rel == "go/demo_807e3753"
+    @test_throws ArgumentError DistSSHQueue.fetch_relpath("/tmp/other", root)
+    stray = "/tmp/go/demo_807e3753"
+    @test !DistSSHQueue.path_has_queue_leaf(stray)
+    @test_throws ArgumentError DistSSHQueue.require_fetchable_leaf(
+        "807e3753-0000-4000-8000-000000000001", stray,
+    )
 end
 
 @testset "fetch_source exact id and states" begin
@@ -49,7 +52,7 @@ end
             return leaf[]
         end)
         running = submit!(q2, script, "parent:1")
-        leaf[] = joinpath(proj, ".distsshkit", "go", "S_t_" * running)
+        leaf[] = joinpath(d, ".distsshkit", "go", "S_" * first(running, 8))
         mkpath(leaf[])
         @test step!(q2) == 1
         for _ = 1:200
@@ -66,6 +69,8 @@ end
         DistSSHQueue.require_fetchable_leaf(running, path)
         custom = joinpath(proj, "out")
         @test_throws ArgumentError DistSSHQueue.require_fetchable_leaf(running, custom)
+        pref = first(running, 8)
+        @test DistSSHQueue.fetch_source(pref; store=store) == line
     end
 end
 
@@ -78,7 +83,7 @@ end
         store = joinpath(d, "jobs.toml")
         idbox = Ref{String}()
         q = Queue(; store=store, runner=function (_)
-            leaf = joinpath(proj, ".distsshkit", "go", "S_t_" * idbox[])
+            leaf = joinpath(d, ".distsshkit", "go", "S_" * first(idbox[], 8))
             mkpath(leaf)
             write(joinpath(leaf, "kit.result"), "ok\n")
             return leaf
@@ -87,12 +92,13 @@ end
         idbox[] = id
         @test step!(q) == 1
         _wait_fetch_state(q, id, :done)
-        want = DistSSHKit.canonical_local_path(joinpath(proj, ".distsshkit", "go", "S_t_" * id))
+        want = DistSSHKit.canonical_local_path(joinpath(d, ".distsshkit", "go", "S_" * first(id, 8)))
         withenv(
             "DISTSSHQUEUE_STORE" => store,
             "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
             "DISTSSHQUEUE_HOST" => nothing,
             "DISTSSHQUEUE_NO_STAGE" => "1",
+            DistSSHQueue.LOCAL_QUEUE_ENV => "1",
             "DISTRIBUTED_PROJECT_ROOT" => proj,
             "DISTSSHKIT_TEST_SSH" => nothing,
         ) do
@@ -102,6 +108,11 @@ end
             @test code == 0
             @test isempty(err) || !occursin("Error:", err)
             @test strip(out) == want
+            code_p, out_p, _ = capture_stdio() do
+                DistSSHQueue.main(["fetch", first(id, 8)])
+            end
+            @test code_p == 0
+            @test strip(out_p) == want
             code_q, _, err_q = capture_stdio() do
                 DistSSHQueue.main(["fetch", "no-such-id"])
             end

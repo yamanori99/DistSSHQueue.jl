@@ -13,6 +13,11 @@ end
 
 const _ID_PREFIX_MIN = 8
 
+function _job_id8(id::AbstractString)::String
+    s = String(id)
+    return first(s, min(8, length(s)))
+end
+
 """Path relative to `root`, or `nothing` if it is not inside."""
 function _rel_under(path::AbstractString, root::AbstractString)::Union{Nothing,String}
     p = DistSSHKit.canonical_local_path(String(path))
@@ -260,7 +265,10 @@ end
 function print_serve_started(log::AbstractString; io::IO=stderr)
     DistSSHKit.print_colored(io, "Started serve", :cyan, false)
     println(io)
-    DistSSHKit.print_help_lines(io, "  log  $(_q_short(log))")
+    DistSSHKit.print_help_lines(io,
+        "  host  $(gethostname())",
+        "  log   $(_q_short(log))",
+    )
     return nothing
 end
 

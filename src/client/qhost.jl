@@ -70,11 +70,16 @@ function _set_queue_env(cur::Union{Nothing,String}, next::AbstractString)::Strin
     return n
 end
 
-"""Peel leading `qhost:NAME` / `--remote-julia PATH` / `--queue-env DIR`."""
+"""Peel leading `qhost:NAME` / `--remote-julia PATH` / `--queue-env DIR`.
+
+Also peels `qhost:NAME` immediately after the first verb. `explicit` is true
+when argv contained `qhost:` (not only `$QHOST_DEFAULT_ENV`).
+"""
 function extract_remote_opts(args::Vector{String})
     host = nothing
     rjulia = nothing
     qenv = nothing
+    explicit = false
     i = 1
     while i <= length(args)
         a = args[i]
@@ -87,6 +92,7 @@ function extract_remote_opts(args::Vector{String})
             ))
         elseif startswith(a, "qhost:")
             host = _set_qhost(host, parse_qhost_token(a))
+            explicit = true
             i += 1
         elseif a == "--remote-julia" && i < length(args)
             rjulia = args[i+1]
@@ -98,8 +104,14 @@ function extract_remote_opts(args::Vector{String})
             break
         end
     end
+    rest = args[i:end]
+    if length(rest) >= 2 && startswith(rest[2], "qhost:")
+        host = _set_qhost(host, parse_qhost_token(rest[2]))
+        explicit = true
+        rest = String[rest[1]; rest[3:end]]
+    end
     host === nothing && (host = qhost_default_from_env())
-    return host, rjulia, qenv, args[i:end]
+    return host, rjulia, qenv, rest, explicit
 end
 
 function coalesce_remote(
@@ -147,6 +159,41 @@ function hop_julia_prefix(queue_env::AbstractString)::Vector{String}
 end
 
 const QHOST_LOCAL_VERBS = ("setup", "serve", "enable", "disable", "service", "add-host", "remove-host")
+
+const CLIENT_REMOTE_VERBS = (
+    "status", "list-host", "size", "plan", "pool", "watch", "submit",
+    "go", "ride", "drive", "cancel", "fetch", "stop", "teardown",
+)
+
+const LOCAL_QUEUE_ENV = "DISTSSHQUEUE_LOCAL"
+
+function _queue_env_on(name::AbstractString)::Bool
+    return strip(get(ENV, String(name), "")) in ("1", "true", "yes", "on")
+end
+
+"""True on a machine that already has Queue `setup` (config file) or `enable`."""
+function queue_host_machine()::Bool
+    _enable_unit_path() !== nothing && return true
+    return isfile(config_path())
+end
+
+function local_queue_exempt()::Bool
+    return queue_host_machine() || _queue_env_on(LOCAL_QUEUE_ENV)
+end
+
+function require_queue_target!(
+    verb::AbstractString;
+    explicit::Bool,
+)
+    verb in CLIENT_REMOTE_VERBS || return nothing
+    explicit && return nothing
+    local_queue_exempt() && return nothing
+    throw(ArgumentError(
+        "client verb needs qhost:HOST on the command line " *
+        "(e.g. julia -m DistSSHQueue qhost:mini submit go …). " *
+        "On the queue host, omit qhost. Local trial: DISTSSHQUEUE_LOCAL=1.",
+    ))
+end
 
 function reject_qhost_on_local(sub::AbstractString, host::Union{Nothing,AbstractString})
     host === nothing && return nothing
@@ -228,9 +275,11 @@ function maybe_remote(
     tty::Bool=false,
     label_qhost::Bool=false,
     queue_env::Union{Nothing,AbstractString}=nothing,
+    explicit::Bool=false,
 )::Union{Nothing,Cint}
-    host, rjulia, qenv, payload = extract_remote_opts(rest)
+    host, rjulia, qenv, payload, rest_explicit = extract_remote_opts(rest)
     dest, spec = coalesce_remote(qhost, gjulia, host, rjulia)
+    (explicit || rest_explicit) || return nothing
     dest === nothing && return nothing
     disp = label_qhost ? dest : nothing
     q = coalesce_queue_env(queue_env, qenv)

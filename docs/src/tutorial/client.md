@@ -27,8 +27,9 @@ julia --project=. -m DistSSHQueue qhost:mini plan SCRIPT.jl
 julia --project=. -m DistSSHQueue qhost:mini pool
 ```
 
-One queue host: `export DISTSSHQUEUE_HOST=mini` and omit `qhost:` (the token
-still wins). Several clusters: pass `qhost:` each time.
+One queue host: still pass `qhost:mini` (or `status qhost:mini`).
+`DISTSSHQUEUE_HOST` is not enough. Local trial without a hop:
+`DISTSSHQUEUE_LOCAL=1`. Several clusters: pass `qhost:` each time.
 
 `list-host` is not Kit `--hosts`. `ssh -G` runs on the queue host.
 `size` / `plan` / `pool` are DistSSHKit inspect verbs there (do not enqueue).
