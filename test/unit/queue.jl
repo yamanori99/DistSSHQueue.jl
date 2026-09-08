@@ -726,6 +726,13 @@ end
                 @test code_jl == 0
                 rows = DistSSHQueue.read_jobs(p)
                 @test rows[end].kwargs["julia"] == "/opt/queue-kit-julia"
+                n_jl = length(rows)
+                code_parent, _, err_parent = capture_stdio() do
+                    DistSSHQueue.main(["submit", "go", "parent", "job.jl"])
+                end
+                @test code_parent == 1
+                @test occursin("needs :N", err_parent)
+                @test length(DistSSHQueue.read_jobs(p)) == n_jl
                 cid = rows[2].id
                 code_c, out_c, _ = capture_stdio() do
                     DistSSHQueue.main(["cancel", cid])
