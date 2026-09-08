@@ -171,16 +171,10 @@ function _queue_env_on(name::AbstractString)::Bool
     return strip(get(ENV, String(name), "")) in ("1", "true", "yes", "on")
 end
 
-"""True on a machine that already has Queue enable or config `hosts`."""
+"""True on a machine that already has Queue `setup` (config file) or `enable`."""
 function queue_host_machine()::Bool
     _enable_unit_path() !== nothing && return true
-    allow = try
-        config_host_names(load_config())
-    catch
-        nothing
-    end
-    allow === nothing && return false
-    return !isempty(allow)
+    return isfile(config_path())
 end
 
 function local_queue_exempt()::Bool

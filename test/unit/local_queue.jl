@@ -29,5 +29,25 @@ using DistSSHQueue
                 @test occursin("Store", out)
             end
         end
+        cfg2 = joinpath(d, "after-setup.toml")
+        withenv(
+            DistSSHQueue.LOCAL_QUEUE_ENV => nothing,
+            DistSSHQueue.QHOST_DEFAULT_ENV => nothing,
+            "DISTSSHQUEUE_CONFIG" => cfg2,
+            "DISTSSHQUEUE_STORE" => store,
+            "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
+        ) do
+            code_setup, _, _ = capture_stdio() do
+                DistSSHQueue.main(["setup", "--config", cfg2])
+            end
+            @test code_setup == 0
+            @test isfile(cfg2)
+            code_host, out_s, err_s = capture_stdio() do
+                DistSSHQueue.main(["status"])
+            end
+            @test code_host == 0
+            @test !occursin("qhost:HOST", err_s)
+            @test occursin("Store", out_s)
+        end
     end
 end
