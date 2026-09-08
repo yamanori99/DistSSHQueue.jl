@@ -82,6 +82,7 @@ function pool_cli(args::Vector{String})::Cint
         mem_headroom=opts.mem_headroom,
         parent_gb=opts.parent_gb,
     )
+    warn_julia_major_minor(tokens)
     any(row -> row.ok && clamp_pool_slots(row.slots, allow, row.host) > 0, result.hosts) &&
         print_queue_pool_submit(result, allow)
     return result.ok ? 0 : 1
