@@ -12,6 +12,8 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
   alone does not hop. Queue host: omit `qhost:`. Local trial:
   `DISTSSHQUEUE_LOCAL=1`. Failed jobs are fetchable. Id may be the
   8-character status prefix.
+- `setup --juliaup` wraps Kit `juliaup_align_remotes`. Do not combine with
+  `--force`.
 
 - Inspect verbs (`size` / `plan` / `pool`) print `Suggested submit (template):`
   instead of `Queue submit:`. `pool` adds notes that counts are sizing hints

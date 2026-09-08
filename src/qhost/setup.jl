@@ -24,6 +24,8 @@ end
 function setup_main(args::Vector{String})::Cint
     config = config_path()
     force = false
+    juliaup = false
+    hosts = String[]
     i = 1
     while i <= length(args)
         a = args[i]
@@ -36,13 +38,37 @@ function setup_main(args::Vector{String})::Cint
         elseif a == "--force"
             force = true
             i += 1
+        elseif a == "--juliaup"
+            juliaup = true
+            i += 1
         elseif a == "--service"
             throw(ArgumentError("setup --service is gone; run: julia -m DistSSHQueue enable"))
         elseif a == "--write-only"
             throw(ArgumentError("setup --write-only is gone; setup only writes config.toml"))
-        else
+        elseif startswith(a, "-")
             throw(ArgumentError("unknown setup option: $(a)"))
+        else
+            push!(hosts, a)
+            i += 1
         end
     end
+    if juliaup
+        force && throw(ArgumentError("setup --juliaup cannot combine with --force"))
+        cfg = load_config(; path=config)
+        apply_config_env!(cfg)
+        names = if isempty(hosts)
+            allow = config_host_names(cfg)
+            (allow === nothing || isempty(allow)) && throw(ArgumentError(
+                "setup --juliaup needs hosts on the command line or add-host first",
+            ))
+            sorted_kit_ssh_names(allow)
+        else
+            String[kit_ssh_name(h) for h in hosts]
+        end
+        confirm = !_queue_env_on("DISTSSHKIT_YES")
+        result = DistSSHKit.juliaup_align_remotes(names; confirm=confirm)
+        return result.failed > 0 ? Cint(1) : Cint(0)
+    end
+    isempty(hosts) || throw(ArgumentError("unknown setup option: $(hosts[1])"))
     return setup(; config=config, force=force)
 end
