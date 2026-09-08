@@ -2,8 +2,14 @@
 
 function _remote_julia_mm(host::AbstractString)::Union{Nothing,Tuple{Int,Int}}
     DistSSHKit.is_parent_host_name(host) && return (VERSION.major, VERSION.minor)
+    path = try
+        DistSSHKit.resolve_remote_julia(String(host), "auto")
+    catch
+        nothing
+    end
+    path === nothing && return nothing
     ver = try
-        DistSSHKit.get_remote_julia_version(String(host), "julia")
+        DistSSHKit.get_remote_julia_version(String(host), path)
     catch
         nothing
     end

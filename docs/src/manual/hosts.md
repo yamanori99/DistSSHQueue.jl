@@ -89,7 +89,6 @@ Prints sizing notes and a `Suggested submit (template):` footer (always
 ```bash
 julia -m DistSSHQueue qhost:mini pool
 julia -m DistSSHQueue qhost:mini pool parent child:host1
-julia -m DistSSHQueue qhost:mini submit pool:8 drive SCRIPT.jl
 ```
 
 Kit flags:
