@@ -3,7 +3,7 @@
 Documenter site for DistSSHQueue.jl. Sources live in `docs/src/`.
 
 Layout (same headings as DistSSHKit; Queue verbs only — do not copy Kit
-`go` / `drive` / `setup` pages):
+`go` / `ride` / `drive` / `setup` pages):
 
 - **Introduction** — `index.md`
 - **First Steps** — `requirements.md`, `tutorial/`

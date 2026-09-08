@@ -23,19 +23,22 @@ copies queue host → workers.
 ```bash
 julia --project=. -m DistSSHQueue qhost:mini list-host
 julia --project=. -m DistSSHQueue qhost:mini size
+julia --project=. -m DistSSHQueue qhost:mini plan SCRIPT.jl
+julia --project=. -m DistSSHQueue qhost:mini pool
 ```
 
 One queue host: `export DISTSSHQUEUE_HOST=mini` and omit `qhost:` (the token
 still wins). Several clusters: pass `qhost:` each time.
 
 `list-host` is not Kit `--hosts`. `ssh -G` runs on the queue host.
-`size` is DistSSHKit `size` there (does not enqueue).
+`size` / `plan` / `pool` are DistSSHKit inspect verbs there (do not enqueue).
 
 ## Submit
 
 Kit argv is DistSSHKit's (`go child:NAME:N SCRIPT.jl`, or `parent:N`
 when workers are on the queue host). Flags:
 [kit go](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/go/),
+[kit ride](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/ride/),
 [kit drive](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/drive/).
 
 ```bash

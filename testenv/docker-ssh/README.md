@@ -1,7 +1,7 @@
 # Docker SSH workers (Queue happy-path E2E)
 
 Real OpenSSH + rsync Linux workers for a DistSSHQueue end-to-end run. These
-containers are **DistSSHKit `go` / `drive` targets** (`child:NAME[:N]`), not the queue
+containers are **DistSSHKit `go` / `ride` / `drive` targets** (`child:NAME[:N]`), not the queue
 host. The queue host and `serve` run on the host during `--e2e`.
 
 Adapted from DistSSHKit's `testenv/docker-ssh` (same worker image shape), kept

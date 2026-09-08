@@ -70,16 +70,16 @@ For everything else, see the
        |    qhost:NAME                    serve    now, this terminal
        |    submit | status | list-host   enable   again after reboot
        |    watch | cancel | fetch | ...
-       +--------------------------------> then DistSSHKit go/drive
+       +--------------------------------> then DistSSHKit go/ride/drive
                                           -> workers (Kit tokens)
 ```
 
 `qhost:NAME` is the SSH name of the queue host (same idea as Kit
 `child:NAME`, but it names the queue host, not a worker). Already logged in
 there? Omit it. One queue host: `export DISTSSHQUEUE_HOST=…` and omit `qhost:`
-(the token still wins). `--hosts` / `--julia` stay on Kit `go` / `drive`.
+(the token still wins). `--hosts` / `--julia` stay on Kit `go` / `ride` / `drive`.
 
-Placement tokens, `go` / `drive` flags, and remote setup are DistSSHKit's —
+Placement tokens, `go` / `ride` / `drive` flags, and remote setup are DistSSHKit's —
 see the [kit docs](https://yamanori99.github.io/DistSSHKit.jl/stable/).
 
 ### Where files live
@@ -100,6 +100,7 @@ copies one finished Kit leaf back.
   SCRIPT.jl             rsync'd on qhost: submit
   .distsshkit/queue/<id>  after qhost: submit
   .distsshkit/go/       after fetch
+  .distsshkit/ride/     after fetch
   .distsshkit/drive/    after fetch (not demo output/)
 ```
 
@@ -130,6 +131,8 @@ not set `DISTRIBUTED_REMOTE_PROJECT_ROOT` in shared `config.toml`.
     SCRIPT_<UTC>_<id>/  result_path
       kit.pid
       kit.result
+  .distsshkit/ride/
+    SCRIPT_<UTC>_<id>/  same allocate
   .distsshkit/drive/
     SCRIPT_<UTC>_<id>/  same allocate; not demo output/
 ```
@@ -160,6 +163,9 @@ From a **client** (job directory; Queue must be loadable from that env):
 
 ```bash
 julia --project=. -m DistSSHQueue qhost:mini list-host
+julia --project=. -m DistSSHQueue qhost:mini size
+julia --project=. -m DistSSHQueue qhost:mini plan SCRIPT.jl
+julia --project=. -m DistSSHQueue qhost:mini pool
 julia --project=. -m DistSSHQueue qhost:mini submit go child:host1:4 SCRIPT.jl
 julia --project=. -m DistSSHQueue qhost:mini status
 julia --project=. -m DistSSHQueue qhost:mini watch

@@ -15,7 +15,7 @@ Also: [First job](@ref Tutorial-Client), [Walkthrough](@ref Tutorial-Walkthrough
 
 Run it from the same `cwd` / `DISTRIBUTED_PROJECT_ROOT` as `submit`.
 The dest is that project's copy of the Kit leaf
-(`…/.distsshkit/{go|drive}/<stem>_<UTC>_<id>/`). stdout is that path,
+(`…/.distsshkit/{go|ride|drive}/<stem>_<UTC>_<id>/`). stdout is that path,
 one line. Re-run rsyncs into the same leaf. A Kit demo that writes
 `output/` on a local `julia -m DistSSHKit drive` still uses that unique
 `.distsshkit/drive/` leaf under Queue (`allocate_output_dir` sets

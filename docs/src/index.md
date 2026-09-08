@@ -25,7 +25,7 @@ How you call it:
   ([API](@ref API))
 
 `qhost:NAME` names the queue host (like Kit `child:NAME`, but not a worker).
-`--hosts` / `--julia` stay on Kit `go` / `drive`. Queue-host Julia is
+`--hosts` / `--julia` stay on Kit `go` / `ride` / `drive`. Queue-host Julia is
 `--remote-julia` / `JULIA_DISTRIBUTED_EXE`.
 
 ## Installation
@@ -72,7 +72,7 @@ Trees (client / queue host / workers): [Where files live](@ref Layout).
        |    qhost:NAME                    serve    now, this terminal
        |    submit | status | list-host   enable   again after reboot
        |    watch | cancel | fetch | ...
-       +--------------------------------> then DistSSHKit go/drive
+       +--------------------------------> then DistSSHKit go/ride/drive
                                           -> workers (Kit tokens)
 ```
 

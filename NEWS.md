@@ -5,19 +5,18 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
-- `submit ride` / `ride` (experimental DistSSHKit `execute!` kind). A `.jl`
-  with no Queue verb is still not implicit `go`.
+## 0.4.0
+
+Breaking cut after `0.3.2`. DistSSHKit **0.6.x**.
+`ride`, `plan`, and `pool` on the queue host.
+
+- DistSSHKit **0.6.x**. A line with a `.jl` and no Queue verb is no
+  longer implicit `go`. Use `go` / `submit go` (same as Kit).
+- `submit ride` / `ride` (experimental DistSSHKit `execute!` kind).
 - `plan` inspects a script on the queue host (same type as `size`). Does
   not enqueue.
 - `pool` shows cores / RAM / slot hint on the queue host (same type as
   `size`). Does not enqueue.
-
-## 0.4.0
-
-Breaking cut after `0.3.2`. DistSSHKit **0.6.x**.
-
-- DistSSHKit **0.6.x**. A line with a `.jl` and no Queue verb is no
-  longer implicit `go`. Use `go` / `submit go` (same as Kit).
 
 ## 0.3.2
 

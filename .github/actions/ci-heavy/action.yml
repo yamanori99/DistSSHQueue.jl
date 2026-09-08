@@ -40,6 +40,7 @@ runs:
             - "docs/**"
             - "README.md"
             - "README.ja.md"
+            - "NEWS.md"
             - "src/**"
             - "Project.toml"
     - id: out
