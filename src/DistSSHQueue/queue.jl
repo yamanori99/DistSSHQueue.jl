@@ -241,20 +241,18 @@ end
 
 """Set Kit `output_dir` before spawn so `:running` cancel and restart adopt need no submitter path.
 
-Uses DistSSHKit `allocate_output_dir` when the bag omitted `output_dir`. That is
-`{script}/.distsshkit/{go|ride|drive}/<stem>_<UTC>_<id>/` (unique leaf; do not
-reuse shared `.distsshkit/drive` or a demo `output/`). Kit `init_output_dir!`
-keeps this path when `DISTRIBUTED_OUTPUT_DIR` is already set. No-op if the
-script is not on disk (unit stubs)."""
-function ensure_kit_output_dir!(j::Job)
+Default leaf is `{store dir}/{kind}/{stem}_{id8}/` (Queue home, not Kit
+`allocate_output_dir`). No-op if the bag already has `output_dir`.
+"""
+function ensure_kit_output_dir!(j::Job; store::Union{Nothing,AbstractString}=nothing)
     kit_output_dir(j) !== nothing && return nothing
     isfile(j.script) || return nothing
-    proj = get(j.kwargs, "project", nothing)
-    proj isa AbstractString || (proj = job_project())
-    isdir(String(proj)) || return nothing
-    dir = DistSSHKit.allocate_output_dir(
-        j.kind, j.script; project=String(proj), job_id=j.id,
-    )
+    root = store === nothing ? dirname(default_store_path()) : dirname(String(store))
+    stem = splitext(basename(j.script))[1]
+    isempty(stem) && (stem = "job")
+    leaf = "$(stem)_$(_job_id8(j.id))"
+    dir = joinpath(root, String(j.kind), leaf)
+    mkpath(dir)
     j.kwargs["output_dir"] = dir
     j.result_path = dir
     return nothing
@@ -302,7 +300,9 @@ function settle_lost_kit_child!(j::Job)
     return j
 end
 
-function run_kit(j::Job, on_spawn)
+function run_kit(j::Job, on_spawn; on_phase=Returns(nothing))
+    _queue_kit_setup!(j, on_phase)
+    on_phase(nothing)
     kp = DistSSHKit.execute!(
         j.kind,
         j.script,
@@ -318,6 +318,41 @@ function run_kit(j::Job, on_spawn)
     return kit_result_path(j, result)
 end
 run_kit(j::Job) = run_kit(j, Returns(nothing))
+
+const NO_KIT_SETUP_ENV = "DISTSSHQUEUE_NO_KIT_SETUP"
+
+function _set_job_phase!(q::Queue, id::AbstractString, ph)
+    lock(q.lock) do
+        i = _index_id(q.jobs, id)
+        i === nothing && return nothing
+        if ph === nothing
+            delete!(q.jobs[i].kwargs, "phase")
+        else
+            q.jobs[i].kwargs["phase"] = String(ph)
+        end
+        _persist!(q)
+        return nothing
+    end
+    return nothing
+end
+
+function _queue_kit_setup!(j::Job, on_phase)
+    _queue_env_on(NO_KIT_SETUP_ENV) && return nothing
+    isempty(j.hosts) && return nothing
+    proj = get(j.kwargs, "project", nothing)
+    proj isa AbstractString || (proj = job_project())
+    isdir(String(proj)) || return nothing
+    session = DistSSHKit.KitSession(;
+        project=String(proj),
+        workers=j.hosts,
+        yes=true,
+    )
+    for step in (:rsync, :instantiate, :check)
+        on_phase(String(step))
+        DistSSHKit.setup!(session, step)
+    end
+    return nothing
+end
 
 function _persist!(q::Queue)
     return _persist!(q, q.store)
@@ -520,6 +555,7 @@ function _finish!(q::Queue, id::AbstractString, state::Symbol, err; result_path=
             j.state = state
             j.finished_at = now(UTC)
             j.error = err === nothing ? nothing : String(err)
+            delete!(j.kwargs, "phase")
             if result_path !== nothing
                 j.result_path = String(result_path)
             end
@@ -534,7 +570,7 @@ function _start!(q::Queue, j::Job)
     j.state = :running
     j.started_at = now(UTC)
     q.live_id = j.id
-    ensure_kit_output_dir!(j)
+    ensure_kit_output_dir!(j; store=q.store)
     _persist!(q)
     runner = q.runner
     id = j.id
@@ -546,7 +582,7 @@ function _start!(q::Queue, j::Job)
     Threads.@spawn begin
         try
             out = if runner === run_kit
-                run_kit(snap, on_spawn)
+                run_kit(snap, on_spawn; on_phase=ph -> _set_job_phase!(q, id, ph))
             else
                 runner(snap)
             end

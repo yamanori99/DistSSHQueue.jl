@@ -16,6 +16,12 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
   `--force`.
 - `add-host` / `pool` warn on Julia major.minor mismatch. Quiet if
   `DISTSSHKIT_QUIET`. Fix: `setup --juliaup`.
+- `status` / `watch` print job cards (`ID STATE KIND SCRIPT`). `--tail
+  N|full`. Watch skips identical frames. Default Kit leaf is
+  `~/.distsshqueue/{kind}/{stem}_{id8}/`. Fetch dest is
+  `{project}/.distsshqueue/{kind}/{stem}_{id8}/`.
+- `serve` runs Kit `setup!` (`rsync` → `instantiate` → `check`) before
+  `execute!`. `DISTSSHQUEUE_NO_KIT_SETUP=1` skips it.
 
 - Inspect verbs (`size` / `plan` / `pool`) print `Suggested submit (template):`
   instead of `Queue submit:`. `pool` adds notes that counts are sizing hints
