@@ -22,6 +22,8 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
   layout on the client tree.
 - `serve` runs Kit `setup!` (`rsync` → `instantiate` → `check`) before
   `execute!`. `DISTSSHQUEUE_NO_KIT_SETUP=1` skips it.
+- `submit pool:N` expands config hosts to the same `:N` (clamped by
+  add-host max). Do not mix with parent / child tokens.
 
 - Inspect verbs (`size` / `plan` / `pool`) print `Suggested submit (template):`
   instead of `Queue submit:`. `pool` adds notes that counts are sizing hints
