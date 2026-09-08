@@ -472,7 +472,7 @@ end
     @test dkw.log_dir == "/logs"
     @test dkw.skip_hash_check === false
     @test dkw.yes === true
-    wid = submit!(q, "w.jl", "child:h1"; kind=:drive, workers=4, mem_headroom=0.5)
+    wid = submit!(q, "w.jl", "child:h1:1"; kind=:drive, workers=4, mem_headroom=0.5)
     wkw = DistSSHQueue.execute_kwargs(job(q, wid))
     @test wkw.workers == 4
     @test wkw.mem_headroom == 0.5
@@ -721,11 +721,18 @@ end
                 @test occursin("unknown subcommand", err_sh)
                 @test length(DistSSHQueue.read_jobs(p)) == length(rows)
                 code_jl, _, _ = capture_stdio() do
-                    DistSSHQueue.main(["submit", "go", "--julia", "/opt/queue-kit-julia", "job.jl"])
+                    DistSSHQueue.main(["submit", "go", "--julia", "/opt/queue-kit-julia", "parent:1", "job.jl"])
                 end
                 @test code_jl == 0
                 rows = DistSSHQueue.read_jobs(p)
                 @test rows[end].kwargs["julia"] == "/opt/queue-kit-julia"
+                n_jl = length(rows)
+                code_parent, _, err_parent = capture_stdio() do
+                    DistSSHQueue.main(["submit", "go", "parent", "job.jl"])
+                end
+                @test code_parent == 1
+                @test occursin("needs :N", err_parent)
+                @test length(DistSSHQueue.read_jobs(p)) == n_jl
                 cid = rows[2].id
                 code_c, out_c, _ = capture_stdio() do
                     DistSSHQueue.main(["cancel", cid])

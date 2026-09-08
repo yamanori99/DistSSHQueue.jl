@@ -18,7 +18,7 @@ DistSSHQueue は、何人かで同じマシンを使い、ジョブを順番に�
 対応は **macOS、Linux、WSL2 Ubuntu** (ネイティブ Windows は対象外)。
 
 小さな研究室や個人でも、常時起動のマシンを 1 台置き、SSH接続したマシンとまとめて小さな計算ノードとして使うことが出来る。
-Julia **1.12+**、DistSSHKit **0.6.x**。
+Julia **1.12+**、DistSSHKit **0.7.x**。
 
 ## インストール
 
@@ -34,7 +34,7 @@ pkg> add DistSSHQueue
 julia> import Pkg; Pkg.add("DistSSHQueue")
 ```
 
-DistSSHKit **0.6.x** は General から付いてくる。通常の Queue 作業で
+DistSSHKit **0.7.x** は General から付いてくる。通常の Queue 作業で
 Kit を `Pkg.develop` しない。
 
 キューホストには **`ssh`**、**`rsync`**、および (git デプロイを使うときだけ) **`git`** も必要。

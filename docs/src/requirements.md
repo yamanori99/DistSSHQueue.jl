@@ -31,7 +31,7 @@ runs jobs.
     usual OS path ([Checks](@ref)) or set `--remote-julia` /
     `JULIA_DISTRIBUTED_EXE`. Missing path or a related bug:
     [open an Issue](https://github.com/yamanori99/DistSSHQueue.jl/issues).
-- **DistSSHKit 0.6.x** from General. Do not `Pkg.develop` Kit (or
+- **DistSSHKit 0.7.x** from General. Do not `Pkg.develop` Kit (or
   Queue) in a job project whose Manifest is copied to workers — that path
   is absolute and the workers do not have it. Separate env for package
   work.

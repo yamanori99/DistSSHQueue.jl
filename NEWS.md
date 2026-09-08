@@ -5,6 +5,10 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
+- DistSSHKit **0.7.x**. Listed `parent` / `child:NAME` need `:N`. No
+  host token is still one slot. Queue does not rewrite a bare token to
+  `:1`. Empty `submit` hosts stay empty (`execute!` one slot).
+
 - Inspect verbs (`size` / `plan` / `pool`) print `Suggested submit (template):`
   instead of `Queue submit:`. `pool` adds notes that counts are sizing hints
   (default GB/worker, no RSS) and that `parent` is the queue host token.
