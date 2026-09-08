@@ -13,7 +13,10 @@ end
 
 function path_has_queue_leaf(path::AbstractString)::Bool
     parts = split(posix_dir(path), '/'; keepempty=false)
-    return any(p -> p in ("go", "ride", "drive"), parts)
+    length(parts) >= 3 || return false
+    kind = parts[end-1]
+    bag = parts[end-2]
+    return kind in ("go", "ride", "drive") && bag in (".distsshqueue", ".distsshkit")
 end
 
 """`result_path` relative to `root`. Refuses `..` and off-tree paths."""

@@ -25,6 +25,11 @@ end
     rel = DistSSHQueue.fetch_relpath(root * "/go/demo_807e3753", root)
     @test rel == "go/demo_807e3753"
     @test_throws ArgumentError DistSSHQueue.fetch_relpath("/tmp/other", root)
+    stray = "/tmp/go/demo_807e3753"
+    @test !DistSSHQueue.path_has_queue_leaf(stray)
+    @test_throws ArgumentError DistSSHQueue.require_fetchable_leaf(
+        "807e3753-0000-4000-8000-000000000001", stray,
+    )
 end
 
 @testset "fetch_source exact id and states" begin
@@ -47,7 +52,7 @@ end
             return leaf[]
         end)
         running = submit!(q2, script, "parent:1")
-        leaf[] = joinpath(d, "go", "S_" * first(running, 8))
+        leaf[] = joinpath(d, ".distsshkit", "go", "S_" * first(running, 8))
         mkpath(leaf[])
         @test step!(q2) == 1
         for _ = 1:200
@@ -78,7 +83,7 @@ end
         store = joinpath(d, "jobs.toml")
         idbox = Ref{String}()
         q = Queue(; store=store, runner=function (_)
-            leaf = joinpath(d, "go", "S_" * first(idbox[], 8))
+            leaf = joinpath(d, ".distsshkit", "go", "S_" * first(idbox[], 8))
             mkpath(leaf)
             write(joinpath(leaf, "kit.result"), "ok\n")
             return leaf
@@ -87,7 +92,7 @@ end
         idbox[] = id
         @test step!(q) == 1
         _wait_fetch_state(q, id, :done)
-        want = DistSSHKit.canonical_local_path(joinpath(d, "go", "S_" * first(id, 8)))
+        want = DistSSHKit.canonical_local_path(joinpath(d, ".distsshkit", "go", "S_" * first(id, 8)))
         withenv(
             "DISTSSHQUEUE_STORE" => store,
             "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),

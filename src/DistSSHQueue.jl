@@ -67,7 +67,7 @@ function main(args::Vector{String}=copy(ARGS))::Cint
             return 0
         end
         sub, rest = String(after[1]), String[String(a) for a in after[2:end]]
-        reject_qhost_on_local(sub, qhost)
+        reject_qhost_on_local(sub, explicit ? qhost : nothing)
         require_queue_target!(sub; explicit=explicit)
         hop = explicit ? qhost : nothing
         _rest() = let

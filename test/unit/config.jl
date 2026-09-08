@@ -296,6 +296,13 @@ end
     DistSSHQueue.reject_qhost_on_local("status", "qbox")
     DistSSHQueue.reject_qhost_on_local("list-host", "qbox")
     DistSSHQueue.reject_qhost_on_local("setup", nothing)
+    withenv(DistSSHQueue.QHOST_DEFAULT_ENV => "qbox") do
+        code_env, _, err_env = capture_stdio() do
+            DistSSHQueue.main(["setup", "-h"])
+        end
+        @test code_env == 0
+        @test !occursin("runs on the queue host", err_env)
+    end
     code, _, err = capture_stdio() do
         DistSSHQueue.main(["qhost:qbox", "add-host", "host1"])
     end
