@@ -476,6 +476,9 @@ end
             code_jf, _, err_jf = run_setup(["--juliaup", "--force"])
             @test code_jf == 1
             @test occursin("cannot combine", err_jf)
+            code_jh, _, err_jh = run_setup(["--juliaup"])
+            @test code_jh == 1
+            @test occursin("add-host", err_jh)
             code4, _, err4 = run_setup(["--service"])
             @test code4 == 1
             @test occursin("enable", err4)

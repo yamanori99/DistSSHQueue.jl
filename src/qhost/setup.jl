@@ -54,8 +54,10 @@ function setup_main(args::Vector{String})::Cint
     end
     if juliaup
         force && throw(ArgumentError("setup --juliaup cannot combine with --force"))
+        cfg = load_config(; path=config)
+        apply_config_env!(cfg)
         names = if isempty(hosts)
-            allow = config_host_names(load_config(; path=config))
+            allow = config_host_names(cfg)
             (allow === nothing || isempty(allow)) && throw(ArgumentError(
                 "setup --juliaup needs hosts on the command line or add-host first",
             ))
@@ -64,8 +66,8 @@ function setup_main(args::Vector{String})::Cint
             String[kit_ssh_name(h) for h in hosts]
         end
         confirm = !_queue_env_on("DISTSSHKIT_YES")
-        DistSSHKit.juliaup_align_remotes(names; confirm=confirm)
-        return 0
+        result = DistSSHKit.juliaup_align_remotes(names; confirm=confirm)
+        return result.failed > 0 ? Cint(1) : Cint(0)
     end
     isempty(hosts) || throw(ArgumentError("unknown setup option: $(hosts[1])"))
     return setup(; config=config, force=force)
