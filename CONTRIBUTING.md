@@ -7,7 +7,7 @@ Internals of this repo.
 
 This is a **separate** package from DistSSHKit: FIFO `serve` in front of one Kit `go` / `ride` / `drive`, not a bigger Kit. Placement tokens, `execute!`, `kit.pid` / `kit.result`, `terminate_run!`, demo argv, and rsync/collect are Kit's. Queue records table state and the path Kit already wrote.
 
-Julia slots match Kit (`min` / `max` / `tip` in `.github/julia-slots.env`). SSH E2E is this repo's `testenv/docker-ssh` (Kit-shaped workers). CI is `Pkg.test` (unit + child CLI / `parent:1`), JETLS, Aqua, Linux SSH E2E on slot **max** (`test/e2e.jl`: `serve` API, queue-host CLI, `qhost:` over loopback OpenSSH) on **main** / `cut` / weekly / dispatch (not ordinary PRs), Gitleaks, schedule-only **E2E weekly** (Linux / macOS Intel / WSL), and schedule-only **CI weekly**.
+Julia slots match Kit (`min` / `max` / `tip` in `.github/julia-slots.env`). SSH E2E is this repo's `testenv/docker-ssh` (Kit-shaped workers). CI is `Pkg.test` (unit + child CLI / `parent:1`), JETLS, Aqua, Linux SSH E2E on slot **max** (`test/e2e.jl`: `serve` API, queue-host CLI, `qhost:` over loopback OpenSSH) on path-filtered PRs / **main** / `cut` / weekly / dispatch, Gitleaks, schedule-only **E2E weekly** (Linux / macOS Intel / WSL), and schedule-only **CI weekly**.
 
 ## Requirements
 
@@ -89,9 +89,10 @@ These run as jobs of the `Test` workflow
 Documenter min is
 [`.github/workflows/Documentation.yml`](.github/workflows/Documentation.yml).
 `Assets` (`draw SVG`) runs if `docs/src/assets/` or that workflow
-changed. Linux E2E (max) does **not** run on an ordinary PR. It runs on
-**main** push (path filter minus markdown under `test/` / `testenv/`),
-**`cut`**, **E2E weekly** (`ssh-e2e-weekly.yml`; `CI.yml` has no
+changed. Linux E2E (max) uses the same **path filter** as **main** push
+(`src/**`, `test/**`, `testenv/**` minus markdown under those trees,
+`Project.toml`, `test/Project.toml`, `.github/workflows/CI.yml`). It also
+runs on **`cut`**, **E2E weekly** (`ssh-e2e-weekly.yml`; `CI.yml` has no
 `schedule`), and `workflow_dispatch`. Tip `Pkg.test` / Aqua
 stay on **main**, **CI weekly**, and `cut`. Registry tree stays on **main**
 and `cut` (ci-cut), not ordinary PRs.
@@ -99,7 +100,7 @@ and `cut` (ci-cut), not ordinary PRs.
 These files **alone** skip the heavy jobs (UI: skipping; Pkg.test /
 JETLS / Aqua do not start). Documenter still runs when `docs/**`, README,
 `src/**`, or `Project.toml` changed; otherwise it is skipped too.
-Linux E2E is skipped on ordinary PRs (same skipping UI):
+Linux E2E is skipped on allowlisted markdown-only PRs (same skipping UI):
 
 - `README.md`, `README.ja.md`, `CONTRIBUTING.md`, `NEWS.md`,
   `SECURITY.md`, `LICENSE`
@@ -109,8 +110,8 @@ Linux E2E is skipped on ordinary PRs (same skipping UI):
 A new root markdown file stays heavy until listed in
 [`.github/actions/ci-heavy/action.yml`](.github/actions/ci-heavy/action.yml).
 A `cut` label skips none of this: Pkg.test, JETLS, Aqua, Documenter,
-and Linux E2E all run. macOS / WSL stay on `E2E weekly`, not the PR.
-A `cut` squash to `main` starts Full on that SHA. Register only after
+and Linux E2E all run (E2E Codecov too). macOS / WSL stay on `E2E weekly`,
+not the PR. A `cut` squash to `main` starts Full on that SHA. Register only after
 that matrix is green (or wait out `cut-hold`).
 
 CI uploads Codecov on **main push** only (`Pkg.test` max slot, flag `pkgtest`). PR E2E does not upload; `cut` PRs and **E2E weekly** Linux upload flag `e2e`. Public repo + Codecov OIDC (`id-token: write`). Status checks are informational (`codecov.yml`). Local coverage:
@@ -182,7 +183,7 @@ Not a calendar. Cut when [NEWS.md](NEWS.md) **Unreleased** has something General
 
 ### After a cut merges
 
-1. **E2E weekly** starts on the **merge commit** (`Project.toml` version went up). Do not register until Linux, macOS Intel, and WSL are green. Ordinary PRs skip Linux E2E; `cut` covers that on the PR, Full covers macOS / WSL after squash. Do not wait for Sunday cron. `workflow_dispatch` remains for a re-run.
+1. **E2E weekly** starts on the **merge commit** (`Project.toml` version went up). Do not register until Linux, macOS Intel, and WSL are green. Path-filtered PRs already run Linux E2E; `cut` still forces it (with Codecov) on the version-bump PR. Full covers macOS / WSL after squash. Do not wait for Sunday cron. `workflow_dispatch` remains for a re-run.
 2. Full red: Issue `E2E weekly failed` gets `cut-hold`. Do not `@JuliaRegistrator register` while `cut-hold` is open. Do not lower `version`.
 3. Full green: CI removes `cut-hold` and closes the Issue. Register on that merge commit (not the PR body). Paste the NEWS section under `Release notes:`.
 4. Skip that version on General instead: keep `cut-hold` until a later cut (higher `version`) is ready, then register that later cut.
