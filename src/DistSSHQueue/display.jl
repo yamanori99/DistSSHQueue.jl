@@ -137,7 +137,7 @@ function print_queue_usage(io::IO=stdout)
     DistSSHKit.print_help_blank(io)
     DistSSHKit.print_help_section("Queue host"; io=io)
     DistSSHKit.print_help_lines(io,
-        "  setup [--force]       Write config.toml",
+        "  setup [--force] [--juliaup]  Write config.toml; --juliaup aligns Julia",
         "  add-host TOKEN …      Add Kit tokens",
         "  remove-host TOKEN …   Drop Kit tokens",
         "  serve                 Run serve in this terminal",

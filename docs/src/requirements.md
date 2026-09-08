@@ -146,22 +146,22 @@ julia -m DistSSHKit setup --check child:USER@HOST
 
 ### Align Julia with juliaup
 
-Queue has no `--juliaup` verb. Use DistSSHKit `setup --juliaup` (Kit
-0.6: same `child:NAME` / `parent` tokens as go / ride / drive). That changes
-each target's **juliaup default** only — it does not change a Julia
+`julia -m DistSSHQueue setup --juliaup` wraps DistSSHKit
+`juliaup_align_remotes` (same `parent` / `child:NAME` tokens as go /
+ride / drive). Do not combine with `--force`. That changes each
+target's **juliaup default** only — it does not change a Julia
 process that is already running.
 
-Prefer the **queue host** (job kit parent). Channel = this command's
-major.minor. Typical labs have passwordless SSH from the queue host to
-workers, not from the client. Run from an env that already loads
-DistSSHKit (default env, a checkout `--project=.`, or the optional
-dedicated dir):
+Prefer the **queue host**. Channel = this command's major.minor.
+Typical labs have passwordless SSH from the queue host to workers,
+not from the client:
 
 ```bash
-# On the queue host: parent = this box; remotes = child:NAME (no bare SSH)
-julia -m DistSSHKit setup --juliaup parent child:host1
-# or: julia --project=$HOME/.distsshqueue/env -m DistSSHKit \
-#        setup --juliaup parent child:host1
+# On the queue host: parent = this box; remotes = child:NAME
+julia -m DistSSHQueue setup --juliaup parent child:host1
+# or omit tokens after add-host:
+# julia -m DistSSHQueue setup --juliaup
+```
 
 # From a client: only hosts you can SSH to from the laptop.
 # parent here is the laptop, not the queue host.
@@ -226,19 +226,19 @@ unit; skip that file if you only `serve` in a terminal.
     Project.toml
     Manifest.toml
   stage/<id>/           client tree after qhost: submit
+  go/                   Kit leaf `{stem}_{id8}/`
+    SCRIPT_807e3753/
+      kit.pid
+      kit.result
+  ride/
+  drive/
 
 ~/org/Repo.jl/          omit qhost: (cwd / DISTRIBUTED_PROJECT_ROOT)
   Project.toml          compute deps
   Manifest.toml
   SCRIPT.jl
-  .distsshkit/go/       result_path (allocate_output_dir)
-    SCRIPT_<UTC>_<id>/
-      kit.pid
-      kit.result
-  .distsshkit/ride/     same allocate
-    SCRIPT_<UTC>_<id>/
-  .distsshkit/drive/    same allocate; not demo output/
-    SCRIPT_<UTC>_<id>/
+  .distsshqueue/go/     after fetch
+    SCRIPT_807e3753/
 ```
 
 `enable` unit (same `julia --project=<queue-env> -m DistSSHQueue serve`):
@@ -253,7 +253,7 @@ and Kit dirs do not change.
 
 No Queue table. Kit default `~/parent/Repo.jl` from that clone (do not
 pin `DISTRIBUTED_REMOTE_PROJECT_ROOT` in shared queue config). Collect
-lands on the queue host `.distsshkit/` dir above.
+lands on the queue host `~/.distsshqueue/{kind}/` dir above.
 
 ```text
 <remote project root>/
