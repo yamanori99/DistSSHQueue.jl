@@ -689,12 +689,25 @@ end
                 @test rows[end].kind === :ride
                 @test DistSSHQueue.execute_kwargs(rows[end]).spi_check === false
                 code_w, _, _ = capture_stdio() do
-                    DistSSHQueue.main(["submit", "drive", "--workers", "4", "child:host1", "drv.jl"])
+                    DistSSHQueue.main(["submit", "drive", "--workers", "4", "child:host1:1", "drv.jl"])
                 end
                 @test code_w == 0
                 rows = DistSSHQueue.read_jobs(p)
-                @test rows[end].hosts == ["child:host1"]
+                want = DistSSHKit.host_tokens(
+                    DistSSHKit.parse_drive_args(["--workers", "4", "child:host1:1", "drv.jl"]);
+                    kind=:drive,
+                )
+                @test rows[end].hosts == want
                 @test rows[end].kwargs["workers"] == 4
+                n_hosts = length(rows)
+                code_bare, _, err_bare = capture_stdio() do
+                    DistSSHQueue.main(["submit", "drive", "--workers", "4", "child:host1", "drv.jl"])
+                end
+                if pkgversion(DistSSHKit) >= v"0.7"
+                    @test code_bare == 1
+                    @test occursin("needs :N", err_bare)
+                    @test length(DistSSHQueue.read_jobs(p)) == n_hosts
+                end
                 code_hf, _, _ = capture_stdio() do
                     DistSSHQueue.main(["go", "--hosts", "child:w:2", "job.jl"])
                 end
