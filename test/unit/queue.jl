@@ -699,6 +699,13 @@ end
                 )
                 @test rows[end].hosts == want
                 @test rows[end].kwargs["workers"] == 4
+                n_hosts = length(rows)
+                code_bare, _, err_bare = capture_stdio() do
+                    DistSSHQueue.main(["submit", "drive", "--workers", "4", "child:host1", "drv.jl"])
+                end
+                @test code_bare == 1
+                @test occursin("needs :N", err_bare)
+                @test length(DistSSHQueue.read_jobs(p)) == n_hosts
                 code_hf, _, _ = capture_stdio() do
                     DistSSHQueue.main(["go", "--hosts", "child:w:2", "job.jl"])
                 end
