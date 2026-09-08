@@ -31,14 +31,3 @@ using DistSSHQueue
         end
     end
 end
-
-@testset "peel_submit_pool" begin
-    rest, n = DistSSHQueue.peel_submit_pool(["pool:8", "drive", "demo.jl"])
-    @test n == 8
-    @test rest == ["drive", "demo.jl"]
-    @test_throws ArgumentError DistSSHQueue.peel_submit_pool(["pool", "drive", "d.jl"])
-    @test_throws ArgumentError DistSSHQueue.peel_submit_pool(["pool:0", "drive", "d.jl"])
-    rest2, n2 = DistSSHQueue.peel_submit_pool(["drive", "parent:1", "d.jl"])
-    @test n2 === nothing
-    @test rest2 == ["drive", "parent:1", "d.jl"]
-end

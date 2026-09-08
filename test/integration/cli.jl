@@ -58,7 +58,6 @@ function cli_env(d::AbstractString)
         "DISTSSHKIT_YES" => "1",
         DistSSHQueue.NO_STAGE_ENV => "1",
         DistSSHQueue.LOCAL_QUEUE_ENV => "1",
-        DistSSHQueue.NO_KIT_SETUP_ENV => "1",
     )
     withenv(env..., "DISTSSHQUEUE_NO_AUTOSERVE" => "1") do
         DistSSHQueue.main(["setup", "--config", cfg]) == 0 || error("setup failed")
