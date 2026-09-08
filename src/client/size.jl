@@ -36,12 +36,7 @@ function print_queue_size_submit(include_parent::Bool, hosts::Vector{String}, pl
         n = get(plan.child_workers, h, 0)
         n > 0 && push!(parts, "child:$h:$n")
     end
-    println("Queue submit:")
-    if isempty(parts)
-        println("  julia --project=. -m DistSSHQueue submit drive SCRIPT.jl")
-    else
-        println("  julia --project=. -m DistSSHQueue submit drive ", join(parts, " "), " SCRIPT.jl")
-    end
+    print_inspect_submit_template("drive", parts)
     return nothing
 end
 

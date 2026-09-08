@@ -22,12 +22,7 @@ function print_queue_pool_submit(pool, allow::Union{Nothing, HostAllow}=nothing)
         name = role === :parent ? DistSSHKit.PARENT_HOST_NAME : String(row.host)
         push!(parts, DistSSHKit.format_placement_token(role, name, slots))
     end
-    println("Queue submit:")
-    if isempty(parts)
-        println("  julia --project=. -m DistSSHQueue submit drive SCRIPT.jl")
-    else
-        println("  julia --project=. -m DistSSHQueue submit drive ", join(parts, " "), " SCRIPT.jl")
-    end
+    print_inspect_submit_template("drive", parts)
     return nothing
 end
 
@@ -82,6 +77,11 @@ function pool_cli(args::Vector{String})::Cint
         parent_gb=opts.parent_gb,
     )
     DistSSHKit.print_pool(result)
+    print_pool_inventory_notes!(;
+        gb_per_worker=opts.gb_per_worker,
+        mem_headroom=opts.mem_headroom,
+        parent_gb=opts.parent_gb,
+    )
     any(row -> row.ok && clamp_pool_slots(row.slots, allow, row.host) > 0, result.hosts) &&
         print_queue_pool_submit(result, allow)
     return result.ok ? 0 : 1
