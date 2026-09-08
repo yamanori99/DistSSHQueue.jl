@@ -16,9 +16,7 @@ function drop_nothing(d::Dict{String,Any})
 end
 
 function submit_hosts(parsed; kind::Symbol)::Vector{String}
-    out = DistSSHKit.host_tokens(parsed; kind=kind)
-    isempty(out) && return String["parent"]
-    return out
+    return DistSSHKit.host_tokens(parsed; kind=kind)
 end
 
 function submit_kit_bag(parsed; kind::Symbol)::Dict{String,Any}
