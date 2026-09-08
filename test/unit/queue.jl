@@ -973,7 +973,7 @@ end
                 end
                 @test code_p == 0
                 @test occursin("suggest:", out_p)
-                @test occursin("Queue submit:", out_p)
+                @test occursin("Suggested submit (template):", out_p)
                 @test occursin("submit go", out_p) || occursin("submit ride", out_p) ||
                     occursin("submit drive", out_p)
                 @test !isfile(p)
@@ -1003,6 +1003,33 @@ end
     end
 end
 
+@testset "inspect CLI chrome" begin
+    _, out, _ = capture_stdio() do
+        DistSSHQueue.print_inspect_submit_template("drive", String["parent:2", "child:host1:4"])
+    end
+    @test occursin("Suggested submit (template):", out)
+    @test occursin("submit drive parent:2 child:host1:4 SCRIPT.jl", out)
+
+    line = DistSSHQueue.pool_sizing_assumption_line(;
+        gb_per_worker=nothing,
+        mem_headroom=DistSSHKit.DEFAULT_MEM_HEADROOM,
+        parent_gb=DistSSHKit.DEFAULT_PARENT_GB,
+    )
+    @test occursin("1.5 GB/worker", line)
+    @test occursin("no RSS; use size to measure", line)
+
+    _, notes, _ = capture_stdio() do
+        DistSSHQueue.print_pool_inventory_notes!(;
+            gb_per_worker=2.0,
+            mem_headroom=0.75,
+            parent_gb=0.4,
+        )
+    end
+    @test occursin("2.0 GB/worker", notes)
+    @test occursin("parent is this queue host", notes)
+    @test occursin("not free queue capacity", notes)
+end
+
 @testset "pool submit template respects Queue host caps" begin
     pool = DistSSHKit.ResourcePool(
         true,
@@ -1018,6 +1045,7 @@ end
     _, out, _ = capture_stdio() do
         DistSSHQueue.print_queue_pool_submit(pool, allow)
     end
+    @test occursin("Suggested submit (template):", out)
     @test occursin("parent:2", out)
     @test occursin("child:host1:4", out)
     @test !occursin("parent:8", out)

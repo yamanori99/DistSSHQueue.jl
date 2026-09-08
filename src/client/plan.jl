@@ -10,12 +10,7 @@ function print_queue_plan_submit(kp)
     if slots !== nothing
         append!(parts, DistSSHKit.resolved_placement_tokens(slots))
     end
-    println("Queue submit:")
-    if isempty(parts)
-        println("  julia --project=. -m DistSSHQueue submit $kind SCRIPT.jl")
-    else
-        println("  julia --project=. -m DistSSHQueue submit $kind ", join(parts, " "), " SCRIPT.jl")
-    end
+    print_inspect_submit_template(kind, parts)
     return nothing
 end
 

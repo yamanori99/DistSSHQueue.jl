@@ -81,7 +81,8 @@ Kit flags:
 
 DistSSHKit `pool` on the queue host (cwd / project). Cores / RAM / slot
 hint (no RSS). Omit tokens to pool config `hosts`. Does not enqueue.
-Prints a `submit drive` template.
+Prints sizing notes and a `Suggested submit (template):` footer (always
+`submit drive`; use `size` to measure RSS).
 
 ```bash
 julia -m DistSSHQueue qhost:mini pool

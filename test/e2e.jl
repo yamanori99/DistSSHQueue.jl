@@ -580,7 +580,7 @@ end
                     @test run_cli(addenv(qcmd(["disable", "--write-only"]), env...)).exitcode == 0
                     @test !isfile(unit)
 
-                    # Glue only: header + Queue submit footer. Table layout is Kit E2E.
+                    # Glue only: header + submit template footer. Table layout is Kit E2E.
                     size_env = merge(env, Dict("DISTSSHKIT_QUIET" => "0"))
                     inspect_hosts = ["parent", "child:$(HOSTS[1])"]
                     size_out = read_cli(addenv(
@@ -588,12 +588,12 @@ end
                         size_env...,
                     ))
                     @test occursin("DistSSHQueue size", size_out)
-                    @test occursin("Queue submit:", size_out)
+                    @test occursin("Suggested submit (template):", size_out)
                     @test occursin("child:$(HOSTS[1]):", size_out)
 
                     plan_out = read_cli(addenv(qcmd(["plan", inspect_hosts..., script]), size_env...))
                     @test occursin("DistSSHQueue plan", plan_out)
-                    @test occursin("Queue submit:", plan_out)
+                    @test occursin("Suggested submit (template):", plan_out)
                     @test occursin("submit go", plan_out) || occursin("submit ride", plan_out) ||
                         occursin("submit drive", plan_out)
                     @test occursin("child:$(HOSTS[1]):", plan_out)
@@ -603,7 +603,8 @@ end
                         size_env...,
                     ))
                     @test occursin("DistSSHQueue pool", pool_out)
-                    @test occursin("Queue submit:", pool_out)
+                    @test occursin("Suggested submit (template):", pool_out)
+                    @test occursin("no RSS; use size to measure", pool_out)
                     @test occursin("child:$(HOSTS[1]):", pool_out)
                     @test !isfile(store)
 

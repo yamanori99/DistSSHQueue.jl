@@ -5,6 +5,10 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
+- Inspect verbs (`size` / `plan` / `pool`) print `Suggested submit (template):`
+  instead of `Queue submit:`. `pool` adds notes that counts are sizing hints
+  (default GB/worker, no RSS) and that `parent` is the queue host token.
+
 ## 0.4.0
 
 Breaking cut after `0.3.2`. DistSSHKit **0.6.x**.
