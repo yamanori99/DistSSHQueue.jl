@@ -322,16 +322,19 @@ run_kit(j::Job) = run_kit(j, Returns(nothing))
 const NO_KIT_SETUP_ENV = "DISTSSHQUEUE_NO_KIT_SETUP"
 
 function _set_job_phase!(q::Queue, id::AbstractString, ph)
-    lock(q.lock) do
-        i = _index_id(q.jobs, id)
-        i === nothing && return nothing
-        if ph === nothing
-            delete!(q.jobs[i].kwargs, "phase")
-        else
-            q.jobs[i].kwargs["phase"] = String(ph)
+    _with_store(q) do
+        lock(q.lock) do
+            reload_keep_live!(q)
+            i = _index_id(q.jobs, id)
+            i === nothing && return nothing
+            if ph === nothing
+                delete!(q.jobs[i].kwargs, "phase")
+            else
+                q.jobs[i].kwargs["phase"] = String(ph)
+            end
+            _persist!(q)
+            return nothing
         end
-        _persist!(q)
-        return nothing
     end
     return nothing
 end

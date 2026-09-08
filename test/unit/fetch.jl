@@ -25,7 +25,7 @@ end
     rel = DistSSHQueue.fetch_relpath(root * "/go/demo_807e3753", root)
     @test rel == "go/demo_807e3753"
     @test_throws ArgumentError DistSSHQueue.fetch_relpath("/tmp/other", root)
-    stray = "/tmp/go/demo_807e3753"
+    stray = "/tmp/output/demo_807e3753"
     @test !DistSSHQueue.path_has_queue_leaf(stray)
     @test_throws ArgumentError DistSSHQueue.require_fetchable_leaf(
         "807e3753-0000-4000-8000-000000000001", stray,
