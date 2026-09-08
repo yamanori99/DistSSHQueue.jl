@@ -17,6 +17,7 @@ until a laptop uses `qhost:` (that hop defaults to
 ```bash
 julia -m DistSSHQueue setup
 julia -m DistSSHQueue add-host parent child:host1
+julia -m DistSSHQueue size
 julia -m DistSSHQueue serve
 ```
 

@@ -69,16 +69,16 @@ Kit を `Pkg.develop` しない。
        |    qhost:NAME                    serve    now, this terminal
        |    submit | status | list-host   enable   again after reboot
        |    watch | cancel | fetch | ...
-       +--------------------------------> then DistSSHKit go/drive
+       +--------------------------------> then DistSSHKit go/ride/drive
                                           -> workers (Kit tokens)
 ```
 
 `qhost:NAME` はキューホストの SSH 名である (Kit の `child:NAME` と同じ形だが、
 ワーカーではなくキューホストを指す)。既にそのマシンにログインしていれば省略する。
 キューホストが 1 つのとき: `export DISTSSHQUEUE_HOST=…` して `qhost:` を省略できる
-(トークンがあればそちらが勝つ)。`--hosts` / `--julia` は Kit の `go` / `drive` のまま。
+(トークンがあればそちらが勝つ)。`--hosts` / `--julia` は Kit の `go` / `ride` / `drive` のまま。
 
-配置トークン、`go` / `drive` のフラグ、リモートの準備は DistSSHKit の範囲である。
+配置トークン、`go` / `ride` / `drive` のフラグ、リモートの準備は DistSSHKit の範囲である。
 [kit docs](https://yamanori99.github.io/DistSSHKit.jl/stable/) を参照。
 
 ### ファイルの置き場
@@ -99,6 +99,7 @@ worker へコピーする。`fetch` は終わった Kit leaf を戻す。
   SCRIPT.jl             qhost: submit で rsync
   .distsshkit/queue/<id>  qhost: submit のあと
   .distsshkit/go/       fetch のあと
+  .distsshkit/ride/     fetch のあと
   .distsshkit/drive/    fetch のあと (demo の output/ ではない)
 ```
 
@@ -128,6 +129,8 @@ worker へコピーする。`fetch` は終わった Kit leaf を戻す。
     SCRIPT_<UTC>_<id>/  result_path
       kit.pid
       kit.result
+  .distsshkit/ride/
+    SCRIPT_<UTC>_<id>/  同じ allocate
   .distsshkit/drive/
     SCRIPT_<UTC>_<id>/  同じ allocate。demo の output/ ではない
 ```
@@ -157,6 +160,9 @@ remote ではない)。収集先は上のキューホスト `.distsshkit/`。
 
 ```bash
 julia --project=. -m DistSSHQueue qhost:mini list-host
+julia --project=. -m DistSSHQueue qhost:mini size
+julia --project=. -m DistSSHQueue qhost:mini plan SCRIPT.jl
+julia --project=. -m DistSSHQueue qhost:mini pool
 julia --project=. -m DistSSHQueue qhost:mini submit go child:host1:4 SCRIPT.jl
 julia --project=. -m DistSSHQueue qhost:mini status
 julia --project=. -m DistSSHQueue qhost:mini watch

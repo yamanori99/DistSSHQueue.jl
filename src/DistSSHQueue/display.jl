@@ -146,6 +146,7 @@ function print_queue_usage(io::IO=stdout)
     DistSSHKit.print_help_lines(io,
         "  julia --project=. -m DistSSHQueue setup",
         "  julia --project=. -m DistSSHQueue qhost:HOST status",
+        "  julia --project=. -m DistSSHQueue qhost:HOST plan SCRIPT.jl",
         "  julia --project=. -m DistSSHQueue qhost:HOST go parent SCRIPT.jl",
     )
     DistSSHKit.print_help_blank(io)

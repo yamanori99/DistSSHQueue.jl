@@ -147,7 +147,7 @@ julia -m DistSSHKit setup --check child:USER@HOST
 ### Align Julia with juliaup
 
 Queue has no `--juliaup` verb. Use DistSSHKit `setup --juliaup` (Kit
-0.6: same `child:NAME` / `parent` tokens as go / drive). That changes
+0.6: same `child:NAME` / `parent` tokens as go / ride / drive). That changes
 each target's **juliaup default** only — it does not change a Julia
 process that is already running.
 
@@ -206,6 +206,8 @@ CLI.
   SCRIPT.jl             rsync'd on qhost submit
   .distsshkit/queue/<id>  after qhost: submit (fetch later)
   .distsshkit/go/       after fetch (same relpath as the stage leaf)
+  .distsshkit/ride/     after fetch
+  .distsshkit/drive/    after fetch
 ```
 
 ### Queue-host tree
@@ -233,6 +235,8 @@ unit; skip that file if you only `serve` in a terminal.
     SCRIPT_<UTC>_<id>/
       kit.pid
       kit.result
+  .distsshkit/ride/     same allocate
+    SCRIPT_<UTC>_<id>/
   .distsshkit/drive/    same allocate; not demo output/
     SCRIPT_<UTC>_<id>/
 ```
