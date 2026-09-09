@@ -19,10 +19,24 @@ julia -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
 julia --project=. -m DistSSHQueue [qhost:HOST] submit drive parent:4 SCRIPT.jl
 ```
 
+A long line in the terminal is still one command. Break after `submit` with `\`:
+
+```bash
+julia --project=. -m DistSSHQueue [qhost:HOST] submit \
+    drive parent:4 child:NAME:N SCRIPT.jl
+```
+
 The DistSSHKit argv runs as-is without Queue:
 
 ```bash
 julia --project=. -m DistSSHKit drive parent:4 SCRIPT.jl
+```
+
+Same wrap:
+
+```bash
+julia --project=. -m DistSSHKit \
+    drive parent:4 child:NAME:N SCRIPT.jl
 ```
 
 That starts compute on **this** machine, now. `submit` only enqueues the

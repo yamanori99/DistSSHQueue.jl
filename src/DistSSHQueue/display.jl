@@ -307,6 +307,8 @@ function print_queue_usage(io::IO=stdout)
         "  julia --project=. -m DistSSHQueue qhost:HOST status",
         "  julia --project=. -m DistSSHQueue qhost:HOST plan SCRIPT.jl",
         "  julia --project=. -m DistSSHQueue qhost:HOST submit drive parent:4 SCRIPT.jl",
+        "  julia --project=. -m DistSSHQueue qhost:HOST submit \\",
+        "      drive parent:4 child:NAME:N SCRIPT.jl",
     )
     DistSSHKit.print_help_blank(io)
     println(io, "Run `julia -m DistSSHQueue <command> -h` for flags.")
