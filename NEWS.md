@@ -3,6 +3,9 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
+- `qhost:` stage is `~/.distsshqueue/stage/<uuid>/` (the job id). A
+  second submit from the same laptop tree does not `rsync --delete`
+  the running copy.
 - Job `Pkg.instantiate` skips a `DEPOT_PATH` entry that is a Julia
   project (queue-env). Empty `JULIA_DEPOT_PATH` uses `~/.julia`, not
   the serve `--project=`.

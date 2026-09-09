@@ -87,7 +87,7 @@ see the [kit docs](https://yamanori99.github.io/DistSSHKit.jl/stable/).
 `qhost:` is the SSH name of the queue host, not a storage prefix. The
 table and Kit result dirs stay **on that box**. The client has no
 `~/.distsshqueue`. `qhost:` submit rsyncs the client job tree to
-`~/.distsshqueue/stage/<id>` (same excludes as Kit rsync: `.gitignore`,
+`~/.distsshqueue/stage/<uuid>` (same excludes as Kit rsync: `.gitignore`,
 `.git/`, `.distsshkit/`, `.distsshqueue/`); the client keeps
 `.distsshqueue/tickets/<uuid>` (every submit). Kit still copies queue
 host → workers. `fetch` copies one finished Kit leaf back.
@@ -108,7 +108,7 @@ host → workers. `fetch` copies one finished Kit leaf back.
 #### Queue host
 
 `~/.distsshqueue` plus **one Kit tree per job** (`qhost:`:
-`stage/<id>/`, or omit `qhost:`: unique `~/org/Repo.jl`). Not `--queue-env`.
+`stage/<uuid>/`, or omit `qhost:`: unique `~/org/Repo.jl`). Not `--queue-env`.
 Do
 not set `DISTRIBUTED_REMOTE_PROJECT_ROOT` in shared `config.toml`.
 `submit` errors if a second project would land on the same worker path.
@@ -123,7 +123,7 @@ not set `DISTRIBUTED_REMOTE_PROJECT_ROOT` in shared `config.toml`.
   env/                  qhost: default --project=; enable if present
     Project.toml
     Manifest.toml
-  stage/<id>/           client tree after qhost: submit
+  stage/<uuid>/         client tree after each qhost: submit
 
 ~/org/Repo.jl/          omit qhost: (cwd / DISTRIBUTED_PROJECT_ROOT)
   Project.toml          compute deps

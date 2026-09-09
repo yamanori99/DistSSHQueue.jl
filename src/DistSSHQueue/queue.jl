@@ -572,7 +572,12 @@ function _submit!(q::Queue, kind::Symbol, script::AbstractString, hosts; kwargs.
             end
             reload_keep_live!(q)
             reject_worker_root_collision!(q.jobs, String(kw["project"]), kw)
-            j = Job(; kind=kind, script=script_path, hosts=toks, kwargs=kw)
+            raw_id = pop!(kw, "id", nothing)
+            j = if raw_id === nothing
+                Job(; kind=kind, script=script_path, hosts=toks, kwargs=kw)
+            else
+                Job(; id=String(raw_id), kind=kind, script=script_path, hosts=toks, kwargs=kw)
+            end
             push!(q.jobs, j)
             _persist!(q)
             return j.id

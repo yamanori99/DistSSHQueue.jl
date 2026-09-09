@@ -24,8 +24,9 @@ using DistSSHQueue
         @test got[5] == remote * "/S.jl"
         @test DistSSHQueue.rewrite_one_path("parent:1", proj, remote) == "parent:1"
         @test DistSSHQueue.remote_stage_root("abc") == remote
-        k = DistSSHQueue.client_stage_key(proj)
-        @test DistSSHQueue.client_stage_key(proj) == k
+        k = DistSSHQueue.new_job_id()
+        @test DistSSHQueue.new_job_id() != k
+        @test occursin(r"^[0-9a-fA-F-]{36}$", k)
         @test DistSSHQueue.remote_stage_root(k; home="/qh") == "/qh/.distsshqueue/stage/" * k
     end
     @test DistSSHQueue.should_stage("status", ["--interval", "1"]) == false

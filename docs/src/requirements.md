@@ -179,7 +179,7 @@ Details: [kit Requirements](https://yamanori99.github.io/DistSSHKit.jl/stable/re
 Typical paths. `qhost:` is the SSH name of the queue host, not a
 storage prefix. The table and Kit result dirs accumulate **on that
 box**. `qhost:` submit rsyncs the client job tree to
-`~/.distsshqueue/stage/<id>`. Kit still copies that tree to workers.
+`~/.distsshqueue/stage/<uuid>`. Kit still copies that tree to workers.
 `teardown` removes `~/.distsshqueue` (including `stage/`), not a git
 clone or `.distsshkit/`.
 
@@ -225,7 +225,7 @@ unit; skip that file if you only `serve` in a terminal.
   env/                  qhost: default --project=; enable if present
     Project.toml
     Manifest.toml
-  stage/<id>/           client tree after qhost: submit
+  stage/<uuid>/         client tree after each qhost: submit
   go/                   Kit leaf `{stem}_{id8}/`
     SCRIPT_807e3753/
       kit.pid

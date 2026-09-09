@@ -86,7 +86,7 @@ Kit を `Pkg.develop` しない。
 `qhost:` はキューホストの SSH 名であり、保存先の接頭辞ではない。表と Kit の
 結果ディレクトリは **そのマシン** に残る。クライアントに
 `~/.distsshqueue` は無い。`qhost:` submit はクライアントのジョブ木を
-`~/.distsshqueue/stage/<id>` へ rsync する (Kit と同じ: `.gitignore`、
+`~/.distsshqueue/stage/<uuid>` へ rsync する (Kit と同じ: `.gitignore`、
 `.git/`、`.distsshkit/`、`.distsshqueue/`)。
 クライアントには `.distsshqueue/tickets/<uuid>` が残る (submitのたびに増え、消さない)。Kit はキューホストから
 worker へコピーする。`fetch` は終わった Kit leaf を戻す。
@@ -107,7 +107,7 @@ worker へコピーする。`fetch` は終わった Kit leaf を戻す。
 #### キューホスト
 
 `~/.distsshqueue` と **ジョブごとに一つの Kit 木** (`qhost:` なら
-`stage/<id>/`、省略なら `~/org/Repo.jl`)。`--queue-env` とは別。
+`stage/<uuid>/`、省略なら `~/org/Repo.jl`)。`--queue-env` とは別。
 共有 `config.toml` に `DISTRIBUTED_REMOTE_PROJECT_ROOT` は書かない。
 二本目のプロジェクトが同じ worker パスなら `submit` はエラー。
 
@@ -121,7 +121,7 @@ worker へコピーする。`fetch` は終わった Kit leaf を戻す。
   env/                  qhost: 既定 --project=。enable はあれば使う
     Project.toml
     Manifest.toml
-  stage/<id>/           qhost: submit 後のクライアント木
+  stage/<uuid>/         qhost: submit のたび (ジョブ id)
 
 ~/org/Repo.jl/          qhost: 省略 (cwd / DISTRIBUTED_PROJECT_ROOT)
   Project.toml          計算の依存

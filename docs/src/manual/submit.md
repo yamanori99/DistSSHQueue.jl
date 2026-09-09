@@ -26,7 +26,7 @@ re-reads config `hosts`. Library [`submit!`](@ref) uses
 `Queue(; allowed=…)` unless `follow_config=true`.
 
 With `qhost:`, the client **rsync**s the job project (`cwd` /
-`DISTRIBUTED_PROJECT_ROOT`) to `~/.distsshqueue/stage/<id>` on the
+`DISTRIBUTED_PROJECT_ROOT`) to `~/.distsshqueue/stage/<uuid>` on the
 queue host (Kit rsync excludes: `.gitignore`, `.git/`, `.distsshkit/`,
 `.distsshqueue/`), then enqueue resolves
 `SCRIPT.jl` there. The client keeps `.distsshqueue/tickets/<uuid>`

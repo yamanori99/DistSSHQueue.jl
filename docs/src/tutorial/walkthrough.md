@@ -41,7 +41,7 @@ julia --project=. -m DistSSHKit demo install without_kit
 julia --project=. -m DistSSHQueue qhost:mini go parent:1 distsshkit_demos/without_kit/pi_echo.jl
 ```
 
-`qhost:` rsyncs this tree to `~/.distsshqueue/stage/<key>` on `mini`
+`qhost:` rsyncs this tree to `~/.distsshqueue/stage/<uuid>` on `mini`
 (excludes `.gitignore`, `.git/`, `.distsshkit/`, `.distsshqueue/`). Stdout is the job UUID. This laptop has
 `.distsshqueue/tickets/<uuid>` only; the Kit leaf is not here yet.
 

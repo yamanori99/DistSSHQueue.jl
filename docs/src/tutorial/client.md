@@ -13,7 +13,7 @@ That `--project=.` stays on the **client**. `qhost:` defaults to
 `--project=~/.distsshqueue/env` on the queue host (`--queue-env DIR` /
 `--queue-env @`). Create that dir if clients hop (see Prepare).
 `qhost:` **rsync**s the client job tree (`cwd` /
-`DISTRIBUTED_PROJECT_ROOT`) to `~/.distsshqueue/stage/<id>` on the
+`DISTRIBUTED_PROJECT_ROOT`) to `~/.distsshqueue/stage/<uuid>` on the
 queue host (Kit rsync excludes: `.gitignore`, `.git/`, `.distsshkit/`,
 `.distsshqueue/`). After submit, this job tree has
 `.distsshqueue/tickets/<uuid>` (not the Kit leaf; every submit stays).

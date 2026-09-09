@@ -99,7 +99,12 @@ end
 function submit_cli(store::AbstractString, kind::Symbol, script::AbstractString, hosts, kw::Dict{String,Any})
     q = Queue(; store=store, follow_config=true)
     nt = isempty(kw) ? NamedTuple() : (; (Symbol(k) => v for (k, v) in kw)...)
-    id = submit!(q, String(script), String[String(x) for x in hosts]; kind=kind, nt...)
+    forced = strip(get(ENV, JOB_ID_ENV, ""))
+    id = if isempty(forced)
+        submit!(q, String(script), String[String(x) for x in hosts]; kind=kind, nt...)
+    else
+        submit!(q, String(script), String[String(x) for x in hosts]; kind=kind, id=forced, nt...)
+    end
     println(id)
     if !_kit_env_on("DISTSSHKIT_QUIET")
         println(stderr, "queue: local ($(gethostname()))")
