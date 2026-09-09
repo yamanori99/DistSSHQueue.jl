@@ -171,7 +171,7 @@ function submit_kind(kind::Symbol, args::Vector{String}; pool_slots::Union{Nothi
     if parsed.help
         DistSSHKit.print_help_section("Queue"; io=stdout)
         DistSSHKit.print_help_lines(stdout,
-            "  `submit $(kind)` enqueues. `qhost:HOST` is the hop (SSH), not a Kit slot.",
+            "  `submit $(kind)` enqueues. `qhost:HOST` is the SSH name of the queue machine, not a Kit slot.",
         )
         DistSSHKit.print_help_blank(stdout)
         DistSSHKit.print_help_section("DistSSHKit"; io=stdout)

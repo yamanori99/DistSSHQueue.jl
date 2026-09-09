@@ -296,7 +296,7 @@ function print_queue_usage(io::IO=stdout)
     DistSSHKit.print_help_section("DistSSHKit"; io=io)
     DistSSHKit.print_help_lines(io,
         "  After `submit`: same argv as DistSSHKit (`drive parent:4 child:NAME:N SCRIPT.jl`).",
-        "  `qhost:HOST` is the hop (SSH). Not a Kit slot (`parent:4`, not `qhost:4`).",
+        "  `qhost:HOST` is the SSH name of the queue machine, not a Kit slot (`parent:4`, not `qhost:4`).",
         "  A leading `go` / `ride` / `drive` is DistSSHKit, not enqueue.",
     )
     DistSSHKit.print_help_blank(io)

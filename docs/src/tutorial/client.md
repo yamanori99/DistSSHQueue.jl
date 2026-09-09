@@ -38,6 +38,13 @@ One queue host: still pass `qhost:HOST` (or `status qhost:HOST`).
 
 ## Submit
 
+One line, nested the same way as [User Guide · submit](@ref Manual-submit):
+
+```text
+julia -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
+└── Julia ──┘  └── queue host ──┘  └Queue┘  └──────── DistSSHKit argv ────────┘
+```
+
 Kit argv is DistSSHKit's (`go child:NAME:N SCRIPT.jl`, or `parent:N`
 when workers are on the queue host). Flags:
 [kit go](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/go/),

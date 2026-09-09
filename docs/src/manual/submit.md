@@ -5,6 +5,16 @@ running. That `serve` instantiates the job project on the queue host
 and runs Kit `setup!` on `child:` hosts before `execute!` (not a
 hand-run DistSSHKit `setup` on the stage tree).
 
+One argv, four nested pieces. `qhost:HOST` is the SSH name of the
+always-on queue machine (omit it when you are already logged in there).
+`submit` is Queue. Everything after that is DistSSHKit, same as
+`julia -m DistSSHKit drive parent:4 SCRIPT.jl`.
+
+```text
+julia -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
+└── Julia ──┘  └── queue host ──┘  └Queue┘  └──────── DistSSHKit argv ────────┘
+```
+
 ```bash
 julia --project=. -m DistSSHQueue [qhost:HOST] submit go [Kit go argv]
 julia --project=. -m DistSSHQueue [qhost:HOST] submit pool:8 drive SCRIPT.jl
@@ -33,7 +43,7 @@ queue host (Kit rsync excludes: `.gitignore`, `.git/`, `.distsshkit/`,
 (every `qhost:` submit from this tree; not the Kit leaf). [`fetch`](@ref Manual-fetch) copies one finished
 Kit leaf back onto that same tree. Omit `qhost:`:
 the script is checked on this machine. Job id prints as a bare stdout line. CLI `submit` also prints
-`queue: local (HOSTNAME)` (or `queue: qhost:HOST` after a hop) then `Queued  N` on stderr (`(R running)` when a job is already running);
+`queue: local (HOSTNAME)` (or `queue: qhost:HOST` when you passed `qhost:`) then `Queued  N` on stderr (`(R running)` when a job is already running);
 `DISTSSHKIT_QUIET` hides that. Missing config `hosts` is allow-all; submit then prints `no add-host list; any child: is accepted`. `pool:N` (before or after the kind) sets
 the same `:N` on every config host (clamped by add-host max). Do not
 mix with `parent` / `child` tokens. Library [`submit!`](@ref) does not.

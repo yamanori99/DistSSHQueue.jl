@@ -7,9 +7,10 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
   child: is accepted`. Status `error` is the full first line (no
   60-character chop). Known Kit `--juliaup` / `parent` setup text is
   prefixed with Queue's `parent:N` vs `child:` rsync note. `qhost:4`
-  is not a Kit slot (`Use parent:4`). After a hop, submit chrome is
+  is not a Kit slot (`Use parent:4`). After `qhost:`, submit chrome is
   `queue: qhost:HOST`, not `queue: local`. Root `--help` lists Queue
   `Commands` then a `DistSSHKit` section (`submit drive parent:4 …`).
+  `qhost:HOST` is the SSH name of the queue machine, not a Kit slot.
 - After `teardown`, `status` (and other client verbs) without `qhost:`
   say `setup` first, or `qhost:HOST` if this is a laptop hop. Not
   “you forgot `qhost:`” on the box that just wiped `~/.distsshqueue`.

@@ -728,6 +728,8 @@ end
                 @test occursin("plan", help)
                 @test occursin("pool", help)
                 @test occursin("ride", help)
+                @test occursin("SSH name of the queue machine", help)
+                @test !occursin("the hop", help)
                 @test occursin("julia -m DistSSHQueue <command> -h", help)
                 code_sh, out_sh, _ = capture_stdio() do
                     DistSSHQueue.main(["submit", "go", "-h"])
