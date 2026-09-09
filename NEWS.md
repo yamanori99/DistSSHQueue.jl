@@ -7,7 +7,8 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 - `qhost:` submit rsync matches Kit `setup --rsync`: `.gitignore` plus
   `.git/` / `.distsshkit/` / `.distsshqueue/`. Ship Manifest (or
-  `data/`) by editing gitignore, not a Queue exception.
+  `data/`) by editing gitignore, not a Queue exception. Stage rsync
+  stdout stays off the job-id line.
 - Before `execute!`, `serve` `Pkg.instantiate`s the job project on the
   queue host (Kit parent). Kit `setup!` (`rsync` → `instantiate` →
   `check`) still runs on `child:` only. `instantiate` / `check` failure

@@ -208,6 +208,7 @@ function rsync_to_qhost!(
     run(
         pipeline(
             Cmd(vcat(rsync, stage_rsync_push_opts(transport), String[src * "/", dest]));
+            stdout=stderr,
             stderr=stderr,
         ),
     )
@@ -222,6 +223,7 @@ function rsync_to_qhost!(
                         String["-az", "-e", transport, p, string(host, ":", remote_root, "/", basename(p))],
                     ),
                 );
+                stdout=stderr,
                 stderr=stderr,
             ),
         )
