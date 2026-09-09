@@ -1,7 +1,8 @@
 """Read-only `list-host`: Kit names from config `hosts`, plus `ssh -G` connect fields.
 
 Prints host tokens (`parent` / `child:NAME`) for `submit`. Not Kit `--hosts`.
-JULIAUP is that host's `juliaup default` (`juliaup status` `*` row).
+JULIAUP is that host's `juliaup default` (`juliaup status` `*` row),
+or `-` if missing, SSH/`status` fails, or there is no `*` row.
 Does not print private keys or IdentityFile.
 """
 
@@ -78,7 +79,7 @@ function _juliaup_channel_from_status(out::AbstractString)::String
     return ch === nothing ? "-" : ch
 end
 
-"""`juliaup` default channel (`*`), or `-` if missing / unreachable."""
+"""`juliaup` default channel (`*`), or `-` if missing, SSH/`status` fails, or no `*`."""
 function _juliaup_default_disp(name::AbstractString)::String
     if DistSSHKit.is_parent_host_name(name)
         ju = DistSSHKit.find_local_juliaup()

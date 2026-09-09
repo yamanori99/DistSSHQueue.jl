@@ -162,7 +162,7 @@ const QHOST_LOCAL_VERBS = ("setup", "serve", "enable", "disable", "service", "ad
 
 const CLIENT_REMOTE_VERBS = (
     "status", "list-host", "size", "plan", "pool", "watch", "submit",
-    "go", "ride", "drive", "cancel", "fetch", "stop", "teardown",
+    "cancel", "fetch", "stop", "teardown",
 )
 
 const LOCAL_QUEUE_ENV = "DISTSSHQUEUE_LOCAL"

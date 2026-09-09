@@ -81,14 +81,12 @@ function staging_enabled()::Bool
     return true
 end
 
-"""`qhost:` `submit` / execute kinds (not help). Ticket even when staging is off."""
+"""`qhost:` `submit` (not help). Ticket even when staging is off."""
 function should_submit_ticket(sub::AbstractString, payload::Vector{String})::Bool
-    (sub == "submit" || is_kit_execute_kind(Symbol(sub))) || return false
+    sub == "submit" || return false
     any(a -> a in ("-h", "--help", "-v", "--version", "-V"), payload) && return false
-    if sub == "submit"
-        isempty(payload) && return false
-        payload[1] in ("-h", "--help") && return false
-    end
+    isempty(payload) && return false
+    payload[1] in ("-h", "--help") && return false
     return true
 end
 

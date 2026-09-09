@@ -710,24 +710,25 @@ end
                 @test !occursin(rows[1].id, listed)
                 @test occursin("queued", listed)
                 @test occursin("STATE", listed)
-                code_alias, _, _ = capture_stdio() do
+                code_alias, _, err_alias = capture_stdio() do
                     DistSSHQueue.main(["go", "parent:1", "alias.jl"])
                 end
-                @test code_alias == 0
+                @test code_alias == 1
+                @test occursin("Enqueue with submit", err_alias)
+                @test occursin("submit go", err_alias)
+                @test length(DistSSHQueue.read_jobs(p)) == 1
                 code_drv, _, _ = capture_stdio() do
                     DistSSHQueue.main(["submit", "drive", "parent:2", "drv.jl"])
                 end
                 @test code_drv == 0
                 rows = DistSSHQueue.read_jobs(p)
-                @test length(rows) == 3
-                @test rows[2].kind === :go
-                @test rows[2].script == DistSSHKit.canonical_local_path(joinpath(pwd(), "alias.jl"))
-                @test rows[3].kind === :drive
-                @test rows[3].script == DistSSHKit.canonical_local_path(joinpath(pwd(), "drv.jl"))
-                @test rows[3].hosts == ["parent:2"]
-                @test rows[3].kwargs["project"] == proj
+                @test length(rows) == 2
+                @test rows[2].kind === :drive
+                @test rows[2].script == DistSSHKit.canonical_local_path(joinpath(pwd(), "drv.jl"))
+                @test rows[2].hosts == ["parent:2"]
+                @test rows[2].kwargs["project"] == proj
                 code_ride, _, _ = capture_stdio() do
-                    DistSSHQueue.main(["ride", "--no-spi-check", "parent:1", "map.jl"])
+                    DistSSHQueue.main(["submit", "ride", "--no-spi-check", "parent:1", "map.jl"])
                 end
                 @test code_ride == 0
                 rows = DistSSHQueue.read_jobs(p)
@@ -753,11 +754,18 @@ end
                     @test occursin("needs :N", err_bare)
                     @test length(DistSSHQueue.read_jobs(p)) == n_hosts
                 end
-                code_hf, _, _ = capture_stdio() do
+                code_kitgo, _, err_kitgo = capture_stdio() do
                     DistSSHQueue.main(["go", "--hosts", "child:w:2", "job.jl"])
+                end
+                @test code_kitgo == 1
+                @test occursin("Enqueue with submit", err_kitgo)
+                n_before_hf = length(DistSSHQueue.read_jobs(p))
+                code_hf, _, _ = capture_stdio() do
+                    DistSSHQueue.main(["submit", "go", "--hosts", "child:w:2", "job.jl"])
                 end
                 @test code_hf == 0
                 rows = DistSSHQueue.read_jobs(p)
+                @test length(rows) == n_before_hf + 1
                 @test rows[end].hosts == ["child:w:2"]
                 code_sh, _, err_sh = capture_stdio() do
                     DistSSHQueue.main(["--hosts", "child:w:2", "job.jl"])
@@ -778,7 +786,7 @@ end
                 @test code_parent == 1
                 @test occursin("needs :N", err_parent)
                 @test length(DistSSHQueue.read_jobs(p)) == n_jl
-                cid = rows[2].id
+                cid = DistSSHQueue.read_jobs(p)[2].id
                 code_c, out_c, _ = capture_stdio() do
                     DistSSHQueue.main(["cancel", cid])
                 end

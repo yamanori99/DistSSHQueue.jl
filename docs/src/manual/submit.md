@@ -9,8 +9,9 @@ julia --project=. -m DistSSHQueue [qhost:HOST] submit go [Kit go argv]
 julia --project=. -m DistSSHQueue [qhost:HOST] submit pool:8 drive SCRIPT.jl
 ```
 
-Bare `go` / `ride` / `drive` alias `submit` of that kind. A `.jl` with no
-Queue verb is not implicit `go` (same as Kit). `ride` is experimental.
+A `.jl` with no Queue verb is not implicit `go` (same as Kit). Top-level
+`go` / `ride` / `drive` are DistSSHKit; enqueue with `submit`. `ride` is
+experimental.
 
 Also: [First job](@ref Tutorial-Client), [Walkthrough](@ref Tutorial-Walkthrough),
 [hosts](@ref Manual-hosts),
