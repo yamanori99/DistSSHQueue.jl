@@ -75,9 +75,11 @@ For everything else, see the
 ```
 
 `qhost:NAME` is the SSH name of the queue host (same idea as Kit
-`child:NAME`, but it names the queue host, not a worker). Already logged in
-there? Omit it. One queue host: `export DISTSSHQUEUE_HOST=…` and omit `qhost:`
-(the token still wins). `--hosts` / `--julia` stay on Kit `go` / `ride` / `drive`.
+`child:NAME`, but it names the queue host, not a worker). From a laptop,
+put `qhost:HOST` on the command line. `DISTSSHQUEUE_HOST` alone does not
+hop. Already logged in on the queue host? Omit `qhost:` (this box's cwd
+is the Kit tree; placement is still `parent` / `child:`). Local trial:
+`DISTSSHQUEUE_LOCAL=1`. `--hosts` / `--julia` stay on Kit `go` / `ride` / `drive`.
 
 Placement tokens, `go` / `ride` / `drive` flags, and remote setup are DistSSHKit's —
 see the [kit docs](https://yamanori99.github.io/DistSSHKit.jl/stable/).
@@ -107,11 +109,12 @@ host → workers. `fetch` copies one finished Kit leaf back.
 
 #### Queue host
 
-`~/.distsshqueue` plus **one Kit tree per job** (`qhost:`:
-`stage/<uuid>/`, or omit `qhost:`: unique `~/org/Repo.jl`). Not `--queue-env`.
-Do
-not set `DISTRIBUTED_REMOTE_PROJECT_ROOT` in shared `config.toml`.
-`submit` errors if a second project would land on the same worker path.
+`~/.distsshqueue` plus **one Kit tree per job**. Client `qhost:` submit:
+`stage/<uuid>/`. Logged in on the queue host (no `qhost:`): this box's
+cwd / `DISTRIBUTED_PROJECT_ROOT` (example `~/org/Repo.jl`, not a reserved
+path). Not `--queue-env`. Do not set `DISTRIBUTED_REMOTE_PROJECT_ROOT` in
+shared `config.toml`. `submit` errors if a second project would land on
+the same worker path.
 
 ```text
 ~/.distsshqueue/
@@ -125,7 +128,7 @@ not set `DISTRIBUTED_REMOTE_PROJECT_ROOT` in shared `config.toml`.
     Manifest.toml
   stage/<uuid>/         client tree after each qhost: submit
 
-~/org/Repo.jl/          omit qhost: (cwd / DISTRIBUTED_PROJECT_ROOT)
+~/org/Repo.jl/          example: logged in, no qhost: (cwd / DISTRIBUTED_PROJECT_ROOT)
   Project.toml          compute deps
   SCRIPT.jl
   .distsshkit/go/
@@ -163,16 +166,16 @@ Collect lands in the queue-host `.distsshkit/` dir above.
 From a **client** (job directory; Queue must be loadable from that env):
 
 ```bash
-julia --project=. -m DistSSHQueue qhost:mini list-host
-julia --project=. -m DistSSHQueue qhost:mini size
-julia --project=. -m DistSSHQueue qhost:mini plan SCRIPT.jl
-julia --project=. -m DistSSHQueue qhost:mini pool
-julia --project=. -m DistSSHQueue qhost:mini submit go child:host1:4 SCRIPT.jl
-julia --project=. -m DistSSHQueue qhost:mini status
-julia --project=. -m DistSSHQueue qhost:mini watch
-julia --project=. -m DistSSHQueue qhost:mini cancel <id>
-julia --project=. -m DistSSHQueue qhost:mini fetch <id>  # 8-char prefix or full UUID
-julia --project=. -m DistSSHQueue qhost:mini fetch .distsshqueue/tickets/<uuid>
+julia --project=. -m DistSSHQueue qhost:HOST list-host
+julia --project=. -m DistSSHQueue qhost:HOST size
+julia --project=. -m DistSSHQueue qhost:HOST plan SCRIPT.jl
+julia --project=. -m DistSSHQueue qhost:HOST pool
+julia --project=. -m DistSSHQueue qhost:HOST submit go child:host1:4 SCRIPT.jl
+julia --project=. -m DistSSHQueue qhost:HOST status
+julia --project=. -m DistSSHQueue qhost:HOST watch
+julia --project=. -m DistSSHQueue qhost:HOST cancel <id>
+julia --project=. -m DistSSHQueue qhost:HOST fetch <id>  # 8-char prefix or full UUID
+julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
 `submit` starts `serve` on the queue host if none is running. `serve`

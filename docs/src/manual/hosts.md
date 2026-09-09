@@ -51,7 +51,7 @@ the queue host. No private keys or IdentityFile. Locally, parent SSH is
 — not the client's hostname.
 
 ```bash
-julia -m DistSSHQueue qhost:mini list-host
+julia -m DistSSHQueue qhost:HOST list-host
 ```
 
 ## size
@@ -60,8 +60,8 @@ DistSSHKit `size` on the queue host (cwd / project). Omit tokens to size
 config `hosts`. Does not enqueue. Prints a `submit drive` template.
 
 ```bash
-julia -m DistSSHQueue qhost:mini size
-julia -m DistSSHQueue qhost:mini size --gb-per-worker 1.5 parent child:host1
+julia -m DistSSHQueue qhost:HOST size
+julia -m DistSSHQueue qhost:HOST size --gb-per-worker 1.5 parent child:host1
 ```
 
 Kit flags (`--probe`, `--gb-per-worker`, …):
@@ -75,7 +75,7 @@ and suggests `go` / `ride` / `drive`. Does not enqueue. Prints a
 `submit` template for that kind.
 
 ```bash
-julia -m DistSSHQueue qhost:mini plan SCRIPT.jl
+julia -m DistSSHQueue qhost:HOST plan SCRIPT.jl
 ```
 
 Kit flags:
@@ -90,8 +90,8 @@ Prints sizing notes and a `Suggested submit (template):` footer (always
 `submit drive`; use `size` to measure RSS).
 
 ```bash
-julia -m DistSSHQueue qhost:mini pool
-julia -m DistSSHQueue qhost:mini pool parent child:host1
+julia -m DistSSHQueue qhost:HOST pool
+julia -m DistSSHQueue qhost:HOST pool parent child:host1
 ```
 
 Kit flags:

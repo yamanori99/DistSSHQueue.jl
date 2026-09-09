@@ -73,7 +73,8 @@ access), not a place for untrusted submitters. Same idea as
 how to report a vulnerability stays in [SECURITY.md](https://github.com/yamanori99/DistSSHQueue.jl/blob/main/SECURITY.md).
 
 Do not set `DISTSSHQUEUE_HOST` here (or in `config.toml` `[env]`).
-That name is a **client** default for `qhost:`.
+Client verbs still need `qhost:HOST` on the command line; the env
+alone does not hop.
 
 ## Client
 
@@ -184,7 +185,9 @@ box**. `qhost:` submit rsyncs the client job tree to
 clone or `.distsshkit/`.
 
 One Kit clone per job on the queue host, with a unique path
-(`~/org/Repo.jl` or a stage dir). Queue has no extra job
+(`stage/<uuid>/` after a client `qhost:` submit, or this box's cwd /
+`DISTRIBUTED_PROJECT_ROOT` when logged in without `qhost:`;
+`~/org/Repo.jl` is only an example). Queue has no extra job
 name. Do not pin `DISTRIBUTED_REMOTE_PROJECT_ROOT` in the shared
 `config.toml` `[env]`: Kit's default worker path is
 `~/basename(parent)/basename(project)`. Same parent name plus same
@@ -233,7 +236,7 @@ unit; skip that file if you only `serve` in a terminal.
   ride/
   drive/
 
-~/org/Repo.jl/          omit qhost: (cwd / DISTRIBUTED_PROJECT_ROOT)
+~/org/Repo.jl/          example: logged in, no qhost: (cwd / DISTRIBUTED_PROJECT_ROOT)
   Project.toml          compute deps
   Manifest.toml
   SCRIPT.jl

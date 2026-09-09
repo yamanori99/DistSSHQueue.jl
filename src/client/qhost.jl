@@ -23,10 +23,11 @@ end
 """SSH name shown on `status` / `watch`. Set by `qhost:`; not a CLI flag."""
 const QHOST_DISPLAY_ENV = "DISTSSHQUEUE_QHOST"
 
-"""Client default queue host (SSH name). Not `DISTSSHKIT_HOSTS` (workers).
+"""Parsed SSH name when argv has no `qhost:` token. Not `DISTSSHKIT_HOSTS` (workers).
 
-Not forwarded on `qhost:` (`DISTSSHQUEUE_QHOST` is display only). Set on the
-client; do not put this in the queue host `config.toml` `[env]`.
+Does **not** hop by itself: client verbs still need `qhost:HOST` on the
+command line (`explicit`). Not forwarded on `qhost:` (`DISTSSHQUEUE_QHOST` is
+display only). Do not put this in the queue host `config.toml` `[env]`.
 """
 const QHOST_DEFAULT_ENV = "DISTSSHQUEUE_HOST"
 
@@ -190,7 +191,7 @@ function require_queue_target!(
     local_queue_exempt() && return nothing
     throw(ArgumentError(
         "client verb needs qhost:HOST on the command line " *
-        "(e.g. julia -m DistSSHQueue qhost:mini submit go …). " *
+        "(e.g. julia -m DistSSHQueue qhost:HOST submit go …). " *
         "On the queue host, omit qhost. Local trial: DISTSSHQUEUE_LOCAL=1.",
     ))
 end
