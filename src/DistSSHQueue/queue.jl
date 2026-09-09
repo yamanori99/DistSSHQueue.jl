@@ -404,8 +404,9 @@ end
 
 function _with_pkg_depots(f)
     old = copy(DEPOT_PATH)
+    depots = pkg_depots_for_instantiate()
     empty!(DEPOT_PATH)
-    append!(DEPOT_PATH, pkg_depots_for_instantiate())
+    append!(DEPOT_PATH, depots)
     try
         return f()
     finally

@@ -382,6 +382,18 @@ end
             push!(DEPOT_PATH, qenv)
             @test DistSSHQueue.pkg_depots_for_instantiate() ==
                   [joinpath(homedir(), ".julia")]
+            real = joinpath(d, "depot")
+            mkpath(real)
+            empty!(DEPOT_PATH)
+            push!(DEPOT_PATH, qenv)
+            push!(DEPOT_PATH, real)
+            @test DistSSHQueue.pkg_depots_for_instantiate() == [real]
+            seen = String[]
+            DistSSHQueue._with_pkg_depots() do
+                append!(seen, DEPOT_PATH)
+                return nothing
+            end
+            @test seen == [real]
             empty!(DEPOT_PATH)
             DistSSHQueue._queue_local_instantiate!(job)
             @test isfile(joinpath(job, "Manifest.toml"))
