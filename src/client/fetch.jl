@@ -140,7 +140,9 @@ const SUBMIT_TICKET_ID_LINE =
 
 function job_id_from_ticket_text(text::AbstractString)::Union{Nothing,String}
     m = match(SUBMIT_TICKET_ID_LINE, String(text))
-    return m === nothing ? nothing : String(m.captures[1])
+    cap = m === nothing ? nothing : m.captures[1]
+    cap === nothing && return nothing
+    return String(cap)
 end
 
 """UUID for `fetch`: ticket path, or the id / prefix as today."""

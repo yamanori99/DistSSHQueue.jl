@@ -7,6 +7,7 @@ Copy one finished Kit result leaf onto this job tree. Inverse of
 That file is not the Kit leaf.
 
 ```bash
+julia --project=. -m DistSSHQueue [qhost:HOST] fetch <id>  # 8-char prefix or full UUID
 julia --project=. -m DistSSHQueue [qhost:HOST] fetch .distsshqueue/tickets/<uuid>
 ```
 
@@ -32,7 +33,8 @@ fetchable. The argument is the ticket path, the full UUID, or the
 
 | Flag | Meaning |
 | --- | --- |
-| ticket / `<id>` | `.distsshqueue/tickets/<uuid>`, full UUID, or unique 8-character prefix |
+| `<id>` | Unique 8-character prefix (`status`) or the full UUID (`submit` stdout) |
+| ticket | `.distsshqueue/tickets/<uuid>` (same job; no need to copy stdout) |
 | `-h` / `--help` | Queue usage |
 
 No `--output-dir`. Kit worker collect is not repeated.

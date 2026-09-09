@@ -49,6 +49,7 @@ julia --project=. -m DistSSHQueue qhost:mini submit go child:host1:4 SCRIPT.jl
 julia --project=. -m DistSSHQueue qhost:mini status
 julia --project=. -m DistSSHQueue qhost:mini watch
 julia --project=. -m DistSSHQueue qhost:mini cancel <id>
+julia --project=. -m DistSSHQueue qhost:mini fetch <id>  # 8-char prefix or full UUID
 julia --project=. -m DistSSHQueue qhost:mini fetch .distsshqueue/tickets/<uuid>
 ```
 
