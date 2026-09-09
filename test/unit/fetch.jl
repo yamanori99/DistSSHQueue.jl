@@ -72,11 +72,19 @@ end
         pref = first(running, 8)
         @test DistSSHQueue.fetch_source(pref; store=store) == line
         stray_store = joinpath(d, "stray.toml")
-        q3 = Queue(; store=stray_store, runner=_ -> "/tmp/go/S_" * first(running, 8))
-        stray_id = submit!(q3, script, "parent:1")
+        stray_id = Ref{String}()
+        q3 = Queue(; store=stray_store, runner=_ -> "/tmp/go/S_" * first(stray_id[], 8))
+        stray_id[] = submit!(q3, script, "parent:1")
         @test step!(q3) == 1
-        _wait_fetch_state(q3, stray_id, :done)
-        @test_throws ArgumentError DistSSHQueue.fetch_source(stray_id; store=stray_store)
+        _wait_fetch_state(q3, stray_id[], :done)
+        err = try
+            DistSSHQueue.fetch_source(stray_id[]; store=stray_store)
+            nothing
+        catch e
+            e
+        end
+        @test err isa ArgumentError
+        @test occursin("queue store", sprint(showerror, err))
     end
 end
 

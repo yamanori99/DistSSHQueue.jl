@@ -353,17 +353,25 @@ function _set_job_phase!(q::Queue, id::AbstractString, ph)
     return nothing
 end
 
+"""Kit session for per-job `setup!`. Same `remote` as `execute_kwargs` → `execute!`."""
+function _kit_setup_session(j::Job, proj::AbstractString)
+    r = get(j.kwargs, "remote", nothing)
+    remote = r isa AbstractString && !isempty(strip(String(r))) ? String(r) : nothing
+    return DistSSHKit.KitSession(;
+        project=String(proj),
+        workers=j.hosts,
+        remote=remote,
+        yes=true,
+    )
+end
+
 function _queue_kit_setup!(j::Job, on_phase)
     _queue_env_on(NO_KIT_SETUP_ENV) && return nothing
     isempty(j.hosts) && return nothing
     proj = get(j.kwargs, "project", nothing)
     proj isa AbstractString || (proj = job_project())
     isdir(String(proj)) || return nothing
-    session = DistSSHKit.KitSession(;
-        project=String(proj),
-        workers=j.hosts,
-        yes=true,
-    )
+    session = _kit_setup_session(j, String(proj))
     for step in (:rsync, :instantiate, :check)
         on_phase(String(step))
         DistSSHKit.setup!(session, step)

@@ -297,6 +297,29 @@ end
     @test job(q, rid).kind === :ride
 end
 
+@testset "kit setup session uses job remote" begin
+    mktempdir() do d
+        script = joinpath(d, "s.jl")
+        write(script, "1\n")
+        j = DistSSHQueue.Job(;
+            kind=:go,
+            script=script,
+            hosts=["parent:1"],
+            kwargs=Dict{String,Any}("project" => String(d), "remote" => "/custom/root"),
+        )
+        s = DistSSHQueue._kit_setup_session(j, String(d))
+        @test s.remote == "/custom/root"
+        j2 = DistSSHQueue.Job(;
+            kind=:go,
+            script=script,
+            hosts=["parent:1"],
+            kwargs=Dict{String,Any}("project" => String(d)),
+        )
+        s2 = DistSSHQueue._kit_setup_session(j2, String(d))
+        @test s2.remote === nothing
+    end
+end
+
 @testset "run_kit skips execute when no longer running" begin
     mktempdir() do d
         script = joinpath(d, "nope.jl")
