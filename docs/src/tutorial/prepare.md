@@ -42,8 +42,9 @@ HOST TOKEN stays `parent`. JULIAUP is that host's `juliaup default`
 (`-` if missing, SSH/`status` fails, or no `*` row).
 
 Do not `cd` the stage tree and run DistSSHKit `setup` by hand. `serve`
-runs Kit `setup!` (`rsync` → `instantiate` → `check`) before each job
-unless `DISTSSHQUEUE_NO_KIT_SETUP=1`. Leave
+`Pkg.instantiate`s that tree on the queue host, then Kit `setup!`
+(`rsync` → `instantiate` → `check`) on `child:` hosts, unless
+`DISTSSHQUEUE_NO_KIT_SETUP=1`. Leave
 `DISTRIBUTED_REMOTE_PROJECT_ROOT` unset in queue `config.toml` so Kit
 uses `~/parent/Repo.jl` per clone.
 [kit Prepare](https://yamanori99.github.io/DistSSHKit.jl/stable/tutorial/prepare/).

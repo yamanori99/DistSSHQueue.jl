@@ -25,7 +25,8 @@ Bare `status` is a snapshot. `watch` is `status --interval` (default
 `0.5`). `--tail N` shows the last N jobs (`full` is all; omitting
 `--tail` is full). Each job is a card: `ID STATE KIND SCRIPT` then
 detail lines. `-q` is the first line only. While Kit setup is in
-progress, STATE shows `rsync` / `instantiate` / `check` (the store
+progress, STATE shows `rsync` / `instantiate` / `check` (`instantiate`
+includes the queue-host project; Kit steps are `child:` only; the store
 row stays `:running`). Live with `qhost:HOST` uses `ssh -t` when this
 stdout is a TTY. Watch redraws with `\e[H` / `\e[J` and skips identical
 frames. A pipe without `-q` prints a compact `serve` / `running` /

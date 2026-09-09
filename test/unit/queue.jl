@@ -309,6 +309,9 @@ end
         )
         s = DistSSHQueue._kit_setup_session(j, String(d))
         @test s.remote == "/custom/root"
+        @test DistSSHQueue._kit_setup_child_tokens(["parent:1", "child:w1:2"]) ==
+              ["child:w1:2"]
+        @test isempty(DistSSHQueue._kit_setup_child_tokens(["parent:2"]))
         j2 = DistSSHQueue.Job(;
             kind=:go,
             script=script,
@@ -318,6 +321,32 @@ end
         s2 = DistSSHQueue._kit_setup_session(j2, String(d))
         @test s2.remote === nothing
     end
+end
+
+@testset "kit setup instantiates the queue-host project without SSH" begin
+    mktempdir() do d
+        write(
+            joinpath(d, "Project.toml"),
+            """
+            name = "QueueHostInst"
+            uuid = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+            """,
+        )
+        script = joinpath(d, "s.jl")
+        write(script, "1\n")
+        j = DistSSHQueue.Job(;
+            kind=:go,
+            script=script,
+            hosts=["parent:1"],
+            kwargs=Dict{String,Any}("project" => String(d)),
+        )
+        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+            DistSSHQueue._queue_kit_setup!(j, Returns(nothing))
+        end
+        @test isfile(joinpath(d, "Project.toml"))
+    end
+    DistSSHQueue._require_kit_setup_ok!((; ok=true), "instantiate")
+    @test_throws ErrorException DistSSHQueue._require_kit_setup_ok!((; ok=false), "check")
 end
 
 @testset "run_kit skips execute when no longer running" begin

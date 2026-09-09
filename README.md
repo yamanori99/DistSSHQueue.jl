@@ -174,7 +174,8 @@ julia --project=. -m DistSSHQueue qhost:mini fetch <id>
 ```
 
 `submit` starts `serve` on the queue host if none is running. `serve`
-runs Kit `setup!` before each job (you do not hand-run DistSSHKit
+instantiates the job project on the queue host and runs Kit `setup!`
+on `child:` hosts before each job (you do not hand-run DistSSHKit
 `setup` on the stage tree). Job ids are a
 bare stdout line; stderr shows `Queued  N` unless `DISTSSHKIT_QUIET` is set.
 `fetch` copies the finished Kit leaf onto this job tree.

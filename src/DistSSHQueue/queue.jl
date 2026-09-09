@@ -363,27 +363,63 @@ function _set_job_phase!(q::Queue, id::AbstractString, ph)
 end
 
 """Kit session for per-job `setup!`. Same `remote` as `execute_kwargs` → `execute!`."""
-function _kit_setup_session(j::Job, proj::AbstractString)
+function _kit_setup_session(j::Job, proj::AbstractString; workers=j.hosts)
     r = get(j.kwargs, "remote", nothing)
     remote = r isa AbstractString && !isempty(strip(String(r))) ? String(r) : nothing
     return DistSSHKit.KitSession(;
         project=String(proj),
-        workers=j.hosts,
+        workers=workers,
         remote=remote,
         yes=true,
     )
 end
 
+"""`child:NAME[:N]` tokens only. Kit `setup!` refuses `parent` except `--juliaup`."""
+function _kit_setup_child_tokens(hosts::AbstractVector{<:AbstractString})::Vector{String}
+    out = String[]
+    for raw in hosts
+        DistSSHKit.is_parent_host_name(kit_ssh_name(raw)) && continue
+        push!(out, String(raw))
+    end
+    return out
+end
+
+"""`Pkg.instantiate` the job tree on this host (Kit parent / queue host)."""
+function _queue_local_instantiate!(proj::AbstractString)
+    root = DistSSHKit.canonical_local_path(proj)
+    isfile(joinpath(root, "Project.toml")) || return nothing
+    Pkg.activate(root) do
+        Pkg.instantiate()
+        return nothing
+    end
+    return nothing
+end
+
+"""Throw unless Kit `setup!` reported `ok` (instantiate / check)."""
+function _require_kit_setup_ok!(result, step::AbstractString)
+    hasproperty(result, :ok) || return nothing
+    getproperty(result, :ok) && return nothing
+    throw(ErrorException("DistSSHKit setup! $(step) failed"))
+end
+
 function _queue_kit_setup!(j::Job, on_phase)
     _queue_env_on(NO_KIT_SETUP_ENV) && return nothing
-    isempty(j.hosts) && return nothing
     proj = get(j.kwargs, "project", nothing)
     proj isa AbstractString || (proj = job_project())
     isdir(String(proj)) || return nothing
-    session = _kit_setup_session(j, String(proj))
-    for step in (:rsync, :instantiate, :check)
-        on_phase(String(step))
-        DistSSHKit.setup!(session, step)
+    children = _kit_setup_child_tokens(j.hosts)
+    session = isempty(children) ? nothing : _kit_setup_session(j, String(proj); workers=children)
+    if session !== nothing
+        on_phase("rsync")
+        # Kit rsync refuses a nonempty remote. Later jobs still instantiate.
+        DistSSHKit.setup!(session, :rsync)
+    end
+    on_phase("instantiate")
+    _queue_local_instantiate!(String(proj))
+    if session !== nothing
+        _require_kit_setup_ok!(DistSSHKit.setup!(session, :instantiate), "instantiate")
+        on_phase("check")
+        _require_kit_setup_ok!(DistSSHKit.setup!(session, :check), "check")
     end
     return nothing
 end

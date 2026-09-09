@@ -5,12 +5,17 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
+- Before `execute!`, `serve` `Pkg.instantiate`s the job project on the
+  queue host (Kit parent). Kit `setup!` (`rsync` → `instantiate` →
+  `check`) still runs on `child:` only. `instantiate` / `check` failure
+  fails the job (`rsync` onto a nonempty remote is skipped, Kit
+  safety). `drive` / `parent:N` no longer need a hand `instantiate` on
+  `~/.distsshqueue/stage/<id>`.
 - Top-level `go` / `ride` / `drive` are DistSSHKit. Queue enqueue is
   `submit go` / `submit ride` / `submit drive` only.
 - `list-host` JULIAUP is each host's `juliaup default` (`*` on
   `juliaup status`). `-` if juliaup is missing, SSH or `status` fails,
   or there is no `*` row.
-
 ## 0.4.1
 
 Patch after `0.4.0`. DistSSHKit **0.7.x**.

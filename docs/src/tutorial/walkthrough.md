@@ -21,8 +21,9 @@ julia -m DistSSHQueue size
 julia -m DistSSHQueue serve
 ```
 
-`add-host` does not deploy. `serve` runs Kit `setup!` (rsync /
-instantiate / check) before each job. Optional: `setup --juliaup`
+`add-host` does not deploy. `serve` instantiates the job project on
+this host, then Kit `setup!` (rsync / instantiate / check) on
+`child:` hosts. Optional: `setup --juliaup`
 when major.minor differs.
 
 Clients hop: create the env, then `pkg> add DistSSHQueue` in it
