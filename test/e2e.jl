@@ -393,6 +393,9 @@ end
             @test prep.ok
             @test length(prep.hosts) == length(HOSTS)
             @test all(h -> h.ok, prep.hosts)
+            # Kit 0.7.1 detached execute uses `--project=` of this tree.
+            DistSSHQueue._queue_local_instantiate!(JOB_PROJECT)
+            @test isfile(joinpath(JOB_PROJECT, "Manifest.toml"))
         end
 
         mktempdir() do d

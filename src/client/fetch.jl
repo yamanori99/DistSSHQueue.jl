@@ -135,6 +135,36 @@ function submit_ticket_path(root::AbstractString, id::AbstractString)::String
     return joinpath(submit_ticket_dir(root), String(id))
 end
 
+const SUBMIT_TICKET_ID_LINE =
+    r"^id\s*=\s*\"([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\""m
+
+function job_id_from_ticket_text(text::AbstractString)::Union{Nothing,String}
+    m = match(SUBMIT_TICKET_ID_LINE, String(text))
+    return m === nothing ? nothing : String(m.captures[1])
+end
+
+"""UUID for `fetch`: ticket path, or the id / prefix as today."""
+function resolve_fetch_job_id(arg::AbstractString; root::AbstractString=job_project())::String
+    raw = String(arg)
+    cands = String[raw]
+    if !isabspath(raw)
+        push!(cands, joinpath(root, raw))
+        push!(cands, joinpath(submit_ticket_dir(root), basename(raw)))
+    end
+    seen = Set{String}()
+    for p in cands
+        p in seen && continue
+        push!(seen, p)
+        isfile(p) || continue
+        id = job_id_from_ticket_text(read(p, String))
+        id !== nothing && return id
+        if startswith(posix_dir(p), posix_dir(submit_ticket_dir(root)))
+            throw(ArgumentError("fetch: not a submit ticket $(repr(p))"))
+        end
+    end
+    return raw
+end
+
 function write_submit_ticket(
     root::AbstractString,
     stdout_text::AbstractString;
@@ -195,7 +225,7 @@ function fetch_cli(
     isempty(payload) && throw(ArgumentError("fetch: need a job id"))
     payload[1] in ("-h", "--help") && (show_usage(); return 0)
     length(payload) == 1 || throw(ArgumentError("fetch: extra arguments"))
-    id = String(payload[1])
+    id = resolve_fetch_job_id(String(payload[1]))
     length(id) < 8 && throw(ArgumentError(
         "fetch: job id needs 8 characters (status prefix) or the full UUID",
     ))

@@ -9,8 +9,8 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
   when that tree has DistSSHKit (after `serve` instantiate). Not
   `pkgdir(DistSSHKit)` of queue-env.
 - `qhost:` submit tickets are `{project}/.distsshqueue/tickets/<uuid>`
-  (every submit, no prune). Not `.distsshkit/queue/`. `fetch` still
-  takes the id; the directory is the laptop history.
+  (every submit, no prune). Not `.distsshkit/queue/`. `fetch` takes
+  that path, the UUID, or the 8-character prefix.
 - `qhost:` submit rsync matches Kit `setup --rsync`: `.gitignore` plus
   `.git/` / `.distsshkit/` / `.distsshqueue/`. Ship Manifest (or
   `data/`) by editing gitignore, not a Queue exception. Stage rsync

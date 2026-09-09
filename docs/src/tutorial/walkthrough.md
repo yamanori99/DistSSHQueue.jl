@@ -47,14 +47,14 @@ julia --project=. -m DistSSHQueue qhost:mini go parent:1 distsshkit_demos/withou
 
 ```bash
 julia --project=. -m DistSSHQueue qhost:mini status
-julia --project=. -m DistSSHQueue qhost:mini fetch <id>
+julia --project=. -m DistSSHQueue qhost:mini fetch .distsshqueue/tickets/<uuid>
 ```
 
 `fetch` copies the Kit leaf
 `{project}/.distsshqueue/go/<stem>_<id8>/` (on `mini`, that project is
 the stage tree) onto the same layout on this job tree. Run it from the
-same directory as `go`. `<id>` may be the 8-character prefix from
-`status`.
+same directory as `go`. The argument may be the ticket path, the UUID,
+or the 8-character prefix from `status`.
 
 ## Worker (`child:NAME`)
 
@@ -62,7 +62,7 @@ From the **client**:
 
 ```bash
 julia --project=. -m DistSSHQueue qhost:mini go child:host1:2 distsshkit_demos/without_kit/pi_echo.jl
-julia --project=. -m DistSSHQueue qhost:mini fetch <id>
+julia --project=. -m DistSSHQueue qhost:mini fetch .distsshqueue/tickets/<uuid>
 ```
 
 Or the same `:N` on every config host:
@@ -76,7 +76,7 @@ julia --project=. -m DistSSHQueue qhost:mini submit pool:2 go distsshkit_demos/w
 ```bash
 julia --project=. -m DistSSHKit demo install with_kit
 julia --project=. -m DistSSHQueue qhost:mini drive parent:1 distsshkit_demos/with_kit/square_file.jl
-julia --project=. -m DistSSHQueue qhost:mini fetch <id>
+julia --project=. -m DistSSHQueue qhost:mini fetch .distsshqueue/tickets/<uuid>
 ```
 
 ## Teardown (queue host)

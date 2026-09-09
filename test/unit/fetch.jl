@@ -174,5 +174,11 @@ end
         @test isfile(dest2)
         @test length(readdir(DistSSHQueue.submit_ticket_dir(proj))) == 2
         @test DistSSHQueue.write_submit_ticket(proj, "not-an-id\n") === nothing
+        @test DistSSHQueue.resolve_fetch_job_id(dest; root=proj) == id
+        @test DistSSHQueue.resolve_fetch_job_id(
+            joinpath(".distsshqueue", "tickets", id); root=proj,
+        ) == id
+        @test DistSSHQueue.resolve_fetch_job_id(id; root=proj) == id
+        @test DistSSHQueue.resolve_fetch_job_id(first(id, 8); root=proj) == first(id, 8)
     end
 end
