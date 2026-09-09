@@ -862,6 +862,14 @@ end
                 end
                 @test code_m == 1
                 @test occursin("cannot mix", err_m)
+                rest, n = DistSSHQueue.peel_submit_pool(
+                    ["go", "--julia", "pool:8", "parent:1", "job.jl"],
+                )
+                @test n === nothing
+                @test rest == ["go", "--julia", "pool:8", "parent:1", "job.jl"]
+                rest2, n2 = DistSSHQueue.peel_submit_pool(["pool:8", "go", "job.jl"])
+                @test n2 == 8
+                @test rest2 == ["go", "job.jl"]
             end
         end
     end

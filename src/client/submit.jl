@@ -24,10 +24,31 @@ function submit_kit_bag(parsed; kind::Symbol)::Dict{String,Any}
     return drop_nothing(Dict{String,Any}(String(k) => v for (k, v) in raw))
 end
 
+"""Peel `pool:N` from Queue selector positions, not Kit option values.
+
+`submit go --julia pool:8 …` keeps `pool:8` as `--julia`'s value.
+After `--`, remaining tokens are script args.
+"""
 function peel_submit_pool(args::Vector{String})
     n = nothing
     out = String[]
+    skip_value = false
+    passthrough = false
     for a in args
+        if passthrough
+            push!(out, a)
+            continue
+        end
+        if skip_value
+            push!(out, a)
+            skip_value = false
+            continue
+        end
+        if a == "--"
+            passthrough = true
+            push!(out, a)
+            continue
+        end
         if a == "pool"
             throw(ArgumentError(
                 "`pool` is the inspect verb. For submit slots use `pool:N` " *
@@ -43,9 +64,20 @@ function peel_submit_pool(args::Vector{String})
             n = slots
         else
             push!(out, a)
+            skip_value = _kit_flag_takes_value(a)
         end
     end
     return out, n
+end
+
+function _kit_flag_takes_value(a::AbstractString)::Bool
+    startswith(a, "--") || startswith(a, "-") || return false
+    occursin('=', a) && return false
+    a in (
+        "--julia", "--output-dir", "--repeat", "--gb-per-worker", "--probe",
+        "--mem-headroom", "--parent-gb", "--workers", "-w", "--hosts",
+        "--hosts-file", "--n", "--log-dir", "--package", "--project",
+    )
 end
 
 function expand_pool_submit_hosts(slots::Int)::Vector{String}
