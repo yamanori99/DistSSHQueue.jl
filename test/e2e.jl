@@ -160,8 +160,10 @@ end
 
 # Poll `jobs.toml` (same as test/integration/cli.jl). Waiting on `status`
 # chrome used to sit through 600×0.2s when Store `serve  running` looked
-# like a job STATE.
-function wait_store_job(store::AbstractString, id::AbstractString, states; tries=150, sleep_s=0.2)
+# like a job STATE. Default 150×0.2s is enough on Apple / Linux; Colima
+# on macos-15-intel needs ~2 min for `qhost:` `pi_echo` to leave
+# `:running` (autoserve hop + nested Docker).
+function wait_store_job(store::AbstractString, id::AbstractString, states; tries=600, sleep_s=0.2)
     want = Set{Symbol}(states)
     sid = String(id)
     last = DistSSHQueue.Job[]
