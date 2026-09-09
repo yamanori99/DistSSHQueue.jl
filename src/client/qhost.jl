@@ -190,9 +190,8 @@ function require_queue_target!(
     explicit && return nothing
     local_queue_exempt() && return nothing
     throw(ArgumentError(
-        "client verb needs qhost:HOST on the command line " *
-        "(e.g. julia -m DistSSHQueue qhost:HOST submit go …). " *
-        "On the queue host, omit qhost. Local trial: DISTSSHQUEUE_LOCAL=1.",
+        "no config / store; `setup` first (or `qhost:HOST` if you meant a client hop). " *
+        "Local trial: DISTSSHQUEUE_LOCAL=1.",
     ))
 end
 
