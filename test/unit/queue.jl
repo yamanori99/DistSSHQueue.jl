@@ -994,13 +994,15 @@ end
 end
 
 @testset "status error shows the full Kit line with a Queue prefix" begin
-    kit = """setup: "parent" is only for --juliaup (kit parent rsync skipped extra words)"""
+    kit = """setup: "parent" is only for --juliaup (kit parent machine). extra words"""
     j = DistSSHQueue.Job(; kind=:go, script="x.jl", hosts=["parent:1"], state=:failed, error=kit)
     shown = DistSSHQueue._job_error_disp(j)
     @test occursin("parent:N", shown)
     @test occursin("only for --juliaup", shown)
     @test occursin("extra words", shown)
     @test !endswith(shown, "…")
+    @test DistSSHQueue.queue_explain_error("unrelated only for --juliaup noise") ==
+          "unrelated only for --juliaup noise"
     prefixed = DistSSHQueue.queue_explain_error("this job includes parent:N; keep")
     @test prefixed == "this job includes parent:N; keep"
 end

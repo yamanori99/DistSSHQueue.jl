@@ -232,7 +232,7 @@ end
 function queue_explain_error(msg::AbstractString)::String
     s = String(msg)
     startswith(s, "this job includes parent:N;") && return s
-    if occursin("only for --juliaup", s)
+    if occursin("is only for --juliaup (kit parent machine)", s)
         return "this job includes parent:N; per-job setup! only rsyncs child: (the queue host is already here). " * s
     end
     return s
