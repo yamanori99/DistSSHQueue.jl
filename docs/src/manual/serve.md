@@ -13,8 +13,10 @@ Also: [Prepare](@ref Tutorial-Prepare), [submit](@ref Manual-submit),
 [setup](@ref Manual-setup). `qhost:` is refused (log in on the queue host).
 
 `serve` is this terminal, now. Ctrl-C stops this process, not a Kit job
-that is already running. `enable` tells the OS to start `serve` after
-reboot / login (LaunchAgent / systemd).
+that is already running. Before each `execute!` it runs Kit `setup!`
+(`rsync` → `instantiate` → `check`) unless `DISTSSHQUEUE_NO_KIT_SETUP=1`.
+`enable` tells the OS to start `serve` after reboot / login
+(LaunchAgent / systemd). `submit` starts `serve` if none is up.
 
 ## Flags
 

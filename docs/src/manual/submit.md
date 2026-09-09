@@ -1,7 +1,8 @@
 # [submit](@id Manual-submit)
 
 Enqueue a DistSSHKit `go`, `ride`, or `drive`. Starts `serve` if none is
-running.
+running. That `serve` runs Kit `setup!` before `execute!` (not a
+hand-run DistSSHKit `setup` on the stage tree).
 
 ```bash
 julia --project=. -m DistSSHQueue [qhost:HOST] submit go [Kit go argv]

@@ -173,11 +173,13 @@ julia --project=. -m DistSSHQueue qhost:mini cancel <id>
 julia --project=. -m DistSSHQueue qhost:mini fetch <id>
 ```
 
-`submit` starts `serve` on the queue host if none is running. Job ids are a
+`submit` starts `serve` on the queue host if none is running. `serve`
+runs Kit `setup!` before each job (you do not hand-run DistSSHKit
+`setup` on the stage tree). Job ids are a
 bare stdout line; stderr shows `Queued  N` unless `DISTSSHKIT_QUIET` is set.
 `fetch` copies the finished Kit leaf onto this job tree.
 
-Typed path (queue host → fetch → Kit worker setup → teardown):
+Typed path (queue host → go / fetch → teardown):
 [Walkthrough](https://yamanori99.github.io/DistSSHQueue.jl/stable/tutorial/walkthrough/).
 
 On the **queue host** (once). `setup` writes `config.toml`, not `env/`.

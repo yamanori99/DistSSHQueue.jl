@@ -9,6 +9,9 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 Patch after `0.4.0`. DistSSHKit **0.7.x**.
 `qhost:HOST`, Kit `:N`, status cards, Kit `setup!` before execute, `submit pool:N`.
+Day to day you do not hand-run DistSSHKit `setup` / instantiate on the
+stage tree: `submit` starts `serve` if needed, and `serve` runs Kit
+`setup!` before `execute!`.
 
 - DistSSHKit **0.7.x**. Listed `parent` / `child:NAME` need `:N`. No
   host token is still one slot. Queue does not rewrite a bare token to

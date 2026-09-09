@@ -170,11 +170,13 @@ julia --project=. -m DistSSHQueue qhost:mini cancel <id>
 julia --project=. -m DistSSHQueue qhost:mini fetch <id>
 ```
 
-`submit` は、`serve` が無ければキューホスト上で起動する。ジョブ id は
+`submit` は、`serve` が無ければキューホスト上で起動する。`serve` が
+ジョブごとに Kit `setup!` を走らせる (stage で DistSSHKit `setup` を
+手で打たない)。ジョブ id は
 stdout 1 行。stderr に `Queued  N` (`DISTSSHKIT_QUIET` で隠す)。
 `fetch` は終わった Kit leaf をこのジョブ木へ戻す。
 
-打つ順 (キューホスト → fetch → Kit worker setup → teardown):
+打つ順 (キューホスト → go / fetch → teardown):
 [Walkthrough](https://yamanori99.github.io/DistSSHQueue.jl/stable/tutorial/walkthrough/)。
 
 **キューホスト** で一度だけ。`setup` は `config.toml` を書く (`env/` は作らない)。
