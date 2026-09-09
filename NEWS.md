@@ -3,6 +3,9 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
+- After `teardown`, `status` (and other client verbs) without `qhost:`
+  say `setup` first, or `qhost:HOST` if this is a laptop hop. Not
+  “you forgot `qhost:`” on the box that just wiped `~/.distsshqueue`.
 - `qhost:` stage is `~/.distsshqueue/stage/<uuid>/` (the job id). A
   second submit from the same laptop tree does not `rsync --delete`
   the running copy. Worker-root collision does not treat two of those

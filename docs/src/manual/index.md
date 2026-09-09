@@ -24,7 +24,9 @@ Kit `go` / `ride` / `drive` / `size` / `plan` / `pool` flags stay in the
 `qhost:HOST` is a **client** token (like Kit `child:NAME`). From a
 laptop, put it on the command line (leading or right after the verb).
 `DISTSSHQUEUE_HOST` alone does not hop. On the queue host, omit
-`qhost:`. Local trial: `DISTSSHQUEUE_LOCAL=1`.
+`qhost:`. After `teardown`, `status` without `qhost:` asks for `setup`
+first (the config is gone), or `qhost:HOST` if this was a client hop.
+Local trial: `DISTSSHQUEUE_LOCAL=1`.
 
 Refuse `qhost:`: `setup`, `serve`, `enable`, `disable`, `add-host`,
 `remove-host`. Forward: `submit`, `status`, `list-host`, `size`, `plan`,

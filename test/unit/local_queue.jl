@@ -16,11 +16,14 @@ using DistSSHQueue
             end
             @test code == 1
             @test occursin("qhost:HOST", err)
+            @test occursin("setup", err)
+            @test !occursin("client verb needs qhost", err)
             code_h, _, err_h = capture_stdio() do
                 DistSSHQueue.main(["status"])
             end
             @test code_h == 1
             @test occursin("qhost:HOST", err_h)
+            @test occursin("setup", err_h)
             withenv(DistSSHQueue.LOCAL_QUEUE_ENV => "1", DistSSHQueue.QHOST_DEFAULT_ENV => nothing) do
                 code_ok, out, _ = capture_stdio() do
                     DistSSHQueue.main(["status"])
@@ -48,6 +51,37 @@ using DistSSHQueue
             @test code_host == 0
             @test !occursin("qhost:HOST", err_s)
             @test occursin("Store", out_s)
+        end
+    end
+end
+
+@testset "status after teardown asks for setup, not a forgotten hop" begin
+    mktempdir() do home
+        withenv(
+            "HOME" => home,
+            DistSSHQueue.LOCAL_QUEUE_ENV => nothing,
+            DistSSHQueue.QHOST_DEFAULT_ENV => nothing,
+            "DISTSSHQUEUE_CONFIG" => nothing,
+            "DISTSSHQUEUE_STORE" => nothing,
+            "DISTSSHKIT_YES" => nothing,
+        ) do
+            code_setup, _, _ = capture_stdio() do
+                DistSSHQueue.main(["setup"])
+            end
+            @test code_setup == 0
+            @test isfile(joinpath(home, ".distsshqueue", "config.toml"))
+            code_td, _, _ = capture_stdio() do
+                DistSSHQueue.teardown_main(["--home", home, "-y", "--write-only"])
+            end
+            @test code_td == 0
+            @test !ispath(joinpath(home, ".distsshqueue"))
+            code, _, err = capture_stdio() do
+                DistSSHQueue.main(["status"])
+            end
+            @test code == 1
+            @test occursin("setup", err)
+            @test occursin("qhost:HOST", err)
+            @test !occursin("client verb needs qhost", err)
         end
     end
 end
