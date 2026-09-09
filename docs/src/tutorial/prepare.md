@@ -1,7 +1,7 @@
 # [Prepare](@id Tutorial-Prepare)
 
 First-time **queue host** before a [First job](@ref Tutorial-Client).
-Typed path (go / fetch / Kit setup / teardown): [Walkthrough](@ref Tutorial-Walkthrough).
+Typed path (go / fetch / teardown): [Walkthrough](@ref Tutorial-Walkthrough).
 This box is always-on **macOS or Linux**. Clients can skip this page if
 someone already set that box up.
 
@@ -40,12 +40,13 @@ allow-all). Optional `:N` is a max. No `serve` restart: the next
 `submit` re-reads the file. `list-host` NAME for parent is the hostname;
 HOST TOKEN stays `parent`.
 
-Workers still need DistSSHKit `setup` (rsync or clone, then instantiate)
-from the **queue host**, not from Queue, **from that job's clone**
-(`~/org/Repo.jl`). Leave `DISTRIBUTED_REMOTE_PROJECT_ROOT` unset in
-queue `config.toml` so Kit uses `~/parent/Repo.jl` per clone.
+Do not `cd` the stage tree and run DistSSHKit `setup` by hand. `serve`
+runs Kit `setup!` (`rsync` → `instantiate` → `check`) before each job
+unless `DISTSSHQUEUE_NO_KIT_SETUP=1`. Leave
+`DISTRIBUTED_REMOTE_PROJECT_ROOT` unset in queue `config.toml` so Kit
+uses `~/parent/Repo.jl` per clone.
 [kit Prepare](https://yamanori99.github.io/DistSSHKit.jl/stable/tutorial/prepare/).
-To align Julia versions, DistSSHKit `setup --juliaup` on the queue host
+To align Julia versions, Queue `setup --juliaup` on the queue host
 (`parent` / `child:NAME`; see [Requirements](@ref)).
 
 ## Dedicated env (optional)
