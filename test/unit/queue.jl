@@ -297,6 +297,24 @@ end
     @test job(q, rid).kind === :ride
 end
 
+@testset "run_kit skips execute when no longer running" begin
+    mktempdir() do d
+        script = joinpath(d, "nope.jl")
+        write(script, "error(\"must not execute\")\n")
+        j = DistSSHQueue.Job(;
+            kind=:go,
+            script=script,
+            hosts=["parent:1"],
+            state=:running,
+            kwargs=Dict{String,Any}("project" => String(d)),
+        )
+        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => "1") do
+            out = DistSSHQueue.run_kit(j, Returns(nothing); still_running=Returns(false))
+            @test out == ""
+        end
+    end
+end
+
 @testset "drive leaf is store-dir/kind/stem_id8" begin
     mktempdir() do d
         sdir = joinpath(d, "with_kit")

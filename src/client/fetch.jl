@@ -73,6 +73,8 @@ function fetch_source(id::AbstractString; store::AbstractString=store_path())::S
     j.state in FETCH_READY || throw(ArgumentError(
         "job $(repr(id)) is $(j.state)",
     ))
+    require_fetchable_leaf(id, p)
+    fetch_relpath(p, dirname(store))
     return string(j.state, FETCH_SOURCE_SEP, p)
 end
 

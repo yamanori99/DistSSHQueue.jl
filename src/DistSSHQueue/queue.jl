@@ -300,9 +300,23 @@ function settle_lost_kit_child!(j::Job)
     return j
 end
 
-function run_kit(j::Job, on_spawn; on_phase=Returns(nothing))
+function _job_still_running(q::Queue, id::AbstractString)::Bool
+    running = Ref(false)
+    _with_store(q) do
+        lock(q.lock) do
+            reload_keep_live!(q)
+            i = _index_id(q.jobs, id)
+            running[] = i !== nothing && q.jobs[i].state === :running
+            return nothing
+        end
+    end
+    return running[]
+end
+
+function run_kit(j::Job, on_spawn; on_phase=Returns(nothing), still_running=Returns(true))
     _queue_kit_setup!(j, on_phase)
     on_phase(nothing)
+    still_running() || return something(kit_output_dir(j), "")
     kp = DistSSHKit.execute!(
         j.kind,
         j.script,
@@ -585,7 +599,11 @@ function _start!(q::Queue, j::Job)
     Threads.@spawn begin
         try
             out = if runner === run_kit
-                run_kit(snap, on_spawn; on_phase=ph -> _set_job_phase!(q, id, ph))
+                run_kit(
+                    snap, on_spawn;
+                    on_phase=ph -> _set_job_phase!(q, id, ph),
+                    still_running=() -> _job_still_running(q, id),
+                )
             else
                 runner(snap)
             end

@@ -71,6 +71,12 @@ end
         @test_throws ArgumentError DistSSHQueue.require_fetchable_leaf(running, custom)
         pref = first(running, 8)
         @test DistSSHQueue.fetch_source(pref; store=store) == line
+        stray_store = joinpath(d, "stray.toml")
+        q3 = Queue(; store=stray_store, runner=_ -> "/tmp/go/S_" * first(running, 8))
+        stray_id = submit!(q3, script, "parent:1")
+        @test step!(q3) == 1
+        _wait_fetch_state(q3, stray_id, :done)
+        @test_throws ArgumentError DistSSHQueue.fetch_source(stray_id; store=stray_store)
     end
 end
 
