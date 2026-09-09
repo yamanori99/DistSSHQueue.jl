@@ -709,7 +709,7 @@ end
                 @test occursin("DistSSHKit", help)
                 @test occursin("Examples", help)
                 @test occursin("qhost:HOST", help)
-                @test occursin("parent:N", help)
+                @test occursin("parent:4", help)
                 @test occursin("submit drive parent:4", help)
                 @test occursin("submit \\", help)
                 @test occursin("child:NAME:N", help)
@@ -825,7 +825,7 @@ end
                 @test occursin("add-host first", err_go)
                 @test isempty(DistSSHQueue.read_jobs(p))
                 code_add, _, _ = capture_stdio() do
-                    DistSSHQueue.main(["add-host", "parent", "child:host1"])
+                    DistSSHQueue.main(["add-host", "parent", "child:host1", "child:w"])
                 end
                 @test code_add == 0
                 code_go, out_go, err_go = capture_stdio() do
@@ -1349,9 +1349,10 @@ end
         jobdir = joinpath(d, "jobtree")
         mkpath(jobdir)
         write(joinpath(jobdir, "a.jl"), "1\n")
+        write(joinpath(d, "config.toml"), "store = $(repr(p))\nhosts = [\"parent\"]\n")
         withenv(
             "DISTSSHQUEUE_STORE" => p,
-            "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
+            "DISTSSHQUEUE_CONFIG" => joinpath(d, "config.toml"),
             "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
             "DISTRIBUTED_PROJECT_ROOT" => nothing,
             "DISTSSHQUEUE_WATCH_TICKS" => "1",
