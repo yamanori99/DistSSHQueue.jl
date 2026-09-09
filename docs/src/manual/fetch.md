@@ -3,11 +3,12 @@
 Copy one finished Kit result leaf onto this job tree. Inverse of
 `qhost:` stage (Kit rsync excludes: `.gitignore`, `.git/`, `.distsshkit/`,
 `.distsshqueue/`). `qhost:` submit leaves
-`.distsshkit/queue/<id>` on this tree so the laptop is not empty; that
-file is not the leaf.
+`.distsshqueue/tickets/<uuid>` on this tree (one file per job, kept).
+That file is not the Kit leaf.
 
 ```bash
-julia --project=. -m DistSSHQueue [qhost:HOST] fetch <id>
+julia --project=. -m DistSSHQueue [qhost:HOST] fetch <id>  # 8-char prefix or full UUID
+julia --project=. -m DistSSHQueue [qhost:HOST] fetch .distsshqueue/tickets/<uuid>
 ```
 
 Also: [First job](@ref Tutorial-Client), [Walkthrough](@ref Tutorial-Walkthrough),
@@ -21,8 +22,8 @@ stdout is that path, one line. Re-run rsyncs into the same leaf.
 On the queue host (omit `qhost:`), fetch prints the leaf path
 and does not copy. The leaf is under the job project (or still under
 `dirname(store)` for an explicit `--output-dir` there). Failed and cancelled jobs with a leaf are
-fetchable. `<id>` is the full UUID or the 8-character prefix from
-`status`.
+fetchable. The argument is the ticket path, the full UUID, or the
+8-character prefix from `status`.
 
 `fetch` stays on the client. It does not hop `main` (`status` /
 `cancel` do). Path lookup is a captured `julia -e` on the queue host
@@ -32,7 +33,8 @@ fetchable. `<id>` is the full UUID or the 8-character prefix from
 
 | Flag | Meaning |
 | --- | --- |
-| `<id>` | Full UUID or unique 8-character prefix (`submit` stdout / `status`) |
+| `<id>` | Unique 8-character prefix (`status`) or the full UUID (`submit` stdout) |
+| ticket | `.distsshqueue/tickets/<uuid>` (same job; no need to copy stdout) |
 | `-h` / `--help` | Queue usage |
 
 No `--output-dir`. Kit worker collect is not repeated.

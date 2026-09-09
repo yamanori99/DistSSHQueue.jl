@@ -7,7 +7,8 @@ queue host.
 julia --project=. -m DistSSHQueue [qhost:HOST] status [-q] [--tail N|full] [--interval S]
 julia --project=. -m DistSSHQueue [qhost:HOST] watch [-q] [--tail N|full] [--interval S]
 julia --project=. -m DistSSHQueue [qhost:HOST] cancel <id>
-julia --project=. -m DistSSHQueue [qhost:HOST] fetch <id>
+julia --project=. -m DistSSHQueue [qhost:HOST] fetch <id>  # 8-char prefix or full UUID
+julia --project=. -m DistSSHQueue [qhost:HOST] fetch .distsshqueue/tickets/<uuid>
 ```
 
 Also: [First job](@ref Tutorial-Client), [submit](@ref Manual-submit),

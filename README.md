@@ -89,8 +89,8 @@ table and Kit result dirs stay **on that box**. The client has no
 `~/.distsshqueue`. `qhost:` submit rsyncs the client job tree to
 `~/.distsshqueue/stage/<id>` (same excludes as Kit rsync: `.gitignore`,
 `.git/`, `.distsshkit/`, `.distsshqueue/`); the client keeps
-`.distsshkit/queue/<id>`. Kit still copies queue host → workers. `fetch`
-copies one finished Kit leaf back.
+`.distsshqueue/tickets/<uuid>` (every submit). Kit still copies queue
+host → workers. `fetch` copies one finished Kit leaf back.
 
 #### Client
 
@@ -99,10 +99,10 @@ copies one finished Kit leaf back.
   Project.toml          DistSSHQueue (CLI)
   Manifest.toml
   SCRIPT.jl             rsync'd on qhost: submit
-  .distsshkit/queue/<id>  after qhost: submit
-  .distsshkit/go/       after fetch
-  .distsshkit/ride/     after fetch
-  .distsshkit/drive/    after fetch (not demo output/)
+  .distsshqueue/tickets/<uuid>  after each qhost: submit (kept)
+  .distsshqueue/go/     after fetch
+  .distsshqueue/ride/   after fetch
+  .distsshqueue/drive/  after fetch
 ```
 
 #### Queue host
@@ -171,7 +171,8 @@ julia --project=. -m DistSSHQueue qhost:mini submit go child:host1:4 SCRIPT.jl
 julia --project=. -m DistSSHQueue qhost:mini status
 julia --project=. -m DistSSHQueue qhost:mini watch
 julia --project=. -m DistSSHQueue qhost:mini cancel <id>
-julia --project=. -m DistSSHQueue qhost:mini fetch <id>
+julia --project=. -m DistSSHQueue qhost:mini fetch <id>  # 8-char prefix or full UUID
+julia --project=. -m DistSSHQueue qhost:mini fetch .distsshqueue/tickets/<uuid>
 ```
 
 `submit` starts `serve` on the queue host if none is running. `serve`

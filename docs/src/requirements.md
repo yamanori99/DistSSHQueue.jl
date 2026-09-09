@@ -204,10 +204,10 @@ CLI.
   Project.toml          DistSSHQueue (CLI)
   Manifest.toml
   SCRIPT.jl             rsync'd on qhost submit
-  .distsshkit/queue/<id>  after qhost: submit (fetch later)
-  .distsshkit/go/       after fetch (same relpath as the stage leaf)
-  .distsshkit/ride/     after fetch
-  .distsshkit/drive/    after fetch
+  .distsshqueue/tickets/<uuid>  after each qhost: submit (kept)
+  .distsshqueue/go/     after fetch
+  .distsshqueue/ride/   after fetch
+  .distsshqueue/drive/  after fetch
 ```
 
 ### Queue-host tree

@@ -270,7 +270,7 @@ function print_queue_usage(io::IO=stdout)
         "  watch [-q] [--tail N|full]    Same as status --interval",
         "  submit go|ride|drive … Enqueue DistSSHKit (`pool:N` sets every host)",
         "  cancel <id>           Drop queued or stop running",
-        "  fetch <id>            Copy a finished Kit leaf here",
+        "  fetch <id>            Copy a finished Kit leaf (prefix, UUID, or ticket)",
         "  teardown -y           Stop serve and remove queue-host files",
     )
     DistSSHKit.print_help_blank(io)

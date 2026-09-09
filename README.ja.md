@@ -88,7 +88,7 @@ Kit を `Pkg.develop` しない。
 `~/.distsshqueue` は無い。`qhost:` submit はクライアントのジョブ木を
 `~/.distsshqueue/stage/<id>` へ rsync する (Kit と同じ: `.gitignore`、
 `.git/`、`.distsshkit/`、`.distsshqueue/`)。
-クライアントには `.distsshkit/queue/<id>` が残る。Kit はキューホストから
+クライアントには `.distsshqueue/tickets/<uuid>` が残る (submitのたびに増え、消さない)。Kit はキューホストから
 worker へコピーする。`fetch` は終わった Kit leaf を戻す。
 
 #### クライアント
@@ -98,10 +98,10 @@ worker へコピーする。`fetch` は終わった Kit leaf を戻す。
   Project.toml          DistSSHQueue (CLI)
   Manifest.toml
   SCRIPT.jl             qhost: submit で rsync
-  .distsshkit/queue/<id>  qhost: submit のあと
-  .distsshkit/go/       fetch のあと
-  .distsshkit/ride/     fetch のあと
-  .distsshkit/drive/    fetch のあと (demo の output/ ではない)
+  .distsshqueue/tickets/<uuid>  qhost: submit のたび (残す)
+  .distsshqueue/go/     fetch のあと
+  .distsshqueue/ride/   fetch のあと
+  .distsshqueue/drive/  fetch のあと
 ```
 
 #### キューホスト
@@ -168,7 +168,8 @@ julia --project=. -m DistSSHQueue qhost:mini submit go child:host1:4 SCRIPT.jl
 julia --project=. -m DistSSHQueue qhost:mini status
 julia --project=. -m DistSSHQueue qhost:mini watch
 julia --project=. -m DistSSHQueue qhost:mini cancel <id>
-julia --project=. -m DistSSHQueue qhost:mini fetch <id>
+julia --project=. -m DistSSHQueue qhost:mini fetch <id>  # 8文字プレフィックスでもフルUUIDでも可
+julia --project=. -m DistSSHQueue qhost:mini fetch .distsshqueue/tickets/<uuid>
 ```
 
 `submit` は、`serve` が無ければキューホスト上で起動する。`serve` が

@@ -159,6 +159,7 @@ end
             proj, id * "\n"; script=script, qhost="mini",
         )
         @test dest == DistSSHQueue.submit_ticket_path(proj, id)
+        @test occursin(joinpath(".distsshqueue", "tickets"), dest)
         @test isfile(dest)
         body = read(dest, String)
         @test occursin("id = ", body)
@@ -166,6 +167,18 @@ end
         @test occursin("qhost = \"mini\"", body)
         @test !occursin("/go/", dest)
         @test !occursin("/drive/", dest)
+        id2 = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+        dest2 = DistSSHQueue.write_submit_ticket(proj, id2 * "\n")
+        @test dest2 == DistSSHQueue.submit_ticket_path(proj, id2)
+        @test isfile(dest)
+        @test isfile(dest2)
+        @test length(readdir(DistSSHQueue.submit_ticket_dir(proj))) == 2
         @test DistSSHQueue.write_submit_ticket(proj, "not-an-id\n") === nothing
+        @test DistSSHQueue.resolve_fetch_job_id(dest; root=proj) == id
+        @test DistSSHQueue.resolve_fetch_job_id(
+            joinpath(".distsshqueue", "tickets", id); root=proj,
+        ) == id
+        @test DistSSHQueue.resolve_fetch_job_id(id; root=proj) == id
+        @test DistSSHQueue.resolve_fetch_job_id(first(id, 8); root=proj) == first(id, 8)
     end
 end

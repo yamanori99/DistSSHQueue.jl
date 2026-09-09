@@ -16,7 +16,8 @@ That `--project=.` stays on the **client**. `qhost:` defaults to
 `DISTRIBUTED_PROJECT_ROOT`) to `~/.distsshqueue/stage/<id>` on the
 queue host (Kit rsync excludes: `.gitignore`, `.git/`, `.distsshkit/`,
 `.distsshqueue/`). After submit, this job tree has
-`.distsshkit/queue/<id>` (not the Kit leaf). `SCRIPT.jl` must exist on
+`.distsshqueue/tickets/<uuid>` (not the Kit leaf; every submit stays).
+`SCRIPT.jl` must exist on
 the **client** in that tree.
 Omit `qhost:`: no rsync; the script is on this machine. Kit still
 copies queue host → workers.
@@ -48,7 +49,8 @@ julia --project=. -m DistSSHQueue qhost:mini submit go child:host1:4 SCRIPT.jl
 julia --project=. -m DistSSHQueue qhost:mini status
 julia --project=. -m DistSSHQueue qhost:mini watch
 julia --project=. -m DistSSHQueue qhost:mini cancel <id>
-julia --project=. -m DistSSHQueue qhost:mini fetch <id>
+julia --project=. -m DistSSHQueue qhost:mini fetch <id>  # 8-char prefix or full UUID
+julia --project=. -m DistSSHQueue qhost:mini fetch .distsshqueue/tickets/<uuid>
 ```
 
 `submit` starts `serve` if none is running. `serve` instantiates the
@@ -57,11 +59,12 @@ before `execute!`. `status` / `watch` print
 `qhost` (or `local (hostname)` when you omitted it). `watch` is
 `status --interval` until Ctrl-C; it does not stop `serve`. Job ids print as a bare
 stdout line. `submit` also prints `Queued  N` on stderr unless
-`DISTSSHKIT_QUIET` is set. After `qhost:` submit, `.distsshkit/queue/<id>`
-marks the job on this laptop. `fetch` copies the finished Kit leaf onto
-this job tree (inverse of the `qhost:` rsync). Run it from the same
-directory as `submit`. Drive CSV (Kit `square_file.jl`) is in that
-`.distsshkit/drive/<stem>_<UTC>_<id>/` leaf, not `output/`.
+`DISTSSHKIT_QUIET` is set. After `qhost:` submit,
+`.distsshqueue/tickets/<uuid>` marks the job on this laptop. `fetch`
+copies the finished Kit leaf onto this job tree (inverse of the
+`qhost:` rsync). Run it from the same directory as `submit`. Drive CSV
+(Kit `square_file.jl`) is in that
+`.distsshqueue/drive/<stem>_<id8>/` leaf, not `output/`.
 
 A `.jl` with no Queue verb is not implicit `go` (same as Kit). Top-level
 `go` / `ride` / `drive` are DistSSHKit; enqueue with `submit`. `ride` is
