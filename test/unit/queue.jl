@@ -705,6 +705,8 @@ end
                 proj = DistSSHKit.canonical_local_path(pwd())
                 help = sprint(DistSSHQueue.print_queue_usage)
                 @test occursin("Usage", help)
+                @test occursin("Commands", help)
+                @test occursin("DistSSHKit", help)
                 @test occursin("Examples", help)
                 @test occursin("qhost:HOST", help)
                 @test occursin("parent:N", help)
@@ -732,6 +734,7 @@ end
                 end
                 @test code_sh == 0
                 @test occursin("parent:N", out_sh)
+                @test occursin("DistSSHKit", out_sh)
                 @test occursin("not a Kit slot", out_sh)
                 @test !occursin("Notes", help)
                 @test !occursin("[--size]", help)

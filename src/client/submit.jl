@@ -171,7 +171,12 @@ function submit_kind(kind::Symbol, args::Vector{String}; pool_slots::Union{Nothi
     if parsed.help
         DistSSHKit.print_help_section("Queue"; io=stdout)
         DistSSHKit.print_help_lines(stdout,
-            "  Placement is `parent:N` / `child:NAME:N`. `qhost:` is the queue host SSH name, not a Kit slot.",
+            "  `submit $(kind)` enqueues. `qhost:HOST` is the hop (SSH), not a Kit slot.",
+        )
+        DistSSHKit.print_help_blank(stdout)
+        DistSSHKit.print_help_section("DistSSHKit"; io=stdout)
+        DistSSHKit.print_help_lines(stdout,
+            "  Same argv as `julia -m DistSSHKit $(kind) …` (`parent:N` / `child:NAME:N`).",
         )
         DistSSHKit.print_help_blank(stdout)
         kit_show_usage(kind)
