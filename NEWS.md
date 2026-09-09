@@ -215,9 +215,10 @@ Home is `~/.distsshqueue`, ENV is `DISTSSHQUEUE_*`, OS unit is
   refused. `setup` / `serve` / `enable` / `disable` refuse `qhost:` (log in
   on the queue host).
 - `qhost:` `submit` / `go` / `drive` rsync the client job tree to
-  `~/.distsshqueue/stage/<id>` (stable per client project path) and set
-  `DISTRIBUTED_PROJECT_ROOT` there. Re-submit of the same tree reuses that
-  dir. Omit `qhost:` does not rsync. `DISTSSHQUEUE_NO_STAGE=1` skips (tests).
+  `~/.distsshqueue/stage/<uuid>/` (the job id, a new directory every
+  submit) and set `DISTRIBUTED_PROJECT_ROOT` there. A second submit from
+  the same laptop tree does not `rsync --delete` a running copy. Omit
+  `qhost:` does not rsync. `DISTSSHQUEUE_NO_STAGE=1` skips (tests).
   Kit still copies queue host → workers.
 - `qhost:` runs `julia --startup-file=no --project=~/.distsshqueue/env` (not the
   client's `--project=.`, not remote cwd `.`). `--queue-env DIR` /

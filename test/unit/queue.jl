@@ -92,13 +92,15 @@ end
         mkpath(s2)
         write(joinpath(s1, "x.jl"), "1\n")
         write(joinpath(s2, "x.jl"), "1\n")
-        q = Queue(; runner=_ -> nothing)
-        id1 = submit!(q, joinpath(s1, "x.jl"), "parent:1"; project=s1)
-        id2 = submit!(q, joinpath(s2, "x.jl"), "parent:1"; project=s2)
-        @test id1 != id2
-        r1 = DistSSHQueue.kit_worker_root(s1, job(q, id1).kwargs)
-        r2 = DistSSHQueue.kit_worker_root(s2, job(q, id2).kwargs)
-        @test r1 != r2
+        withenv("DISTRIBUTED_REMOTE_PROJECT_ROOT" => nothing) do
+            q = Queue(; runner=_ -> nothing)
+            id1 = submit!(q, joinpath(s1, "x.jl"), "parent:1"; project=s1)
+            id2 = submit!(q, joinpath(s2, "x.jl"), "parent:1"; project=s2)
+            @test id1 != id2
+            r1 = DistSSHQueue.kit_worker_root(s1, job(q, id1).kwargs)
+            r2 = DistSSHQueue.kit_worker_root(s2, job(q, id2).kwargs)
+            @test r1 != r2
+        end
     end
 end
 
