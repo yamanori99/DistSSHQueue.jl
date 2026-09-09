@@ -40,7 +40,7 @@ end
         write(script, "1\n")
         queued_store = joinpath(d, "queued.toml")
         q = Queue(; store=queued_store, runner=_ -> nothing)
-        queued = submit!(q, script, "parent:1")
+        queued = submit!(q, script, "parent:1"; project=proj)
         @test_throws ArgumentError DistSSHQueue.fetch_source(queued; store=queued_store)
         @test_throws ArgumentError DistSSHQueue.fetch_source("no-such-id"; store=queued_store)
 
@@ -51,7 +51,7 @@ end
             wait(hold)
             return leaf[]
         end)
-        running = submit!(q2, script, "parent:1")
+        running = submit!(q2, script, "parent:1"; project=proj)
         leaf[] = joinpath(d, ".distsshkit", "go", "S_" * first(running, 8))
         mkpath(leaf[])
         @test step!(q2) == 1
@@ -74,7 +74,7 @@ end
         stray_store = joinpath(d, "stray.toml")
         stray_id = Ref{String}()
         q3 = Queue(; store=stray_store, runner=_ -> "/tmp/go/S_" * first(stray_id[], 8))
-        stray_id[] = submit!(q3, script, "parent:1")
+        stray_id[] = submit!(q3, script, "parent:1"; project=proj)
         @test step!(q3) == 1
         _wait_fetch_state(q3, stray_id[], :done)
         err = try
@@ -102,7 +102,7 @@ end
             write(joinpath(leaf, "kit.result"), "ok\n")
             return leaf
         end)
-        id = submit!(q, script, "parent:1")
+        id = submit!(q, script, "parent:1"; project=proj)
         idbox[] = id
         @test step!(q) == 1
         _wait_fetch_state(q, id, :done)
