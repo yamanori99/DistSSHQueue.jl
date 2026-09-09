@@ -14,7 +14,8 @@ That `--project=.` stays on the **client**. `qhost:` defaults to
 `--queue-env @`). Create that dir if clients hop (see Prepare).
 `qhost:` **rsync**s the client job tree (`cwd` /
 `DISTRIBUTED_PROJECT_ROOT`) to `~/.distsshqueue/stage/<id>` on the
-queue host (excludes `.distsshkit/`). After submit, this job tree has
+queue host (Kit rsync excludes: `.gitignore`, `.git/`, `.distsshkit/`,
+`.distsshqueue/`). After submit, this job tree has
 `.distsshkit/queue/<id>` (not the Kit leaf). `SCRIPT.jl` must exist on
 the **client** in that tree.
 Omit `qhost:`: no rsync; the script is on this machine. Kit still

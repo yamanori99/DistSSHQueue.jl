@@ -42,7 +42,7 @@ julia --project=. -m DistSSHQueue qhost:mini go parent:1 distsshkit_demos/withou
 ```
 
 `qhost:` rsyncs this tree to `~/.distsshqueue/stage/<key>` on `mini`
-(excludes `.distsshkit/`). Stdout is the job UUID. This laptop has
+(excludes `.gitignore`, `.git/`, `.distsshkit/`, `.distsshqueue/`). Stdout is the job UUID. This laptop has
 `.distsshkit/queue/<id>` only; the Kit leaf is not here yet.
 
 ```bash

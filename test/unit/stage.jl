@@ -37,4 +37,10 @@ using DistSSHQueue
         @test DistSSHQueue.should_stage("submit", ["go", "S.jl"]) == false
         @test DistSSHQueue.should_submit_ticket("submit", ["go", "S.jl"])
     end
+    opts = DistSSHQueue.stage_rsync_push_opts("ssh -o BatchMode=yes")
+    @test opts[1] == "-az"
+    @test ":- .gitignore" in opts
+    @test ".distsshqueue/" in opts
+    @test ".distsshkit/" in opts
+    @test ".git/" in opts
 end

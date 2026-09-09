@@ -1,7 +1,8 @@
 # [fetch](@id Manual-fetch)
 
 Copy one finished Kit result leaf onto this job tree. Inverse of
-`qhost:` stage (which excludes `.distsshkit/`). `qhost:` submit leaves
+`qhost:` stage (Kit rsync excludes: `.gitignore`, `.git/`, `.distsshkit/`,
+`.distsshqueue/`). `qhost:` submit leaves
 `.distsshkit/queue/<id>` on this tree so the laptop is not empty; that
 file is not the leaf.
 
