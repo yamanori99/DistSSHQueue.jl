@@ -282,6 +282,21 @@ end
     @test_throws ArgumentError DistSSHQueue.extract_remote_opts(["--qhost", "qbox", "status"])
     @test DistSSHQueue.parse_qhost_token("qhost:user@box") == "user@box"
     @test_throws ArgumentError DistSSHQueue.parse_qhost_token("child:w:2")
+    err4 = try
+        DistSSHQueue.parse_qhost_token("qhost:4")
+        ""
+    catch e
+        e isa ArgumentError ? e.msg : sprint(showerror, e)
+    end
+    @test occursin("parent:4", err4)
+    @test occursin("not Kit slots", err4)
+    twice = try
+        DistSSHQueue.extract_remote_opts(["qhost:box", "drive", "qhost:4", "child:w:1"])
+        ""
+    catch e
+        e isa ArgumentError ? e.msg : sprint(showerror, e)
+    end
+    @test occursin("parent:4", twice)
 
     host_go, julia_go, _, payload_go, _ = DistSSHQueue.extract_remote_opts(["go", "child:w1:2", "S.jl"])
     @test host_go === nothing

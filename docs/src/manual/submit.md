@@ -33,8 +33,8 @@ queue host (Kit rsync excludes: `.gitignore`, `.git/`, `.distsshkit/`,
 (every `qhost:` submit from this tree; not the Kit leaf). [`fetch`](@ref Manual-fetch) copies one finished
 Kit leaf back onto that same tree. Omit `qhost:`:
 the script is checked on this machine. Job id prints as a bare stdout line. CLI `submit` also prints
-`queue: local (HOSTNAME)` then `Queued  N` on stderr (`(R running)` when a job is already running);
-`DISTSSHKIT_QUIET` hides that. `pool:N` (before or after the kind) sets
+`queue: local (HOSTNAME)` (or `queue: qhost:HOST` after a hop) then `Queued  N` on stderr (`(R running)` when a job is already running);
+`DISTSSHKIT_QUIET` hides that. Missing config `hosts` is allow-all; submit then prints `no add-host list; any child: is accepted`. `pool:N` (before or after the kind) sets
 the same `:N` on every config host (clamped by add-host max). Do not
 mix with `parent` / `child` tokens. Library [`submit!`](@ref) does not.
 Two different projects

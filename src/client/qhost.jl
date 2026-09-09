@@ -17,6 +17,9 @@ function parse_qhost_token(raw::AbstractString)::String
     startswith(s, "qhost:") || throw(ArgumentError("queue host is `qhost:NAME`, not $(repr(s))"))
     name = strip(chopprefix(s, "qhost:"))
     isempty(name) && throw(ArgumentError("`qhost:` needs an SSH name"))
+    occursin(r"^\d+$", name) && throw(ArgumentError(
+        "`qhost:` names the queue host (SSH), not Kit slots. Use `parent:$(name)`.",
+    ))
     return String(name)
 end
 

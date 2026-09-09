@@ -680,7 +680,7 @@ function _finish!(q::Queue, id::AbstractString, state::Symbol, err; result_path=
             end
             j.state = state
             j.finished_at = now(UTC)
-            j.error = err === nothing ? nothing : String(err)
+            j.error = err === nothing ? nothing : queue_explain_error(String(err))
             delete!(j.kwargs, "phase")
             if result_path !== nothing
                 j.result_path = String(result_path)

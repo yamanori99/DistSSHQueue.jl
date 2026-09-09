@@ -228,14 +228,21 @@ function _id_chrome(id::AbstractString, ids::AbstractVector{<:AbstractString})::
     return first(String(id), min(_ID_PREFIX_MIN, length(id)))
 end
 
-const _ERROR_CELL_MAX = 60
+"""Queue wording in front of a known Kit line (status `error` and `Job.error`)."""
+function queue_explain_error(msg::AbstractString)::String
+    s = String(msg)
+    startswith(s, "this job includes parent:N;") && return s
+    if occursin("only for --juliaup", s)
+        return "this job includes parent:N; per-job setup! only rsyncs child: (the queue host is already here). " * s
+    end
+    return s
+end
 
 function _job_error_disp(j::Job)::String
     e = j.error
     e isa AbstractString || return ""
-    firstline = first(split(e, '\n'; limit=2))
-    length(firstline) > _ERROR_CELL_MAX && return string(firstline[1:_ERROR_CELL_MAX], "…")
-    return firstline
+    explained = queue_explain_error(e)
+    return first(split(explained, '\n'; limit=2))
 end
 
 function _q_state_color(state::Symbol)
@@ -268,7 +275,7 @@ function print_queue_usage(io::IO=stdout)
         "  plan                  Kit plan on the queue host",
         "  pool                  Kit pool on the queue host",
         "  watch [-q] [--tail N|full]    Same as status --interval",
-        "  submit go|ride|drive … Enqueue DistSSHKit (`pool:N` sets every host)",
+        "  submit go|ride|drive … Enqueue DistSSHKit (`parent:N` / `child:NAME:N`; `pool:N`)",
         "  cancel <id>           Drop queued or stop running",
         "  fetch <id>            Copy a finished Kit leaf (prefix, UUID, or ticket)",
         "  teardown -y           Stop serve and remove queue-host files",
@@ -291,7 +298,7 @@ function print_queue_usage(io::IO=stdout)
         "  julia --project=. -m DistSSHQueue setup",
         "  julia --project=. -m DistSSHQueue qhost:HOST status",
         "  julia --project=. -m DistSSHQueue qhost:HOST plan SCRIPT.jl",
-        "  julia --project=. -m DistSSHQueue qhost:HOST go parent SCRIPT.jl",
+        "  julia --project=. -m DistSSHQueue qhost:HOST submit go parent:N SCRIPT.jl",
     )
     DistSSHKit.print_help_blank(io)
     println(io, "Run `julia -m DistSSHQueue <command> -h` for flags.")
