@@ -241,17 +241,26 @@ end
 
 """Set Kit `output_dir` before spawn so `:running` cancel and restart adopt need no submitter path.
 
-Default leaf is `{store dir}/{kind}/{stem}_{id8}/` (Queue home, not Kit
-`allocate_output_dir`). No-op if the bag already has `output_dir`.
+Default leaf is `{project}/.distsshqueue/{kind}/{stem}_{id8}/` (same
+layout as `fetch` dest). Kit remote slots use `relpath(output, project)`,
+so a leaf next to `jobs.toml` (outside the job tree) makes `child:` `go`
+exit 1. No-op if the bag already has `output_dir`.
 """
 function ensure_kit_output_dir!(j::Job; store::Union{Nothing,AbstractString}=nothing)
     kit_output_dir(j) !== nothing && return nothing
     isfile(j.script) || return nothing
-    root = store === nothing ? dirname(default_store_path()) : dirname(String(store))
+    proj = get(j.kwargs, "project", nothing)
+    root = if proj isa AbstractString && !isempty(strip(String(proj)))
+        String(proj)
+    elseif store === nothing
+        dirname(default_store_path())
+    else
+        dirname(String(store))
+    end
     stem = splitext(basename(j.script))[1]
     isempty(stem) && (stem = "job")
     leaf = "$(stem)_$(_job_id8(j.id))"
-    dir = joinpath(root, String(j.kind), leaf)
+    dir = joinpath(root, ".distsshqueue", String(j.kind), leaf)
     mkpath(dir)
     j.kwargs["output_dir"] = dir
     j.result_path = dir

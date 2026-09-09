@@ -18,8 +18,8 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
   `DISTSSHKIT_QUIET`. Fix: `setup --juliaup`.
 - `status` / `watch` print job cards (`ID STATE KIND SCRIPT`). `--tail
   N|full`. Watch skips identical frames. Default Kit leaf is
-  `~/.distsshqueue/{kind}/{stem}_{id8}/`. Fetch dest is
-  `{project}/.distsshqueue/{kind}/{stem}_{id8}/`.
+  `{project}/.distsshqueue/{kind}/{stem}_{id8}/`. Fetch dest is the same
+  layout on the client tree.
 - `serve` runs Kit `setup!` (`rsync` → `instantiate` → `check`) before
   `execute!`. `DISTSSHQUEUE_NO_KIT_SETUP=1` skips it.
 

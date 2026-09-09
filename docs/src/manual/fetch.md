@@ -17,9 +17,9 @@ Run it from the same `cwd` / `DISTRIBUTED_PROJECT_ROOT` as `submit`.
 The dest is `{project}/.distsshqueue/{go|ride|drive}/{stem}_{id8}/`.
 stdout is that path, one line. Re-run rsyncs into the same leaf.
 
-On the queue host (omit `qhost:`), fetch prints the store leaf path
-and does not copy. Source root is `dirname(store)` (usually
-`~/.distsshqueue/`). Failed and cancelled jobs with a leaf are
+On the queue host (omit `qhost:`), fetch prints the leaf path
+and does not copy. The leaf is under the job project (or still under
+`dirname(store)` for an explicit `--output-dir` there). Failed and cancelled jobs with a leaf are
 fetchable. `<id>` is the full UUID or the 8-character prefix from
 `status`.
 

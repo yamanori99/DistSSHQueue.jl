@@ -37,6 +37,32 @@ function fetch_relpath(
     return rel
 end
 
+"""Leaf must sit under the store directory or the job `project` (Kit `relpath`)."""
+function require_fetch_in_known_root(j::Job, result_path::AbstractString, store::AbstractString)
+    roots = String[dirname(store)]
+    proj = get(j.kwargs, "project", nothing)
+    if proj isa AbstractString
+        s = strip(String(proj))
+        !isempty(s) && push!(roots, s)
+    end
+    last = nothing
+    seen = Set{String}()
+    for r in roots
+        r in seen && continue
+        push!(seen, r)
+        try
+            fetch_relpath(result_path, r)
+            return nothing
+        catch e
+            e isa ArgumentError || rethrow()
+            last = e
+        end
+    end
+    throw(something(last, ArgumentError(
+        "result is not under the queue store directory or the job project",
+    )))
+end
+
 function fetch_dest(local_proj::AbstractString, kind::AbstractString, leaf::AbstractString)::String
     k = String(kind)
     k in ("go", "ride", "drive") || throw(ArgumentError("fetch: bad kind $(repr(k))"))
@@ -74,7 +100,7 @@ function fetch_source(id::AbstractString; store::AbstractString=store_path())::S
         "job $(repr(id)) is $(j.state)",
     ))
     require_fetchable_leaf(id, p)
-    fetch_relpath(p, dirname(store))
+    require_fetch_in_known_root(j, p, store)
     return string(j.state, FETCH_SOURCE_SEP, p)
 end
 

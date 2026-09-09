@@ -338,7 +338,7 @@ end
     end
 end
 
-@testset "drive leaf is store-dir/kind/stem_id8" begin
+@testset "drive leaf is project/.distsshqueue/kind/stem_id8" begin
     mktempdir() do d
         sdir = joinpath(d, "with_kit")
         mkpath(sdir)
@@ -357,7 +357,9 @@ end
         p = DistSSHKit.canonical_local_path(something(j.result_path))
         @test occursin(first(id, 8), basename(p))
         @test basename(dirname(p)) == "drive"
-        @test dirname(dirname(p)) == DistSSHKit.canonical_local_path(d)
+        @test basename(dirname(dirname(p))) == ".distsshqueue"
+        @test dirname(dirname(dirname(p))) == DistSSHKit.canonical_local_path(d)
+        @test !startswith(relpath(p, DistSSHKit.canonical_local_path(d)), "..")
         DistSSHQueue.require_fetchable_leaf(id, p)
         mod = Module()
         Base.include(mod, script)

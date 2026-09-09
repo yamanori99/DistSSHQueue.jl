@@ -107,7 +107,7 @@ function stage_kit_demos!(proj::AbstractString)
 end
 
 # Poll until `id` is terminal. Does not start a later queued job once `id` is done.
-function drive_until_terminal!(q, id; tries = 150, sleep_s = 0.2)
+function drive_until_terminal!(q, id; tries = 600, sleep_s = 0.2)
     terminal = (:done, :failed, :cancelled)
     for _ = 1:tries
         st = job(q, id).state
@@ -168,8 +168,10 @@ function wait_store_job(store::AbstractString, id::AbstractString, states; tries
     for _ = 1:tries
         last = isfile(store) ? DistSSHQueue.read_jobs(store) : DistSSHQueue.Job[]
         i = findfirst(j -> j.id == sid, last)
-        if i !== nothing && last[i].state in want
-            return last[i]
+        if i !== nothing
+            st = last[i].state
+            st in want && return last[i]
+            st in (:failed, :cancelled, :done) && !(st in want) && return last[i]
         end
         sleep(sleep_s)
     end
@@ -703,7 +705,8 @@ end
 
                         id_f = read_cli(addenv(qh(["submit", "go", token, script, GO_N...]), client_env...))
                         @test !isempty(id_f)
-                        wait_store_job(qh_store, id_f, (:done,))
+                        row_f = wait_store_job(qh_store, id_f, (:done,))
+                        @test row_f.state === :done
                         fetched = read_cli(addenv(qh(["fetch", id_f]), client_env...))
                         @test occursin(id_f, fetched)
                         @test isfile(joinpath(fetched, "kit.result"))

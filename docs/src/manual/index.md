@@ -50,7 +50,7 @@ Each row: `id` (UUID), `kind` (`:go` / `:ride` / `:drive`), `script`, `hosts`,
 `state` (`:queued` / `:running` / `:done` / `:failed` / `:cancelled`),
 `queued_at` / `started_at` / `finished_at`, `error`, and `result_path`
 — Kit's output directory. If submit omitted `--output-dir`, `serve`
-sets one under `{store dir}/{kind}/{stem}_{id8}/` when the row becomes
+sets one under `{project}/.distsshqueue/{kind}/{stem}_{id8}/` when the row becomes
 `:running` (so `cancel` and a later `serve` can find `kit.pid`). Drive
 is that unique leaf, not shared `.distsshkit/drive` and not demo
 `output/`. Queue
@@ -79,7 +79,7 @@ when that file exists, otherwise `:failed`. Drive listed `parent` /
 `child` hosts must join, stay, and collect unless the job passed
 `--best-effort` (Kit 0.7;
 [kit drive](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/drive/)).
-Kit results stay under `~/.distsshqueue/{kind}/`.
+Kit results stay under `{project}/.distsshqueue/{kind}/`.
 
 ## Shared peel
 
