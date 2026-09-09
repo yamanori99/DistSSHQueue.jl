@@ -78,6 +78,9 @@ const SSH_ENV = Dict(
     "DISTSSHKIT_QUIET" => get(ENV, "DISTSSHKIT_QUIET", "1"),
     "DISTRIBUTED_SSH_OPTS" => "-F $(SSH_CONFIG)",
     "DISTRIBUTED_REMOTE_PROJECT_ROOT" => REMOTE_ROOT,
+    # E2E already runs Kit setup! in its own testset. Per-job setup! would
+    # redo rsync/instantiate/check and stall status until wait_status times out.
+    DistSSHQueue.NO_KIT_SETUP_ENV => "1",
 )
 
 function kit_root()::String
@@ -153,6 +156,20 @@ function e2e_qcmd(test_project::AbstractString, args)
             "-m", "DistSSHQueue", String[string(a) for a in args]...,
         ]),
     )
+end
+
+# Cards print a setup phase in the STATE column while Kit setup! is running.
+function status_is_running(text::AbstractString, id::AbstractString)::Bool
+    status_shows_id(text, id) || return false
+    for token in ("running", "rsync", "instantiate", "check")
+        occursin(Regex("\\b" * token * "\\b"), text) && return true
+    end
+    return false
+end
+
+function status_is_done(text::AbstractString, id::AbstractString)::Bool
+    status_shows_id(text, id) || return false
+    return occursin(r"\bdone\b", text) && !status_is_running(text, id)
 end
 
 function wait_status(pred, cmd::Cmd; tries=600, sleep_s=0.2)
@@ -615,10 +632,10 @@ end
                         id = read_cli(addenv(qcmd(["submit", "go", token, "--output-dir", outdir, script, GO_N...]), env...))
                         @test !isempty(id)
                         listed = wait_status(addenv(qcmd(["status"]), env...)) do out
-                            status_shows_id(out, id) && occursin("  done  ", out) && !occursin("  running  ", out)
+                            status_is_done(out, id)
                         end
                         @test status_shows_id(listed, id)
-                        @test occursin("  done  ", listed)
+                        @test occursin("done", listed)
                         wout = read_cli(addenv(qcmd(["watch", "--interval", "0.05"]), merge(env, Dict("DISTSSHKIT_QUIET" => "0"))...))
                         @test occursin("serve", wout)
                         @test occursin("running", wout)
@@ -662,6 +679,7 @@ end
                             "DISTSSHKIT_QUIET" => get(ENV, "DISTSSHKIT_QUIET", "1"),
                             "DISTRIBUTED_SSH_OPTS" => "-F $(SSH_CONFIG)",
                             "DISTRIBUTED_REMOTE_PROJECT_ROOT" => REMOTE_ROOT,
+                            DistSSHQueue.NO_KIT_SETUP_ENV => "1",
                         )
                         wrapper = write_remote_julia(joinpath(d, "remote-julia"), remote_env)
                         client_env = Dict{String,String}(
@@ -682,10 +700,10 @@ end
                         id1 = read_cli(addenv(qh(["submit", "go", token, "--output-dir", outdir, script, GO_N...]), client_env...))
                         @test !isempty(id1)
                         listed = wait_status(addenv(qh(["status"]), client_env...)) do out
-                            status_shows_id(out, id1) && occursin("  done  ", out) && !occursin("  running  ", out)
+                            status_is_done(out, id1)
                         end
                         @test status_shows_id(listed, id1)
-                        @test occursin("  done  ", listed)
+                        @test occursin("done", listed)
                         wout = read_cli(addenv(qh(["watch", "--interval", "0.05"]), client_env..., "DISTSSHKIT_QUIET" => "0"))
                         @test occursin("serve", wout)
                         @test occursin("running", wout)
@@ -693,7 +711,7 @@ end
                         id_f = read_cli(addenv(qh(["submit", "go", token, script, GO_N...]), client_env...))
                         @test !isempty(id_f)
                         wait_status(addenv(qh(["status"]), client_env...)) do out
-                            status_shows_id(out, id_f) && occursin("  done  ", out) && !occursin("  running  ", out)
+                            status_is_done(out, id_f)
                         end
                         fetched = read_cli(addenv(qh(["fetch", id_f]), client_env...))
                         @test occursin(id_f, fetched)
@@ -709,7 +727,7 @@ end
                         isdir(cancel_out) && rm(cancel_out; recursive=true)
                         id2 = read_cli(addenv(qh(["submit", "go", "parent:1", "--output-dir", cancel_out, hold]), client_env...))
                         wait_status(addenv(qh(["status"]), client_env...)) do out
-                            status_shows_id(out, id2) && occursin("  running  ", out)
+                            status_is_running(out, id2)
                         end
                         isfile(joinpath(cancel_out, "kit.pid")) || sleep(0.5)
                         id3 = read_cli(addenv(qh(["submit", "go", token, script, GO_N...]), client_env...))
