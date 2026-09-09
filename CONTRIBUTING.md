@@ -111,8 +111,9 @@ A new root markdown file stays heavy until listed in
 [`.github/actions/ci-heavy/action.yml`](.github/actions/ci-heavy/action.yml).
 A `cut` label skips none of this: Pkg.test, JETLS, Aqua, Documenter,
 and Linux E2E all run (E2E Codecov too). macOS / WSL stay on `E2E weekly`,
-not the PR. A `cut` squash to `main` starts Full on that SHA. Register only after
-that matrix is green (or wait out `cut-hold`).
+not the PR. Register from the cut PR's Linux E2E (optional local Mac
+`./testenv/docker-ssh/scripts/up.sh --e2e`). Intel / WSL weekly are
+watchers, not the register gate.
 
 CI uploads Codecov on **main push** only (`Pkg.test` max slot, flag `pkgtest`). PR E2E does not upload; `cut` PRs and **E2E weekly** Linux upload flag `e2e`. Public repo + Codecov OIDC (`id-token: write`). Status checks are informational (`codecov.yml`). Local coverage:
 
@@ -136,7 +137,7 @@ Required to merge (ruleset `main` uses these names). Tip jobs are allow-failure.
 
 | When | Workflow | What |
 | --- | --- | --- |
-| Sunday 04:00 JST, Run workflow, or a `cut` squash to `main` | `E2E weekly` | `ubuntu-latest`, `macos-15-intel`, WSL2 → `ubuntu-24.04`. Linux job uploads E2E Codecov. Not a PR check. Failure opens (or comments on) Issue `E2E weekly failed`; a later green run closes it. A red Full after a `cut` merge adds `cut-hold`. Compat-only `Project.toml` edits start the workflow but skip Full. |
+| Sunday 04:00 JST, Run workflow, or a `cut` squash to `main` | `E2E weekly` | `ubuntu-latest`, `macos-15-intel`, WSL2 → `ubuntu-24.04`. Linux job uploads E2E Codecov. Not a PR check. Failure opens (or comments on) Issue `E2E weekly failed`; a later all-green run closes it. A red **Linux** job after a `cut` merge adds `cut-hold`. Intel / WSL red does not. Compat-only `Project.toml` edits start the workflow but skip the matrix. |
 | Sunday 10:00 JST, or Run workflow | `CI weekly` | Same `Pkg.test` / JETLS / Aqua slots as a PR (no coverage). Not a PR check. Catches max / Aqua / JETLS `@release` drift when nothing merged that week. Failure of min/max jobs opens Issue `CI weekly failed` (`ci`); tip is omitted from that notify. `cache-gc` keeps one Actions cache per restore-key prefix. |
 
 ## Pull requests
@@ -160,7 +161,7 @@ what is useful.
 | --- | --- |
 | `breaking` | Incompatible behavior. May land **without** a version bump. |
 | `cut` | `Project.toml` `version` went up. |
-| `cut-hold` | Postpone register. CI adds this on Issue `E2E weekly failed` when Full is red after a `cut` merge. Not a PR `area:*` label. Do not lower `version`. |
+| `cut-hold` | Postpone register. CI adds this on Issue `E2E weekly failed` when weekly **Linux** is red after a `cut` merge. Intel / WSL red does not. Not a PR `area:*` label. Do not lower `version`. |
 
 On a breaking line bump `x` in `0.x.y`; otherwise bump `y`. Do not ship an empty cut. Do not automate the bump or `@JuliaRegistrator register`.
 
@@ -183,13 +184,16 @@ Not a calendar. Cut when [NEWS.md](NEWS.md) **Unreleased** has something General
 
 ### After a cut merges
 
-1. **E2E weekly** starts on the **merge commit** (`Project.toml` version went up). Do not register until Linux, macOS Intel, and WSL are green. Path-filtered PRs already run Linux E2E; `cut` still forces it (with Codecov) on the version-bump PR. Full covers macOS / WSL after squash. Do not wait for Sunday cron. `workflow_dispatch` remains for a re-run.
-2. Full red: Issue `E2E weekly failed` gets `cut-hold`. Do not `@JuliaRegistrator register` while `cut-hold` is open. Do not lower `version`.
-3. Full green: CI removes `cut-hold` and closes the Issue. Register on that merge commit (not the PR body). Paste the NEWS section under `Release notes:`.
-4. Skip that version on General instead: keep `cut-hold` until a later cut (higher `version`) is ready, then register that later cut.
-5. TagBot tags once General has the release.
+1. Register when the **cut PR Linux E2E** is green (`ubuntu-latest → ubuntu-24.04`, with Codecov). Path-filtered PRs already run that job; `cut` still forces it. Optional: local Mac `./testenv/docker-ssh/scripts/up.sh --e2e` (same suite; not Colima Intel CI). Do not wait for weekly Intel / WSL.
+2. **E2E weekly** still starts on the merge commit (`Project.toml` version went up): Linux, `macos-15-intel`, WSL2. Watchers. Do not wait for Sunday cron. `workflow_dispatch` remains for a re-run.
+3. Weekly **Linux** red after a cut: Issue `E2E weekly failed` gets `cut-hold`. Do not `@JuliaRegistrator register` while `cut-hold` is open. Do not lower `version`. Intel / WSL red comments on that Issue without `cut-hold`.
+4. Weekly Linux green: CI removes `cut-hold` even if Intel / WSL are still red (the Issue stays open until the whole weekly run is green). Register on the merge commit (not the PR body). Paste the NEWS section under `Release notes:`.
+5. Skip that version on General instead: keep `cut-hold` until a later cut (higher `version`) is ready, then register that later cut.
+6. TagBot tags once General has the release.
 
 TagBot uses SSH deploy key secret `DOCUMENTER_KEY` (write deploy key on this repo) so the `vX.Y.Z` tag starts Docs and `stable` updates. Docs still deploy with `GITHUB_TOKEN`. Do not add a `+doc1` tag unless that path failed. Manual rebuild: `gh workflow run Docs --ref vX.Y.Z`.
+
+GitHub Releases need a token that can `POST /repos/.../releases`. `GITHUB_TOKEN` often returns 403 (`workflows: write`) even when the tagged commit does not touch `.github/workflows`. Keep cut commits to `Project.toml` + `NEWS.md` (no workflow files). For Releases, set repo secret **`TAGBOT_PAT`**: fine-grained PAT (this repo, or the same token as DistSSHKit), Contents read/write, Issues read/write, Workflows read/write. TagBot falls back to `GITHUB_TOKEN` if the secret is empty. Do not put `permissions:` on `.github/workflows/TagBot.yml` (TagBot defaults). If TagBot opens `TagBot: Manual intervention needed for releases`, the tag may already exist; create the Release only (`gh release create vX.Y.Z --notes "…"`), then close the Issue.
 
 Repo Settings → Actions → Workflow permissions: **Read and write** (`GITHUB_TOKEN`).
 
@@ -245,7 +249,7 @@ CI infers, in order:
 1. A unique type on a closing issue (`Fixes #N`)
 2. Else the branch prefix: `feat/` → enhancement, `fix/` → bug, `breaking/` → breaking, `chore/` / `docs/` / `ci/` / `test/` / anything else → chore
 
-`fix/` plus `Fixes` an enhancement issue gets `enhancement`. `breaking` may sit next to the type label. After a `cut` merge, Full runs; a human registers when green (or holds with `cut-hold`); TagBot tags.
+`fix/` plus `Fixes` an enhancement issue gets `enhancement`. `breaking` may sit next to the type label. After a cut, a human registers from Linux E2E (or holds with `cut-hold` if weekly Linux is red); TagBot tags.
 
 Ruleset `main` requires check `PR label` (workflow `Type`). Type labels (`bug` / `enhancement` / `breaking` / `chore` / `cut`) and each `area:*` must exist (`gh label create` if missing). `when:*` is Issues only (not a PR type).
 
@@ -257,7 +261,7 @@ Colors match DistSSHKit: type is "what", area is "where". Do not give each `area
 | Path area | teal `#bfdadc` | `area:client` `area:qhost` `area:queue` `area:project-docs` |
 | Documenter | blue `#0075ca` | `area:docs` (and leftover `docs`) |
 | CI | black `#000000` | `area:ci` (and `ci` on weekly failure issues) |
-| Hold | pale blue `#BFD4F2` | `cut-hold` on Issue `E2E weekly failed` after a red Full |
+| Hold | pale blue `#BFD4F2` | `cut-hold` on Issue `E2E weekly failed` after a red weekly Linux job |
 | Test harness | pale blue `#c5def5` | `area:test` |
 | Horizon | orange `#fdba74` / violet `#c4b5fd` / slate `#94a3b8` | `when:current` `when:next` `when:later` |
 

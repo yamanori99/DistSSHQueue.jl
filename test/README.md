@@ -41,7 +41,7 @@ Green on one layer does not imply the others. `Pkg.test()` does not run `e2e.jl`
 | unit | in-process queue / config | child julia, SSH |
 | integration | child CLI (`-m DistSSHQueue`) and **parent:1** | real SSH / rsync |
 | e2e | docker-ssh workers, `serve` API, and `-m DistSSHQueue` (`qhost:` over loopback OpenSSH). Prints `[i/N]` at the start of each inner `@testset` (SSH can sit silent for minutes otherwise); update `_E2E_N` when adding a case | local-only CLI wiring |
-| e2e weekly | same `e2e.jl` from Linux, macOS Intel, or WSL2 (not a PR check) | macOS workers |
+| e2e weekly | same `e2e.jl` from Linux, macOS Intel, or WSL2 (not a PR check; Intel / WSL watchers). Register from cut PR Linux E2E | macOS workers |
 
 `enable` / `disable` / `teardown` in SSH E2E use `--write-only` (no runner systemd / LaunchAgent). Coverage: `Pkg.test` max slot flag `pkgtest` on main push; `DISTSSHQUEUE_CODE_COVERAGE=1` on `up.sh --e2e` flag `e2e` (cut PRs and E2E weekly Linux).
 
