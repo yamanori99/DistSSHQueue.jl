@@ -325,13 +325,7 @@ end
 
 @testset "kit setup instantiates the queue-host project without SSH" begin
     mktempdir() do d
-        write(
-            joinpath(d, "Project.toml"),
-            """
-            name = "QueueHostInst"
-            uuid = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
-            """,
-        )
+        write(joinpath(d, "Project.toml"), "[deps]\n")
         script = joinpath(d, "s.jl")
         write(script, "1\n")
         j = DistSSHQueue.Job(;
@@ -344,9 +338,53 @@ end
             DistSSHQueue._queue_kit_setup!(j, Returns(nothing))
         end
         @test isfile(joinpath(d, "Project.toml"))
+        @test isfile(joinpath(d, "Manifest.toml"))
     end
     DistSSHQueue._require_kit_setup_ok!((; ok=true), "instantiate")
     @test_throws ErrorException DistSSHQueue._require_kit_setup_ok!((; ok=false), "check")
+end
+
+@testset "instantiate skips queue-env and empty JULIA_DEPOT_PATH" begin
+    mktempdir() do d
+        qenv = joinpath(d, "env")
+        job = joinpath(d, "job")
+        mkpath(qenv)
+        mkpath(job)
+        write(joinpath(qenv, "Project.toml"), "[deps]\n")
+        env_manifest = joinpath(qenv, "Manifest.toml")
+        write(env_manifest, "manifest_format = \"2.0\"\n")
+        env_before = read(env_manifest, String)
+        write(joinpath(job, "Project.toml"), "[deps]\n")
+        @test DistSSHQueue.pkg_depots_for_instantiate() isa Vector{String}
+        old = copy(DEPOT_PATH)
+        try
+            empty!(DEPOT_PATH)
+            push!(DEPOT_PATH, qenv)
+            @test DistSSHQueue.pkg_depots_for_instantiate() ==
+                  [joinpath(homedir(), ".julia")]
+            real = joinpath(d, "depot")
+            mkpath(real)
+            empty!(DEPOT_PATH)
+            push!(DEPOT_PATH, qenv)
+            push!(DEPOT_PATH, real)
+            @test DistSSHQueue.pkg_depots_for_instantiate() == [real]
+            seen = String[]
+            DistSSHQueue._with_pkg_depots() do
+                append!(seen, DEPOT_PATH)
+                return nothing
+            end
+            @test seen == [real]
+            empty!(DEPOT_PATH)
+            DistSSHQueue._queue_local_instantiate!(job)
+            @test isfile(joinpath(job, "Manifest.toml"))
+            @test read(env_manifest, String) == env_before
+            @test !isdir(joinpath(qenv, "packages"))
+            @test !isdir(joinpath(qenv, "compiled"))
+        finally
+            empty!(DEPOT_PATH)
+            append!(DEPOT_PATH, old)
+        end
+    end
 end
 
 @testset "run_kit skips execute when no longer running" begin

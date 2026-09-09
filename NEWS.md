@@ -3,8 +3,9 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
-## Unreleased
-
+- Job `Pkg.instantiate` skips a `DEPOT_PATH` entry that is a Julia
+  project (queue-env). Empty `JULIA_DEPOT_PATH` uses `~/.julia`, not
+  the serve `--project=`.
 - DistSSHKit **0.7.1**. Detached `execute!` `--project=` is the job tree
   when that tree has DistSSHKit (after `serve` instantiate). Not
   `pkgdir(DistSSHKit)` of queue-env.

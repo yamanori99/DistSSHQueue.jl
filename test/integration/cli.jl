@@ -233,6 +233,33 @@ end
         end
     end
 
+    @testset "instantiate subprocess skips queue-env depot" begin
+        mktempdir() do d
+            qenv = joinpath(d, "env")
+            job = joinpath(d, "job")
+            mkpath(qenv)
+            mkpath(job)
+            write(joinpath(qenv, "Project.toml"), "[deps]\n")
+            env_manifest = joinpath(qenv, "Manifest.toml")
+            write(env_manifest, "manifest_format = \"2.0\"\n")
+            env_before = read(env_manifest, String)
+            write(joinpath(job, "Project.toml"), "[deps]\n")
+            script = """
+            using DistSSHQueue
+            empty!(DEPOT_PATH)
+            push!(DEPOT_PATH, $(repr(qenv)))
+            DistSSHQueue._queue_local_instantiate!($(repr(job)))
+            """
+            cmd = DistSSHQueue.with_serve_tag(
+                Cmd(String[JULIA, "--startup-file=no", "--project=$TEST_PROJECT", "-e", script]),
+            )
+            run(cmd)
+            @test isfile(joinpath(job, "Manifest.toml"))
+            @test read(env_manifest, String) == env_before
+            @test !isdir(joinpath(qenv, "packages"))
+        end
+    end
+
     @testset "teardown -y after setup" begin
         mktempdir() do home
             data = joinpath(home, ".distsshqueue")
