@@ -57,8 +57,8 @@ is that unique leaf, not shared `.distsshkit/drive` and not demo
 does not keep a second copy of Kit's result tree. Kit kwargs (`args`,
 `project`, `output_dir`, …) travel as an opaque bag through DistSSHKit's
 `execute!` allow-list. `serve` also passes `job_id` (the row UUID)
-so Kit progress lines can carry `job=`. `serve` runs Kit `setup!`
-one step at a time before `execute!` unless
+so Kit progress lines can carry `job=`. `serve` instantiates the job
+project on the queue host, then Kit `setup!` on `child:` hosts, unless
 `DISTSSHQUEUE_NO_KIT_SETUP=1`.
 
 The table is TOML on the queue host (`~/.distsshqueue/jobs.toml`),

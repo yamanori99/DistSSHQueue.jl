@@ -50,8 +50,9 @@ julia --project=. -m DistSSHQueue qhost:mini cancel <id>
 julia --project=. -m DistSSHQueue qhost:mini fetch <id>
 ```
 
-`submit` starts `serve` if none is running. `serve` then runs Kit
-`setup!` before `execute!`. `status` / `watch` print
+`submit` starts `serve` if none is running. `serve` instantiates the
+job project on the queue host and runs Kit `setup!` on `child:` hosts
+before `execute!`. `status` / `watch` print
 `qhost` (or `local (hostname)` when you omitted it). `watch` is
 `status --interval` until Ctrl-C; it does not stop `serve`. Job ids print as a bare
 stdout line. `submit` also prints `Queued  N` on stderr unless

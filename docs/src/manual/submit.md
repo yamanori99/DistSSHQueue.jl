@@ -1,7 +1,8 @@
 # [submit](@id Manual-submit)
 
 Enqueue a DistSSHKit `go`, `ride`, or `drive`. Starts `serve` if none is
-running. That `serve` runs Kit `setup!` before `execute!` (not a
+running. That `serve` instantiates the job project on the queue host
+and runs Kit `setup!` on `child:` hosts before `execute!` (not a
 hand-run DistSSHKit `setup` on the stage tree).
 
 ```bash

@@ -15,10 +15,11 @@ Julia **1.12+**, DistSSHKit **0.7.x**. Placement tokens
 ## What is DistSSHQueue?
 
 Day to day you **submit** from a client (`qhost:HOST`). If no `serve` is up,
-`submit` starts one on the queue host. That process runs Kit `setup!`
-before `execute!`. You do not need Queue `setup`, a `serve` terminal, or
+`submit` starts one on the queue host. That process instantiates the
+job project there and runs Kit `setup!` on `child:` hosts before
+`execute!`. You do not need Queue `setup`, a `serve` terminal, or
 `enable` for a job to run, and you do not hand-run DistSSHKit `setup`
-on the stage tree.
+or `Pkg.instantiate` on the stage tree.
 
 How you call it:
 

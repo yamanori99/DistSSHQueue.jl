@@ -13,8 +13,13 @@ Also: [Prepare](@ref Tutorial-Prepare), [submit](@ref Manual-submit),
 [setup](@ref Manual-setup). `qhost:` is refused (log in on the queue host).
 
 `serve` is this terminal, now. Ctrl-C stops this process, not a Kit job
-that is already running. Before each `execute!` it runs Kit `setup!`
-(`rsync` → `instantiate` → `check`) unless `DISTSSHQUEUE_NO_KIT_SETUP=1`.
+that is already running. Before each `execute!` it `Pkg.instantiate`s
+the job project on this host, then Kit `setup!` (`rsync` →
+`instantiate` → `check`) on `child:` hosts, unless
+`DISTSSHQUEUE_NO_KIT_SETUP=1`. Kit `setup!` does not instantiate
+`parent`. Child `instantiate` / `check` failure fails the job. A
+later job's `rsync` onto a nonempty worker path is Kit's no-overwrite
+rule; `instantiate` still runs.
 `enable` tells the OS to start `serve` after reboot / login
 (LaunchAgent / systemd). `submit` starts `serve` if none is up.
 
