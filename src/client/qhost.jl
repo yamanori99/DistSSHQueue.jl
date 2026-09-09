@@ -299,7 +299,7 @@ function maybe_remote(
     )
 end
 
-"""`qhost:` submit hop: capture stdout, reprint it, write `.distsshkit/queue/<id>`."""
+"""`qhost:` submit hop: capture stdout, reprint it, write `.distsshqueue/tickets/<id>`."""
 function _remote_submit_ticket(
     dest::AbstractString,
     spec::AbstractString,

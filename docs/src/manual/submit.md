@@ -29,8 +29,8 @@ With `qhost:`, the client **rsync**s the job project (`cwd` /
 `DISTRIBUTED_PROJECT_ROOT`) to `~/.distsshqueue/stage/<id>` on the
 queue host (Kit rsync excludes: `.gitignore`, `.git/`, `.distsshkit/`,
 `.distsshqueue/`), then enqueue resolves
-`SCRIPT.jl` there. The client gets `.distsshkit/queue/<id>` (a ticket,
-not the Kit leaf). [`fetch`](@ref Manual-fetch) copies one finished
+`SCRIPT.jl` there. The client keeps `.distsshqueue/tickets/<uuid>`
+(every `qhost:` submit from this tree; not the Kit leaf). [`fetch`](@ref Manual-fetch) copies one finished
 Kit leaf back onto that same tree. Omit `qhost:`:
 the script is checked on this machine. Job id prints as a bare stdout line. CLI `submit` also prints
 `queue: local (HOSTNAME)` then `Queued  N` on stderr (`(R running)` when a job is already running);

@@ -5,6 +5,12 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
+- DistSSHKit **0.7.1**. Detached `execute!` `--project=` is the job tree
+  when that tree has DistSSHKit (after `serve` instantiate). Not
+  `pkgdir(DistSSHKit)` of queue-env.
+- `qhost:` submit tickets are `{project}/.distsshqueue/tickets/<uuid>`
+  (every submit, no prune). Not `.distsshkit/queue/`. `fetch` still
+  takes the id; the directory is the laptop history.
 - `qhost:` submit rsync matches Kit `setup --rsync`: `.gitignore` plus
   `.git/` / `.distsshkit/` / `.distsshqueue/`. Ship Manifest (or
   `data/`) by editing gitignore, not a Queue exception. Stage rsync

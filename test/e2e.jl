@@ -180,7 +180,11 @@ function wait_store_job(store::AbstractString, id::AbstractString, states; tries
         if i !== nothing
             st = last[i].state
             st in want && return last[i]
-            st in (:failed, :cancelled, :done) && !(st in want) && return last[i]
+            if st in (:failed, :cancelled, :done) && !(st in want)
+                err = last[i].error
+                extra = err === nothing || isempty(strip(String(err))) ? "" : ": $err"
+                error("job $sid is $st (wanted $want)$extra")
+            end
         end
         sleep(sleep_s)
     end
@@ -661,6 +665,8 @@ end
                     mkpath(sshd_dir)
                     port = free_loopback_port()
                     qh_store = joinpath(e2e_home, ".distsshqueue", "qhost-jobs.toml")
+                    gi = joinpath(JOB_PROJECT, ".gitignore")
+                    gi_body = read(gi, String)
                     sshd_proc = start_loopback_sshd(sshd_dir, port, controller_key)
                     try
                         ssh_cfg = write_ssh_config_with_qhost(
@@ -674,6 +680,11 @@ end
                             server = read(joinpath(sshd_dir, "sshd.log"), String)
                             error("loopback ssh to distsshqueue-qh failed: $client$server")
                         end
+                        # Stage rsync honors `.gitignore` (`Manifest.toml` is listed).
+                        # Kit 0.7.1 uses `--project=` of a tree that names DistSSHKit,
+                        # so the Manifest [2/11] wrote must reach the stage. Do not
+                        # instantiate that Manifest on workers (path-dev Kit).
+                        write(gi, replace(gi_body, r"^Manifest\.toml\r?\n?"m => ""))
                         remote_env = Dict{String,String}(
                             "HOME" => e2e_home,
                             "JULIA_DEPOT_PATH" => julia_depot_path_env(),
@@ -704,6 +715,7 @@ end
                         isdir(outdir) && rm(outdir; recursive=true)
                         id1 = read_cli(addenv(qh(["submit", "go", token, "--output-dir", outdir, script, GO_N...]), client_env...))
                         @test !isempty(id1)
+                        @test isfile(DistSSHQueue.submit_ticket_path(JOB_PROJECT, id1))
                         wait_store_job(qh_store, id1, (:done,); tries=600)
                         listed = read_cli(addenv(qh(["status"]), client_env...))
                         @test status_shows_id(listed, id1)
@@ -743,6 +755,7 @@ end
                         @test run_cli(addenv(qh(["stop"]), client_env...)).exitcode == 0
                         @test run_cli(addenv(qh(["teardown", "-y", "--write-only"]), client_env...)).exitcode == 0
                     finally
+                        write(gi, gi_body)
                         DistSSHQueue.stop_serve!(qh_store)
                         DistSSHQueue.stop_serve!(store)
                         stop_loopback_sshd(sshd_proc)

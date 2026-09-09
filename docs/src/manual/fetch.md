@@ -3,8 +3,9 @@
 Copy one finished Kit result leaf onto this job tree. Inverse of
 `qhost:` stage (Kit rsync excludes: `.gitignore`, `.git/`, `.distsshkit/`,
 `.distsshqueue/`). `qhost:` submit leaves
-`.distsshkit/queue/<id>` on this tree so the laptop is not empty; that
-file is not the leaf.
+`.distsshqueue/tickets/<uuid>` on this tree (one file per job, kept).
+That file is not the Kit leaf. Use the filename as `<id>` for `fetch`
+if you did not keep stdout.
 
 ```bash
 julia --project=. -m DistSSHQueue [qhost:HOST] fetch <id>
@@ -32,7 +33,7 @@ fetchable. `<id>` is the full UUID or the 8-character prefix from
 
 | Flag | Meaning |
 | --- | --- |
-| `<id>` | Full UUID or unique 8-character prefix (`submit` stdout / `status`) |
+| `<id>` | Full UUID or unique 8-character prefix (`tickets/<uuid>` / `submit` stdout / `status`) |
 | `-h` / `--help` | Queue usage |
 
 No `--output-dir`. Kit worker collect is not repeated.

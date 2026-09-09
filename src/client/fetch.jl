@@ -126,8 +126,13 @@ function job_id_from_submit_stdout(out::AbstractString)::Union{Nothing,String}
     return nothing
 end
 
+"""Client history of `qhost:` submits. One file per UUID; nothing prunes it."""
+function submit_ticket_dir(root::AbstractString)::String
+    return joinpath(String(root), ".distsshqueue", "tickets")
+end
+
 function submit_ticket_path(root::AbstractString, id::AbstractString)::String
-    return joinpath(String(root), ".distsshkit", "queue", String(id))
+    return joinpath(submit_ticket_dir(root), String(id))
 end
 
 function write_submit_ticket(
