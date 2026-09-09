@@ -27,7 +27,8 @@ re-reads config `hosts`. Library [`submit!`](@ref) uses
 
 With `qhost:`, the client **rsync**s the job project (`cwd` /
 `DISTRIBUTED_PROJECT_ROOT`) to `~/.distsshqueue/stage/<id>` on the
-queue host (`.distsshkit/` is excluded), then enqueue resolves
+queue host (Kit rsync excludes: `.gitignore`, `.git/`, `.distsshkit/`,
+`.distsshqueue/`), then enqueue resolves
 `SCRIPT.jl` there. The client gets `.distsshkit/queue/<id>` (a ticket,
 not the Kit leaf). [`fetch`](@ref Manual-fetch) copies one finished
 Kit leaf back onto that same tree. Omit `qhost:`:

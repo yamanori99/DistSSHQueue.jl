@@ -1,8 +1,9 @@
 """Client `qhost:` submit: rsync the job tree onto the queue host.
 
 Omit `qhost:` is unchanged (cwd / `DISTRIBUTED_PROJECT_ROOT` on this box).
-Kit still copies queue host → workers. `DISTSSHQUEUE_NO_STAGE=1` skips
-(tests with a fake `ssh`).
+Kit still copies queue host → workers. Same excludes as Kit `setup --rsync`
+(`.git/` / `.distsshkit/` / `.distsshqueue/` plus `.gitignore`).
+`DISTSSHQUEUE_NO_STAGE=1` skips (tests with a fake `ssh`).
 """
 
 const NO_STAGE_ENV = "DISTSSHQUEUE_NO_STAGE"
@@ -174,6 +175,24 @@ function _ssh_mkdir!(host::AbstractString, remote_dir::AbstractString)
     return nothing
 end
 
+"""rsync flags for laptop → queue-host stage (Kit `setup --rsync` plus `.distsshqueue/`)."""
+function stage_rsync_push_opts(transport::AbstractString)::Vector{String}
+    return String[
+        "-az",
+        "--delete",
+        "-e",
+        String(transport),
+        "--exclude",
+        ".git/",
+        "--exclude",
+        ".distsshkit/",
+        "--exclude",
+        ".distsshqueue/",
+        "--filter",
+        ":- .gitignore",
+    ]
+end
+
 function rsync_to_qhost!(
     host::AbstractString,
     local_root::AbstractString,
@@ -188,23 +207,8 @@ function rsync_to_qhost!(
     transport = _ssh_transport()
     run(
         pipeline(
-            Cmd(
-                vcat(
-                    rsync,
-                    String[
-                        "-az",
-                        "--delete",
-                        "-e",
-                        transport,
-                        "--exclude",
-                        ".git/",
-                        "--exclude",
-                        ".distsshkit/",
-                        src * "/",
-                        dest,
-                    ],
-                ),
-            );
+            Cmd(vcat(rsync, stage_rsync_push_opts(transport), String[src * "/", dest]));
+            stdout=stderr,
             stderr=stderr,
         ),
     )
@@ -219,6 +223,7 @@ function rsync_to_qhost!(
                         String["-az", "-e", transport, p, string(host, ":", remote_root, "/", basename(p))],
                     ),
                 );
+                stdout=stderr,
                 stderr=stderr,
             ),
         )

@@ -87,7 +87,8 @@ see the [kit docs](https://yamanori99.github.io/DistSSHKit.jl/stable/).
 `qhost:` is the SSH name of the queue host, not a storage prefix. The
 table and Kit result dirs stay **on that box**. The client has no
 `~/.distsshqueue`. `qhost:` submit rsyncs the client job tree to
-`~/.distsshqueue/stage/<id>` (excludes `.distsshkit/`); the client keeps
+`~/.distsshqueue/stage/<id>` (same excludes as Kit rsync: `.gitignore`,
+`.git/`, `.distsshkit/`, `.distsshqueue/`); the client keeps
 `.distsshkit/queue/<id>`. Kit still copies queue host → workers. `fetch`
 copies one finished Kit leaf back.
 

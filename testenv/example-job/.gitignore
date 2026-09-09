@@ -2,6 +2,7 @@
 # and E2E copies DistSSHKit demos there so workers must receive them.
 go_out/
 output/
+e2e_kit_out/
 .distsshkit/
 *.log
 Manifest.toml

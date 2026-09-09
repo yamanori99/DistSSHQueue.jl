@@ -87,7 +87,7 @@ from the job env (`julia --project=.`).
   `JULIA_DISTRIBUTED_EXE` (same detection as DistSSHKit)
 
 `qhost:` submit copies the client job tree onto the queue host (and
-excludes `.distsshkit/`), then runs Queue as the **queue-host user**.
+excludes `.gitignore`, `.git/`, `.distsshkit/`, `.distsshqueue/`), then runs Queue as the **queue-host user**.
 `fetch` copies one finished Kit leaf back.
 Placement tokens are interpreted **on the queue host**. Omit `qhost:`:
 no copy.

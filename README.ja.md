@@ -86,7 +86,8 @@ Kit を `Pkg.develop` しない。
 `qhost:` はキューホストの SSH 名であり、保存先の接頭辞ではない。表と Kit の
 結果ディレクトリは **そのマシン** に残る。クライアントに
 `~/.distsshqueue` は無い。`qhost:` submit はクライアントのジョブ木を
-`~/.distsshqueue/stage/<id>` へ rsync する (`.distsshkit/` は除外)。
+`~/.distsshqueue/stage/<id>` へ rsync する (Kit と同じ: `.gitignore`、
+`.git/`、`.distsshkit/`、`.distsshqueue/`)。
 クライアントには `.distsshkit/queue/<id>` が残る。Kit はキューホストから
 worker へコピーする。`fetch` は終わった Kit leaf を戻す。
 
