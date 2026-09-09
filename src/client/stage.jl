@@ -8,7 +8,7 @@ Kit still copies queue host → workers. Same excludes as Kit `setup --rsync`
 
 const NO_STAGE_ENV = "DISTSSHQUEUE_NO_STAGE"
 
-"""Queue-host dest for one client submit. Unique per hop.
+"""Queue-host dest for one client submit. Unique per job UUID.
 
 `home` is that box's `homedir()` under the same Julia as `qhost:` (`--remote-julia`
 wrapper included). Default `~` is for docs/tests without SSH.
@@ -60,20 +60,6 @@ end
 """Home the hop Julia sees (`--remote-julia` wrapper ENV), not only SSH login `\$HOME`."""
 function queue_host_homedir(host::AbstractString, rjulia::AbstractString)::String
     return hop_print(host, rjulia, "print(homedir())")
-end
-
-"""Stable dir name for one client job tree (canonical path). Same tree re-submits here.
-
-Not a job UUID: two trees that Kit would pin to the same worker path must stay
-one queue-host project, or `submit` refuses the second.
-"""
-function client_stage_key(local_proj::AbstractString)::String
-    p = DistSSHKit.canonical_local_path(local_proj)
-    h = 0xcbf29ce484222325
-    for b in codeunits(p)
-        h = (h ⊻ UInt64(b)) * 0x100000001b3
-    end
-    return string(h; base=16)
 end
 
 function staging_enabled()::Bool
@@ -261,7 +247,7 @@ function path_under_project(path::AbstractString, proj::AbstractString)::Bool
     return p == r || startswith(p, path_inside_prefix(r))
 end
 
-"""Rsync cwd / `DISTRIBUTED_PROJECT_ROOT` to `~/.distsshqueue/stage/<id>` on `host`."""
+"""Rsync cwd / `DISTRIBUTED_PROJECT_ROOT` to `~/.distsshqueue/stage/<uuid>` on `host`."""
 function stage_job_tree!(
     host::AbstractString,
     rjulia::AbstractString,
@@ -274,7 +260,7 @@ function stage_job_tree!(
     parsed.show_version && return (String[String(a) for a in payload], Dict{String,String}())
     local_script = script_arg(parsed.script_path, kit)
     local_proj = job_project()
-    key = client_stage_key(local_proj)
+    key = new_job_id()
     remote_root = remote_stage_root(key; home=queue_host_homedir(host, rjulia))
     extras = String[]
     if !path_under_project(local_script, local_proj)
@@ -289,6 +275,9 @@ function stage_job_tree!(
         raw = String(parsed.script_path)
         staged = String[a == raw ? want : a for a in staged]
     end
-    env = Dict{String,String}("DISTRIBUTED_PROJECT_ROOT" => remote_root)
+    env = Dict{String,String}(
+        "DISTRIBUTED_PROJECT_ROOT" => remote_root,
+        JOB_ID_ENV => key,
+    )
     return staged, env
 end

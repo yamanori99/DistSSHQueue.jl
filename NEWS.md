@@ -3,6 +3,13 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
+- `qhost:` stage is `~/.distsshqueue/stage/<uuid>/` (the job id). A
+  second submit from the same laptop tree does not `rsync --delete`
+  the running copy. Worker-root collision does not treat two of those
+  stage dirs as different projects (a pinned
+  `DISTRIBUTED_REMOTE_PROJECT_ROOT` is then allowed). `submit!` refuses
+  a caller `id=` that is already in the table (first-row lookup would
+  otherwise hit the wrong job).
 - Job `Pkg.instantiate` skips a `DEPOT_PATH` entry that is a Julia
   project (queue-env). Empty `JULIA_DEPOT_PATH` uses `~/.julia`, not
   the serve `--project=`.
@@ -211,9 +218,10 @@ Home is `~/.distsshqueue`, ENV is `DISTSSHQUEUE_*`, OS unit is
   refused. `setup` / `serve` / `enable` / `disable` refuse `qhost:` (log in
   on the queue host).
 - `qhost:` `submit` / `go` / `drive` rsync the client job tree to
-  `~/.distsshqueue/stage/<id>` (stable per client project path) and set
-  `DISTRIBUTED_PROJECT_ROOT` there. Re-submit of the same tree reuses that
-  dir. Omit `qhost:` does not rsync. `DISTSSHQUEUE_NO_STAGE=1` skips (tests).
+  `~/.distsshqueue/stage/<uuid>/` (the job id, a new directory every
+  submit) and set `DISTRIBUTED_PROJECT_ROOT` there. A second submit from
+  the same laptop tree does not `rsync --delete` a running copy. Omit
+  `qhost:` does not rsync. `DISTSSHQUEUE_NO_STAGE=1` skips (tests).
   Kit still copies queue host → workers.
 - `qhost:` runs `julia --startup-file=no --project=~/.distsshqueue/env` (not the
   client's `--project=.`, not remote cwd `.`). `--queue-env DIR` /

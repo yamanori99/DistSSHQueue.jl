@@ -35,9 +35,9 @@ whole): `fetch` (inverse of stage).
 `--remote-julia` / `JULIA_DISTRIBUTED_EXE`. `--queue-env DIR` is
 `julia --project=` on the queue host (default `~/.distsshqueue/env` if
 you created that dir), not the client's `--project=.`. `--queue-env @`
-is the remote default Julia env. Default `qhost:`: `DISTSSHQUEUE_HOST` (not
-`DISTSSHKIT_HOSTS`). Not forwarded. Not `DISTSSHQUEUE_QHOST` (that is
-`status` / `watch` display).
+is the remote default Julia env. Hop is argv `qhost:HOST` (not
+`DISTSSHKIT_HOSTS`). `DISTSSHQUEUE_HOST` alone does not hop. Not forwarded.
+Not `DISTSSHQUEUE_QHOST` (that is `status` / `watch` display).
 
 `serve` is “run the process”. `enable` is “register that process with
 the OS” (LaunchAgent / systemd). The queue host is **macOS or Linux**.

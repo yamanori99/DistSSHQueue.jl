@@ -13,7 +13,7 @@ That `--project=.` stays on the **client**. `qhost:` defaults to
 `--project=~/.distsshqueue/env` on the queue host (`--queue-env DIR` /
 `--queue-env @`). Create that dir if clients hop (see Prepare).
 `qhost:` **rsync**s the client job tree (`cwd` /
-`DISTRIBUTED_PROJECT_ROOT`) to `~/.distsshqueue/stage/<id>` on the
+`DISTRIBUTED_PROJECT_ROOT`) to `~/.distsshqueue/stage/<uuid>` on the
 queue host (Kit rsync excludes: `.gitignore`, `.git/`, `.distsshkit/`,
 `.distsshqueue/`). After submit, this job tree has
 `.distsshqueue/tickets/<uuid>` (not the Kit leaf; every submit stays).
@@ -23,13 +23,13 @@ Omit `qhost:`: no rsync; the script is on this machine. Kit still
 copies queue host → workers.
 
 ```bash
-julia --project=. -m DistSSHQueue qhost:mini list-host
-julia --project=. -m DistSSHQueue qhost:mini size
-julia --project=. -m DistSSHQueue qhost:mini plan SCRIPT.jl
-julia --project=. -m DistSSHQueue qhost:mini pool
+julia --project=. -m DistSSHQueue qhost:HOST list-host
+julia --project=. -m DistSSHQueue qhost:HOST size
+julia --project=. -m DistSSHQueue qhost:HOST plan SCRIPT.jl
+julia --project=. -m DistSSHQueue qhost:HOST pool
 ```
 
-One queue host: still pass `qhost:mini` (or `status qhost:mini`).
+One queue host: still pass `qhost:HOST` (or `status qhost:HOST`).
 `DISTSSHQUEUE_HOST` is not enough. Local trial without a hop:
 `DISTSSHQUEUE_LOCAL=1`. Several clusters: pass `qhost:` each time.
 
@@ -45,12 +45,12 @@ when workers are on the queue host). Flags:
 [kit drive](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/drive/).
 
 ```bash
-julia --project=. -m DistSSHQueue qhost:mini submit go child:host1:4 SCRIPT.jl
-julia --project=. -m DistSSHQueue qhost:mini status
-julia --project=. -m DistSSHQueue qhost:mini watch
-julia --project=. -m DistSSHQueue qhost:mini cancel <id>
-julia --project=. -m DistSSHQueue qhost:mini fetch <id>  # 8-char prefix or full UUID
-julia --project=. -m DistSSHQueue qhost:mini fetch .distsshqueue/tickets/<uuid>
+julia --project=. -m DistSSHQueue qhost:HOST submit go child:host1:4 SCRIPT.jl
+julia --project=. -m DistSSHQueue qhost:HOST status
+julia --project=. -m DistSSHQueue qhost:HOST watch
+julia --project=. -m DistSSHQueue qhost:HOST cancel <id>
+julia --project=. -m DistSSHQueue qhost:HOST fetch <id>  # 8-char prefix or full UUID
+julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
 `submit` starts `serve` if none is running. `serve` instantiates the

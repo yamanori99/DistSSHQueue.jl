@@ -13,8 +13,8 @@ REPL help also works (`?DistSSHQueue.submit!`).
 Submitters `using DistSSHQueue`. Queue-host code `using DistSSHKit`.
 Job files for Kit `go` / `ride` still do not import DistSSHKit.
 
-Prefer the CLI. From a client: `qhost:HOST` (not `--hosts`). Default
-queue host: `DISTSSHQUEUE_HOST`. CLI `submit` uses `follow_config`; library
+Prefer the CLI. From a client: `qhost:HOST` on the command line (not
+`--hosts`). `DISTSSHQUEUE_HOST` alone does not hop. CLI `submit` uses `follow_config`; library
 [`submit!`](@ref) uses `Queue(; allowed=…)` unless `follow_config=true`.
 Config: `~/.distsshqueue/config.toml`.
 

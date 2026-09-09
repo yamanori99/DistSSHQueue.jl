@@ -19,8 +19,12 @@ const KIT_EXECUTE_KINDS = (:go, :drive, :ride)
 
 is_kit_execute_kind(k::Symbol)::Bool = k === :go || k === :drive || k === :ride
 
+new_job_id()::String = string(Base.UUID(rand(UInt128)))
+
+"""Hop ENV: stage dir UUID must match `jobs.toml`."""
+const JOB_ID_ENV = "DISTSSHQUEUE_JOB_ID"
 function Job(;
-    id::AbstractString=string(Base.UUID(rand(UInt128))),
+    id::AbstractString=new_job_id(),
     kind::Symbol,
     script::AbstractString,
     hosts::AbstractVector{<:AbstractString},

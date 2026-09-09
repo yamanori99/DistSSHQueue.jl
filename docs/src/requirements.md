@@ -73,7 +73,8 @@ access), not a place for untrusted submitters. Same idea as
 how to report a vulnerability stays in [SECURITY.md](https://github.com/yamanori99/DistSSHQueue.jl/blob/main/SECURITY.md).
 
 Do not set `DISTSSHQUEUE_HOST` here (or in `config.toml` `[env]`).
-That name is a **client** default for `qhost:`.
+Client verbs still need `qhost:HOST` on the command line; the env
+alone does not hop.
 
 ## Client
 
@@ -179,12 +180,14 @@ Details: [kit Requirements](https://yamanori99.github.io/DistSSHKit.jl/stable/re
 Typical paths. `qhost:` is the SSH name of the queue host, not a
 storage prefix. The table and Kit result dirs accumulate **on that
 box**. `qhost:` submit rsyncs the client job tree to
-`~/.distsshqueue/stage/<id>`. Kit still copies that tree to workers.
+`~/.distsshqueue/stage/<uuid>`. Kit still copies that tree to workers.
 `teardown` removes `~/.distsshqueue` (including `stage/`), not a git
 clone or `.distsshkit/`.
 
 One Kit clone per job on the queue host, with a unique path
-(`~/org/Repo.jl` or a stage dir). Queue has no extra job
+(`stage/<uuid>/` after a client `qhost:` submit, or this box's cwd /
+`DISTRIBUTED_PROJECT_ROOT` when logged in without `qhost:`;
+`~/org/Repo.jl` is only an example). Queue has no extra job
 name. Do not pin `DISTRIBUTED_REMOTE_PROJECT_ROOT` in the shared
 `config.toml` `[env]`: Kit's default worker path is
 `~/basename(parent)/basename(project)`. Same parent name plus same
@@ -225,7 +228,7 @@ unit; skip that file if you only `serve` in a terminal.
   env/                  qhost: default --project=; enable if present
     Project.toml
     Manifest.toml
-  stage/<id>/           client tree after qhost: submit
+  stage/<uuid>/         client tree after each qhost: submit
   go/                   Kit leaf `{stem}_{id8}/`
     SCRIPT_807e3753/
       kit.pid
@@ -233,7 +236,7 @@ unit; skip that file if you only `serve` in a terminal.
   ride/
   drive/
 
-~/org/Repo.jl/          omit qhost: (cwd / DISTRIBUTED_PROJECT_ROOT)
+~/org/Repo.jl/          example: logged in, no qhost: (cwd / DISTRIBUTED_PROJECT_ROOT)
   Project.toml          compute deps
   Manifest.toml
   SCRIPT.jl

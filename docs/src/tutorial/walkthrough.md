@@ -4,7 +4,7 @@ Commands in the order you type them. Flags and trees stay on
 [Prepare](@ref Tutorial-Prepare), [First job](@ref Tutorial-Client),
 and the [User Guide](@ref Manual). Not a dump of root `--help`.
 
-Names here: queue host SSH `mini`, worker SSH `host1`. Swap them.
+Names here: queue host SSH `HOST`, worker SSH `host1`. Swap them.
 
 ## Queue host (once)
 
@@ -28,7 +28,7 @@ when major.minor differs.
 
 Clients hop: create the env, then `pkg> add DistSSHQueue` in it
 (Prepare). `enable` is optional (survive reboot). From a laptop,
-every client verb needs `qhost:mini` on the command line.
+every client verb needs `qhost:HOST` on the command line.
 
 ## Client: go on parent
 
@@ -38,21 +38,21 @@ Listed `parent` / `child:NAME` need `:N`.
 
 ```bash
 julia --project=. -m DistSSHKit demo install without_kit
-julia --project=. -m DistSSHQueue qhost:mini go parent:1 distsshkit_demos/without_kit/pi_echo.jl
+julia --project=. -m DistSSHQueue qhost:HOST go parent:1 distsshkit_demos/without_kit/pi_echo.jl
 ```
 
-`qhost:` rsyncs this tree to `~/.distsshqueue/stage/<key>` on `mini`
+`qhost:` rsyncs this tree to `~/.distsshqueue/stage/<uuid>` on `HOST`
 (excludes `.gitignore`, `.git/`, `.distsshkit/`, `.distsshqueue/`). Stdout is the job UUID. This laptop has
 `.distsshqueue/tickets/<uuid>` only; the Kit leaf is not here yet.
 
 ```bash
-julia --project=. -m DistSSHQueue qhost:mini status
-julia --project=. -m DistSSHQueue qhost:mini fetch <id>  # 8-char prefix or full UUID
-julia --project=. -m DistSSHQueue qhost:mini fetch .distsshqueue/tickets/<uuid>
+julia --project=. -m DistSSHQueue qhost:HOST status
+julia --project=. -m DistSSHQueue qhost:HOST fetch <id>  # 8-char prefix or full UUID
+julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
 `fetch` copies the Kit leaf
-`{project}/.distsshqueue/go/<stem>_<id8>/` (on `mini`, that project is
+`{project}/.distsshqueue/go/<stem>_<id8>/` (on `HOST`, that project is
 the stage tree) onto the same layout on this job tree. Run it from the
 same directory as `go`.
 
@@ -61,24 +61,24 @@ same directory as `go`.
 From the **client**:
 
 ```bash
-julia --project=. -m DistSSHQueue qhost:mini go child:host1:2 distsshkit_demos/without_kit/pi_echo.jl
-julia --project=. -m DistSSHQueue qhost:mini fetch <id>  # 8-char prefix or full UUID
-julia --project=. -m DistSSHQueue qhost:mini fetch .distsshqueue/tickets/<uuid>
+julia --project=. -m DistSSHQueue qhost:HOST go child:host1:2 distsshkit_demos/without_kit/pi_echo.jl
+julia --project=. -m DistSSHQueue qhost:HOST fetch <id>  # 8-char prefix or full UUID
+julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
 Or the same `:N` on every config host:
 
 ```bash
-julia --project=. -m DistSSHQueue qhost:mini submit pool:2 go distsshkit_demos/without_kit/pi_echo.jl
+julia --project=. -m DistSSHQueue qhost:HOST submit pool:2 go distsshkit_demos/without_kit/pi_echo.jl
 ```
 
 ## Drive
 
 ```bash
 julia --project=. -m DistSSHKit demo install with_kit
-julia --project=. -m DistSSHQueue qhost:mini drive parent:1 distsshkit_demos/with_kit/square_file.jl
-julia --project=. -m DistSSHQueue qhost:mini fetch <id>  # 8-char prefix or full UUID
-julia --project=. -m DistSSHQueue qhost:mini fetch .distsshqueue/tickets/<uuid>
+julia --project=. -m DistSSHQueue qhost:HOST drive parent:1 distsshkit_demos/with_kit/square_file.jl
+julia --project=. -m DistSSHQueue qhost:HOST fetch <id>  # 8-char prefix or full UUID
+julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
 ## Teardown (queue host)

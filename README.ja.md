@@ -74,9 +74,11 @@ Kit を `Pkg.develop` しない。
 ```
 
 `qhost:NAME` はキューホストの SSH 名である (Kit の `child:NAME` と同じ形だが、
-ワーカーではなくキューホストを指す)。既にそのマシンにログインしていれば省略する。
-キューホストが 1 つのとき: `export DISTSSHQUEUE_HOST=…` して `qhost:` を省略できる
-(トークンがあればそちらが勝つ)。`--hosts` / `--julia` は Kit の `go` / `ride` / `drive` のまま。
+ワーカーではなくキューホストを指す)。ラップトップからはコマンドラインに
+`qhost:HOST` を付ける。`DISTSSHQUEUE_HOST` だけではキューホストへ SSH しない。
+すでにキューホストにログインしていれば `qhost:` を省略する (このマシンの cwd
+が Kit 木。配置はこれまでどおり `parent` / `child:`)。手元の試行:
+`DISTSSHQUEUE_LOCAL=1`。`--hosts` / `--julia` は Kit の `go` / `ride` / `drive` のまま。
 
 配置トークン、`go` / `ride` / `drive` のフラグ、リモートの準備は DistSSHKit の範囲である。
 [kit docs](https://yamanori99.github.io/DistSSHKit.jl/stable/) を参照。
@@ -86,7 +88,7 @@ Kit を `Pkg.develop` しない。
 `qhost:` はキューホストの SSH 名であり、保存先の接頭辞ではない。表と Kit の
 結果ディレクトリは **そのマシン** に残る。クライアントに
 `~/.distsshqueue` は無い。`qhost:` submit はクライアントのジョブ木を
-`~/.distsshqueue/stage/<id>` へ rsync する (Kit と同じ: `.gitignore`、
+`~/.distsshqueue/stage/<uuid>` へ rsync する (Kit と同じ: `.gitignore`、
 `.git/`、`.distsshkit/`、`.distsshqueue/`)。
 クライアントには `.distsshqueue/tickets/<uuid>` が残る (submitのたびに増え、消さない)。Kit はキューホストから
 worker へコピーする。`fetch` は終わった Kit leaf を戻す。
@@ -106,8 +108,10 @@ worker へコピーする。`fetch` は終わった Kit leaf を戻す。
 
 #### キューホスト
 
-`~/.distsshqueue` と **ジョブごとに一つの Kit 木** (`qhost:` なら
-`stage/<id>/`、省略なら `~/org/Repo.jl`)。`--queue-env` とは別。
+`~/.distsshqueue` と **ジョブごとに一つの Kit 木**。クライアントから
+`qhost:` submit したとき: `stage/<uuid>/`。キューホストにログインして
+`qhost:` なしのとき: このマシンの cwd / `DISTRIBUTED_PROJECT_ROOT`
+(例 `~/org/Repo.jl`。予約パスではない)。`--queue-env` とは別。
 共有 `config.toml` に `DISTRIBUTED_REMOTE_PROJECT_ROOT` は書かない。
 二本目のプロジェクトが同じ worker パスなら `submit` はエラー。
 
@@ -121,9 +125,9 @@ worker へコピーする。`fetch` は終わった Kit leaf を戻す。
   env/                  qhost: 既定 --project=。enable はあれば使う
     Project.toml
     Manifest.toml
-  stage/<id>/           qhost: submit 後のクライアント木
+  stage/<uuid>/         qhost: submit のたび (ジョブ id)
 
-~/org/Repo.jl/          qhost: 省略 (cwd / DISTRIBUTED_PROJECT_ROOT)
+~/org/Repo.jl/          例: ログイン済み、qhost: なし (cwd / DISTRIBUTED_PROJECT_ROOT)
   Project.toml          計算の依存
   SCRIPT.jl
   .distsshkit/go/
@@ -160,16 +164,16 @@ remote ではない)。収集先は上のキューホスト `.distsshkit/`。
 **クライアント** から (ジョブのディレクトリ。その env から Queue が load できること):
 
 ```bash
-julia --project=. -m DistSSHQueue qhost:mini list-host
-julia --project=. -m DistSSHQueue qhost:mini size
-julia --project=. -m DistSSHQueue qhost:mini plan SCRIPT.jl
-julia --project=. -m DistSSHQueue qhost:mini pool
-julia --project=. -m DistSSHQueue qhost:mini submit go child:host1:4 SCRIPT.jl
-julia --project=. -m DistSSHQueue qhost:mini status
-julia --project=. -m DistSSHQueue qhost:mini watch
-julia --project=. -m DistSSHQueue qhost:mini cancel <id>
-julia --project=. -m DistSSHQueue qhost:mini fetch <id>  # 8文字プレフィックスでもフルUUIDでも可
-julia --project=. -m DistSSHQueue qhost:mini fetch .distsshqueue/tickets/<uuid>
+julia --project=. -m DistSSHQueue qhost:HOST list-host
+julia --project=. -m DistSSHQueue qhost:HOST size
+julia --project=. -m DistSSHQueue qhost:HOST plan SCRIPT.jl
+julia --project=. -m DistSSHQueue qhost:HOST pool
+julia --project=. -m DistSSHQueue qhost:HOST submit go child:host1:4 SCRIPT.jl
+julia --project=. -m DistSSHQueue qhost:HOST status
+julia --project=. -m DistSSHQueue qhost:HOST watch
+julia --project=. -m DistSSHQueue qhost:HOST cancel <id>
+julia --project=. -m DistSSHQueue qhost:HOST fetch <id>  # 8文字プレフィックスでもフルUUIDでも可
+julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
 `submit` は、`serve` が無ければキューホスト上で起動する。`serve` が
