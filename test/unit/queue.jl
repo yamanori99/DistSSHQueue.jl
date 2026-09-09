@@ -817,7 +817,7 @@ end
                 end
                 @test code_qv == 1
                 @test occursin("cannot combine", err_qv)
-                code_go, out_go, err_go = capture_stdio() do
+                code_go, _, err_go = capture_stdio() do
                     DistSSHQueue.main(["submit", "go", "child:host1:4", "job.jl"])
                 end
                 @test code_go == 1
