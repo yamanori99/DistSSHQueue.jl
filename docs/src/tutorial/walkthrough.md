@@ -49,9 +49,11 @@ julia --project=. -m DistSSHQueue qhost:mini status
 julia --project=. -m DistSSHQueue qhost:mini fetch <id>
 ```
 
-`fetch` copies `~/.distsshqueue/go/<stem>_<id8>/` onto
-`{project}/.distsshqueue/go/<stem>_<id8>/`. Run it from the same
-directory as `go`. `<id>` may be the 8-character prefix from `status`.
+`fetch` copies the Kit leaf
+`{project}/.distsshqueue/go/<stem>_<id8>/` (on `mini`, that project is
+the stage tree) onto the same layout on this job tree. Run it from the
+same directory as `go`. `<id>` may be the 8-character prefix from
+`status`.
 
 ## Worker (`child:NAME`)
 
@@ -61,8 +63,6 @@ From the **client**:
 julia --project=. -m DistSSHQueue qhost:mini go child:host1:2 distsshkit_demos/without_kit/pi_echo.jl
 julia --project=. -m DistSSHQueue qhost:mini fetch <id>
 ```
-
-Or every config host with the same N: `submit pool:2 go SCRIPT.jl`.
 
 ## Drive
 
