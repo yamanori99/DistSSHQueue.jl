@@ -87,7 +87,14 @@ Kit flags:
 DistSSHKit `pool` on the queue host (cwd / project). Cores / RAM / slot
 hint (no RSS). Omit tokens to pool config `hosts`. Does not enqueue.
 Prints sizing notes and a `Suggested submit (template):` footer (always
-`submit drive`; use `size` to measure RSS).
+`submit drive`; use `size` to measure RSS). Same nesting as submit:
+`pool` is Queue; tokens after it are DistSSHKit. Not `submit pool:N`
+([submit](@ref Manual-submit)).
+
+```text
+julia -m DistSSHQueue  [qhost:HOST]  pool  parent  child:host1
+└── Julia ──┘  └── queue host ──┘  └Queue┘  └──── DistSSHKit argv ────┘
+```
 
 ```bash
 julia -m DistSSHQueue qhost:HOST pool

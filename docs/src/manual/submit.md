@@ -22,7 +22,13 @@ julia --project=. -m DistSSHQueue [qhost:HOST] submit drive parent:4 SCRIPT.jl
 `pool:N` is Queue, not Kit: it expands config `hosts` to the same `:N`
 (clamped by add-host max). Place it next to `submit` (before or after
 the kind), not among `parent` / `child` tokens. Library [`submit!`](@ref)
-does not expand `pool:N`.
+does not expand `pool:N`. Inspect `pool` (no enqueue) is
+[User Guide · hosts](@ref Manual-hosts).
+
+```text
+julia -m DistSSHQueue  [qhost:HOST]  submit  pool:8  drive  SCRIPT.jl
+└── Julia ──┘  └── queue host ──┘  └──── Queue ────┘  └── DistSSHKit argv ──┘
+```
 
 ```bash
 julia --project=. -m DistSSHQueue [qhost:HOST] submit pool:8 drive SCRIPT.jl
