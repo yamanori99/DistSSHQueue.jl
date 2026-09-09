@@ -166,7 +166,14 @@ function wait_store_job(store::AbstractString, id::AbstractString, states; tries
     sid = String(id)
     last = DistSSHQueue.Job[]
     for _ = 1:tries
-        last = isfile(store) ? DistSSHQueue.read_jobs(store) : DistSSHQueue.Job[]
+        last = try
+            DistSSHQueue.with_store_lock(store) do
+                isfile(store) ? DistSSHQueue.read_jobs(store) : DistSSHQueue.Job[]
+            end
+        catch e
+            string(typeof(e)) == "TOML.ParserError" || rethrow()
+            last
+        end
         i = findfirst(j -> j.id == sid, last)
         if i !== nothing
             st = last[i].state
