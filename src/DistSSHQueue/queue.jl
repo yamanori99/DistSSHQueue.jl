@@ -384,12 +384,44 @@ function _kit_setup_child_tokens(hosts::AbstractVector{<:AbstractString})::Vecto
     return out
 end
 
-"""`Pkg.instantiate` the job tree on this host (Kit parent / queue host)."""
+"""`Pkg.instantiate` the job tree on this host (Kit parent / queue host).
+
+Uses `DEPOT_PATH` entries that are real depots. A path with `Project.toml`
+(queue-env, the job tree) is skipped. Empty `JULIA_DEPOT_PATH` does not
+install into the active `--project=`.
+"""
+function pkg_depots_for_instantiate()::Vector{String}
+    out = String[]
+    for p in DEPOT_PATH
+        s = String(p)
+        isempty(s) && continue
+        isfile(joinpath(s, "Project.toml")) && continue
+        push!(out, s)
+    end
+    isempty(out) && push!(out, joinpath(homedir(), ".julia"))
+    return out
+end
+
+function _with_pkg_depots(f)
+    old = copy(DEPOT_PATH)
+    empty!(DEPOT_PATH)
+    append!(DEPOT_PATH, pkg_depots_for_instantiate())
+    try
+        return f()
+    finally
+        empty!(DEPOT_PATH)
+        append!(DEPOT_PATH, old)
+    end
+end
+
 function _queue_local_instantiate!(proj::AbstractString)
     root = DistSSHKit.canonical_local_path(proj)
     isfile(joinpath(root, "Project.toml")) || return nothing
-    Pkg.activate(root) do
-        Pkg.instantiate()
+    _with_pkg_depots() do
+        Pkg.activate(root) do
+            Pkg.instantiate()
+            return nothing
+        end
         return nothing
     end
     return nothing
