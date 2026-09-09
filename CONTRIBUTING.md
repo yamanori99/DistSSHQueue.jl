@@ -259,7 +259,7 @@ Colors match DistSSHKit: type is "what", area is "where". Do not give each `area
 | CI | black `#000000` | `area:ci` (and `ci` on weekly failure issues) |
 | Hold | pale blue `#BFD4F2` | `cut-hold` on Issue `E2E weekly failed` after a red Full |
 | Test harness | pale blue `#c5def5` | `area:test` |
-| Horizon | rose / blue / gray | `when:current` `when:next` `when:later` |
+| Horizon | orange `#fdba74` / violet `#c4b5fd` / slate `#94a3b8` | `when:current` `when:next` `when:later` |
 
 | `when:*` | Use |
 | --- | --- |
