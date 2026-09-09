@@ -402,16 +402,20 @@ function pkg_depots_for_instantiate()::Vector{String}
     return out
 end
 
+const _PKG_DEPOT_LOCK = ReentrantLock()
+
 function _with_pkg_depots(f)
-    old = copy(DEPOT_PATH)
-    depots = pkg_depots_for_instantiate()
-    empty!(DEPOT_PATH)
-    append!(DEPOT_PATH, depots)
-    try
-        return f()
-    finally
+    lock(_PKG_DEPOT_LOCK) do
+        old = copy(DEPOT_PATH)
+        depots = pkg_depots_for_instantiate()
         empty!(DEPOT_PATH)
-        append!(DEPOT_PATH, old)
+        append!(DEPOT_PATH, depots)
+        try
+            return f()
+        finally
+            empty!(DEPOT_PATH)
+            append!(DEPOT_PATH, old)
+        end
     end
 end
 
