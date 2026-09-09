@@ -325,13 +325,7 @@ end
 
 @testset "kit setup instantiates the queue-host project without SSH" begin
     mktempdir() do d
-        write(
-            joinpath(d, "Project.toml"),
-            """
-            name = "QueueHostInst"
-            uuid = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
-            """,
-        )
+        write(joinpath(d, "Project.toml"), "[deps]\n")
         script = joinpath(d, "s.jl")
         write(script, "1\n")
         j = DistSSHQueue.Job(;
@@ -356,25 +350,11 @@ end
         job = joinpath(d, "job")
         mkpath(qenv)
         mkpath(job)
-        write(
-            joinpath(qenv, "Project.toml"),
-            """
-            name = "QueueEnv"
-            uuid = "bbbbbbbb-cccc-4ddd-8eee-ffffffffffff"
-            version = "0.0.1"
-            """,
-        )
+        write(joinpath(qenv, "Project.toml"), "[deps]\n")
         env_manifest = joinpath(qenv, "Manifest.toml")
         write(env_manifest, "manifest_format = \"2.0\"\n")
         env_before = read(env_manifest, String)
-        write(
-            joinpath(job, "Project.toml"),
-            """
-            name = "IsoJob"
-            uuid = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
-            version = "0.0.1"
-            """,
-        )
+        write(joinpath(job, "Project.toml"), "[deps]\n")
         @test DistSSHQueue.pkg_depots_for_instantiate() isa Vector{String}
         old = copy(DEPOT_PATH)
         try
