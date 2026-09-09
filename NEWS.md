@@ -10,7 +10,7 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 Patch after `0.4.0`. DistSSHKit **0.7.x**.
 `qhost:HOST`, Kit `:N`, status cards, Kit `setup!` before execute, `submit pool:N`.
 
-> [!IMPORTANT]
+> [!NOTE]
 > Day to day you do not hand-run DistSSHKit `setup` / instantiate on the
 > stage tree. `submit` starts `serve` if needed, and `serve` runs Kit
 > `setup!` (`rsync` → `instantiate` → `check`) before `execute!`.
