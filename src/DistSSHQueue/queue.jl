@@ -87,18 +87,29 @@ function kit_worker_root(project::AbstractString, kw::AbstractDict)::String
     return DistSSHKit.remote_env_project_root(layout)
 end
 
+"""True when `project` is a qhost stage dir (`…/.distsshqueue/stage/<uuid>`)."""
+function is_qhost_stage_project(project::AbstractString)::Bool
+    parts = splitpath(DistSSHKit.canonical_local_path(project))
+    i = findfirst(isequal(".distsshqueue"), parts)
+    return i !== nothing && i < length(parts) && parts[i + 1] == "stage"
+end
+
 """Refuse two different queue-host projects that Kit would place on the same worker path.
 
 Does not rename. Does not `setup --delete`. Same project (re-submit) is fine.
+Terminal rows do not occupy workers. Two `qhost:` stage UUID dirs may share a
+pinned `DISTRIBUTED_REMOTE_PROJECT_ROOT` (per-job copies of one client tree).
 """
 function reject_worker_root_collision!(jobs::Vector{Job}, project::AbstractString, kw::AbstractDict)
     proj = DistSSHKit.canonical_local_path(project)
     root = kit_worker_root(proj, kw)
     for j in jobs
+        j.state in (:done, :failed, :cancelled) && continue
         other = get(j.kwargs, "project", nothing)
         other isa AbstractString || continue
         op = DistSSHKit.canonical_local_path(String(other))
         op == proj && continue
+        is_qhost_stage_project(proj) && is_qhost_stage_project(op) && continue
         kit_worker_root(op, j.kwargs) == root || continue
         throw(ArgumentError(
             "project $(proj) and $(op) both deploy to $(root) on workers. " *

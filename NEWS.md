@@ -5,8 +5,11 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 - `qhost:` stage is `~/.distsshqueue/stage/<uuid>/` (the job id). A
   second submit from the same laptop tree does not `rsync --delete`
-  the running copy. `submit!` refuses a caller `id=` that is already
-  in the table (first-row lookup would otherwise hit the wrong job).
+  the running copy. Worker-root collision does not treat two of those
+  stage dirs as different projects (a pinned
+  `DISTRIBUTED_REMOTE_PROJECT_ROOT` is then allowed). `submit!` refuses
+  a caller `id=` that is already in the table (first-row lookup would
+  otherwise hit the wrong job).
 - Job `Pkg.instantiate` skips a `DEPOT_PATH` entry that is a Julia
   project (queue-env). Empty `JULIA_DEPOT_PATH` uses `~/.julia`, not
   the serve `--project=`.
