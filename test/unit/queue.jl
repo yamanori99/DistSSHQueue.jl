@@ -711,6 +711,7 @@ end
                 @test occursin("qhost:HOST", help)
                 @test occursin("parent:N", help)
                 @test occursin("submit drive parent:4", help)
+                @test occursin("-m DistSSHKit drive", help)
                 @test !occursin("qhost:HOST go parent SCRIPT", help)
                 @test !occursin("qhost:HOST drive parent", help)
                 @test occursin("list-host", help)

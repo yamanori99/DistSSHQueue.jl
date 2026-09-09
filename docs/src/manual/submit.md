@@ -19,6 +19,16 @@ julia -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
 julia --project=. -m DistSSHQueue [qhost:HOST] submit drive parent:4 SCRIPT.jl
 ```
 
+The DistSSHKit argv runs as-is without Queue:
+
+```bash
+julia --project=. -m DistSSHKit drive parent:4 SCRIPT.jl
+```
+
+That starts compute on **this** machine, now. `submit` only enqueues the
+same argv; `serve` runs it later on the queue host (after `qhost:`, on
+the staged tree). Use Kit alone to debug placement, then enqueue.
+
 `pool:N` is Queue, not Kit: it expands config `hosts` to the same `:N`
 (clamped by add-host max). Place it next to `submit` (before or after
 the kind), not among `parent` / `child` tokens. Library [`submit!`](@ref)

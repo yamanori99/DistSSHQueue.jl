@@ -296,8 +296,9 @@ function print_queue_usage(io::IO=stdout)
     DistSSHKit.print_help_section("DistSSHKit"; io=io)
     DistSSHKit.print_help_lines(io,
         "  After `submit`: same argv as DistSSHKit (`drive parent:4 child:NAME:N SCRIPT.jl`).",
+        "  Replay: `julia --project=. -m DistSSHKit drive parent:4 SCRIPT.jl` (this machine, now).",
         "  `qhost:HOST` is the SSH name of the queue machine, not a Kit slot (`parent:4`, not `qhost:4`).",
-        "  A leading `go` / `ride` / `drive` is DistSSHKit, not enqueue.",
+        "  A leading `go` / `ride` / `drive` on DistSSHQueue is DistSSHKit, not enqueue.",
     )
     DistSSHKit.print_help_blank(io)
     DistSSHKit.print_help_section("Examples"; io=io)

@@ -45,6 +45,14 @@ julia -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
 └── Julia ──┘  └── queue host ──┘  └Queue┘  └──────── DistSSHKit argv ────────┘
 ```
 
+The tail is DistSSHKit. Same compute, now, on this machine:
+
+```bash
+julia --project=. -m DistSSHKit drive parent:4 SCRIPT.jl
+```
+
+`submit` only enqueues that argv for `serve` on the queue host.
+
 Kit argv is DistSSHKit's (`go child:NAME:N SCRIPT.jl`, or `parent:N`
 when workers are on the queue host). Flags:
 [kit go](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/go/),

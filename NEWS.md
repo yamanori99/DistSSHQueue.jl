@@ -11,6 +11,7 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
   `queue: qhost:HOST`, not `queue: local`. Root `--help` lists Queue
   `Commands` then a `DistSSHKit` section (`submit drive parent:4 …`).
   `qhost:HOST` is the SSH name of the queue machine, not a Kit slot.
+  DistSSHKit argv replays with `julia --project=. -m DistSSHKit …`.
 - After `teardown`, `status` (and other client verbs) without `qhost:`
   say `setup` first, or `qhost:HOST` if this is a laptop hop. Not
   “you forgot `qhost:`” on the box that just wiped `~/.distsshqueue`.
