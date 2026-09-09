@@ -9,9 +9,12 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 Patch after `0.4.0`. DistSSHKit **0.7.x**.
 `qhost:HOST`, Kit `:N`, status cards, Kit `setup!` before execute, `submit pool:N`.
-Day to day you do not hand-run DistSSHKit `setup` / instantiate on the
-stage tree: `submit` starts `serve` if needed, and `serve` runs Kit
-`setup!` before `execute!`.
+
+> [!IMPORTANT]
+> Day to day you do not hand-run DistSSHKit `setup` / instantiate on the
+> stage tree. `submit` starts `serve` if needed, and `serve` runs Kit
+> `setup!` (`rsync` → `instantiate` → `check`) before `execute!`.
+> `DISTSSHQUEUE_NO_KIT_SETUP=1` skips it.
 
 - DistSSHKit **0.7.x**. Listed `parent` / `child:NAME` need `:N`. No
   host token is still one slot. Queue does not rewrite a bare token to
@@ -28,8 +31,6 @@ stage tree: `submit` starts `serve` if needed, and `serve` runs Kit
   N|full`. Watch skips identical frames. Default Kit leaf is
   `{project}/.distsshqueue/{kind}/{stem}_{id8}/`. Fetch dest is the same
   layout on the client tree.
-- `serve` runs Kit `setup!` (`rsync` → `instantiate` → `check`) before
-  `execute!`. `DISTSSHQUEUE_NO_KIT_SETUP=1` skips it.
 - `submit pool:N` expands config hosts to the same `:N` (clamped by
   add-host max). Do not mix with parent / child tokens.
 
