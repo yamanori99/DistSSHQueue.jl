@@ -5,6 +5,9 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
+- Top-level `go` / `ride` / `drive` are DistSSHKit. Queue enqueue is
+  `submit go` / `submit ride` / `submit drive` only.
+
 ## 0.4.1
 
 Patch after `0.4.0`. DistSSHKit **0.7.x**.

@@ -119,9 +119,10 @@ function main(args::Vector{String}=copy(ARGS))::Cint
             r === nothing || return r
             return submit_main(_rest())
         elseif is_kit_execute_kind(Symbol(sub))
-            r = maybe_remote(hop, gjulia, sub, rest; queue_env=gqenv, explicit=explicit)
-            r === nothing || return r
-            return submit_kind(Symbol(sub), rest)
+            DistSSHKit.print_cli_error(
+                "$sub is DistSSHKit. Enqueue with submit: julia -m DistSSHQueue [qhost:HOST] submit $sub …",
+            )
+            return 1
         elseif sub == "fetch"
             return fetch_cli(hop, gjulia, gqenv, rest; explicit=explicit)
         elseif sub == "cancel"
