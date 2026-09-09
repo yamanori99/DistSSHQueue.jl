@@ -589,6 +589,7 @@ end
                     env = merge(host_env, Dict("DISTSSHQUEUE_NO_AUTOSERVE" => "1"))
                     @test run_cli(addenv(qcmd(["setup"]), env...)).exitcode == 0
                     @test isfile(cfg)
+                    @test run_cli(addenv(qcmd(["add-host", "parent", "child:$(HOSTS[1])"]), env...)).exitcode == 0
                     @test run_cli(addenv(qcmd(["enable", "--write-only", "--queue-env", test_project, "--julia", E2E_JULIA]), env...)).exitcode == 0
                     rel = if Sys.isapple()
                         joinpath("Library", "LaunchAgents", "org.distsshqueue.serve.plist")
