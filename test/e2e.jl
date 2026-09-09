@@ -158,18 +158,28 @@ function e2e_qcmd(test_project::AbstractString, args)
     )
 end
 
-# Cards print a setup phase in the STATE column while Kit setup! is running.
-function status_is_running(text::AbstractString, id::AbstractString)::Bool
-    status_shows_id(text, id) || return false
-    for token in ("running", "rsync", "instantiate", "check")
-        occursin(Regex("\\b" * token * "\\b"), text) && return true
+# STATE column on the job card. Whole-status `\brunning\b` also matches Store
+# `serve  running` while the daemon is up, so wait_status never sees `:done`.
+function status_row_state(text::AbstractString, id::AbstractString)::Union{Nothing,String}
+    pref = first(String(id), 8)
+    for line in eachsplit(String(text), '\n')
+        s = strip(line)
+        startswith(s, pref) || continue
+        parts = split(s, r"\s+"; limit=4)
+        length(parts) >= 2 || continue
+        return String(parts[2])
     end
-    return false
+    return nothing
+end
+
+function status_is_running(text::AbstractString, id::AbstractString)::Bool
+    st = status_row_state(text, id)
+    st === nothing && return false
+    return st in ("running", "rsync", "instantiate", "check")
 end
 
 function status_is_done(text::AbstractString, id::AbstractString)::Bool
-    status_shows_id(text, id) || return false
-    return occursin(r"\bdone\b", text) && !status_is_running(text, id)
+    return status_row_state(text, id) == "done"
 end
 
 function wait_status(pred, cmd::Cmd; tries=600, sleep_s=0.2)
