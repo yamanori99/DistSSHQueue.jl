@@ -129,5 +129,7 @@ uploads flag `e2e`. `Pkg.test()` still does not start Docker.
 is **not** a PR check (Sunday 04:00 JST + `workflow_dispatch`). It builds
 `ghcr.io/<owner>/distsshqueue-linux-ssh-worker:<sha>` (`DISTSSHQUEUE_SKIP_UP=1`), then E2E on
 Ubuntu, `macos-15-intel` (Colima via [`scripts/setup-colima-ci.sh`](scripts/setup-colima-ci.sh)),
-and WSL2, then tags `latest`. Linux weekly uploads Codecov flag `e2e`. Make the
+and WSL2, then tags `latest`. Linux weekly uploads Codecov flag `e2e`. Register
+from the cut PR's Linux E2E. Weekly Intel / WSL are watchers (`cut-hold` only
+if weekly Linux is red). Make the
 GHCR package public after the first push so forks can pull if needed.
