@@ -80,6 +80,8 @@ end
     id = submit!(q, "a.jl", "parent:1"; id=want)
     @test id == want
     @test job(q, id).id == want
+    @test_throws ArgumentError submit!(q, "b.jl", "parent:1"; id=want)
+    @test length(jobs(q)) == 1
 end
 
 @testset "two stage trees from one client path do not share a worker root" begin

@@ -573,6 +573,9 @@ function _submit!(q::Queue, kind::Symbol, script::AbstractString, hosts; kwargs.
             reload_keep_live!(q)
             reject_worker_root_collision!(q.jobs, String(kw["project"]), kw)
             raw_id = pop!(kw, "id", nothing)
+            if raw_id !== nothing && _index_id(q.jobs, String(raw_id)) !== nothing
+                throw(ArgumentError("job id already exists: $(repr(String(raw_id)))"))
+            end
             j = if raw_id === nothing
                 Job(; kind=kind, script=script_path, hosts=toks, kwargs=kw)
             else
