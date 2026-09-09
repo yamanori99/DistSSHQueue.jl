@@ -30,6 +30,7 @@ using DistSSHQueue
     end
     @test DistSSHQueue.should_stage("status", ["--interval", "1"]) == false
     @test DistSSHQueue.should_submit_ticket("submit", ["go", "S.jl"])
+    @test DistSSHQueue.should_submit_ticket("go", ["S.jl"]) == false
     @test DistSSHQueue.should_submit_ticket("status", ["--interval", "1"]) == false
     withenv(DistSSHQueue.NO_STAGE_ENV => "1") do
         @test DistSSHQueue.staging_enabled() == false

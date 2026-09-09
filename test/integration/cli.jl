@@ -201,14 +201,15 @@ end
                     "--remote-julia", JULIA,
                     "list-host",
                 ]) == 0
-                @test DistSSHQueue.main([
+                code_go = DistSSHQueue.main([
                     "qhost:qbox",
                     "--remote-julia", JULIA,
                     "go",
                     "--hosts",
                     "child:w:2",
                     "hello.jl",
-                ]) == 0
+                ])
+                @test code_go == 1
             end
             withenv(
                 env...,
@@ -223,10 +224,7 @@ end
             @test occursin("status", dumped)
             @test occursin("watch", dumped)
             @test occursin("list-host", dumped)
-            @test occursin("go", dumped)
-            @test occursin("--hosts", dumped)
-            @test occursin("child:w:2", dumped)
-            @test occursin("hello.jl", dumped)
+            @test !occursin("hello.jl", dumped)
             @test occursin("--startup-file=no", dumped)
             @test occursin("--project=~/.distsshqueue/env", dumped)
             @test !occursin("add-host", dumped)

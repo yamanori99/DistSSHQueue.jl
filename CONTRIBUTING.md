@@ -195,7 +195,7 @@ Repo Settings → Actions → Workflow permissions: **Read and write** (`GITHUB_
 
 ## Issues
 
-**Issues** (Bug / Enhancement forms only): `bug` or `enhancement`. The area dropdown is triage; add `area:*` if useful. This repo has no Discussions; usage questions that are not a bug or a committed feature can wait or be an Issue. Security: [SECURITY.md](SECURITY.md).
+**Issues** (Bug / Enhancement forms only): `bug` or `enhancement`. The area dropdown is triage; add `area:*` if useful. Horizon (`when:*`) is **when**, not type or path: every open Issue gets exactly one of `when:current` / `when:next` / `when:later`. This repo has no Discussions; usage questions that are not a bug or a committed feature can wait or be an Issue. Security: [SECURITY.md](SECURITY.md).
 
 A Queue failure is not automatically a Queue bug. Decide the repo first:
 
@@ -247,7 +247,7 @@ CI infers, in order:
 
 `fix/` plus `Fixes` an enhancement issue gets `enhancement`. `breaking` may sit next to the type label. After a `cut` merge, Full runs; a human registers when green (or holds with `cut-hold`); TagBot tags.
 
-Ruleset `main` requires check `PR label` (workflow `Type`). Type labels (`bug` / `enhancement` / `breaking` / `chore` / `cut`) and each `area:*` must exist (`gh label create` if missing).
+Ruleset `main` requires check `PR label` (workflow `Type`). Type labels (`bug` / `enhancement` / `breaking` / `chore` / `cut`) and each `area:*` must exist (`gh label create` if missing). `when:*` is Issues only (not a PR type).
 
 Colors match DistSSHKit: type is "what", area is "where". Do not give each `area:*` its own hue.
 
@@ -259,6 +259,13 @@ Colors match DistSSHKit: type is "what", area is "where". Do not give each `area
 | CI | black `#000000` | `area:ci` (and `ci` on weekly failure issues) |
 | Hold | pale blue `#BFD4F2` | `cut-hold` on Issue `E2E weekly failed` after a red Full |
 | Test harness | pale blue `#c5def5` | `area:test` |
+| Horizon | orange `#fdba74` / violet `#c4b5fd` / slate `#94a3b8` | `when:current` `when:next` `when:later` |
+
+| `when:*` | Use |
+| --- | --- |
+| `when:current` | Broken daily path or CLI that lies; same 0.4 contract |
+| `when:next` | Same contract: chrome, copy, colors |
+| `when:later` | Later cut: daemon, inventory, cwd, ids |
 
 ## Language
 
