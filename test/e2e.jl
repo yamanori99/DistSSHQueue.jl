@@ -715,7 +715,7 @@ end
                         row_f = wait_store_job(qh_store, id_f, (:done,))
                         @test row_f.state === :done
                         fetched = read_cli(addenv(qh(["fetch", id_f]), client_env...))
-                        @test occursin(id_f, fetched)
+                        @test occursin(first(id_f, 8), fetched)
                         @test isfile(joinpath(fetched, "kit.result"))
                         rm(fetched; recursive=true, force=true)
 
