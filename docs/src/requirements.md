@@ -47,7 +47,7 @@ WSL2 is Linux, with DistSSHKit's extra rules:
 ## Queue host
 
 The always-on **queue host** is **macOS or Linux** (Mac mini, Linux VM;
-`enable` is LaunchAgent / systemd). A sleeping laptop is not this
+`enable` is LaunchAgent / systemd). A machine that sleeps is not this
 machine. WSL2 is Linux for a **client** or a worker; do not use it as
 the always-on queue host.
 
@@ -78,7 +78,7 @@ alone does not hop.
 
 ## Client
 
-A dev laptop. No `~/.distsshqueue` on the client. After `fetch`, Kit
+A dev machine. No `~/.distsshqueue` on the client. After `fetch`, Kit
 leaves land under the job tree's `.distsshkit/`. Queue must be loadable
 from the job env (`julia --project=.`).
 
@@ -164,8 +164,8 @@ julia -m DistSSHQueue setup --juliaup parent child:host1
 # julia -m DistSSHQueue setup --juliaup
 ```
 
-# From a client: only hosts you can SSH to from the laptop.
-# parent here is the laptop, not the queue host.
+# From a client: only hosts you can SSH to from this machine.
+# parent here is this client, not the queue host.
 julia --project=. -m DistSSHKit setup --juliaup child:QHOST
 ```
 

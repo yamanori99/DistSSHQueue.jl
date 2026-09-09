@@ -5,14 +5,29 @@ running. That `serve` instantiates the job project on the queue host
 and runs Kit `setup!` on `child:` hosts before `execute!` (not a
 hand-run DistSSHKit `setup` on the stage tree).
 
-One argv, four nested pieces. `qhost:HOST` is the SSH name of the
-always-on queue machine (omit it when you are already logged in there).
-`submit` is Queue. The next word is the DistSSHKit kind (`go` / `ride` /
-`drive`); after that, argv matches DistSSHKit.
+Type the line on a **client**, in the **job directory** (Queue must be
+loadable; `--project=.` is that tree, and `SCRIPT.jl` lives there). Not
+already on the queue host: include `qhost:HOST`. Already logged in on
+that always-on machine? Same directory, omit `qhost:`. Do not type this
+on a worker. `serve` on the queue host runs the DistSSHKit argv later.
 
-```text
-julia -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
-└── Julia ──┘  └── queue host ──┘  └Queue┘  └──────── DistSSHKit argv ────────┘
+```bash
+cd ~/my-job    # Project.toml, SCRIPT.jl; Queue loadable
+
+# another machine (not the queue host)
+julia --project=. -m DistSSHQueue qhost:HOST submit drive parent:4 SCRIPT.jl
+
+# already on the queue host
+julia --project=. -m DistSSHQueue submit drive parent:4 SCRIPT.jl
+```
+
+One argv, four nested pieces. `qhost:HOST` is the SSH name of that
+queue machine. `submit` is Queue. The next word is the DistSSHKit kind
+(`go` / `ride` / `drive`); after that, argv matches DistSSHKit.
+
+```bash
+julia --project=. -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
+#──────────── Julia ────────────┘  └─ qhost ──┘  Queue   └─── DistSSHKit argv ────┘
 ```
 
 ```bash
@@ -32,13 +47,6 @@ The DistSSHKit argv runs as-is without Queue:
 julia --project=. -m DistSSHKit drive parent:4 SCRIPT.jl
 ```
 
-Same wrap:
-
-```bash
-julia --project=. -m DistSSHKit \
-    drive parent:4 child:NAME:N SCRIPT.jl
-```
-
 That starts compute on **this** machine, now. `submit` only enqueues the
 same argv; `serve` runs it later on the queue host (after `qhost:`, on
 the staged tree). Use Kit alone to debug placement, then enqueue.
@@ -49,13 +57,9 @@ the kind), not among `parent` / `child` tokens. Library [`submit!`](@ref)
 does not expand `pool:N`. Inspect `pool` (no enqueue) is
 [User Guide · hosts](@ref Manual-hosts).
 
-```text
-julia -m DistSSHQueue  [qhost:HOST]  submit  pool:8  drive  SCRIPT.jl
-└── Julia ──┘  └── queue host ──┘  └──── Queue ────┘  └── DistSSHKit argv ──┘
-```
-
 ```bash
-julia --project=. -m DistSSHQueue [qhost:HOST] submit pool:8 drive SCRIPT.jl
+julia --project=. -m DistSSHQueue  [qhost:HOST]  submit  pool:8  drive  SCRIPT.jl
+#──────────── Julia ────────────┘  └─ qhost ──┘  └── Queue ───┘  └─ DistSSHKit -┘
 ```
 
 A `.jl` with no Queue verb is not implicit `go` (same as Kit). Top-level

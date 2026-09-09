@@ -13,10 +13,10 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
   `qhost:HOST` is the SSH name of the queue machine, not a Kit slot.
   DistSSHKit argv replays with `julia --project=. -m DistSSHKit …`.
 - After `teardown`, `status` (and other client verbs) without `qhost:`
-  say `setup` first, or `qhost:HOST` if this is a laptop hop. Not
+  say `setup` first, or `qhost:HOST` if this is a client hop. Not
   “you forgot `qhost:`” on the box that just wiped `~/.distsshqueue`.
 - `qhost:` stage is `~/.distsshqueue/stage/<uuid>/` (the job id). A
-  second submit from the same laptop tree does not `rsync --delete`
+  second submit from the same client tree does not `rsync --delete`
   the running copy. Worker-root collision does not treat two of those
   stage dirs as different projects (a pinned
   `DISTRIBUTED_REMOTE_PROJECT_ROOT` is then allowed). `submit!` refuses
@@ -232,7 +232,7 @@ Home is `~/.distsshqueue`, ENV is `DISTSSHQUEUE_*`, OS unit is
 - `qhost:` `submit` / `go` / `drive` rsync the client job tree to
   `~/.distsshqueue/stage/<uuid>/` (the job id, a new directory every
   submit) and set `DISTRIBUTED_PROJECT_ROOT` there. A second submit from
-  the same laptop tree does not `rsync --delete` a running copy. Omit
+  the same client tree does not `rsync --delete` a running copy. Omit
   `qhost:` does not rsync. `DISTSSHQUEUE_NO_STAGE=1` skips (tests).
   Kit still copies queue host → workers.
 - `qhost:` runs `julia --startup-file=no --project=~/.distsshqueue/env` (not the

@@ -50,7 +50,7 @@ Kit を `Pkg.develop` しない。
 ### 基本用語
 
 - **キューホスト** — `~/.distsshqueue` を持ち、`serve` を動かす常時起動の
-  **macOS または Linux** (VM でよい)。スリープするラップトップはこれではない。
+  **macOS または Linux** (VM でよい)。スリープするマシンはこれではない。
   WSL2 はクライアントまたはワーカーであり、この役ではない。
 - **クライアント** — 投入・一覧・監視・取消・成果物の取得をする開発マシン。台数に上限はない。
   Kit のマスターになってはならない。
@@ -74,7 +74,7 @@ Kit を `Pkg.develop` しない。
 ```
 
 `qhost:NAME` はキューホストの SSH 名である (Kit の `child:NAME` と同じ形だが、
-ワーカーではなくキューホストを指す)。ラップトップからはコマンドラインに
+ワーカーではなくキューホストを指す)。そのマシンにいないときはコマンドラインに
 `qhost:HOST` を付ける。`DISTSSHQUEUE_HOST` だけではキューホストへ SSH しない。
 すでにキューホストにログインしていれば `qhost:` を省略する (このマシンの cwd
 が Kit 木。配置はこれまでどおり `parent` / `child:`)。手元の試行:
@@ -82,6 +82,38 @@ Kit を `Pkg.develop` しない。
 
 配置トークン、`go` / `ride` / `drive` のフラグ、リモートの準備は DistSSHKit の範囲である。
 [kit docs](https://yamanori99.github.io/DistSSHKit.jl/stable/) を参照。
+
+### submit
+
+1つのargvに4つの入れ子。`submit` はQueue。その後ろはDistSSHKitの
+argv (`go` / `ride` / `drive` とその先) で、`-m DistSSHKit` にそのまま
+渡せる (Queueなし)。Kit単体はそのマシンで今すぐ計算する。`submit`
+は同じargvをキューに載せるだけである。
+
+```bash
+julia --project=. -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
+#──────────── Julia ────────────┘  └─ qhost ──┘  Queue   └─── DistSSHKit argv ────┘
+```
+
+```bash
+julia --project=. -m DistSSHQueue [qhost:HOST] submit drive parent:4 SCRIPT.jl
+```
+
+長い行は `submit` のあとで `\` 折り:
+
+```bash
+julia --project=. -m DistSSHQueue [qhost:HOST] submit \
+    drive parent:4 child:NAME:N SCRIPT.jl
+```
+
+同じ DistSSHKit argv、キューなし:
+
+```bash
+julia --project=. -m DistSSHKit drive parent:4 SCRIPT.jl
+```
+
+`pool:N` は Queue (`submit` の隣) であり、Kit のトークンではない。詳細:
+[submit](https://yamanori99.github.io/DistSSHQueue.jl/stable/manual/submit/)。
 
 ### ファイルの置き場
 

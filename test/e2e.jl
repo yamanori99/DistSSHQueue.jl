@@ -12,7 +12,7 @@
 # Kit slots on docker-ssh (`child:distsshqueue-w1:1`).
 # Three roles, one suite: client = loopback, qhost = this host, child = containers.
 # Do not treat a container as qhost. `parent:1` only occupies FIFO here.
-# Not a laptop + `parent:N` topology. `enable` / `disable` / `teardown` use
+# Not a client-as-`parent:N` topology. `enable` / `disable` / `teardown` use
 # `--write-only` (no user systemd / launchctl).
 #
 # Table jobs are the four *file*/*echo* demos. `pipeline_pi.jl` /

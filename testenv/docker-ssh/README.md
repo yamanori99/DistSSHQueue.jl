@@ -33,7 +33,7 @@ The host during `--e2e` is the **queue host**. docker-ssh containers are DistSSH
    `submit` / `status` / `watch` / `fetch` / `cancel` / `stop` / `teardown -y --write-only`.
    `qhost:HOST setup` is refused.
 9. Does not `systemctl enable --now` or `launchctl bootstrap`. Does not treat
-   `parent:N` on a sleeping laptop as the product path.
+   `parent:N` on a client that sleeps as the product path.
 
 Worker image pins Julia to CI slot **max** (juliaup `--default-channel`, today **1.13**)
 so DistSSHKit `setup --check` can run **without** `--ignore-julia-version`. Pins live in

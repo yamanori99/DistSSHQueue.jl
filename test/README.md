@@ -10,7 +10,7 @@ From the Queue checkout root:
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-That is `test/runtests.jl` (unit + integration). Each included file prints `[i/N]` at start (update `_RUNTEST_N` when adding one). It tags autoserve `serve` pids and SIGTERMs them on exit or if `Pkg.test`'s parent dies, so Ctrl-C does not leave `nohup` `serve` on the laptop. `Pkg.test()` must pass on a Registry install (no Queue `Manifest.toml`, often mode 444): real `ssh` spawn runs only when that binary is on `PATH` (tests inject a fake `ssh` when they need `-G`); real SSH clusters stay in `e2e.jl`. Occasional copy recipe: [Registry tree](#registry-tree). Real SSH:
+That is `test/runtests.jl` (unit + integration). Each included file prints `[i/N]` at start (update `_RUNTEST_N` when adding one). It tags autoserve `serve` pids and SIGTERMs them on exit or if `Pkg.test`'s parent dies, so Ctrl-C does not leave `nohup` `serve` on this machine. `Pkg.test()` must pass on a Registry install (no Queue `Manifest.toml`, often mode 444): real `ssh` spawn runs only when that binary is on `PATH` (tests inject a fake `ssh` when they need `-G`); real SSH clusters stay in `e2e.jl`. Occasional copy recipe: [Registry tree](#registry-tree). Real SSH:
 
 ```bash
 testenv/docker-ssh/scripts/up.sh --e2e

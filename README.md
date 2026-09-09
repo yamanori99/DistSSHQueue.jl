@@ -51,8 +51,8 @@ For everything else, see the
 ### Basic terms
 
 - **Queue host** — the always-on **macOS or Linux** box that holds
-  `~/.distsshqueue` and runs `serve` (a VM is fine). A sleeping laptop
-  is not this box. WSL2 is a client or worker, not this role.
+  `~/.distsshqueue` and runs `serve` (a VM is fine). A machine that
+  sleeps is not this box. WSL2 is a client or worker, not this role.
 - **Client** — a dev machine that submits, lists, watches, fetches, or
   cancels. No cap. It must not become the Kit master.
 - **serve** — FIFO process on the queue host. It starts DistSSHKit
@@ -75,14 +75,46 @@ For everything else, see the
 ```
 
 `qhost:NAME` is the SSH name of the queue host (same idea as Kit
-`child:NAME`, but it names the queue host, not a worker). From a laptop,
-put `qhost:HOST` on the command line. `DISTSSHQUEUE_HOST` alone does not
+`child:NAME`, but it names the queue host, not a worker). Not already
+on that box: put `qhost:HOST` on the command line. `DISTSSHQUEUE_HOST` alone does not
 hop. Already logged in on the queue host? Omit `qhost:` (this box's cwd
 is the Kit tree; placement is still `parent` / `child:`). Local trial:
 `DISTSSHQUEUE_LOCAL=1`. `--hosts` / `--julia` stay on Kit `go` / `ride` / `drive`.
 
 Placement tokens, `go` / `ride` / `drive` flags, and remote setup are DistSSHKit's —
 see the [kit docs](https://yamanori99.github.io/DistSSHKit.jl/stable/).
+
+### submit
+
+One argv, four nested pieces. `submit` is Queue. After it, the line is
+DistSSHKit argv (`go` / `ride` / `drive` and the rest) and runs as-is
+with `-m DistSSHKit` (no Queue). That Kit command starts compute on
+**this** machine now; `submit` only enqueues the same argv.
+
+```bash
+julia --project=. -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
+#──────────── Julia ────────────┘  └─ qhost ──┘  Queue   └─── DistSSHKit argv ────┘
+```
+
+```bash
+julia --project=. -m DistSSHQueue [qhost:HOST] submit drive parent:4 SCRIPT.jl
+```
+
+Break a long terminal line after `submit` with `\`:
+
+```bash
+julia --project=. -m DistSSHQueue [qhost:HOST] submit \
+    drive parent:4 child:NAME:N SCRIPT.jl
+```
+
+Same DistSSHKit argv, no queue:
+
+```bash
+julia --project=. -m DistSSHKit drive parent:4 SCRIPT.jl
+```
+
+`pool:N` is Queue (next to `submit`), not a Kit token. Full notes:
+[submit](https://yamanori99.github.io/DistSSHQueue.jl/stable/manual/submit/).
 
 ### Where files live
 

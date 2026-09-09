@@ -82,7 +82,7 @@ before `execute!`. `status` / `watch` print
 `status --interval` until Ctrl-C; it does not stop `serve`. Job ids print as a bare
 stdout line. `submit` also prints `Queued  N` on stderr unless
 `DISTSSHKIT_QUIET` is set. After `qhost:` submit,
-`.distsshqueue/tickets/<uuid>` marks the job on this laptop. `fetch`
+`.distsshqueue/tickets/<uuid>` marks the job on this client. `fetch`
 copies the finished Kit leaf onto this job tree (inverse of the
 `qhost:` rsync). Run it from the same directory as `submit`. Drive CSV
 (Kit `square_file.jl`) is in that

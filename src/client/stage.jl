@@ -161,7 +161,7 @@ function _ssh_mkdir!(host::AbstractString, remote_dir::AbstractString)
     return nothing
 end
 
-"""rsync flags for laptop → queue-host stage (Kit `setup --rsync` plus `.distsshqueue/`)."""
+"""rsync flags for client → queue-host stage (Kit `setup --rsync` plus `.distsshqueue/`)."""
 function stage_rsync_push_opts(transport::AbstractString)::Vector{String}
     return String[
         "-az",

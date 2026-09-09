@@ -745,7 +745,7 @@ end
                 @test !occursin("[--size]", help)
                 @test !occursin("qhost:HOST add-host", help)
                 @test !occursin("IdentityFile", help)
-                @test !occursin("sleeping laptop", help)
+                @test !occursin("laptop", help)
                 @test !occursin("service install", help)
                 code_h, out_h, _ = capture_stdio() do
                     DistSSHQueue.main(["-h"])

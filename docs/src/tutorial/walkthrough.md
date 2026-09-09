@@ -11,7 +11,7 @@ Names here: queue host SSH `HOST`, worker SSH `host1`. Swap them.
 Always-on **macOS or Linux**. Default Julia env is enough
 (`pkg> add DistSSHQueue` there). `setup` writes `config.toml` only.
 `parent` is this box. Dedicated `~/.distsshqueue/env` is optional
-until a laptop uses `qhost:` (that hop defaults to
+until a client uses `qhost:` (that hop defaults to
 `--project=~/.distsshqueue/env`).
 
 ```bash
@@ -27,7 +27,7 @@ this host, then Kit `setup!` (rsync / instantiate / check) on
 when major.minor differs.
 
 Clients hop: create the env, then `pkg> add DistSSHQueue` in it
-(Prepare). `enable` is optional (survive reboot). From a laptop,
+(Prepare). `enable` is optional (survive reboot). From a client,
 every client verb needs `qhost:HOST` on the command line.
 
 ## Client: go on parent
@@ -42,7 +42,7 @@ julia --project=. -m DistSSHQueue qhost:HOST go parent:1 distsshkit_demos/withou
 ```
 
 `qhost:` rsyncs this tree to `~/.distsshqueue/stage/<uuid>` on `HOST`
-(excludes `.gitignore`, `.git/`, `.distsshkit/`, `.distsshqueue/`). Stdout is the job UUID. This laptop has
+(excludes `.gitignore`, `.git/`, `.distsshkit/`, `.distsshqueue/`). Stdout is the job UUID. This client has
 `.distsshqueue/tickets/<uuid>` only; the Kit leaf is not here yet.
 
 ```bash
