@@ -5,8 +5,7 @@ running.
 
 ```bash
 julia --project=. -m DistSSHQueue [qhost:HOST] submit go [Kit go argv]
-julia --project=. -m DistSSHQueue [qhost:HOST] submit ride [Kit ride argv]
-julia --project=. -m DistSSHQueue [qhost:HOST] submit drive [Kit drive argv]
+julia --project=. -m DistSSHQueue [qhost:HOST] submit pool:8 drive SCRIPT.jl
 ```
 
 Bare `go` / `ride` / `drive` alias `submit` of that kind. A `.jl` with no
@@ -30,8 +29,10 @@ queue host (`.distsshkit/` is excluded), then enqueue resolves
 not the Kit leaf). [`fetch`](@ref Manual-fetch) copies one finished
 Kit leaf back onto that same tree. Omit `qhost:`:
 the script is checked on this machine. Job id prints as a bare stdout line. CLI `submit` also prints
-`Queued  N` on stderr (`(R running)` when a job is already running);
-`DISTSSHKIT_QUIET` hides that. Library [`submit!`](@ref) does not.
+`queue: local (HOSTNAME)` then `Queued  N` on stderr (`(R running)` when a job is already running);
+`DISTSSHKIT_QUIET` hides that. `pool:N` (before or after the kind) sets
+the same `:N` on every config host (clamped by add-host max). Do not
+mix with `parent` / `child` tokens. Library [`submit!`](@ref) does not.
 Two different projects
 that Kit would deploy to the same worker path are refused (no
 rename, no `setup --delete`). The same project may be submitted again.

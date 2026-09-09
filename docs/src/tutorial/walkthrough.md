@@ -64,6 +64,12 @@ julia --project=. -m DistSSHQueue qhost:mini go child:host1:2 distsshkit_demos/w
 julia --project=. -m DistSSHQueue qhost:mini fetch <id>
 ```
 
+Or the same `:N` on every config host:
+
+```bash
+julia --project=. -m DistSSHQueue qhost:mini submit pool:2 go distsshkit_demos/without_kit/pi_echo.jl
+```
+
 ## Drive
 
 ```bash

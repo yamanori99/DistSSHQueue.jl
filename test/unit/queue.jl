@@ -838,6 +838,43 @@ end
     end
 end
 
+@testset "CLI submit pool:N" begin
+    mktempdir() do d
+        p = joinpath(d, "jobs.toml")
+        cfg = joinpath(d, "config.toml")
+        write(cfg, "store = $(repr(p))\nhosts = [\"parent\", \"child:host1:4\"]\n")
+        jobdir = mktempdir()
+        write(joinpath(jobdir, "Project.toml"), "[deps]\n")
+        write(joinpath(jobdir, "job.jl"), "1\n")
+        withenv(
+            "DISTSSHQUEUE_STORE" => p,
+            "DISTSSHQUEUE_CONFIG" => cfg,
+            "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
+        ) do
+            cd(jobdir) do
+                code, _, _ = capture_stdio() do
+                    DistSSHQueue.main(["submit", "pool:8", "go", "job.jl"])
+                end
+                @test code == 0
+                @test DistSSHQueue.read_jobs(p)[end].hosts == ["parent:8", "child:host1:4"]
+                code_m, _, err_m = capture_stdio() do
+                    DistSSHQueue.main(["submit", "pool:2", "go", "parent:1", "job.jl"])
+                end
+                @test code_m == 1
+                @test occursin("cannot mix", err_m)
+                rest, n = DistSSHQueue.peel_submit_pool(
+                    ["go", "--julia", "pool:8", "parent:1", "job.jl"],
+                )
+                @test n === nothing
+                @test rest == ["go", "--julia", "pool:8", "parent:1", "job.jl"]
+                rest2, n2 = DistSSHQueue.peel_submit_pool(["pool:8", "go", "job.jl"])
+                @test n2 == 8
+                @test rest2 == ["go", "job.jl"]
+            end
+        end
+    end
+end
+
 @testset "CLI add-host applies while serve is running" begin
     mktempdir() do d
         p = joinpath(d, "jobs.toml")
