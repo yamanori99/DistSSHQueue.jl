@@ -602,6 +602,7 @@ end
                 @test occursin("Examples", help)
                 @test occursin("qhost:HOST", help)
                 @test occursin("list-host", help)
+                @test occursin("juliaup default", help)
                 @test occursin("  size ", help)
                 @test occursin("add-host", help)
                 @test occursin("remove-host", help)
@@ -940,13 +941,29 @@ for a in "\$@"; do
     exit 0
   fi
 done
+printf '%s\\n' "* 1.13"
 exit 0
 """,
         )
         chmod(joinpath(fake, "ssh"), 0o755)
+        ju = joinpath(fake, "juliaup")
+        write(
+            ju,
+            """
+#!/bin/sh
+[ "\$1" = "status" ] || exit 1
+printf '%s\\n' "* 1.12"
+exit 0
+""",
+        )
+        chmod(ju, 0o755)
         path = fake * ":" * get(ENV, "PATH", "")
         write(cfg, "hosts = [\"parent\", \"child:host1\"]\n")
-        withenv("DISTSSHQUEUE_CONFIG" => cfg, "PATH" => path) do
+        withenv(
+            "DISTSSHQUEUE_CONFIG" => cfg,
+            "PATH" => path,
+            "DISTSSHKIT_TEST_LOCAL_JULIAUP" => ju,
+        ) do
             code, out, _ = capture_stdio() do
                 DistSSHQueue.main(["list-host"])
             end
@@ -962,6 +979,9 @@ exit 0
             @test !occursin("identityfile", lowercase(out))
             @test !occursin("id_rsa", out)
             @test occursin("MAX", out)
+            @test occursin("JULIAUP", out)
+            @test occursin("1.12", out)
+            @test occursin("1.13", out)
         end
         write(cfg, "hosts = [\"parent\", \"child:host1\"]\n")
         withenv(

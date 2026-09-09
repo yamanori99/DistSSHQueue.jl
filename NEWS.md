@@ -5,6 +5,9 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
+- `list-host` JULIAUP is each host's `juliaup default` (`*` on
+  `juliaup status`). `-` if juliaup is missing or SSH fails.
+
 ## 0.4.1
 
 Patch after `0.4.0`. DistSSHKit **0.7.x**.

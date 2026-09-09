@@ -263,7 +263,7 @@ function print_queue_usage(io::IO=stdout)
     DistSSHKit.print_help_section("Client"; io=io)
     DistSSHKit.print_help_lines(io,
         "  status [-q] [--tail N|full]  Snapshot; --interval is live",
-        "  list-host             Host tokens on the queue host",
+        "  list-host             Host tokens and juliaup default",
         "  size                  Kit size on the queue host",
         "  plan                  Kit plan on the queue host",
         "  pool                  Kit pool on the queue host",

@@ -38,7 +38,7 @@ Defaults work without `config.toml`. `--force` rewrites it. Use it for
 `child:NAME` is SSH. First add creates the list (submit is no longer
 allow-all). Optional `:N` is a max. No `serve` restart: the next
 `submit` re-reads the file. `list-host` NAME for parent is the hostname;
-HOST TOKEN stays `parent`.
+HOST TOKEN stays `parent`. JULIAUP is that host's `juliaup default`.
 
 Do not `cd` the stage tree and run DistSSHKit `setup` by hand. `serve`
 runs Kit `setup!` (`rsync` → `instantiate` → `check`) before each job

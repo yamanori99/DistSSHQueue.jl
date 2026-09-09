@@ -1,6 +1,7 @@
 """Read-only `list-host`: Kit names from config `hosts`, plus `ssh -G` connect fields.
 
 Prints host tokens (`parent` / `child:NAME`) for `submit`. Not Kit `--hosts`.
+JULIAUP is that host's `juliaup default` (`juliaup status` `*` row).
 Does not print private keys or IdentityFile.
 """
 
@@ -54,6 +55,52 @@ function _host_token(name::AbstractString)::String
     return "child:$(name)"
 end
 
+function _juliaup_status_sh()::String
+    words = join(
+        DistSSHKit._juliaup_candidate_sh_word.(DistSSHKit.remote_juliaup_candidates()),
+        " ",
+    )
+    return """
+    JU=\"\"
+    for c in $words; do
+      if [ -x \"\$c\" ]; then
+        JU=\"\$c\"
+        break
+      fi
+    done
+    [ -z \"\$JU\" ] && exit 0
+    \"\$JU\" status 2>/dev/null
+    """
+end
+
+function _juliaup_channel_from_status(out::AbstractString)::String
+    ch = DistSSHKit._juliaup_default_channel_from_status(out)
+    return ch === nothing ? "-" : ch
+end
+
+"""`juliaup` default channel (`*`), or `-` if missing / unreachable."""
+function _juliaup_default_disp(name::AbstractString)::String
+    if DistSSHKit.is_parent_host_name(name)
+        ju = DistSSHKit.find_local_juliaup()
+        ju === nothing && return "-"
+        proc, out, _ = DistSSHKit._juliaup_run_captured(ju, ["status"])
+        Int(something(proc.exitcode, 1)) == 0 || return "-"
+        return _juliaup_channel_from_status(out)
+    end
+    try
+        out = read(
+            pipeline(
+                DistSSHKit._host_sync_remote_shell_cmd(String(name), _juliaup_status_sh());
+                stderr=devnull,
+            ),
+            String,
+        )
+        return _juliaup_channel_from_status(out)
+    catch
+        return "-"
+    end
+end
+
 function print_list_host(
     names::Union{Nothing, HostAllow};
     io::IO=stdout,
@@ -75,8 +122,21 @@ function print_list_host(
     tw = max(10, maximum(length ∘ _host_token, rows))
     maxs = String[names[n] === nothing ? "-" : string(names[n]) for n in rows]
     mw = max(3, maximum(length, maxs))
-    println(io, "  ", rpad("NAME", nw), "  ", rpad("HOST TOKEN", tw), "  ", rpad("MAX", mw), "  SSH")
-    for (n, label) in zip(rows, labels)
+    julias = String[_juliaup_default_disp(n) for n in rows]
+    jw = max(7, maximum(length, julias))
+    println(
+        io,
+        "  ",
+        rpad("NAME", nw),
+        "  ",
+        rpad("HOST TOKEN", tw),
+        "  ",
+        rpad("MAX", mw),
+        "  ",
+        rpad("JULIAUP", jw),
+        "  SSH",
+    )
+    for (n, label, ju) in zip(rows, labels, julias)
         println(
             io,
             "  ",
@@ -85,6 +145,8 @@ function print_list_host(
             rpad(_host_token(n), tw),
             "  ",
             rpad(names[n] === nothing ? "-" : string(names[n]), mw),
+            "  ",
+            rpad(ju, jw),
             "  ",
             _host_token_ssh_disp(n; hopped=hopped),
         )
