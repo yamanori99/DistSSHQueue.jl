@@ -21,20 +21,23 @@ julia -m DistSSHQueue size
 julia -m DistSSHQueue serve
 ```
 
-`add-host` does not deploy. Kit `setup --rsync` / `--instantiate` is
-later, from the **stage tree**, before `child:host1` runs a job.
+`add-host` does not deploy. `serve` runs Kit `setup!` (rsync /
+instantiate / check) before each job. Optional: `setup --juliaup`
+when major.minor differs.
 
 Clients hop: create the env, then `pkg> add DistSSHQueue` in it
-(Prepare). `enable` is optional (survive reboot).
+(Prepare). `enable` is optional (survive reboot). From a laptop,
+every client verb needs `qhost:mini` on the command line.
 
 ## Client: go on parent
 
 Job directory. Queue loadable (`julia --project=.`). DistSSHKit **0.7.x**
 comes with Queue. `demo install` copies into `distsshkit_demos/`.
+Listed `parent` / `child:NAME` need `:N`.
 
 ```bash
 julia --project=. -m DistSSHKit demo install without_kit
-julia --project=. -m DistSSHQueue qhost:mini go parent distsshkit_demos/without_kit/pi_echo.jl
+julia --project=. -m DistSSHQueue qhost:mini go parent:1 distsshkit_demos/without_kit/pi_echo.jl
 ```
 
 `qhost:` rsyncs this tree to `~/.distsshqueue/stage/<key>` on `mini`
@@ -46,25 +49,15 @@ julia --project=. -m DistSSHQueue qhost:mini status
 julia --project=. -m DistSSHQueue qhost:mini fetch <id>
 ```
 
-`fetch` copies `.distsshkit/go/<stem>_<UTC>_<id>/` onto this tree.
-Run it from the same directory as `go`.
+`fetch` copies the Kit leaf
+`{project}/.distsshqueue/go/<stem>_<id8>/` (on `mini`, that project is
+the stage tree) onto the same layout on this job tree. Run it from the
+same directory as `go`. `<id>` may be the 8-character prefix from
+`status`.
 
 ## Worker (`child:NAME`)
 
-On **mini**, after the first `qhost:` submit, the clone is the stage
-dir (`ls ~/.distsshqueue/stage`). From **that** tree, DistSSHKit
-setup — same two-segment remote Kit would use for drive
-(`~/parent/<project>`), not Queue `add-host`:
-
-```bash
-cd ~/.distsshqueue/stage/<key>
-julia --project=. -m DistSSHKit setup --rsync child:host1
-julia --project=. -m DistSSHKit setup --instantiate child:host1
-```
-
-[kit Prepare](https://yamanori99.github.io/DistSSHKit.jl/stable/tutorial/prepare/).
-
-Then from the **client**:
+From the **client**:
 
 ```bash
 julia --project=. -m DistSSHQueue qhost:mini go child:host1:2 distsshkit_demos/without_kit/pi_echo.jl
@@ -75,21 +68,12 @@ julia --project=. -m DistSSHQueue qhost:mini fetch <id>
 
 ```bash
 julia --project=. -m DistSSHKit demo install with_kit
-julia --project=. -m DistSSHQueue qhost:mini drive parent distsshkit_demos/with_kit/square_file.jl
+julia --project=. -m DistSSHQueue qhost:mini drive parent:1 distsshkit_demos/with_kit/square_file.jl
 julia --project=. -m DistSSHQueue qhost:mini fetch <id>
 ```
 
-CSV is in `.distsshkit/drive/<stem>_<UTC>_<id>/`, not demo `output/`.
-
-## Teardown
-
-On the queue host. No `-y` is a dry-run (exit 0). Then `-y`. After
-wipe, `status` is Store `path none` and Jobs `(none)`.
+## Teardown (queue host)
 
 ```bash
-julia -m DistSSHQueue teardown
 julia -m DistSSHQueue teardown -y
-julia -m DistSSHQueue status
 ```
-
-From a client: `qhost:mini teardown` then `qhost:mini teardown -y`.
