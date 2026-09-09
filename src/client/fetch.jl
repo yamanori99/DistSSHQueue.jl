@@ -13,10 +13,8 @@ end
 
 function path_has_queue_leaf(path::AbstractString)::Bool
     parts = split(posix_dir(path), '/'; keepempty=false)
-    length(parts) >= 3 || return false
-    kind = parts[end-1]
-    bag = parts[end-2]
-    return kind in ("go", "ride", "drive") && bag in (".distsshqueue", ".distsshkit")
+    length(parts) >= 2 || return false
+    return parts[end-1] in ("go", "ride", "drive")
 end
 
 """`result_path` relative to `root`. Refuses `..` and off-tree paths."""
@@ -37,6 +35,32 @@ function fetch_relpath(
         "fetch: refused relative path $(repr(rel))",
     ))
     return rel
+end
+
+"""Leaf must sit under the store directory or the job `project` (Kit `relpath`)."""
+function require_fetch_in_known_root(j::Job, result_path::AbstractString, store::AbstractString)
+    roots = String[dirname(store)]
+    proj = get(j.kwargs, "project", nothing)
+    if proj isa AbstractString
+        s = strip(String(proj))
+        !isempty(s) && push!(roots, s)
+    end
+    last = nothing
+    seen = Set{String}()
+    for r in roots
+        r in seen && continue
+        push!(seen, r)
+        try
+            fetch_relpath(result_path, r)
+            return nothing
+        catch e
+            e isa ArgumentError || rethrow()
+            last = e
+        end
+    end
+    throw(something(last, ArgumentError(
+        "result is not under the queue store directory or the job project",
+    )))
 end
 
 function fetch_dest(local_proj::AbstractString, kind::AbstractString, leaf::AbstractString)::String
@@ -75,6 +99,8 @@ function fetch_source(id::AbstractString; store::AbstractString=store_path())::S
     j.state in FETCH_READY || throw(ArgumentError(
         "job $(repr(id)) is $(j.state)",
     ))
+    require_fetchable_leaf(id, p)
+    require_fetch_in_known_root(j, p, store)
     return string(j.state, FETCH_SOURCE_SEP, p)
 end
 

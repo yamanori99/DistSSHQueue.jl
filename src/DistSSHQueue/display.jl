@@ -13,11 +13,6 @@ end
 
 const _ID_PREFIX_MIN = 8
 
-function _job_id8(id::AbstractString)::String
-    s = String(id)
-    return first(s, min(8, length(s)))
-end
-
 """Path relative to `root`, or `nothing` if it is not inside."""
 function _rel_under(path::AbstractString, root::AbstractString)::Union{Nothing,String}
     p = DistSSHKit.canonical_local_path(String(path))
@@ -45,15 +40,159 @@ function _job_script_disp(j::Job)::String
     return _q_short(j.script)
 end
 
-function _job_result_disp(j::Job)::String
+function _job_id8(id::AbstractString)::String
+    s = String(id)
+    return first(s, min(8, length(s)))
+end
+
+function _job_phase_disp(j::Job)::String
+    p = get(j.kwargs, "phase", nothing)
+    p isa AbstractString || return ""
+    s = strip(String(p))
+    return s
+end
+
+function _job_state_disp(j::Job)::String
+    if j.state === :running
+        ph = _job_phase_disp(j)
+        isempty(ph) || return ph
+    end
+    return String(j.state)
+end
+
+function _job_result_disp(j::Job; verbose::Bool=false)::String
     r = j.result_path
     r isa AbstractString || return ""
-    p = get(j.kwargs, "project", nothing)
-    if p isa AbstractString
-        rel = _rel_under(r, p)
-        rel !== nothing && return rel
-    end
+    verbose || return basename(rstrip(String(r), '/'))
+    home = homedir()
+    p = DistSSHKit.canonical_local_path(String(r))
+    h = DistSSHKit.canonical_local_path(home)
+    startswith(p, h) && return string("~", chopprefix(p, h))
     return _q_short(r)
+end
+
+function _tail_jobs(rows::Vector{Job}, tail::Union{Nothing,Int})
+    tail === nothing && return rows, 0
+    n = length(rows)
+    n <= tail && return rows, 0
+    return rows[(n - tail + 1):n], n - tail
+end
+
+function print_jobs_table(
+    rows::Vector{Job};
+    io::IO=stdout,
+    present::Bool=true,
+    quiet::Bool=false,
+    hidden::Int=0,
+    verbose::Bool=false,
+)
+    DistSSHKit.print_help_section("Jobs"; io=io)
+    if !present
+        DistSSHKit.print_colored(io, "  (none)", :light_black, false)
+        println(io)
+        return nothing
+    end
+    if isempty(rows)
+        DistSSHKit.print_colored(io, "  (empty)", :light_black, false)
+        println(io)
+        return nothing
+    end
+    ids = _unique_prefixes(String[j.id for j in rows])
+    states = String[_job_state_disp(j) for j in rows]
+    kinds = String[String(j.kind) for j in rows]
+    scripts = String[_job_script_disp(j) for j in rows]
+    w_id = max(2, maximum(length, ids; init=2))
+    w_st = max(5, maximum(length, states; init=5))
+    w_k = max(4, maximum(length, kinds; init=4))
+    w_sc = max(6, maximum(length, scripts; init=6))
+    headers = String["ID", "STATE", "KIND", "SCRIPT"]
+    widths = Int[w_id, w_st, w_k, w_sc]
+    head = join((_q_cell(headers[i], widths[i]) for i in eachindex(headers)), "  ")
+    DistSSHKit.print_colored(io, "  " * head, :light_black, false)
+    println(io)
+    for (i, j) in enumerate(rows)
+        i > 1 && println(io)
+        print(io, "  ", _q_cell(ids[i], w_id), "  ")
+        DistSSHKit.print_colored(
+            io, _q_cell(states[i], w_st),
+            isempty(_job_phase_disp(j)) ? _q_state_color(j.state) : :cyan,
+            false,
+        )
+        print(io, "  ", _q_cell(kinds[i], w_k), "  ", _q_cell(scripts[i], w_sc))
+        println(io)
+        quiet && continue
+        hosts = join(j.hosts, "  ")
+        isempty(hosts) || begin
+            DistSSHKit.print_colored(io, "    hosts    ", :light_black, false)
+            println(io, hosts)
+        end
+        proj = _job_project_disp(j)
+        isempty(proj) || begin
+            DistSSHKit.print_colored(io, "    project  ", :light_black, false)
+            println(io, proj)
+        end
+        res = _job_result_disp(j; verbose=verbose)
+        isempty(res) || begin
+            DistSSHKit.print_colored(io, "    result   ", :light_black, false)
+            println(io, res)
+        end
+        err = _job_error_disp(j)
+        isempty(err) || begin
+            DistSSHKit.print_colored(io, "    error    ", :light_black, false)
+            DistSSHKit.print_colored(io, err, :red, false)
+            println(io)
+        end
+    end
+    if hidden > 0
+        DistSSHKit.print_colored(
+            io, "  ($hidden older jobs hidden; --tail full)", :light_black, false,
+        )
+        println(io)
+    end
+    return nothing
+end
+
+function print_status_table(
+    store::AbstractString,
+    rows::Vector{Job};
+    io::IO=stdout,
+    qhost::Union{Nothing,AbstractString}=nothing,
+    quiet::Bool=false,
+    live::Bool=false,
+    hidden::Int=0,
+    verbose::Bool=false,
+)
+    present = isfile(store)
+    if !quiet
+        DistSSHKit.print_help_section("Store"; io=io)
+        DistSSHKit.print_help_lines(io,
+            "  path   $(_store_path_disp(store, present, qhost))",
+            "  serve  $(_serve_disp(store))",
+            "  enable $(_enable_disp())",
+            "  qhost  $(_qhost_disp(qhost))",
+        )
+        DistSSHKit.print_help_blank(io)
+    end
+    print_jobs_table(rows; io=io, present=present, quiet=quiet, hidden=hidden, verbose=verbose)
+    if live && !quiet
+        DistSSHKit.print_help_blank(io)
+        DistSSHKit.print_help_lines(io, "Ctrl-C stops watch; serve stays.")
+    end
+    return nothing
+end
+
+function print_watch_frame(
+    store::AbstractString,
+    rows::Vector{Job};
+    io::IO=stdout,
+    qhost::Union{Nothing,AbstractString}=nothing,
+    quiet::Bool=false,
+    hidden::Int=0,
+    verbose::Bool=false,
+)
+    return print_status_table(
+        store, rows; io=io, qhost=qhost, quiet=quiet, live=true, hidden=hidden, verbose=verbose,
+    )
 end
 
 """Shortest unique prefixes (`minlen` or more) for `ids`, same order."""
@@ -123,13 +262,13 @@ function print_queue_usage(io::IO=stdout)
     DistSSHKit.print_help_blank(io)
     DistSSHKit.print_help_section("Client"; io=io)
     DistSSHKit.print_help_lines(io,
-        "  status [-q]           Snapshot; --interval is live",
+        "  status [-q] [--tail N|full]  Snapshot; --interval is live",
         "  list-host             Host tokens on the queue host",
         "  size                  Kit size on the queue host",
         "  plan                  Kit plan on the queue host",
         "  pool                  Kit pool on the queue host",
-        "  watch [-q]            Same as status --interval",
-        "  submit go|ride|drive … Enqueue DistSSHKit",
+        "  watch [-q] [--tail N|full]    Same as status --interval",
+        "  submit go|ride|drive … Enqueue DistSSHKit (`pool:N` sets every host)",
         "  cancel <id>           Drop queued or stop running",
         "  fetch <id>            Copy a finished Kit leaf here",
         "  teardown -y           Stop serve and remove queue-host files",
@@ -330,109 +469,6 @@ function _qhost_disp(qhost::Union{Nothing,AbstractString})::String
     end
     v = String(qhost)
     return v == hn ? v : "$v ($hn)"
-end
-
-function print_jobs_table(
-    rows::Vector{Job};
-    io::IO=stdout,
-    present::Bool=true,
-)
-    DistSSHKit.print_help_section("Jobs"; io=io)
-    if !present
-        DistSSHKit.print_colored(io, "  (none)", :light_black, false)
-        println(io)
-        return nothing
-    end
-    if isempty(rows)
-        DistSSHKit.print_colored(io, "  (empty)", :light_black, false)
-        println(io)
-        return nothing
-    end
-    ids = _unique_prefixes(String[j.id for j in rows])
-    states = String[String(j.state) for j in rows]
-    kinds = String[String(j.kind) for j in rows]
-    hosts = String[join(j.hosts, ',') for j in rows]
-    scripts = String[_job_script_disp(j) for j in rows]
-    w_id = max(2, maximum(length, ids; init=2))
-    w_st = max(5, maximum(length, states; init=5))
-    w_k = max(4, maximum(length, kinds; init=4))
-    w_h = max(5, maximum(length, hosts; init=5))
-    w_sc = max(6, maximum(length, scripts; init=6))
-    headers = String["ID", "STATE", "KIND", "HOSTS", "SCRIPT"]
-    widths = Int[w_id, w_st, w_k, w_h, w_sc]
-
-    # Optional trailing columns: shown only when at least one row has a value.
-    optional = Tuple{String,Vector{String},Int}[]
-    show_proj = any(j -> get(j.kwargs, "project", nothing) !== nothing, rows)
-    if show_proj
-        projs = String[_job_project_disp(j) for j in rows]
-        push!(optional, ("PROJECT", projs, max(7, maximum(length, projs; init=7))))
-    end
-    show_res = any(j -> j.result_path !== nothing, rows)
-    if show_res
-        ress = String[_job_result_disp(j) for j in rows]
-        push!(optional, ("RESULT", ress, max(6, maximum(length, ress; init=6))))
-    end
-    show_err = any(j -> j.error !== nothing, rows)
-    if show_err
-        errs = String[_job_error_disp(j) for j in rows]
-        push!(optional, ("ERROR", errs, max(5, maximum(length, errs; init=5))))
-    end
-    for (h, _, w) in optional
-        push!(headers, h)
-        push!(widths, w)
-    end
-
-    head = join((_q_cell(headers[i], widths[i]) for i in eachindex(headers)), "  ")
-    DistSSHKit.print_colored(io, "  " * head, :light_black, false)
-    println(io)
-    for (i, j) in enumerate(rows)
-        print(io, "  ", _q_cell(ids[i], w_id), "  ")
-        DistSSHKit.print_colored(io, _q_cell(states[i], w_st), _q_state_color(j.state), false)
-        print(io, "  ", _q_cell(kinds[i], w_k), "  ", _q_cell(hosts[i], w_h), "  ", _q_cell(scripts[i], w_sc))
-        for (_, vals, w) in optional
-            print(io, "  ", _q_cell(vals[i], w))
-        end
-        println(io)
-    end
-    return nothing
-end
-
-function print_status_table(
-    store::AbstractString,
-    rows::Vector{Job};
-    io::IO=stdout,
-    qhost::Union{Nothing,AbstractString}=nothing,
-    quiet::Bool=false,
-    live::Bool=false,
-)
-    present = isfile(store)
-    if !quiet
-        DistSSHKit.print_help_section("Store"; io=io)
-        DistSSHKit.print_help_lines(io,
-            "  path   $(_store_path_disp(store, present, qhost))",
-            "  serve  $(_serve_disp(store))",
-            "  enable $(_enable_disp())",
-            "  qhost  $(_qhost_disp(qhost))",
-        )
-        DistSSHKit.print_help_blank(io)
-    end
-    print_jobs_table(rows; io=io, present=present)
-    if live && !quiet
-        DistSSHKit.print_help_blank(io)
-        DistSSHKit.print_help_lines(io, "Ctrl-C stops watch; serve stays.")
-    end
-    return nothing
-end
-
-function print_watch_frame(
-    store::AbstractString,
-    rows::Vector{Job};
-    io::IO=stdout,
-    qhost::Union{Nothing,AbstractString}=nothing,
-    quiet::Bool=false,
-)
-    return print_status_table(store, rows; io=io, qhost=qhost, quiet=quiet, live=true)
 end
 
 function print_watch_compact(

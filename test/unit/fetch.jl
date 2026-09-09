@@ -25,7 +25,7 @@ end
     rel = DistSSHQueue.fetch_relpath(root * "/go/demo_807e3753", root)
     @test rel == "go/demo_807e3753"
     @test_throws ArgumentError DistSSHQueue.fetch_relpath("/tmp/other", root)
-    stray = "/tmp/go/demo_807e3753"
+    stray = "/tmp/output/demo_807e3753"
     @test !DistSSHQueue.path_has_queue_leaf(stray)
     @test_throws ArgumentError DistSSHQueue.require_fetchable_leaf(
         "807e3753-0000-4000-8000-000000000001", stray,
@@ -71,6 +71,20 @@ end
         @test_throws ArgumentError DistSSHQueue.require_fetchable_leaf(running, custom)
         pref = first(running, 8)
         @test DistSSHQueue.fetch_source(pref; store=store) == line
+        stray_store = joinpath(d, "stray.toml")
+        stray_id = Ref{String}()
+        q3 = Queue(; store=stray_store, runner=_ -> "/tmp/go/S_" * first(stray_id[], 8))
+        stray_id[] = submit!(q3, script, "parent:1")
+        @test step!(q3) == 1
+        _wait_fetch_state(q3, stray_id[], :done)
+        err = try
+            DistSSHQueue.fetch_source(stray_id[]; store=stray_store)
+            nothing
+        catch e
+            e
+        end
+        @test err isa ArgumentError
+        @test occursin("queue store", sprint(showerror, err))
     end
 end
 

@@ -21,8 +21,10 @@ Kit `go` / `ride` / `drive` / `size` / `plan` / `pool` flags stay in the
 
 ## Client vs queue host
 
-`qhost:HOST` is a **client** token (like Kit `child:NAME`). On the queue
-host, omit it.
+`qhost:HOST` is a **client** token (like Kit `child:NAME`). From a
+laptop, put it on the command line (leading or right after the verb).
+`DISTSSHQUEUE_HOST` alone does not hop. On the queue host, omit
+`qhost:`. Local trial: `DISTSSHQUEUE_LOCAL=1`.
 
 Refuse `qhost:`: `setup`, `serve`, `enable`, `disable`, `add-host`,
 `remove-host`. Forward: `submit`, `status`, `list-host`, `size`, `plan`,
@@ -48,14 +50,16 @@ Each row: `id` (UUID), `kind` (`:go` / `:ride` / `:drive`), `script`, `hosts`,
 `state` (`:queued` / `:running` / `:done` / `:failed` / `:cancelled`),
 `queued_at` / `started_at` / `finished_at`, `error`, and `result_path`
 — Kit's output directory. If submit omitted `--output-dir`, `serve`
-sets one with DistSSHKit `allocate_output_dir` when the row becomes
+sets one under `{project}/.distsshqueue/{kind}/{stem}_{id8}/` when the row becomes
 `:running` (so `cancel` and a later `serve` can find `kit.pid`). Drive
-is a unique `.distsshkit/drive/<stem>_<UTC>_<id>/`, not shared
-`.distsshkit/drive` and not demo `output/`. Queue
+is that unique leaf, not shared `.distsshkit/drive` and not demo
+`output/`. Queue
 does not keep a second copy of Kit's result tree. Kit kwargs (`args`,
 `project`, `output_dir`, …) travel as an opaque bag through DistSSHKit's
 `execute!` allow-list. `serve` also passes `job_id` (the row UUID)
-so Kit progress lines can carry `job=`.
+so Kit progress lines can carry `job=`. `serve` runs Kit `setup!`
+one step at a time before `execute!` unless
+`DISTSSHQUEUE_NO_KIT_SETUP=1`.
 
 The table is TOML on the queue host (`~/.distsshqueue/jobs.toml`),
 rewritten under a directory lock (`jobs.toml.lock`). Writers
@@ -73,9 +77,9 @@ will not start the next FIFO job). A `:running` row with no live
 `kit.pid` is `:done` or `:failed` from DistSSHKit `ok` in `kit.result`
 when that file exists, otherwise `:failed`. Drive listed `parent` /
 `child` hosts must join, stay, and collect unless the job passed
-`--best-effort` (Kit 0.6;
+`--best-effort` (Kit 0.7;
 [kit drive](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/drive/)).
-Kit results stay under that project (`.distsshkit/`).
+Kit results stay under `{project}/.distsshqueue/{kind}/`.
 
 ## Shared peel
 

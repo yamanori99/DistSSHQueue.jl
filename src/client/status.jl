@@ -58,21 +58,32 @@ function peel_status_watch_interval(
     rest::Vector{String};
     verb::AbstractString,
     default_interval::Union{Nothing,Float64},
-)::Tuple{Symbol,Union{Nothing,Float64}}
+)::Tuple{Symbol,Union{Nothing,Float64},Union{Nothing,Int}}
     interval = default_interval
+    tail = nothing
     i = 1
     while i <= length(rest)
         a = rest[i]
         if a == "--interval" && i < length(rest)
             interval = parse(Float64, rest[i + 1])
             i += 2
+        elseif a == "--tail" && i < length(rest)
+            raw = strip(rest[i + 1])
+            if raw == "full"
+                tail = nothing
+            else
+                n = tryparse(Int, raw)
+                (n === nothing || n < 1) && throw(ArgumentError("$verb: --tail needs N or full"))
+                tail = n
+            end
+            i += 2
         elseif a in ("-h", "--help")
-            return :help, interval
+            return :help, interval, tail
         else
             throw(ArgumentError("unknown $verb option: $(a)"))
         end
     end
-    return :run, interval
+    return :run, interval, tail
 end
 
 function show_status(
@@ -80,21 +91,38 @@ function show_status(
     io::IO=stdout,
     qhost::Union{Nothing,AbstractString}=qhost_display_from_env(),
     quiet::Bool=false,
+    tail::Union{Nothing,Int}=nothing,
+    verbose::Bool=false,
 )
     rows = isfile(store) ? read_jobs(store) : Job[]
-    return print_status_table(store, rows; io=io, qhost=qhost, quiet=quiet)
+    shown, hidden = _tail_jobs(rows, tail)
+    return print_status_table(
+        store, shown; io=io, qhost=qhost, quiet=quiet, hidden=hidden, verbose=verbose,
+    )
 end
 
 function status_cli(args::Vector{String})::Cint
     return _status_watch_cli(args; verb="status", default_interval=nothing)
 end
 
-function _watch_redraw!(f, io::IO)
+function _watch_paint!(io::IO, text::AbstractString, prev::Ref{String})
+    s = String(text)
+    s == prev[] && return nothing
+    prev[] = s
     if io isa Base.TTY
-        print(io, "\e[H\e[2J")
+        print(io, "\e[H", s, "\e[J")
+    else
+        print(io, s)
     end
-    f()
     flush(io)
+    return nothing
+end
+
+function _watch_redraw!(f, io::IO, prev::Ref{String})
+    text = sprint() do buf
+        f(buf)
+    end
+    _watch_paint!(io, text, prev)
     return nothing
 end
 
@@ -119,20 +147,27 @@ function watch!(
     io::IO=stdout,
     qhost::Union{Nothing,AbstractString}=qhost_display_from_env(),
     quiet::Bool=false,
+    tail::Union{Nothing,Int}=nothing,
+    verbose::Bool=false,
 )::Cint
     interval > 0 || throw(ArgumentError("watch: --interval must be > 0"))
     ticks === nothing || ticks >= 1 || throw(ArgumentError("watch: $WATCH_TICKS_ENV must be >= 1"))
     n = 0
+    prev = Ref("")
     try
         while true
             n += 1
             rows = isfile(store) ? read_jobs(store) : Job[]
+            shown, hidden = _tail_jobs(rows, tail)
             if quiet || io isa Base.TTY
-                _watch_redraw!(io) do
-                    print_watch_frame(store, rows; io=io, qhost=qhost, quiet=quiet)
+                _watch_redraw!(io, prev) do buf
+                    print_watch_frame(
+                        store, shown; io=buf, qhost=qhost, quiet=quiet,
+                        hidden=hidden, verbose=verbose,
+                    )
                 end
             else
-                print_watch_compact(store, rows; io=io)
+                print_watch_compact(store, shown; io=io)
             end
             ticks !== nothing && n >= ticks && break
             sleep(interval)
@@ -153,16 +188,18 @@ function _status_watch_cli(
     default_interval::Union{Nothing,Float64},
 )::Cint
     mode, rest = peel_status_watch_verbosity(args)
-    kind, interval = peel_status_watch_interval(
+    kind, interval, tail = peel_status_watch_interval(
         rest; verb=verb, default_interval=default_interval,
     )
     kind === :help && (show_usage(); return 0)
     quiet = mode === :quiet
+    verbose = mode === :chrome && any(a -> a in ("--verbose", "--progress"), args)
     if interval === nothing
-        show_status(store_path(); quiet=quiet)
+        show_status(store_path(); quiet=quiet, tail=tail, verbose=verbose)
         return 0
     end
     return watch!(
         store_path(); interval=interval, ticks=watch_ticks_from_env(), quiet=quiet,
+        tail=tail, verbose=verbose,
     )
 end

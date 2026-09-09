@@ -253,7 +253,7 @@ and Kit dirs do not change.
 
 No Queue table. Kit default `~/parent/Repo.jl` from that clone (do not
 pin `DISTRIBUTED_REMOTE_PROJECT_ROOT` in shared queue config). Collect
-lands on the queue host `~/.distsshqueue/{kind}/` dir above.
+lands on the queue host `{project}/.distsshqueue/{kind}/` dir above.
 
 ```text
 <remote project root>/

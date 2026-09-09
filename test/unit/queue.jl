@@ -297,7 +297,48 @@ end
     @test job(q, rid).kind === :ride
 end
 
-@testset "drive allocate_output_dir is .distsshkit/drive with the job id" begin
+@testset "kit setup session uses job remote" begin
+    mktempdir() do d
+        script = joinpath(d, "s.jl")
+        write(script, "1\n")
+        j = DistSSHQueue.Job(;
+            kind=:go,
+            script=script,
+            hosts=["parent:1"],
+            kwargs=Dict{String,Any}("project" => String(d), "remote" => "/custom/root"),
+        )
+        s = DistSSHQueue._kit_setup_session(j, String(d))
+        @test s.remote == "/custom/root"
+        j2 = DistSSHQueue.Job(;
+            kind=:go,
+            script=script,
+            hosts=["parent:1"],
+            kwargs=Dict{String,Any}("project" => String(d)),
+        )
+        s2 = DistSSHQueue._kit_setup_session(j2, String(d))
+        @test s2.remote === nothing
+    end
+end
+
+@testset "run_kit skips execute when no longer running" begin
+    mktempdir() do d
+        script = joinpath(d, "nope.jl")
+        write(script, "error(\"must not execute\")\n")
+        j = DistSSHQueue.Job(;
+            kind=:go,
+            script=script,
+            hosts=["parent:1"],
+            state=:running,
+            kwargs=Dict{String,Any}("project" => String(d)),
+        )
+        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => "1") do
+            out = DistSSHQueue.run_kit(j, Returns(nothing); still_running=Returns(false))
+            @test out == ""
+        end
+    end
+end
+
+@testset "drive leaf is project/.distsshqueue/kind/stem_id8" begin
     mktempdir() do d
         sdir = joinpath(d, "with_kit")
         mkpath(sdir)
@@ -314,8 +355,11 @@ end
         _wait_state(q, id, :done)
         j = job(q, id)
         p = DistSSHKit.canonical_local_path(something(j.result_path))
-        @test occursin(id, basename(p))
+        @test occursin(first(id, 8), basename(p))
         @test basename(dirname(p)) == "drive"
+        @test basename(dirname(dirname(p))) == ".distsshqueue"
+        @test dirname(dirname(dirname(p))) == DistSSHKit.canonical_local_path(d)
+        @test !startswith(relpath(p, DistSSHKit.canonical_local_path(d)), "..")
         DistSSHQueue.require_fetchable_leaf(id, p)
         mod = Module()
         Base.include(mod, script)
@@ -562,8 +606,8 @@ end
                 @test occursin("add-host", help)
                 @test occursin("remove-host", help)
                 @test occursin("watch", help)
-                @test occursin("status [-q]           Snapshot; --interval is live", help)
-                @test occursin("watch [-q]            Same as status --interval", help)
+                @test occursin("status [-q] [--tail N|full]  Snapshot; --interval is live", help)
+                @test occursin("watch [-q] [--tail N|full]    Same as status --interval", help)
                 @test occursin("enable", help)
                 @test occursin("disable", help)
                 @test occursin("fetch <id>", help)
@@ -1216,7 +1260,7 @@ end
     end
 end
 
-@testset "status table shows the ERROR column for failed jobs" begin
+@testset "status table shows the error line for failed jobs" begin
     mktempdir() do d
         p = joinpath(d, "jobs.toml")
         q = Queue(; store=p, runner=_ -> error("boom: kaboom"))
@@ -1224,7 +1268,7 @@ end
         @test step!(q) == 1
         _wait_state(q, id, :failed)
         listed = sprint(io -> DistSSHQueue.show_status(p; io=io))
-        @test occursin("ERROR", listed)
+        @test occursin("error", listed)
         @test occursin("boom: kaboom", listed)
     end
 end
@@ -1300,9 +1344,8 @@ end
         listed = sprint(io -> DistSSHQueue.show_status(p; io=io))
         @test occursin("aaaaaaaa-1", listed)
         @test occursin("aaaaaaaa-2", listed)
-        @test occursin(a.id, listed) # RESULT leaf keeps the stored UUID
+        @test occursin("pi_echo_x_aaaaaaaa-1111-4000-8000-000000000001", listed)
         @test occursin(joinpath("demos", "pi_echo.jl"), listed) || occursin("demos/pi_echo.jl", listed)
-        @test occursin(joinpath("demos", ".distsshkit"), listed) || occursin("demos/.distsshkit", listed)
         @test !occursin(stage * "/", listed)
         @test occursin(DistSSHKit.short_path(stage), listed)
     end

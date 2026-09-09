@@ -14,30 +14,32 @@ Also: [First job](@ref Tutorial-Client), [Walkthrough](@ref Tutorial-Walkthrough
 [status](@ref Manual-status).
 
 Run it from the same `cwd` / `DISTRIBUTED_PROJECT_ROOT` as `submit`.
-The dest is that project's copy of the Kit leaf
-(`…/.distsshkit/{go|ride|drive}/<stem>_<UTC>_<id>/`). stdout is that path,
-one line. Re-run rsyncs into the same leaf. A Kit demo that writes
-`output/` on a local `julia -m DistSSHKit drive` still uses that unique
-`.distsshkit/drive/` leaf under Queue (`allocate_output_dir` sets
-`DISTRIBUTED_OUTPUT_DIR` before `init_output_dir!`).
+The dest is `{project}/.distsshqueue/{go|ride|drive}/{stem}_{id8}/`.
+stdout is that path, one line. Re-run rsyncs into the same leaf.
+
+On the queue host (omit `qhost:`), fetch prints the leaf path
+and does not copy. The leaf is under the job project (or still under
+`dirname(store)` for an explicit `--output-dir` there). Failed and cancelled jobs with a leaf are
+fetchable. `<id>` is the full UUID or the 8-character prefix from
+`status`.
 
 `fetch` stays on the client. It does not hop `main` (`status` /
 `cancel` do). Path lookup is a captured `julia -e` on the queue host
-(same hop as stage homedir). Omit `qhost:` on the queue host: the
-leaf is already local; fetch prints the path.
+(same hop as stage homedir).
 
 ## Flags
 
 | Flag | Meaning |
 | --- | --- |
-| `<id>` | Exact job UUID (`submit` stdout / `status`) |
+| `<id>` | Full UUID or unique 8-character prefix (`submit` stdout / `status`) |
 | `-h` / `--help` | Queue usage |
 
 No `--output-dir`. Kit worker collect is not repeated.
 
 ## Refused
 
-`:queued`, `:running`, missing `result_path`, a path outside this
-tree's stage, a path that is not under `.distsshkit`, and a leaf
-basename that does not contain the id (`submit --output-dir` unless
-that dir already follows Kit's leaf name).
+`:queued`, `:running`, missing `result_path`, a path outside the
+queue store directory, a path that is not under `go` / `ride` /
+`drive`, and a leaf basename that does not contain the 8-character
+id (`submit --output-dir` unless that dir already follows this leaf
+name).
