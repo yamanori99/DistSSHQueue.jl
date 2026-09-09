@@ -160,7 +160,9 @@ end
 
 # Poll `jobs.toml` (same as test/integration/cli.jl). Waiting on `status`
 # chrome used to sit through 600×0.2s when Store `serve  running` looked
-# like a job STATE.
+# like a job STATE. Default 150×0.2s (~30 s) is enough for local E2E;
+# the `client qhost:` testset passes tries=600 for Colima on macos-15-intel
+# (autoserve hop + nested Docker).
 function wait_store_job(store::AbstractString, id::AbstractString, states; tries=150, sleep_s=0.2)
     want = Set{Symbol}(states)
     sid = String(id)
@@ -702,7 +704,7 @@ end
                         isdir(outdir) && rm(outdir; recursive=true)
                         id1 = read_cli(addenv(qh(["submit", "go", token, "--output-dir", outdir, script, GO_N...]), client_env...))
                         @test !isempty(id1)
-                        wait_store_job(qh_store, id1, (:done,))
+                        wait_store_job(qh_store, id1, (:done,); tries=600)
                         listed = read_cli(addenv(qh(["status"]), client_env...))
                         @test status_shows_id(listed, id1)
                         @test occursin("done", listed)
@@ -712,7 +714,7 @@ end
 
                         id_f = read_cli(addenv(qh(["submit", "go", token, script, GO_N...]), client_env...))
                         @test !isempty(id_f)
-                        row_f = wait_store_job(qh_store, id_f, (:done,))
+                        row_f = wait_store_job(qh_store, id_f, (:done,); tries=600)
                         @test row_f.state === :done
                         fetched = read_cli(addenv(qh(["fetch", id_f]), client_env...))
                         @test occursin(first(id_f, 8), fetched)
@@ -727,13 +729,13 @@ end
                         cancel_out = joinpath(JOB_PROJECT, "e2e_kit_out", "qhost_cancel")
                         isdir(cancel_out) && rm(cancel_out; recursive=true)
                         id2 = read_cli(addenv(qh(["submit", "go", "parent:1", "--output-dir", cancel_out, hold]), client_env...))
-                        wait_store_job(qh_store, id2, (:running,))
+                        wait_store_job(qh_store, id2, (:running,); tries=600)
                         isfile(joinpath(cancel_out, "kit.pid")) || sleep(0.5)
                         id3 = read_cli(addenv(qh(["submit", "go", token, script, GO_N...]), client_env...))
-                        wait_store_job(qh_store, id3, (:queued,))
+                        wait_store_job(qh_store, id3, (:queued,); tries=600)
                         cancelled = read_cli(addenv(qh(["cancel", id3]), client_env...))
                         @test cancelled == id3
-                        wait_store_job(qh_store, id3, (:cancelled,))
+                        wait_store_job(qh_store, id3, (:cancelled,); tries=600)
                         after = read_cli(addenv(qh(["status"]), client_env...))
                         @test status_shows_id(after, id2)
                         @test occursin("cancelled", after)
