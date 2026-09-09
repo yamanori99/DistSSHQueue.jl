@@ -113,7 +113,6 @@ function submit_cli(store::AbstractString, kind::Symbol, script::AbstractString,
         else
             println(stderr, "queue: local ($(gethostname()))")
         end
-        q.allowed === nothing && println(stderr, "no add-host list; any child: is accepted")
         nq = count(j -> j.state === :queued, q.jobs)
         nr = count(j -> j.state === :running, q.jobs)
         if nr > 0

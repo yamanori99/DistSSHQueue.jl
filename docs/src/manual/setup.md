@@ -61,7 +61,7 @@ store = "~/.distsshqueue/jobs.toml"
 | Key | Meaning |
 | --- | --- |
 | `store` | Job table path (`DISTSSHQUEUE_STORE`) |
-| `hosts` | Kit tokens; missing = allow-all; `[]` = allow none |
+| `hosts` | Kit tokens; missing = CLI needs `add-host` before a named token; `[]` = allow none |
 | `[env]` | Default ENV for this host (not `DISTSSHQUEUE_HOST`). Skip `DISTRIBUTED_REMOTE_PROJECT_ROOT` unless this box is one job |
 
 CLI `submit` re-reads `hosts` each time

@@ -109,7 +109,7 @@ function print_list_host(
 )
     DistSSHKit.print_help_chrome("DistSSHQueue list-host"; io=io)
     if names === nothing
-        println(io, "  (no hosts= in config; submit accepts any Kit name)")
+        println(io, "  (no hosts= in config; add-host first)")
         return nothing
     end
     if isempty(names)

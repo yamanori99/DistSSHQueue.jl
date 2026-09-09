@@ -3,8 +3,8 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
-- Submit/status copy: allow-all enqueue says `no add-host list; any
-  child: is accepted`. Status `error` is the full first line (no
+- Submit/status copy: missing config `hosts` plus a placement token is
+  an error (`no add-host list; … add-host first`). Status `error` is the full first line (no
   60-character chop). Known Kit `--juliaup` / `parent` setup text is
   prefixed with Queue's `parent:N` vs `child:` rsync note. `qhost:4`
   is not a Kit slot (`Use parent:4`). After `qhost:`, submit chrome is
@@ -268,7 +268,7 @@ Home is `~/.distsshqueue`, ENV is `DISTSSHQUEUE_*`, OS unit is
 
 - `add-host` / `remove-host` on the queue host. Tokens `parent[:N]` /
   `child:NAME[:N]`. Optional `:N` is a max. First add creates the list;
-  missing key is allow-all; empty array allows none. Leftover `allowed` is
+  missing key: CLI submit with a placement token errors (`add-host first`); empty array allows none. Leftover `allowed` is
   still read until rewritten. Next `submit` re-reads (do not restart
   `serve`). CLI `submit` follows config; library `submit!` uses
   `Queue(; allowed=…)` unless `follow_config=true`. `submit!` rejects

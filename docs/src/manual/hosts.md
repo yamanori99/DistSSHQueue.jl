@@ -30,8 +30,8 @@ Optional `:N` is a per-name max. Bare `host1` is not a token.
 
 | | |
 | --- | --- |
-| Missing `hosts` | Allow all names |
-| First `add-host` | Creates the list (submit is no longer allow-all) |
+| Missing `hosts` | CLI: named tokens error (`add-host first`) |
+| First `add-host` | Creates the list |
 | `hosts = []` | Last `remove-host`; submit accepts none |
 | Leftover `allowed` | Still read until rewritten to `hosts` |
 

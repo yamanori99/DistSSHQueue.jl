@@ -820,8 +820,19 @@ end
                 code_go, out_go, err_go = capture_stdio() do
                     DistSSHQueue.main(["submit", "go", "child:host1:4", "job.jl"])
                 end
+                @test code_go == 1
+                @test occursin("no add-host list", err_go)
+                @test occursin("add-host first", err_go)
+                @test isempty(DistSSHQueue.read_jobs(p))
+                code_add, _, _ = capture_stdio() do
+                    DistSSHQueue.main(["add-host", "parent", "child:host1"])
+                end
+                @test code_add == 0
+                code_go, out_go, err_go = capture_stdio() do
+                    DistSSHQueue.main(["submit", "go", "child:host1:4", "job.jl"])
+                end
                 @test code_go == 0
-                @test occursin("no add-host list; any child: is accepted", err_go)
+                @test !occursin("no add-host list", err_go)
                 rows = DistSSHQueue.read_jobs(p)
                 @test length(rows) == 1
                 @test strip(out_go) == rows[1].id
@@ -1159,7 +1170,7 @@ exit 0
                 DistSSHQueue.main(["list-host"])
             end
             @test code == 0
-            @test occursin("any Kit name", out)
+            @test occursin("add-host first", out)
         end
         write(cfg, "hosts = []\n")
         withenv("DISTSSHQUEUE_CONFIG" => cfg, "PATH" => path) do

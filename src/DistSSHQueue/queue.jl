@@ -578,6 +578,11 @@ function _submit!(q::Queue, kind::Symbol, script::AbstractString, hosts; kwargs.
         lock(q.lock) do
             q.follow_config && (q.allowed = fresh)
             allow = q.allowed
+            if q.follow_config && allow === nothing && !isempty(toks)
+                throw(ArgumentError(
+                    "no add-host list; $(repr(toks[1])) is not in inventory (add-host first)",
+                ))
+            end
             for t in toks
                 reject_host_token!(allow, t)
             end
