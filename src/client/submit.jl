@@ -176,10 +176,6 @@ function submit_kind(kind::Symbol, args::Vector{String}; pool_slots::Union{Nothi
     )
 end
 
-submit_go(args::Vector{String})::Cint = submit_kind(:go, args)
-submit_drive(args::Vector{String})::Cint = submit_kind(:drive, args)
-submit_ride(args::Vector{String})::Cint = submit_kind(:ride, args)
-
 function submit_main(args::Vector{String})::Cint
     isempty(args) && throw(ArgumentError("submit: need `go`, `ride`, or `drive`"))
     rest, slots = peel_submit_pool(args)
