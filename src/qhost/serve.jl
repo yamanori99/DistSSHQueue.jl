@@ -107,7 +107,7 @@ function serve_cli(args::Vector{String})::Cint
             interval = parse(Float64, args[i+1])
             i += 2
         elseif args[i] in ("-h", "--help")
-            show_usage()
+            show_usage(; command="serve")
             return 0
         else
             throw(ArgumentError("unknown serve option: $(args[i])"))
@@ -121,7 +121,7 @@ end
 `submit` will not auto-serve until an explicit `serve` clears the latch."""
 function stop_cli(args::Vector{String})::Cint
     for a in args
-        a in ("-h", "--help") && (show_usage(); return 0)
+        a in ("-h", "--help") && (show_usage(; command="stop"); return 0)
         throw(ArgumentError("unknown stop option: $(a)"))
     end
     store = store_path()

@@ -204,6 +204,6 @@ function submit_main(args::Vector{String})::Cint
     rest, slots = peel_submit_pool(args)
     isempty(rest) && throw(ArgumentError("submit: need `go`, `ride`, or `drive`"))
     kit, rest2 = String(rest[1]), String[String(a) for a in rest[2:end]]
-    kit in ("-h", "--help") && (show_usage(); return 0)
+    kit in ("-h", "--help") && (show_usage(; command="submit"); return 0)
     return submit_kind(kit_kind_from_cli(kit), rest2; pool_slots=slots)
 end

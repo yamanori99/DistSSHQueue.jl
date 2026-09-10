@@ -4,8 +4,12 @@ Command reference. For a hands-on path, use First Steps
 ([Requirements](@ref) → [Prepare](@ref Tutorial-Prepare) →
 [Walkthrough](@ref Tutorial-Walkthrough)).
 
-Root `--help` is a short table (Kit-shaped verbs; flags on
-`<command> -h`). `teardown -y` is Danger at the bottom. Flags and FAQ:
+Root `--help` defines Client vs Queue host (`qhost:HOST`), then Usage,
+then `--help client` / `--help qhost`. Version is
+`DistSSHQueue X (DistSSHKit Y)`. `--help client` is Jobs then Hosts;
+`--help qhost` is Setup, Serve, then Danger (`teardown`; needs `-y`;
+job trees stay). `<command> -h` is flags only. Kit argv is on
+`--help client`. Flags and FAQ:
 `julia --project=. -m DistSSHQueue <command> -h` and the pages below.
 Each command page starts with a **Flags** table for that command.
 Kit `go` / `ride` / `drive` / `size` / `plan` / `pool` flags stay in the

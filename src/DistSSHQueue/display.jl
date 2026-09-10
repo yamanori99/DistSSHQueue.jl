@@ -254,8 +254,8 @@ function _q_state_color(state::Symbol)
 end
 
 function println_queue_version(io::IO=stdout)
-    println(io, "DistSSHQueue $(pkgversion(DistSSHQueue))")
-    DistSSHKit.println_kit_version(io)
+    kv = DistSSHKit.dist_ssh_kit_version()
+    println(io, "DistSSHQueue $(pkgversion(DistSSHQueue)) (DistSSHKit $(kv))")
     return nothing
 end
 
@@ -264,63 +264,181 @@ function help_verb_line(verb::AbstractString, gloss::AbstractString)
     return "  $(rpad(String(verb), 19))$(gloss)"
 end
 
-function print_queue_usage(io::IO=stdout)
+function print_queue_usage(
+    io::IO=stdout;
+    topic::Union{Nothing,AbstractString}=nothing,
+)
+    t = topic === nothing ? "" : strip(String(topic))
+    isempty(t) && return print_queue_root_usage(io)
+    t == "client" && return print_queue_client_usage(io)
+    t in ("qhost", "queue", "queue-host") && return print_queue_host_usage(io)
+    throw(ArgumentError("unknown help topic: $(t) (client / qhost)"))
+end
+
+function print_queue_root_usage(io::IO=stdout)
     DistSSHKit.print_help_chrome("DistSSHQueue"; io=io)
-    DistSSHKit.print_help_section("Usage"; io=io)
+    println_queue_version(io)
+    DistSSHKit.print_help_blank(io)
+    DistSSHKit.print_help_section("Client / qhost"; io=io)
     DistSSHKit.print_help_lines(io,
-        "  julia -m DistSSHQueue [qhost:HOST] <command> [args...]",
-        "  julia -m DistSSHQueue --version",
+        help_verb_line("Client", "job `--project=.`; `qhost:HOST` is SSH to the queue"),
+        help_verb_line("Queue host", "`serve`; `--queue-env` (`~/.distsshqueue/env`)"),
     )
     DistSSHKit.print_help_blank(io)
-    DistSSHKit.print_help_section("Commands"; io=io)
+    DistSSHKit.print_help_section("Usage"; io=io)
     DistSSHKit.print_help_lines(io,
-        help_verb_line("status", "Snapshot of the store"),
-        help_verb_line("list-host", "Host tokens and juliaup default"),
-        help_verb_line("size", "Kit size on the queue host"),
-        help_verb_line("plan", "Kit plan on the queue host"),
-        help_verb_line("pool", "Kit pool on the queue host"),
-        help_verb_line("watch", "Live status"),
+        help_verb_line("Client", "julia --project=. -m DistSSHQueue [qhost:HOST] …"),
+        help_verb_line("Queue host", "julia -m DistSSHQueue …"),
+    )
+    DistSSHKit.print_help_blank(io)
+    DistSSHKit.print_help_section("Help"; io=io)
+    DistSSHKit.print_help_lines(io,
+        "  --help client",
+        "  --help qhost",
+    )
+    DistSSHKit.print_help_blank(io)
+    println(io, "Run `<command> --help` (or `-h`) for flags.")
+    return nothing
+end
+
+function print_queue_client_usage(io::IO=stdout)
+    DistSSHKit.print_help_chrome("DistSSHQueue --help client"; io=io)
+    DistSSHKit.print_help_section("Jobs"; io=io)
+    DistSSHKit.print_help_lines(io,
         help_verb_line("submit", "Enqueue DistSSHKit"),
+        help_verb_line("status", "Snapshot of the store"),
+        help_verb_line("watch", "Live status"),
         help_verb_line("cancel", "Drop queued or stop running"),
         help_verb_line("fetch", "Copy a finished Kit leaf"),
     )
     DistSSHKit.print_help_blank(io)
-    DistSSHKit.print_help_section("Queue host"; io=io)
+    DistSSHKit.print_help_section("Hosts"; io=io)
+    DistSSHKit.print_help_lines(io,
+        help_verb_line("list-host", "Host tokens and juliaup default"),
+        help_verb_line("size", "Kit size on the queue host"),
+        help_verb_line("plan", "Kit plan on the queue host"),
+        help_verb_line("pool", "Kit pool on the queue host"),
+    )
+    DistSSHKit.print_help_blank(io)
+    DistSSHKit.print_help_section("Examples"; io=io)
+    DistSSHKit.print_help_lines(io,
+        "  julia --project=. -m DistSSHQueue qhost:HOST status",
+        "  julia --project=. -m DistSSHQueue qhost:HOST submit drive parent:4 SCRIPT.jl",
+    )
+    DistSSHKit.print_help_blank(io)
+    DistSSHKit.print_help_section("See DistSSHKit"; io=io)
+    DistSSHKit.print_help_lines(io,
+        "  Same argv as DistSSHKit (`go` / `ride` / `drive parent:4 child:NAME:N …`).",
+        "  `julia --project=. -m DistSSHKit --help`",
+    )
+    DistSSHKit.print_help_blank(io)
+    println(io, "Run `<command> --help` (or `-h`) for flags.")
+    return nothing
+end
+
+function print_queue_host_usage(io::IO=stdout)
+    DistSSHKit.print_help_chrome("DistSSHQueue --help qhost"; io=io)
+    DistSSHKit.print_help_section("Setup"; io=io)
     DistSSHKit.print_help_lines(io,
         help_verb_line("setup", "Write config.toml if missing"),
         help_verb_line("add-host", "Add Kit tokens"),
         help_verb_line("remove-host", "Drop Kit tokens"),
+    )
+    DistSSHKit.print_help_blank(io)
+    DistSSHKit.print_help_section("Serve"; io=io)
+    DistSSHKit.print_help_lines(io,
         help_verb_line("serve", "Run serve in this terminal"),
         help_verb_line("stop", "Stop serve, keep files"),
         help_verb_line("enable", "Start serve after reboot"),
         help_verb_line("disable", "Remove that OS registration"),
     )
     DistSSHKit.print_help_blank(io)
-    DistSSHKit.print_help_section("DistSSHKit"; io=io)
-    DistSSHKit.print_help_lines(io,
-        "  After `submit`: same argv as DistSSHKit (`drive parent:4 child:NAME:N SCRIPT.jl`).",
-        "  Replay: `julia --project=. -m DistSSHKit drive parent:4 SCRIPT.jl` (this machine, now).",
-        "  `qhost:HOST` is the SSH name of the queue machine, not a Kit slot (`parent:4`, not `qhost:4`).",
-        "  A leading `go` / `ride` / `drive` on DistSSHQueue is DistSSHKit, not enqueue.",
-    )
-    DistSSHKit.print_help_blank(io)
     DistSSHKit.print_help_section("Examples"; io=io)
     DistSSHKit.print_help_lines(io,
-        "  julia --project=. -m DistSSHQueue setup",
-        "  julia --project=. -m DistSSHQueue qhost:HOST status",
-        "  julia --project=. -m DistSSHQueue qhost:HOST plan SCRIPT.jl",
-        "  julia --project=. -m DistSSHQueue qhost:HOST submit drive parent:4 SCRIPT.jl",
-        "  julia --project=. -m DistSSHQueue qhost:HOST submit \\",
-        "      drive parent:4 child:NAME:N SCRIPT.jl",
+        "  julia -m DistSSHQueue setup",
+        "  julia -m DistSSHQueue add-host parent child:NAME",
+        "  julia -m DistSSHQueue serve",
     )
     DistSSHKit.print_help_blank(io)
     DistSSHKit.print_help_section("Danger"; io=io)
     DistSSHKit.print_help_lines(io,
-        help_verb_line("teardown -y", "Stop serve and remove queue-host files"),
+        help_verb_line("teardown", "Stop serve and remove `~/.distsshqueue`"),
+        help_verb_line("", "Needs `-y`. Job trees stay."),
     )
     DistSSHKit.print_help_blank(io)
-    println(io, "Run `julia -m DistSSHQueue <command> -h` for flags.")
+    println(io, "Run `<command> --help` (or `-h`) for flags.")
     return nothing
+end
+
+const QUEUE_COMMAND_HELP = (
+    "status", "watch", "list-host", "cancel", "fetch", "submit",
+    "add-host", "remove-host", "serve", "stop", "enable", "disable",
+    "setup", "teardown",
+)
+
+"""True when `rest[1]` is `-h` / `--help` and `sub` has a Queue command page."""
+function command_help_argv(sub::AbstractString, rest::Vector{String})::Bool
+    isempty(rest) && return false
+    rest[1] in ("-h", "--help") || return false
+    return String(sub) in QUEUE_COMMAND_HELP
+end
+
+"""Short page for `<command> --help`. How to invoke DistSSHQueue is on root `--help`."""
+function print_queue_command_usage(io::IO, verb::AbstractString)
+    v = String(verb)
+    v == "setup" && return print_setup_usage(io)
+    v == "teardown" && return print_teardown_usage(io)
+    usage, flags = queue_command_help(v)
+    DistSSHKit.print_help_chrome("DistSSHQueue $v"; io=io)
+    DistSSHKit.print_help_section("Usage"; io=io)
+    DistSSHKit.print_help_lines(io, usage...)
+    isempty(flags) && return nothing
+    DistSSHKit.print_help_blank(io)
+    DistSSHKit.print_help_section("Flags"; io=io)
+    DistSSHKit.print_help_lines(io, [help_verb_line(f, g) for (f, g) in flags]...)
+    return nothing
+end
+
+function queue_command_help(verb::AbstractString)
+    v = String(verb)
+    h = ("--help / -h", "This page")
+    v == "status" && return (("  status",), (
+        ("-q / --quiet", "Table only"),
+        ("--interval SEC", "Refresh like watch"),
+        ("--tail N|full", "How many jobs to show"),
+        h,
+    ))
+    v == "watch" && return (("  watch",), (
+        ("-q / --quiet", "Table only"),
+        ("--interval SEC", "Refresh interval (default 0.5)"),
+        ("--tail N|full", "How many jobs to show"),
+        h,
+    ))
+    v == "list-host" && return (("  list-host",), (h,))
+    v == "cancel" && return (("  cancel ID",), (h,))
+    v == "fetch" && return (("  fetch ID",), (h,))
+    v == "submit" && return ((
+        "  submit go|ride|drive …",
+        "  `submit go --help` for DistSSHKit flags (same for ride / drive).",
+    ), (h,))
+    v == "add-host" && return (("  add-host [parent] [child:NAME...]",), (h,))
+    v == "remove-host" && return (("  remove-host [parent] [child:NAME...]",), (h,))
+    v == "serve" && return (("  serve",), (
+        ("--interval SEC", "Poll the store (default 0.2)"),
+        h,
+    ))
+    v == "stop" && return (("  stop",), (h,))
+    v == "enable" && return (("  enable",), (
+        ("--julia PATH", "Julia for the OS unit"),
+        ("--queue-env DIR", "Queue env (not job `--project=`)"),
+        ("--write-only", "Write the unit file; do not load it"),
+        h,
+    ))
+    v == "disable" && return (("  disable",), (
+        ("--write-only", "Do not unload the OS unit"),
+        h,
+    ))
+    throw(ArgumentError("no command help for $(v)"))
 end
 
 function print_setup_usage(io::IO=stdout)
@@ -336,7 +454,7 @@ function print_setup_usage(io::IO=stdout)
         help_verb_line("--force", "Rewrite config.toml (not with --juliaup)"),
         help_verb_line("--juliaup", "Align Julia on Kit hosts"),
         help_verb_line("--config PATH", "Config file"),
-        help_verb_line("-h", "This page"),
+        help_verb_line("--help / -h", "This page"),
     )
     return nothing
 end
@@ -345,18 +463,17 @@ function print_teardown_usage(io::IO=stdout)
     DistSSHKit.print_help_chrome("DistSSHQueue teardown"; io=io)
     DistSSHKit.print_help_section("Usage"; io=io)
     DistSSHKit.print_help_lines(io,
-        "  julia -m DistSSHQueue teardown -y",
-        "  julia -m DistSSHQueue qhost:HOST teardown -y",
+        "  teardown",
     )
     DistSSHKit.print_help_blank(io)
     DistSSHKit.print_help_section("Flags"; io=io)
     DistSSHKit.print_help_lines(io,
-        help_verb_line("-y / --yes", "Delete (or DISTSSHKIT_YES)"),
+        help_verb_line("-y / --yes", "Required to delete (or DISTSSHKIT_YES)"),
         help_verb_line("--write-only", "Do not stop serve or unload the OS unit"),
         help_verb_line("--home DIR", "Home for ~/.distsshqueue"),
         help_verb_line("--bindir DIR", "Leftover dskq shim path"),
         help_verb_line("--config PATH", "Config file"),
-        help_verb_line("-h", "This page"),
+        help_verb_line("--help / -h", "This page"),
     )
     return nothing
 end

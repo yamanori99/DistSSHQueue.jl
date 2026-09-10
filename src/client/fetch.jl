@@ -225,7 +225,7 @@ function fetch_cli(
     hop = (explicit || rest_explicit) ? dest : nothing
     qe = coalesce_queue_env(gqenv, qenv)
     isempty(payload) && throw(ArgumentError("fetch: need a job id"))
-    payload[1] in ("-h", "--help") && (show_usage(); return 0)
+    payload[1] in ("-h", "--help") && (show_usage(; command="fetch"); return 0)
     length(payload) == 1 || throw(ArgumentError("fetch: extra arguments"))
     id = resolve_fetch_job_id(String(payload[1]))
     length(id) < 8 && throw(ArgumentError(
