@@ -160,7 +160,7 @@ function list_host_cli(args::Vector{String})::Cint
     while i <= length(args)
         a = args[i]
         if a in ("-h", "--help")
-            show_usage()
+            show_usage(; command="list-host")
             return 0
         end
         throw(ArgumentError("unknown list-host option: $(a)"))

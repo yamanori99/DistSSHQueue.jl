@@ -52,7 +52,14 @@ include("qhost/setup.jl")
 include("qhost/teardown.jl")
 include("qhost/serve.jl")
 
-show_usage(; io::IO=stdout) = print_queue_usage(io)
+function show_usage(;
+    io::IO=stdout,
+    topic::Union{Nothing,AbstractString}=nothing,
+    command::Union{Nothing,AbstractString}=nothing,
+)
+    command !== nothing && return print_queue_command_usage(io, command)
+    return print_queue_usage(io; topic=topic)
+end
 
 """CLI entry. Prefer `julia -m DistSSHQueue` (client `qhost:HOST` / queue-host `setup`)."""
 function main(args::Vector{String}=copy(ARGS))::Cint
@@ -60,7 +67,8 @@ function main(args::Vector{String}=copy(ARGS))::Cint
     try
         qhost, gjulia, gqenv, after, explicit = extract_remote_opts(args)
         if isempty(after) || after[1] in ("-h", "--help", "help")
-            show_usage()
+            topic = length(after) >= 2 ? String(after[2]) : nothing
+            print_queue_usage(; topic=topic)
             return 0
         end
         if length(after) == 1 && after[1] in ("--version", "-v", "-V")
@@ -68,6 +76,10 @@ function main(args::Vector{String}=copy(ARGS))::Cint
             return 0
         end
         sub, rest = String(after[1]), String[String(a) for a in after[2:end]]
+        if command_help_argv(sub, rest)
+            print_queue_command_usage(stdout, sub)
+            return 0
+        end
         reject_qhost_on_local(sub, explicit ? qhost : nothing)
         require_queue_target!(sub; explicit=explicit)
         hop = explicit ? qhost : nothing

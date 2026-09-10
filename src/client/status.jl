@@ -211,7 +211,7 @@ function _status_watch_cli(
     kind, interval, tail = peel_status_watch_interval(
         rest; verb=verb, default_interval=default_interval,
     )
-    kind === :help && (show_usage(); return 0)
+    kind === :help && (show_usage(; command=verb); return 0)
     quiet = mode === :quiet
     verbose = mode === :chrome && any(a -> a in ("--verbose", "--progress"), args)
     if interval === nothing

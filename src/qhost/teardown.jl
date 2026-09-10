@@ -101,7 +101,7 @@ function teardown_main(args::Vector{String})::Cint
     while i <= length(args)
         a = args[i]
         if a in ("-h", "--help")
-            show_usage()
+            print_teardown_usage()
             return 0
         elseif a in ("-y", "--yes")
             yes = true

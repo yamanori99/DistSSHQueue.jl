@@ -3,6 +3,13 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
+- Root `--help` defines Client vs Queue host (`qhost:HOST`), then Usage,
+  then `--help client` / `--help qhost`. Version is
+  `DistSSHQueue X (DistSSHKit Y)`. `--help client` is Jobs then Hosts;
+  `--help qhost` is Setup, Serve, then Danger (`teardown`; needs `-y`;
+  job trees stay). `<command> --help` is that verb's Usage and Flags,
+  not how to invoke DistSSHQueue. Kit argv is on
+  `--help client`. `setup --help` lists `--force` / `--juliaup`.
 - `qhost:` snapshot `status` uses `ssh -t` when this stdout is a TTY
   (same Kit colors as a local `status`). `NO_COLOR` is copied onto the
   hop so Kit still drops ANSI; watch still gets a TTY to clear the

@@ -44,7 +44,7 @@ function add_host_cli(args::Vector{String})::Cint
     names = String[]
     for a in args
         if a in ("-h", "--help")
-            show_usage()
+            show_usage(; command="add-host")
             return 0
         end
         startswith(a, "-") && throw(ArgumentError("unknown add-host option: $(a)"))
@@ -60,7 +60,7 @@ function remove_host_cli(args::Vector{String})::Cint
     names = String[]
     for a in args
         if a in ("-h", "--help")
-            show_usage()
+            show_usage(; command="remove-host")
             return 0
         end
         startswith(a, "-") && throw(ArgumentError("unknown remove-host option: $(a)"))

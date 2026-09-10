@@ -210,7 +210,7 @@ function enable_main(args::Vector{String})::Cint
             apply = false
             i += 1
         elseif args[i] in ("-h", "--help")
-            show_usage()
+            show_usage(; command="enable")
             return 0
         else
             throw(ArgumentError("unknown enable option: $(args[i])"))
@@ -227,7 +227,7 @@ function disable_main(args::Vector{String})::Cint
             apply = false
             i += 1
         elseif args[i] in ("-h", "--help")
-            show_usage()
+            show_usage(; command="disable")
             return 0
         else
             throw(ArgumentError("unknown disable option: $(args[i])"))
