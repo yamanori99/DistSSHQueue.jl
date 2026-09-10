@@ -1,7 +1,7 @@
 """Read-only `list-host`: Kit names from config `hosts`, plus `ssh -G` connect fields.
 
 Prints host tokens (`parent` / `child:NAME`) for `submit`. Not Kit `--hosts`.
-JULIAUP is that host's `juliaup default` (`juliaup status` `*` row),
+JULIA is that host's `juliaup default` (`juliaup status` `*` row),
 or `-` if missing, SSH/`status` fails, or there is no `*` row.
 Does not print private keys or IdentityFile.
 """
@@ -33,22 +33,28 @@ function _host_name_disp(name::AbstractString)::String
     return String(name)
 end
 
-function _host_token_ssh_disp(
-    name::AbstractString;
-    hopped::Bool=false,
-)::String
+function _print_list_card_field(io::IO, key::AbstractString, val::AbstractString)
+    DistSSHKit.print_colored(io, "    $(rpad(String(key), 8))  ", :light_black, false)
+    println(io, val)
+    return nothing
+end
+
+function _print_host_ssh_card(io::IO, name::AbstractString; hopped::Bool)
     if DistSSHKit.is_parent_host_name(name)
-        hn = gethostname()
-        return hopped ? "queue host ($hn)" : "this machine ($hn)"
+        label = hopped ? "queue host" : "this machine"
+        _print_list_card_field(io, "ssh", label)
+        return nothing
     end
     g = ssh_g_connect(name)
-    isempty(g) && return "(ssh -G failed)"
-    parts = String[]
-    haskey(g, "host") && push!(parts, "Host $(g["host"])")
-    haskey(g, "hostname") && push!(parts, "HostName $(g["hostname"])")
-    haskey(g, "user") && push!(parts, "User $(g["user"])")
-    haskey(g, "port") && push!(parts, "Port $(g["port"])")
-    return join(parts, "  ")
+    if isempty(g)
+        _print_list_card_field(io, "ssh", "(ssh -G failed)")
+        return nothing
+    end
+    for key in _SSH_G_KEYS
+        haskey(g, key) || continue
+        _print_list_card_field(io, key, g[key])
+    end
+    return nothing
 end
 
 function _host_token(name::AbstractString)::String
@@ -120,37 +126,33 @@ function print_list_host(
     rows = sorted_kit_ssh_names(names)
     labels = String[_host_name_disp(n) for n in rows]
     nw = max(4, maximum(length, labels))
-    tw = max(10, maximum(length ∘ _host_token, rows))
+    tw = max(5, maximum(length ∘ _host_token, rows))
     maxs = String[names[n] === nothing ? "-" : string(names[n]) for n in rows]
     mw = max(3, maximum(length, maxs))
     julias = String[_juliaup_default_disp(n) for n in rows]
-    jw = max(7, maximum(length, julias))
-    println(
+    headers = ("NAME", "TOKEN", "MAX")
+    widths = Int[nw, tw, mw]
+    DistSSHKit.print_colored(
         io,
-        "  ",
-        rpad("NAME", nw),
-        "  ",
-        rpad("HOST TOKEN", tw),
-        "  ",
-        rpad("MAX", mw),
-        "  ",
-        rpad("JULIAUP", jw),
-        "  SSH",
+        "  $(join((_q_cell(headers[i], widths[i]) for i in eachindex(headers)), "  "))  JULIA",
+        :light_black,
+        false,
     )
-    for (n, label, ju) in zip(rows, labels, julias)
-        println(
+    println(io)
+    for (i, n) in enumerate(rows)
+        i > 1 && println(io)
+        print(
             io,
             "  ",
-            rpad(label, nw),
+            _q_cell(labels[i], nw),
             "  ",
-            rpad(_host_token(n), tw),
+            _q_cell(_host_token(n), tw),
             "  ",
-            rpad(names[n] === nothing ? "-" : string(names[n]), mw),
+            _q_cell(names[n] === nothing ? "-" : string(names[n]), mw),
             "  ",
-            rpad(ju, jw),
-            "  ",
-            _host_token_ssh_disp(n; hopped=hopped),
         )
+        println(io, julias[i])
+        _print_host_ssh_card(io, n; hopped=hopped)
     end
     return nothing
 end

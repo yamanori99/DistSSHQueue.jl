@@ -314,7 +314,7 @@ function print_queue_client_usage(io::IO=stdout)
     DistSSHKit.print_help_blank(io)
     DistSSHKit.print_help_section("Hosts"; io=io)
     DistSSHKit.print_help_lines(io,
-        help_verb_line("list-host", "Host tokens and juliaup default"),
+        help_verb_line("list-host", "Inventory cards (juliaup default)"),
         help_verb_line("size", "Kit size on the queue host"),
         help_verb_line("plan", "Kit plan on the queue host"),
         help_verb_line("pool", "Kit pool on the queue host"),

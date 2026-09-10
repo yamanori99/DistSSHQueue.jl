@@ -33,7 +33,9 @@ One queue host: still pass `qhost:HOST` (or `status qhost:HOST`).
 `DISTSSHQUEUE_HOST` is not enough. Local trial without a hop:
 `DISTSSHQUEUE_LOCAL=1`. Several clusters: pass `qhost:` each time.
 
-`list-host` is not Kit `--hosts`. `ssh -G` runs on the queue host.
+`list-host` is not Kit `--hosts`. Cards like `status`: NAME / TOKEN / MAX /
+JULIA, then indented `ssh -G` (`host` / `hostname` / `user` / `port`).
+`ssh -G` runs on the queue host.
 `size` / `plan` / `pool` are DistSSHKit inspect verbs there (do not enqueue).
 
 ## Submit

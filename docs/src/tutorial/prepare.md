@@ -38,7 +38,7 @@ Defaults work without `config.toml`. `--force` rewrites it. Use it for
 `child:NAME` is SSH. First add creates the list. CLI submit with a
 placement token and no `hosts` is an error. Optional `:N` is a max. No `serve` restart: the next
 `submit` re-reads the file. `list-host` NAME for parent is the hostname;
-HOST TOKEN stays `parent`. JULIAUP is that host's `juliaup default`
+TOKEN stays `parent`. JULIA is that host's `juliaup default`
 (`-` if missing, SSH/`status` fails, or no `*` row).
 
 Do not `cd` the stage tree and run DistSSHKit `setup` by hand. `serve`
