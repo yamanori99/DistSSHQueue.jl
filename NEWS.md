@@ -3,6 +3,12 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
+## 0.5.0
+
+Breaking cut after `0.4.1`. DistSSHKit **0.7.1**.
+Enqueue is `submit go` / `submit ride` / `submit drive` only.
+Per-job `qhost:` stage; tickets under `.distsshqueue`.
+
 - `add-host child:` warns that those SSH names are reachable via DistSSHKit
   from this queue host (`DISTSSHKIT_QUIET` hides it). Parent-only is quiet.
   Not a confirm prompt.
