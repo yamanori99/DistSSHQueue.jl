@@ -224,6 +224,8 @@ function fetch_cli(
     dest, spec = coalesce_remote(qhost, gjulia, host, rjulia)
     hop = (explicit || rest_explicit) ? dest : nothing
     qe = coalesce_queue_env(gqenv, qenv)
+    progress = rsync_progress_on(payload)
+    payload = String[a for a in payload if a != "--progress"]
     isempty(payload) && throw(ArgumentError("fetch: need a job id"))
     payload[1] in ("-h", "--help") && (show_usage(; command="fetch"); return 0)
     length(payload) == 1 || throw(ArgumentError("fetch: extra arguments"))
@@ -245,7 +247,7 @@ function fetch_cli(
     st in FETCH_READY || throw(ArgumentError("job $(repr(id)) is $(st)"))
     qroot = dirname(dirname(posix_dir(path)))
     out = local_fetch_dest(id, path, qroot)
-    rsync_from_qhost!(hop, path, out)
+    rsync_from_qhost!(hop, path, out; progress=progress)
     println(out)
     return 0
 end

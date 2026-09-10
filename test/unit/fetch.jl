@@ -142,6 +142,11 @@ end
             end
             @test code_e == 1
             @test occursin("need a job id", err_e)
+            code_ep, _, err_ep = capture_stdio() do
+                DistSSHQueue.main(["fetch", "--progress"])
+            end
+            @test code_ep == 1
+            @test occursin("need a job id", err_ep)
         end
     end
 end

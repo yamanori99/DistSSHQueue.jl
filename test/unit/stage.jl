@@ -40,8 +40,32 @@ using DistSSHQueue
     end
     opts = DistSSHQueue.stage_rsync_push_opts("ssh -o BatchMode=yes")
     @test opts[1] == "-az"
+    @test !("--info=progress2" in opts)
     @test ":- .gitignore" in opts
     @test ".distsshqueue/" in opts
     @test ".distsshkit/" in opts
     @test ".git/" in opts
+    @test "--info=progress2" in DistSSHQueue.stage_rsync_push_opts("ssh"; progress=true)
+    buf = IOBuffer()
+    DistSSHQueue.print_rsync_start("qh", "/Users/me/.distsshqueue/stage/abc"; io=buf)
+    @test occursin("rsync → qh:", String(take!(buf)))
+    buf2 = IOBuffer()
+    DistSSHQueue.print_rsync_start("qh", "/tmp/leaf"; pulling=true, io=buf2)
+    @test occursin("rsync ← qh:", String(take!(buf2)))
+    withenv("DISTSSHKIT_QUIET" => "1") do
+        bufq = IOBuffer()
+        DistSSHQueue.print_rsync_start("qh", "/x"; io=bufq)
+        @test isempty(String(take!(bufq)))
+        @test DistSSHQueue.rsync_progress_on(["--progress"]) == false
+    end
+    withenv("DISTSSHKIT_QUIET" => nothing, "DISTSSHKIT_PROGRESS" => "1") do
+        @test DistSSHQueue.rsync_progress_on() == true
+    end
+    withenv("DISTSSHKIT_QUIET" => nothing, "DISTSSHKIT_PROGRESS" => nothing) do
+        @test DistSSHQueue.rsync_progress_on() == false
+        @test DistSSHQueue.rsync_progress_on(["go", "--progress", "S.jl"]) == true
+    end
+    fetch_h = sprint(io -> DistSSHQueue.print_queue_command_usage(io, "fetch"))
+    @test occursin("--progress", fetch_h)
+    @test occursin("progress2", fetch_h)
 end

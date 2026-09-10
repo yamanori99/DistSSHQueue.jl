@@ -3,6 +3,10 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
+- `qhost:` submit/fetch prints `rsync → HOST:path` / `rsync ← HOST:path`
+  on stderr when the transfer starts (`DISTSSHKIT_QUIET` hides it).
+  `DISTSSHKIT_PROGRESS` / `--progress` adds rsync `--info=progress2`
+  (`DISTSSHKIT_QUIET` skips that too). Not a size guess.
 - Root `--help` defines Client vs Queue host (`qhost:HOST`), then Usage,
   then `--help client` / `--help qhost`. Version is
   `DistSSHQueue X (DistSSHKit Y)`. `--help client` is Jobs then Hosts;

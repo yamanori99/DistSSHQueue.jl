@@ -3,7 +3,8 @@
 Omit `qhost:` is unchanged (cwd / `DISTRIBUTED_PROJECT_ROOT` on this box).
 Kit still copies queue host → workers. Same excludes as Kit `setup --rsync`
 (`.git/` / `.distsshkit/` / `.distsshqueue/` plus `.gitignore`).
-`DISTSSHQUEUE_NO_STAGE=1` skips (tests with a fake `ssh`).
+Stderr gets `rsync → HOST:path` when the copy starts (`DISTSSHKIT_QUIET`
+hides it). `DISTSSHQUEUE_NO_STAGE=1` skips (tests with a fake `ssh`).
 """
 
 const NO_STAGE_ENV = "DISTSSHQUEUE_NO_STAGE"
@@ -162,9 +163,10 @@ function _ssh_mkdir!(host::AbstractString, remote_dir::AbstractString)
 end
 
 """rsync flags for client → queue-host stage (Kit `setup --rsync` plus `.distsshqueue/`)."""
-function stage_rsync_push_opts(transport::AbstractString)::Vector{String}
-    return String[
-        "-az",
+function stage_rsync_push_opts(transport::AbstractString; progress::Bool=false)::Vector{String}
+    opts = String["-az"]
+    progress && push!(opts, "--info=progress2")
+    append!(opts, String[
         "--delete",
         "-e",
         String(transport),
@@ -176,14 +178,35 @@ function stage_rsync_push_opts(transport::AbstractString)::Vector{String}
         ".distsshqueue/",
         "--filter",
         ":- .gitignore",
-    ]
+    ])
+    return opts
+end
+
+function rsync_progress_on(args::Vector{String}=String[])::Bool
+    _queue_env_on("DISTSSHKIT_QUIET") && return false
+    _queue_env_on("DISTSSHKIT_PROGRESS") && return true
+    return any(isequal("--progress"), args)
+end
+
+"""One stderr line when a `qhost:` rsync starts. `DISTSSHKIT_QUIET` skips it."""
+function print_rsync_start(
+    host::AbstractString,
+    remote_path::AbstractString;
+    pulling::Bool=false,
+    io::IO=stderr,
+)
+    _queue_env_on("DISTSSHKIT_QUIET") && return nothing
+    arrow = pulling ? "←" : "→"
+    println(io, "rsync $(arrow) $(host):$(_q_short(remote_path))")
+    return nothing
 end
 
 function rsync_to_qhost!(
     host::AbstractString,
     local_root::AbstractString,
     remote_root::AbstractString,
-    extra_files::Vector{String},
+    extra_files::Vector{String};
+    progress::Bool=false,
 )
     src = DistSSHKit.canonical_local_path(local_root)
     isdir(src) || throw(ArgumentError("qhost submit: job project is not a directory: $(repr(src))"))
@@ -191,13 +214,17 @@ function rsync_to_qhost!(
     dest = string(host, ":", remote_root, "/")
     rsync = _rsync_bin()
     transport = _ssh_transport()
+    print_rsync_start(host, remote_root)
     run(
         pipeline(
-            Cmd(vcat(rsync, stage_rsync_push_opts(transport), String[src * "/", dest]));
+            Cmd(vcat(rsync, stage_rsync_push_opts(transport; progress=progress), String[src * "/", dest]));
             stdout=stderr,
             stderr=stderr,
         ),
     )
+    extra_opts = String["-az"]
+    progress && push!(extra_opts, "--info=progress2")
+    append!(extra_opts, String["-e", transport])
     for f in extra_files
         p = DistSSHKit.canonical_local_path(f)
         isfile(p) || throw(ArgumentError("qhost submit: extra file missing: $(repr(p))"))
@@ -206,7 +233,8 @@ function rsync_to_qhost!(
                 Cmd(
                     vcat(
                         rsync,
-                        String["-az", "-e", transport, p, string(host, ":", remote_root, "/", basename(p))],
+                        extra_opts,
+                        String[p, string(host, ":", remote_root, "/", basename(p))],
                     ),
                 );
                 stdout=stderr,
@@ -221,20 +249,21 @@ end
 function rsync_from_qhost!(
     host::AbstractString,
     remote_abs::AbstractString,
-    local_dest::AbstractString,
+    local_dest::AbstractString;
+    progress::Bool=false,
 )
     remote = rstrip(replace(String(remote_abs), '\\' => '/'), '/')
     dest = DistSSHKit.canonical_local_path(local_dest)
     mkpath(dest)
     src = string(host, ":", remote, "/")
+    print_rsync_start(host, remote; pulling=true)
+    flags = String["-az"]
+    progress && push!(flags, "--info=progress2")
+    append!(flags, String["--delete", "-e", _ssh_transport()])
     run(
         pipeline(
-            Cmd(
-                vcat(
-                    _rsync_bin(),
-                    String["-az", "--delete", "-e", _ssh_transport(), src, dest * "/"],
-                ),
-            );
+            Cmd(vcat(_rsync_bin(), flags, String[src, dest * "/"]));
+            stdout=stderr,
             stderr=stderr,
         ),
     )
@@ -266,7 +295,7 @@ function stage_job_tree!(
     if !path_under_project(local_script, local_proj)
         push!(extras, local_script)
     end
-    rsync_to_qhost!(host, local_proj, remote_root, extras)
+    rsync_to_qhost!(host, local_proj, remote_root, extras; progress=rsync_progress_on(payload))
     staged = rewrite_payload_paths(payload, local_proj, remote_root)
     if !isempty(extras)
         want = string(remote_root, "/", basename(local_script))
