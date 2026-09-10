@@ -3,6 +3,15 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
+## 0.5.1
+
+Patch after `0.5.0`. DistSSHKit **0.7.x** (≥0.7.2).
+`qhost:` stage skips Kit `:check` without `.git`. Queue-only detached `-m` needs Kit ≥0.7.2.
+
+- DistSSHKit **0.7.x** (≥0.7.2). Detached `execute!` `--project=` is the job tree
+  only when DistSSHKit is in `Project.toml` `[deps]`. A Queue-only job
+  uses `pkgdir(DistSSHKit)` so `julia -m DistSSHKit` loads
+  ([#240](https://github.com/yamanori99/DistSSHQueue.jl/issues/240)).
 - `serve` Kit `:check` only when the job project has `.git/`. A `qhost:`
   stage never has it (Kit rsync), so that hop skips `:check` instead of
   dying on `Could not get local git commit`
@@ -14,7 +23,7 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## 0.5.0
 
-Breaking cut after `0.4.1`. DistSSHKit **0.7.1**.
+Breaking cut after `0.4.1`. DistSSHKit **0.7.x** (≥0.7.1).
 Enqueue is `submit go` / `submit ride` / `submit drive` only.
 Per-job `qhost:` stage; tickets under `.distsshqueue`.
 
@@ -62,7 +71,7 @@ Per-job `qhost:` stage; tickets under `.distsshqueue`.
 - Job `Pkg.instantiate` skips a `DEPOT_PATH` entry that is a Julia
   project (queue-env). Empty `JULIA_DEPOT_PATH` uses `~/.julia`, not
   the serve `--project=`.
-- DistSSHKit **0.7.1**. Detached `execute!` `--project=` is the job tree
+- DistSSHKit **0.7.x** (≥0.7.1). Detached `execute!` `--project=` is the job tree
   when that tree has DistSSHKit (after `serve` instantiate). Not
   `pkgdir(DistSSHKit)` of queue-env.
 - `qhost:` submit tickets are `{project}/.distsshqueue/tickets/<uuid>`
