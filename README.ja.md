@@ -211,6 +211,8 @@ julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 `submit` は、`serve` が無ければキューホスト上で起動する。`serve` が
 ジョブ木をキューホスト上で `Pkg.instantiate` し、`child:` には Kit
 `setup!` を走らせる (stage で DistSSHKit `setup` を手で打たない)。
+Kit `:check` はジョブ木に `.git/` があるときだけ。`qhost:` の stage
+は `.git/` を送らないので、その hop では `:check` を飛ばす。
 ジョブ id は
 stdout 1 行。stderr に `Queued  N` (`DISTSSHKIT_QUIET` で隠す)。
 `fetch` は終わった Kit leaf をこのジョブ木へ戻す。

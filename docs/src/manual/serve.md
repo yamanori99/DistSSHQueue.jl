@@ -15,9 +15,13 @@ Also: [Prepare](@ref Tutorial-Prepare), [submit](@ref Manual-submit),
 `serve` is this terminal, now. Ctrl-C stops this process, not a Kit job
 that is already running. Before each `execute!` it `Pkg.instantiate`s
 the job project on this host, then Kit `setup!` (`rsync` →
-`instantiate` → `check`) on `child:` hosts, unless
+`instantiate`, then `check` only if that tree has `.git/`) on
+`child:` hosts, unless
 `DISTSSHQUEUE_NO_KIT_SETUP=1`. Kit `setup!` does not instantiate
-`parent`. Child `instantiate` / `check` failure fails the job. A
+`parent`. Child `instantiate` / `check` failure fails the job.
+A `qhost:` stage omits `.git/` (Kit rsync), so `serve` skips Kit
+`:check` there until DistSSHKit has a no-git probe
+([#238](https://github.com/yamanori99/DistSSHQueue.jl/issues/238)). A
 later job's `rsync` onto a nonempty worker path is Kit's no-overwrite
 rule; `instantiate` still runs.
 `enable` tells the OS to start `serve` after reboot / login

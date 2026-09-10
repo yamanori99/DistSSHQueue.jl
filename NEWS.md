@@ -3,6 +3,15 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
+- `serve` Kit `:check` only when the job project has `.git/`. A `qhost:`
+  stage never has it (Kit rsync), so that hop skips `:check` instead of
+  dying on `Could not get local git commit`
+  ([#238](https://github.com/yamanori99/DistSSHQueue.jl/issues/238)).
+  Interim until DistSSHKit has a no-git probe
+  ([#370](https://github.com/yamanori99/DistSSHKit.jl/issues/370)).
+  Checkout-backed local submits still run `:check`. Julia major.minor
+  is not preflighted on a stage tree.
+
 ## 0.5.0
 
 Breaking cut after `0.4.1`. DistSSHKit **0.7.1**.

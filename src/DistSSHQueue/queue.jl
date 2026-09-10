@@ -450,6 +450,9 @@ function _require_kit_setup_ok!(result, step::AbstractString)
     throw(ErrorException("DistSSHKit setup! $(step) failed"))
 end
 
+"""Kit `:check` needs a checkout. Stage trees omit `.git/` (#238; DistSSHKit#370)."""
+_queue_kit_check_git(proj::AbstractString)::Bool = isdir(joinpath(String(proj), ".git"))
+
 function _queue_kit_setup!(j::Job, on_phase)
     _queue_env_on(NO_KIT_SETUP_ENV) && return nothing
     proj = get(j.kwargs, "project", nothing)
@@ -466,8 +469,10 @@ function _queue_kit_setup!(j::Job, on_phase)
     _queue_local_instantiate!(String(proj))
     if session !== nothing
         _require_kit_setup_ok!(DistSSHKit.setup!(session, :instantiate), "instantiate")
-        on_phase("check")
-        _require_kit_setup_ok!(DistSSHKit.setup!(session, :check), "check")
+        if _queue_kit_check_git(String(proj))
+            on_phase("check")
+            _require_kit_setup_ok!(DistSSHKit.setup!(session, :check), "check")
+        end
     end
     return nothing
 end

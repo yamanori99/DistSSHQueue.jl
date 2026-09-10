@@ -25,7 +25,10 @@ runs jobs.
     (`julia -m DistSSHQueue`)
   - Same **major.minor** on the queue host and SSH workers (DistSSHKit
     `setup --check` fails on a mismatch unless `--ignore-julia-version`;
-    patch-only differences warn)
+    patch-only differences warn). `serve` runs that `:check` only when
+    the job project has `.git/`. A `qhost:` stage has none, so that hop
+    does not preflight Julia mismatch until Kit has a no-git probe
+    ([#238](https://github.com/yamanori99/DistSSHQueue.jl/issues/238)).
   - Prefer **[juliaup](https://github.com/JuliaLang/juliaup)** at
     `$HOME/.juliaup/bin/julia`. If it is not there, put a 1.12+ binary at a
     usual OS path ([Checks](@ref)) or set `--remote-julia` /
@@ -105,7 +108,8 @@ DistSSHKit hosts. Passwordless SSH **from the queue host**, Julia
 The `ssh …` snippets below are **examples** you can type yourself — DistSSHQueue
 does not run them. Timeouts need not match DistSSHKit (`ConnectTimeout` here is
 `5`; the kit uses `10` plus keepalives). Worker probes are DistSSHKit's
-(`setup --check` from the queue host).
+(`setup --check` from the queue host). `serve` does not run Kit
+`:check` on a `qhost:` stage (no `.git/`).
 
 ### Probe the queue host
 
