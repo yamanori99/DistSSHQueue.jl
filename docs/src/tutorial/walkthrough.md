@@ -11,7 +11,7 @@ Names here: queue host SSH `HOST`, worker SSH `host1`. Swap them.
 Always-on **macOS or Linux**. Default Julia env is enough
 (`pkg> add DistSSHQueue` there). `setup` writes `config.toml` only.
 `parent` is this box. Dedicated `~/.distsshqueue/env` is optional
-until a client uses `qhost:` (that hop defaults to
+until a client uses `qhost:` (`qhost:` defaults to
 `--project=~/.distsshqueue/env`).
 
 ```bash
@@ -26,9 +26,9 @@ this host, then Kit `setup!` (rsync / instantiate / check) on
 `child:` hosts. Optional: `setup --juliaup`
 when major.minor differs.
 
-Clients hop: create the env, then `pkg> add DistSSHQueue` in it
-(Prepare). `enable` is optional (survive reboot). From a client,
-every client verb needs `qhost:HOST` on the command line.
+From a client: create the env, then `pkg> add DistSSHQueue` in it
+(Prepare). `enable` is optional (survive reboot). Every client verb
+needs `qhost:HOST` on the command line.
 
 ## Client: go on parent
 
@@ -38,7 +38,7 @@ Listed `parent` / `child:NAME` need `:N`.
 
 ```bash
 julia --project=. -m DistSSHKit demo install without_kit
-julia --project=. -m DistSSHQueue qhost:HOST go parent:1 distsshkit_demos/without_kit/pi_echo.jl
+julia --project=. -m DistSSHQueue qhost:HOST submit go parent:1 distsshkit_demos/without_kit/pi_echo.jl
 ```
 
 `qhost:` rsyncs this tree to `~/.distsshqueue/stage/<uuid>` on `HOST`
@@ -54,14 +54,14 @@ julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 `fetch` copies the Kit leaf
 `{project}/.distsshqueue/go/<stem>_<id8>/` (on `HOST`, that project is
 the stage tree) onto the same layout on this job tree. Run it from the
-same directory as `go`.
+same directory as `submit`.
 
 ## Worker (`child:NAME`)
 
 From the **client**:
 
 ```bash
-julia --project=. -m DistSSHQueue qhost:HOST go child:host1:2 distsshkit_demos/without_kit/pi_echo.jl
+julia --project=. -m DistSSHQueue qhost:HOST submit go child:host1:2 distsshkit_demos/without_kit/pi_echo.jl
 julia --project=. -m DistSSHQueue qhost:HOST fetch <id>  # 8-char prefix or full UUID
 julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
@@ -76,7 +76,7 @@ julia --project=. -m DistSSHQueue qhost:HOST submit pool:2 go distsshkit_demos/w
 
 ```bash
 julia --project=. -m DistSSHKit demo install with_kit
-julia --project=. -m DistSSHQueue qhost:HOST drive parent:1 distsshkit_demos/with_kit/square_file.jl
+julia --project=. -m DistSSHQueue qhost:HOST submit drive parent:1 distsshkit_demos/with_kit/square_file.jl
 julia --project=. -m DistSSHQueue qhost:HOST fetch <id>  # 8-char prefix or full UUID
 julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```

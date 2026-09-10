@@ -65,9 +65,6 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
   `~/.distsshqueue/stage/<id>`.
 - Top-level `go` / `ride` / `drive` are DistSSHKit. Queue enqueue is
   `submit go` / `submit ride` / `submit drive` only.
-- `list-host` JULIAUP is each host's `juliaup default` (`*` on
-  `juliaup status`). `-` if juliaup is missing, SSH or `status` fails,
-  or there is no `*` row.
 
 ## 0.4.1
 

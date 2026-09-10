@@ -217,7 +217,7 @@ on `child:` hosts before each job (you do not hand-run DistSSHKit
 bare stdout line; stderr shows `Queued  N` unless `DISTSSHKIT_QUIET` is set.
 `fetch` copies the finished Kit leaf onto this job tree.
 
-Typed path (queue host → go / fetch → teardown):
+Typed path (queue host → submit / fetch → teardown):
 [Walkthrough](https://yamanori99.github.io/DistSSHQueue.jl/stable/tutorial/walkthrough/).
 
 On the **queue host** (once). `setup` writes `config.toml`, not `env/`.

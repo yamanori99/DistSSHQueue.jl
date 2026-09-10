@@ -1,7 +1,7 @@
 # [Prepare](@id Tutorial-Prepare)
 
 First-time **queue host** before a [First job](@ref Tutorial-Client).
-Typed path (go / fetch / teardown): [Walkthrough](@ref Tutorial-Walkthrough).
+Typed path (submit / fetch / teardown): [Walkthrough](@ref Tutorial-Walkthrough).
 This box is always-on **macOS or Linux**. Clients can skip this page if
 someone already set that box up.
 
@@ -55,7 +55,7 @@ To align Julia versions, Queue `setup --juliaup` on the queue host
 
 ## Dedicated env (optional)
 
-Create `~/.distsshqueue/env` when clients `qhost:` (that hop defaults to
+Create `~/.distsshqueue/env` when clients `qhost:` (`qhost:` defaults to
 `--project=~/.distsshqueue/env`) or when `enable` should not pin a
 checkout. Skip it if you only `setup` / `add-host` / `serve` from an env
 that already has DistSSHQueue. `--queue-env @` is the remote default
