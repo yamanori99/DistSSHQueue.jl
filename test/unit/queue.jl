@@ -383,6 +383,65 @@ end
     @test_throws ErrorException DistSSHQueue._require_kit_setup_ok!((; ok=false), "check")
 end
 
+@testset "kit setup :check only when the job project has .git" begin
+    mktempdir() do d
+        write(joinpath(d, "Project.toml"), "[deps]\n")
+        script = joinpath(d, "s.jl")
+        write(script, "1\n")
+        @test !DistSSHQueue._queue_kit_check_git(String(d))
+        mkpath(joinpath(d, ".git"))
+        @test DistSSHQueue._queue_kit_check_git(String(d))
+        rm(joinpath(d, ".git"); recursive=true)
+        write(joinpath(d, ".git"), "gitdir: /tmp/linked.git\n")
+        @test DistSSHQueue._queue_kit_check_git(String(d))
+        rm(joinpath(d, ".git"))
+        @test !DistSSHQueue._queue_kit_check_git(String(d))
+        j = DistSSHQueue.Job(;
+            kind=:go,
+            script=script,
+            hosts=["child:w1:1"],
+            kwargs=Dict{String,Any}("project" => String(d)),
+        )
+        modes = Symbol[]
+        fake_setup!(_, mode::Symbol) = (push!(modes, mode); (; ok=true))
+        phases = String[]
+        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+            DistSSHQueue._queue_kit_setup!(
+                j,
+                ph -> ph isa AbstractString && push!(phases, String(ph));
+                kit_setup! = fake_setup!,
+            )
+        end
+        @test modes == [:rsync, :instantiate]
+        @test phases == ["rsync", "instantiate"]
+        mkpath(joinpath(d, ".git"))
+        empty!(modes)
+        empty!(phases)
+        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+            DistSSHQueue._queue_kit_setup!(
+                j,
+                ph -> ph isa AbstractString && push!(phases, String(ph));
+                kit_setup! = fake_setup!,
+            )
+        end
+        @test modes == [:rsync, :instantiate, :check]
+        @test phases == ["rsync", "instantiate", "check"]
+        rm(joinpath(d, ".git"); recursive=true)
+        write(joinpath(d, ".git"), "gitdir: /tmp/linked.git\n")
+        empty!(modes)
+        empty!(phases)
+        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+            DistSSHQueue._queue_kit_setup!(
+                j,
+                ph -> ph isa AbstractString && push!(phases, String(ph));
+                kit_setup! = fake_setup!,
+            )
+        end
+        @test modes == [:rsync, :instantiate, :check]
+        @test phases == ["rsync", "instantiate", "check"]
+    end
+end
+
 @testset "instantiate skips queue-env and empty JULIA_DEPOT_PATH" begin
     mktempdir() do d
         qenv = joinpath(d, "env")

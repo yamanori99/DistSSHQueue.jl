@@ -27,7 +27,9 @@ Bare `status` is a snapshot. `watch` is `status --interval` (default
 `--tail` is full). Each job is a card: `ID STATE KIND SCRIPT` then
 detail lines. `-q` is the first line only. While Kit setup is in
 progress, STATE shows `rsync` / `instantiate` / `check` (`instantiate`
-includes the queue-host project; Kit steps are `child:` only; the store
+includes the queue-host project; Kit steps are `child:` only;
+`check` only when the job project is a git checkout; a `qhost:`
+stage has no `.git/`, so STATE does not sit on `check`; the store
 row stays `:running`). `qhost:HOST` `status` / `watch` use `ssh -t` when
 this stdout is a TTY (watch paint). Kit colors unless this client has
 `NO_COLOR` (copied onto the hop). Watch redraws with `\e[H\e[J` then

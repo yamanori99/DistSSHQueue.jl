@@ -3,7 +3,8 @@
 Enqueue a DistSSHKit `go`, `ride`, or `drive`. Starts `serve` if none is
 running. That `serve` instantiates the job project on the queue host
 and runs Kit `setup!` on `child:` hosts before `execute!` (not a
-hand-run DistSSHKit `setup` on the stage tree).
+hand-run DistSSHKit `setup` on the stage tree). Kit `:check` runs
+only when that job tree has `.git/`; a `qhost:` stage omits it.
 
 Type the line on a **client**, in the **job directory** (Queue must be
 loadable; `--project=.` is that tree, and `SCRIPT.jl` lives there). Not

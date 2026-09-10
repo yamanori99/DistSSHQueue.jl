@@ -213,7 +213,8 @@ julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 `submit` starts `serve` on the queue host if none is running. `serve`
 instantiates the job project on the queue host and runs Kit `setup!`
 on `child:` hosts before each job (you do not hand-run DistSSHKit
-`setup` on the stage tree). Job ids are a
+`setup` on the stage tree). Kit `:check` runs only when the job tree
+has `.git/`; a `qhost:` stage omits it. Job ids are a
 bare stdout line; stderr shows `Queued  N` unless `DISTSSHKIT_QUIET` is set.
 `fetch` copies the finished Kit leaf onto this job tree.
 

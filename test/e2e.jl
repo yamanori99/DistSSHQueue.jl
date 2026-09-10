@@ -79,7 +79,7 @@ const SSH_ENV = Dict(
     "DISTRIBUTED_SSH_OPTS" => "-F $(SSH_CONFIG)",
     "DISTRIBUTED_REMOTE_PROJECT_ROOT" => REMOTE_ROOT,
     # E2E already runs Kit setup! in its own testset. Per-job setup! would
-    # redo rsync/instantiate/check on every job.
+    # redo rsync/instantiate (and :check only if the job tree has .git/).
     DistSSHQueue.NO_KIT_SETUP_ENV => "1",
 )
 
