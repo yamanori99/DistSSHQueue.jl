@@ -28,9 +28,10 @@ Bare `status` is a snapshot. `watch` is `status --interval` (default
 detail lines. `-q` is the first line only. While Kit setup is in
 progress, STATE shows `rsync` / `instantiate` / `check` (`instantiate`
 includes the queue-host project; Kit steps are `child:` only; the store
-row stays `:running`). Live with `qhost:HOST` uses `ssh -t` when this
-stdout is a TTY. Watch redraws with `\e[H` / `\e[J` and skips identical
-frames. A pipe without `-q` prints a compact `serve` / `running` /
+row stays `:running`). `qhost:HOST` `status` / `watch` use `ssh -t` when
+this stdout is a TTY (watch paint). Kit colors unless this client has
+`NO_COLOR` (copied onto the hop). Watch redraws with `\e[H\e[J` then
+the frame (clear the screen first) and skips identical frames. A pipe without `-q` prints a compact `serve` / `running` /
 `queued` line; `-q` on a pipe is still the table.
 How the table file is locked and rewritten:
 [User Guide · Job record](@ref Manual-job-record).

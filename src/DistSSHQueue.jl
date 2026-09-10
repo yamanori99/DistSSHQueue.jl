@@ -84,7 +84,7 @@ function main(args::Vector{String}=copy(ARGS))::Cint
         elseif sub == "status"
             r = maybe_remote(
                 hop, gjulia, "status", rest;
-                tty=any(isequal("--interval"), rest) && stdout isa Base.TTY,
+                tty=status_watch_hop_tty(rest),
                 label_qhost=true, queue_env=gqenv, explicit=explicit,
             )
             r === nothing || return r
@@ -112,7 +112,7 @@ function main(args::Vector{String}=copy(ARGS))::Cint
         elseif sub == "remove-host"
             return remove_host_cli(rest)
         elseif sub == "watch"
-            r = maybe_remote(hop, gjulia, "watch", rest; tty=stdout isa Base.TTY, label_qhost=true, queue_env=gqenv, explicit=explicit)
+            r = maybe_remote(hop, gjulia, "watch", rest; tty=status_watch_hop_tty(rest), label_qhost=true, queue_env=gqenv, explicit=explicit)
             r === nothing || return r
             return watch_cli(_rest())
         elseif sub == "submit"

@@ -1415,6 +1415,38 @@ end
     end
 end
 
+@testset "watch TTY paint clears before the frame" begin
+    prev = Ref("")
+    buf = IOBuffer()
+    DistSSHQueue._watch_paint!(buf, "ab", prev; clear=true)
+    DistSSHQueue._watch_paint!(buf, "c", prev; clear=true)
+    @test String(take!(buf)) == "\e[H\e[Jab\e[H\e[Jc"
+    prev_pipe = Ref("")
+    pipe = IOBuffer()
+    DistSSHQueue._watch_paint!(pipe, "ab", prev_pipe)
+    DistSSHQueue._watch_paint!(pipe, "c", prev_pipe)
+    @test String(take!(pipe)) == "abc"
+end
+
+@testset "qhost status hop tty does not require --interval" begin
+    @test DistSSHQueue.status_watch_hop_tty(String[]; client_tty=true)
+    @test DistSSHQueue.status_watch_hop_tty(["--interval", "0.5"]; client_tty=true)
+    @test DistSSHQueue.status_watch_hop_tty(String[]; client_tty=false) === false
+end
+
+@testset "qhost hop forwards NO_COLOR" begin
+    withenv("NO_COLOR" => "1", "DISTSSHKIT_QUIET" => nothing) do
+        assigns = String[]
+        DistSSHQueue.append_hop_forwarded_env!(assigns)
+        @test any(a -> occursin("NO_COLOR", a), assigns)
+    end
+    withenv("NO_COLOR" => nothing, "DISTSSHKIT_QUIET" => nothing) do
+        assigns = String[]
+        DistSSHQueue.append_hop_forwarded_env!(assigns)
+        @test !any(a -> occursin("NO_COLOR", a), assigns)
+    end
+end
+
 @testset "cli surfaces friendly errors instead of stacktraces" begin
     mktempdir() do d
         p = joinpath(d, "jobs.toml")
