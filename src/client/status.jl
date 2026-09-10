@@ -105,12 +105,32 @@ function status_cli(args::Vector{String})::Cint
     return _status_watch_cli(args; verb="status", default_interval=nothing)
 end
 
-function _watch_paint!(io::IO, text::AbstractString, prev::Ref{String})
+"""`ssh -t` for `qhost:` `status` / `watch` when the client stdout is a TTY.
+
+Do not also require `--interval` on `rest` (snapshot hops would be a pipe
+and Kit `use_colors()` would drop ANSI).
+"""
+function status_watch_hop_tty(
+    ::AbstractVector{<:AbstractString};
+    client_tty::Bool=stdout isa Base.TTY,
+)::Bool
+    return client_tty
+end
+
+function _watch_paint!(
+    io::IO,
+    text::AbstractString,
+    prev::Ref{String};
+    clear::Bool=io isa Base.TTY,
+)
     s = String(text)
     s == prev[] && return nothing
     prev[] = s
-    if io isa Base.TTY
-        print(io, "\e[H", s, "\e[J")
+    # Home + erase the whole screen, then paint. `\e[H` + frame + `\e[J`
+    # only clears from the end of the new frame, so a shorter row keeps
+    # leftover characters on that line.
+    if clear
+        print(io, "\e[H\e[J", s)
     else
         print(io, s)
     end

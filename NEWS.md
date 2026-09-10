@@ -3,6 +3,10 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
+- `qhost:` snapshot `status` uses `ssh -t` when this stdout is a TTY
+  (same Kit colors as a local `status`; `NO_COLOR` still wins). Watch
+  TTY paint is `\e[H\e[J` then the frame so a shorter row does not
+  leave leftover characters.
 - Submit/status copy: missing config `hosts` plus a placement token is
   an error (`no add-host list; … add-host first`). Status `error` is the full first line (no
   60-character chop). Known Kit `--juliaup` / `parent` setup text is
