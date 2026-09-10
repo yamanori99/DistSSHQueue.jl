@@ -263,6 +263,7 @@ function rsync_from_qhost!(
     run(
         pipeline(
             Cmd(vcat(_rsync_bin(), flags, String[src, dest * "/"]));
+            stdout=stderr,
             stderr=stderr,
         ),
     )
