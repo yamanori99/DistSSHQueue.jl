@@ -281,7 +281,7 @@ end
 `label_qhost` sets `DISTSSHQUEUE_QHOST` to the client token (not a CLI flag;
 re-passing `qhost:` would recurse). `status` / `watch` print that token on the
 Store `qhost` line and prefix `path`. `list-host` only uses it to say
-`queue host (hostname)` instead of `this machine`; NAME is `gethostname()`.
+`queue host` instead of `this machine`; NAME is `gethostname()`.
 """
 function maybe_remote(
     qhost::Union{Nothing,AbstractString},

@@ -40,15 +40,16 @@ file. A `:running` Kit job is not stopped.
 
 ## list-host
 
-Read-only. NAME for `parent` is this queue host's hostname; HOST TOKEN
-stays `parent` (copy-paste for `submit`, including `parent:N`). Children:
-NAME is the SSH Host, HOST TOKEN is `child:NAME`. JULIAUP is that
-host's `juliaup default` (`juliaup status` `*` row); `-` if juliaup is
-missing, SSH or `status` fails, or there is no `*` row. `ssh -G`
-(Host / HostName / User / Port) runs on
-the queue host. No private keys or IdentityFile. Locally, parent SSH is
-`this machine (hostname)`. Via `qhost:`, it is `queue host (hostname)`
-— not the client's hostname.
+Read-only. Cards like [`status`](@ref Manual-status): NAME / TOKEN / MAX /
+JULIA on the first line, then indented `ssh -G` fields (`host` /
+`hostname` / `user` / `port`). NAME for `parent` is this queue host's
+hostname; TOKEN stays `parent` (copy-paste for `submit`, including
+`parent:N`). Children: NAME is the SSH Host, TOKEN is `child:NAME`.
+JULIA is that host's `juliaup default` (`juliaup status` `*` row); `-`
+if juliaup is missing, SSH or `status` fails, or there is no `*` row.
+`ssh -G` runs on the queue host. No private keys or IdentityFile.
+Locally, parent `ssh` is `this machine`. Via `qhost:`, it is
+`queue host` — NAME is still the queue host's hostname, not the client's.
 
 ```bash
 julia -m DistSSHQueue qhost:HOST list-host
