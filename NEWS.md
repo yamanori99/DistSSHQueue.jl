@@ -3,6 +3,9 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
+- Root `--help` is Kit-width verbs (flags on `<command> -h`). `teardown
+  -y` is once under Danger, not in Commands and Queue host. `setup -h`
+  lists `--force` / `--juliaup`.
 - `qhost:` snapshot `status` uses `ssh -t` when this stdout is a TTY
   (same Kit colors as a local `status`). `NO_COLOR` is copied onto the
   hop so Kit still drops ANSI; watch still gets a TTY to clear the
