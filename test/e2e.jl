@@ -393,7 +393,8 @@ end
             @test prep.ok
             @test length(prep.hosts) == length(HOSTS)
             @test all(h -> h.ok, prep.hosts)
-            # Kit 0.7.1 detached execute uses `--project=` of this tree.
+            # This tree lists DistSSHKit in [deps], so Kit 0.7.2 still uses
+            # `--project=` here (not pkgdir).
             DistSSHQueue._queue_local_instantiate!(JOB_PROJECT)
             @test isfile(joinpath(JOB_PROJECT, "Manifest.toml"))
         end
@@ -685,9 +686,10 @@ end
                             error("loopback ssh to distsshqueue-qh failed: $client$server")
                         end
                         # Stage rsync honors `.gitignore` (`Manifest.toml` is listed).
-                        # Kit 0.7.1 uses `--project=` of a tree that names DistSSHKit,
-                        # so the Manifest [2/11] wrote must reach the stage. Do not
-                        # instantiate that Manifest on workers (path-dev Kit).
+                        # This job lists DistSSHKit in [deps], so Kit 0.7.2 still
+                        # uses `--project=` of the stage; the Manifest [2/11] wrote
+                        # must reach it. Do not instantiate that Manifest on
+                        # workers (path-dev Kit).
                         write(gi, replace(gi_body, r"^Manifest\.toml\r?\n?"m => ""))
                         remote_env = Dict{String,String}(
                             "HOME" => e2e_home,

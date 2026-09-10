@@ -3,6 +3,10 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
+- DistSSHKit **0.7.2**. Detached `execute!` `--project=` is the job tree
+  only when DistSSHKit is in `Project.toml` `[deps]`. A Queue-only job
+  uses `pkgdir(DistSSHKit)` so `julia -m DistSSHKit` loads
+  ([#240](https://github.com/yamanori99/DistSSHQueue.jl/issues/240)).
 - `serve` Kit `:check` only when the job project has `.git/`. A `qhost:`
   stage never has it (Kit rsync), so that hop skips `:check` instead of
   dying on `Could not get local git commit`
