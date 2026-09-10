@@ -215,7 +215,7 @@ julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 stdout 1 行。stderr に `Queued  N` (`DISTSSHKIT_QUIET` で隠す)。
 `fetch` は終わった Kit leaf をこのジョブ木へ戻す。
 
-打つ順 (キューホスト → go / fetch → teardown):
+打つ順 (キューホスト → submit / fetch → teardown):
 [Walkthrough](https://yamanori99.github.io/DistSSHQueue.jl/stable/tutorial/walkthrough/)。
 
 **キューホスト** で一度だけ。`setup` は `config.toml` を書く (`env/` は作らない)。

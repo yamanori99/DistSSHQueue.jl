@@ -11,7 +11,7 @@ Submit from a **client** after the queue host is up
 Run from a directory where Queue is loadable (`julia --project=.`).
 That `--project=.` stays on the **client**. `qhost:` defaults to
 `--project=~/.distsshqueue/env` on the queue host (`--queue-env DIR` /
-`--queue-env @`). Create that dir if clients hop (see Prepare).
+`--queue-env @`). Create that dir if clients use `qhost:` (see Prepare).
 `qhost:` **rsync**s the client job tree (`cwd` /
 `DISTRIBUTED_PROJECT_ROOT`) to `~/.distsshqueue/stage/<uuid>` on the
 queue host (Kit rsync excludes: `.gitignore`, `.git/`, `.distsshkit/`,
@@ -30,7 +30,7 @@ julia --project=. -m DistSSHQueue qhost:HOST pool
 ```
 
 One queue host: still pass `qhost:HOST` (or `status qhost:HOST`).
-`DISTSSHQUEUE_HOST` is not enough. Local trial without a hop:
+`DISTSSHQUEUE_HOST` is not enough. Local trial without `qhost:`:
 `DISTSSHQUEUE_LOCAL=1`. Several clusters: pass `qhost:` each time.
 
 `list-host` is not Kit `--hosts`. Cards like `status`: NAME / TOKEN / MAX /
