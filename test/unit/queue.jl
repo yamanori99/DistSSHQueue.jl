@@ -1434,6 +1434,19 @@ end
     @test DistSSHQueue.status_watch_hop_tty(String[]; client_tty=false) === false
 end
 
+@testset "qhost hop forwards NO_COLOR" begin
+    withenv("NO_COLOR" => "1", "DISTSSHKIT_QUIET" => nothing) do
+        assigns = String[]
+        DistSSHQueue.append_hop_forwarded_env!(assigns)
+        @test any(a -> occursin("NO_COLOR", a), assigns)
+    end
+    withenv("NO_COLOR" => nothing, "DISTSSHKIT_QUIET" => nothing) do
+        assigns = String[]
+        DistSSHQueue.append_hop_forwarded_env!(assigns)
+        @test !any(a -> occursin("NO_COLOR", a), assigns)
+    end
+end
+
 @testset "cli surfaces friendly errors instead of stacktraces" begin
     mktempdir() do d
         p = joinpath(d, "jobs.toml")

@@ -198,6 +198,23 @@ function require_queue_target!(
     ))
 end
 
+"""Copy client Kit chrome env onto a `qhost:` hop (`-e` assigns).
+
+`NO_COLOR` uses `haskey` (Kit `use_colors()`), not a truthy value. Keep `ssh -t`
+when the client is a TTY so watch can still clear the screen.
+"""
+function append_hop_forwarded_env!(assigns::Vector{String})
+    for name in ("DISTSSHKIT_QUIET", "DISTSSHKIT_PROGRESS", "DISTSSHKIT_VERBOSE")
+        v = strip(get(ENV, name, ""))
+        isempty(v) && continue
+        push!(assigns, "ENV[$(repr(name))] = $(repr(v))")
+    end
+    if haskey(ENV, "NO_COLOR")
+        push!(assigns, "ENV[\"NO_COLOR\"] = $(repr(ENV["NO_COLOR"]))")
+    end
+    return assigns
+end
+
 function reject_qhost_on_local(sub::AbstractString, host::Union{Nothing,AbstractString})
     host === nothing && return nothing
     sub in QHOST_LOCAL_VERBS || return nothing
@@ -229,11 +246,7 @@ function remote_dispatch(
     if !isempty(ticks)
         push!(assigns, "ENV[$(repr(WATCH_TICKS_ENV))] = $(repr(ticks))")
     end
-    for name in ("DISTSSHKIT_QUIET", "DISTSSHKIT_PROGRESS", "DISTSSHKIT_VERBOSE")
-        v = strip(get(ENV, name, ""))
-        isempty(v) && continue
-        push!(assigns, "ENV[$(repr(name))] = $(repr(v))")
-    end
+    append_hop_forwarded_env!(assigns)
     if !isempty(assigns)
         args = String[String(sub)]
         append!(args, String[String(a) for a in payload])
