@@ -1220,6 +1220,7 @@ exit 0
             @test occursin("this machine", out)
             @test !occursin("queue host", out)
             @test occursin("hostname", out)
+            @test occursin("    host      host1", out)
             @test occursin("10.0.0.8", out)
             @test occursin("user", out)
             @test occursin("lab", out)
