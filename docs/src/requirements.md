@@ -68,7 +68,8 @@ Anyone who can run Queue `submit` as the queue-host user (on that box or
 via `qhost:`) can run arbitrary Julia as that user; DistSSHKit then uses
 passwordless SSH to every listed worker. The queue host and its workers
 are **one trust domain** — the intended lab premise (shared shell
-access), not a place for untrusted submitters. Same idea as
+access), not a place for untrusted submitters. `add-host child:` reminds
+the person who just added inventory. Same idea as
 [kit Requirements](https://yamanori99.github.io/DistSSHKit.jl/stable/requirements/);
 how to report a vulnerability stays in [SECURITY.md](https://github.com/yamanori99/DistSSHQueue.jl/blob/main/SECURITY.md).
 

@@ -40,6 +40,34 @@ function warn_julia_major_minor(tokens)
     return nothing
 end
 
+"""Warn that `child:` inventory is reachable via DistSSHKit from this queue host.
+
+Silent if quiet or the argv is parent-only. Not a confirm prompt.
+"""
+function warn_child_submit_reach(tokens)
+    _queue_env_on("DISTSSHKIT_QUIET") && return nothing
+    kids = String[]
+    seen = Set{String}()
+    for raw in tokens
+        name = kit_ssh_name(String(raw))
+        DistSSHKit.is_parent_host_name(name) && continue
+        name in seen && continue
+        push!(seen, name)
+        push!(kids, "child:$(name)")
+    end
+    isempty(kids) && return nothing
+    listed = join(kids, ", ")
+    be = length(kids) == 1 ? "is" : "are"
+    those = length(kids) == 1 ? "that SSH name" : "those SSH names"
+    DistSSHKit.print_err(
+        "  Warning: $(listed) $(be) reachable via DistSSHKit from this queue host.\n",
+    )
+    DistSSHKit.print_err(
+        "  Anyone who can submit as this user (including qhost:) can use $(those).\n",
+    )
+    return nothing
+end
+
 function add_host_cli(args::Vector{String})::Cint
     names = String[]
     for a in args
@@ -52,6 +80,7 @@ function add_host_cli(args::Vector{String})::Cint
     end
     add_host_names!(config_path(), names)
     print_list_host(config_host_names(load_config()))
+    warn_child_submit_reach(names)
     warn_julia_major_minor(names)
     return 0
 end
