@@ -3,6 +3,11 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
+## 0.5.1
+
+Patch after `0.5.0`. DistSSHKit **0.7.2**.
+`qhost:` stage skips Kit `:check` without `.git`. Queue-only detached `-m` needs Kit 0.7.2.
+
 - DistSSHKit **0.7.2**. Detached `execute!` `--project=` is the job tree
   only when DistSSHKit is in `Project.toml` `[deps]`. A Queue-only job
   uses `pkgdir(DistSSHKit)` so `julia -m DistSSHKit` loads
