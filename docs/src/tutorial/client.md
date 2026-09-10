@@ -38,6 +38,28 @@ One queue host: still pass `qhost:HOST` (or `status qhost:HOST`).
 
 ## Submit
 
+One line, nested the same way as [User Guide · submit](@ref Manual-submit):
+
+```text
+julia -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
+└── Julia ──┘  └── queue host ──┘  └Queue┘  └──────── DistSSHKit argv ────────┘
+```
+
+The tail is DistSSHKit. Same compute, now, on this machine:
+
+```bash
+julia --project=. -m DistSSHKit drive parent:4 SCRIPT.jl
+```
+
+Longer argv, still one command (`\` at the end of the line):
+
+```bash
+julia --project=. -m DistSSHQueue qhost:HOST submit \
+    drive parent:4 child:host1:4 SCRIPT.jl
+```
+
+`submit` only enqueues that argv for `serve` on the queue host.
+
 Kit argv is DistSSHKit's (`go child:NAME:N SCRIPT.jl`, or `parent:N`
 when workers are on the queue host). Flags:
 [kit go](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/go/),
@@ -60,7 +82,7 @@ before `execute!`. `status` / `watch` print
 `status --interval` until Ctrl-C; it does not stop `serve`. Job ids print as a bare
 stdout line. `submit` also prints `Queued  N` on stderr unless
 `DISTSSHKIT_QUIET` is set. After `qhost:` submit,
-`.distsshqueue/tickets/<uuid>` marks the job on this laptop. `fetch`
+`.distsshqueue/tickets/<uuid>` marks the job on this client. `fetch`
 copies the finished Kit leaf onto this job tree (inverse of the
 `qhost:` rsync). Run it from the same directory as `submit`. Drive CSV
 (Kit `square_file.jl`) is in that

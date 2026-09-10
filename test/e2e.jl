@@ -12,7 +12,7 @@
 # Kit slots on docker-ssh (`child:distsshqueue-w1:1`).
 # Three roles, one suite: client = loopback, qhost = this host, child = containers.
 # Do not treat a container as qhost. `parent:1` only occupies FIFO here.
-# Not a laptop + `parent:N` topology. `enable` / `disable` / `teardown` use
+# Not a client-as-`parent:N` topology. `enable` / `disable` / `teardown` use
 # `--write-only` (no user systemd / launchctl).
 #
 # Table jobs are the four *file*/*echo* demos. `pipeline_pi.jl` /
@@ -589,6 +589,7 @@ end
                     env = merge(host_env, Dict("DISTSSHQUEUE_NO_AUTOSERVE" => "1"))
                     @test run_cli(addenv(qcmd(["setup"]), env...)).exitcode == 0
                     @test isfile(cfg)
+                    @test run_cli(addenv(qcmd(["add-host", "parent", "child:$(HOSTS[1])"]), env...)).exitcode == 0
                     @test run_cli(addenv(qcmd(["enable", "--write-only", "--queue-env", test_project, "--julia", E2E_JULIA]), env...)).exitcode == 0
                     rel = if Sys.isapple()
                         joinpath("Library", "LaunchAgents", "org.distsshqueue.serve.plist")

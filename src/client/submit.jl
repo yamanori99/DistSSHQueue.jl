@@ -107,7 +107,12 @@ function submit_cli(store::AbstractString, kind::Symbol, script::AbstractString,
     end
     println(id)
     if !_kit_env_on("DISTSSHKIT_QUIET")
-        println(stderr, "queue: local ($(gethostname()))")
+        qh = qhost_display_from_env()
+        if qh !== nothing && !isempty(strip(qh))
+            println(stderr, "queue: qhost:$(strip(qh))")
+        else
+            println(stderr, "queue: local ($(gethostname()))")
+        end
         nq = count(j -> j.state === :queued, q.jobs)
         nr = count(j -> j.state === :running, q.jobs)
         if nr > 0
@@ -162,7 +167,20 @@ function submit_kind(kind::Symbol, args::Vector{String}; pool_slots::Union{Nothi
         peeled
     end
     parsed = kit_parse_args(kind, rest)
-    parsed.help && (kit_show_usage(kind); return 0)
+    if parsed.help
+        DistSSHKit.print_help_section("Queue"; io=stdout)
+        DistSSHKit.print_help_lines(stdout,
+            "  `submit $(kind)` enqueues. `qhost:HOST` is the SSH name of the queue machine, not a Kit slot.",
+        )
+        DistSSHKit.print_help_blank(stdout)
+        DistSSHKit.print_help_section("DistSSHKit"; io=stdout)
+        DistSSHKit.print_help_lines(stdout,
+            "  Same argv as `julia -m DistSSHKit $(kind) …` (`parent:N` / `child:NAME:N`).",
+        )
+        DistSSHKit.print_help_blank(stdout)
+        kit_show_usage(kind)
+        return 0
+    end
     parsed.show_version && (DistSSHKit.println_kit_version(); return 0)
     verb = String(kind)
     hosts = submit_hosts(parsed; kind=kind)

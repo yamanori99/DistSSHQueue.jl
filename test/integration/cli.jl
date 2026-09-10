@@ -51,7 +51,7 @@ function cli_env(d::AbstractString)
     write(joinpath(jobdir, "Project.toml"), "[deps]\n")
     write(joinpath(jobdir, "hello.jl"), "write(joinpath(@__DIR__, \"hello.ran\"), \"cli-local\\n\")\nprintln(\"cli-local\")\n")
     write(joinpath(jobdir, "hold.jl"), "while true; sleep(1); end\n")
-    write(cfg, "store = $(repr(store))\n\n[env]\nDISTSSHKIT_YES = \"1\"\n")
+    write(cfg, "store = $(repr(store))\nhosts = [\"parent\"]\n\n[env]\nDISTSSHKIT_YES = \"1\"\n")
     env = Dict(
         "DISTSSHQUEUE_CONFIG" => cfg,
         "DISTSSHQUEUE_STORE" => store,

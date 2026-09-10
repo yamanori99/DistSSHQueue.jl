@@ -705,8 +705,17 @@ end
                 proj = DistSSHKit.canonical_local_path(pwd())
                 help = sprint(DistSSHQueue.print_queue_usage)
                 @test occursin("Usage", help)
+                @test occursin("Commands", help)
+                @test occursin("DistSSHKit", help)
                 @test occursin("Examples", help)
                 @test occursin("qhost:HOST", help)
+                @test occursin("parent:4", help)
+                @test occursin("submit drive parent:4", help)
+                @test occursin("submit \\", help)
+                @test occursin("child:NAME:N", help)
+                @test occursin("-m DistSSHKit drive", help)
+                @test !occursin("qhost:HOST go parent SCRIPT", help)
+                @test !occursin("qhost:HOST drive parent", help)
                 @test occursin("list-host", help)
                 @test occursin("juliaup default", help)
                 @test occursin("  size ", help)
@@ -722,12 +731,21 @@ end
                 @test occursin("plan", help)
                 @test occursin("pool", help)
                 @test occursin("ride", help)
+                @test occursin("SSH name of the queue machine", help)
+                @test !occursin("the hop", help)
                 @test occursin("julia -m DistSSHQueue <command> -h", help)
+                code_sh, out_sh, _ = capture_stdio() do
+                    DistSSHQueue.main(["submit", "go", "-h"])
+                end
+                @test code_sh == 0
+                @test occursin("parent:N", out_sh)
+                @test occursin("DistSSHKit", out_sh)
+                @test occursin("not a Kit slot", out_sh)
                 @test !occursin("Notes", help)
                 @test !occursin("[--size]", help)
                 @test !occursin("qhost:HOST add-host", help)
                 @test !occursin("IdentityFile", help)
-                @test !occursin("sleeping laptop", help)
+                @test !occursin("laptop", help)
                 @test !occursin("service install", help)
                 code_h, out_h, _ = capture_stdio() do
                     DistSSHQueue.main(["-h"])
@@ -799,10 +817,22 @@ end
                 end
                 @test code_qv == 1
                 @test occursin("cannot combine", err_qv)
-                code_go, out_go, _ = capture_stdio() do
+                code_go, _, err_go = capture_stdio() do
+                    DistSSHQueue.main(["submit", "go", "child:host1:4", "job.jl"])
+                end
+                @test code_go == 1
+                @test occursin("no add-host list", err_go)
+                @test occursin("add-host first", err_go)
+                @test isempty(DistSSHQueue.read_jobs(p))
+                code_add, _, _ = capture_stdio() do
+                    DistSSHQueue.main(["add-host", "parent", "child:host1", "child:w"])
+                end
+                @test code_add == 0
+                code_go, out_go, err_go = capture_stdio() do
                     DistSSHQueue.main(["submit", "go", "child:host1:4", "job.jl"])
                 end
                 @test code_go == 0
+                @test !occursin("no add-host list", err_go)
                 rows = DistSSHQueue.read_jobs(p)
                 @test length(rows) == 1
                 @test strip(out_go) == rows[1].id
@@ -925,14 +955,23 @@ end
                 @test code_ok == 0
                 @test occursin(r"Queued\s+1\b", err_ok)
                 @test occursin("queue: local", err_ok)
+                @test !occursin("no add-host list", err_ok)
                 @test !occursin("Queued", out_ok)
                 id1 = strip(out_ok)
                 @test !isempty(id1)
+                withenv(DistSSHQueue.QHOST_DISPLAY_ENV => "mini-tak-ts") do
+                    code_h, _, err_h = capture_stdio() do
+                        DistSSHQueue.main(["submit", "go", "parent:1", "job.jl"])
+                    end
+                    @test code_h == 0
+                    @test occursin("queue: qhost:mini-tak-ts", err_h)
+                    @test !occursin("queue: local", err_h)
+                end
                 code2, out2, err2 = capture_stdio() do
                     DistSSHQueue.main(["submit", "go", "parent:1", "job.jl"])
                 end
                 @test code2 == 0
-                @test occursin(r"Queued\s+2\b", err2)
+                @test occursin(r"Queued\s+3\b", err2)
                 @test strip(out2) != id1
                 withenv("DISTSSHKIT_QUIET" => "1") do
                     code_q, out_q, err_q = capture_stdio() do
@@ -941,6 +980,7 @@ end
                     @test code_q == 0
                     @test !occursin("Queued", err_q)
                     @test !occursin("queue: local", err_q)
+                    @test !occursin("no add-host list", err_q)
                     @test !isempty(strip(out_q))
                 end
                 code_bad, _, err = capture_stdio() do
@@ -951,6 +991,20 @@ end
             end
         end
     end
+end
+
+@testset "status error shows the full Kit line with a Queue prefix" begin
+    kit = """setup: "parent" is only for --juliaup (kit parent machine). extra words"""
+    j = DistSSHQueue.Job(; kind=:go, script="x.jl", hosts=["parent:1"], state=:failed, error=kit)
+    shown = DistSSHQueue._job_error_disp(j)
+    @test occursin("parent:N", shown)
+    @test occursin("only for --juliaup", shown)
+    @test occursin("extra words", shown)
+    @test !endswith(shown, "…")
+    @test DistSSHQueue.queue_explain_error("unrelated only for --juliaup noise") ==
+          "unrelated only for --juliaup noise"
+    prefixed = DistSSHQueue.queue_explain_error("this job includes parent:N; keep")
+    @test prefixed == "this job includes parent:N; keep"
 end
 
 @testset "CLI submit pool:N" begin
@@ -1118,7 +1172,7 @@ exit 0
                 DistSSHQueue.main(["list-host"])
             end
             @test code == 0
-            @test occursin("any Kit name", out)
+            @test occursin("add-host first", out)
         end
         write(cfg, "hosts = []\n")
         withenv("DISTSSHQUEUE_CONFIG" => cfg, "PATH" => path) do
@@ -1295,9 +1349,10 @@ end
         jobdir = joinpath(d, "jobtree")
         mkpath(jobdir)
         write(joinpath(jobdir, "a.jl"), "1\n")
+        write(joinpath(d, "config.toml"), "store = $(repr(p))\nhosts = [\"parent\"]\n")
         withenv(
             "DISTSSHQUEUE_STORE" => p,
-            "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
+            "DISTSSHQUEUE_CONFIG" => joinpath(d, "config.toml"),
             "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
             "DISTRIBUTED_PROJECT_ROOT" => nothing,
             "DISTSSHQUEUE_WATCH_TICKS" => "1",

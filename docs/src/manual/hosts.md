@@ -30,10 +30,10 @@ Optional `:N` is a per-name max. Bare `host1` is not a token.
 
 | | |
 | --- | --- |
-| Missing `hosts` | Allow all names |
-| First `add-host` | Creates the list (submit is no longer allow-all) |
+| Missing `hosts` | Named tokens error unless leftover `allowed` (`add-host first`) |
+| First `add-host` | Creates `hosts` |
 | `hosts = []` | Last `remove-host`; submit accepts none |
-| Leftover `allowed` | Still read until rewritten to `hosts` |
+| Leftover `allowed` | Inventory until `add-host` rewrites it to `hosts` |
 
 No `serve` restart. Next [`submit`](@ref Manual-submit) re-reads the
 file. A `:running` Kit job is not stopped.
@@ -84,10 +84,18 @@ Kit flags:
 
 ## pool
 
-DistSSHKit `pool` on the queue host (cwd / project). Cores / RAM / slot
-hint (no RSS). Omit tokens to pool config `hosts`. Does not enqueue.
-Prints sizing notes and a `Suggested submit (template):` footer (always
-`submit drive`; use `size` to measure RSS).
+Queue `pool` wraps DistSSHKit `pool` on the queue host (cwd / project).
+Cores / RAM / slot hint (no RSS). Omit tokens: Queue passes config
+`hosts`. Does not enqueue. Prints sizing notes and a
+`Suggested submit (template):` footer (always `submit drive`; use `size`
+to measure RSS). Same nesting as submit: Queue verb, then DistSSHKit
+tokens. Enqueue with the same `:N` on every config host is
+`submit pool:N` ([submit](@ref Manual-submit)).
+
+```text
+julia -m DistSSHQueue  [qhost:HOST]  pool  parent  child:host1
+└── Julia ──┘  └── queue host ──┘  └Queue┘  └──── DistSSHKit argv ────┘
+```
 
 ```bash
 julia -m DistSSHQueue qhost:HOST pool

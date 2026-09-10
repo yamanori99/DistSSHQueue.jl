@@ -17,7 +17,7 @@ Also: [First job](@ref Tutorial-Client), [submit](@ref Manual-submit),
 `status` / `watch` share one Store table (`path` / `serve` / `enable` /
 `qhost`). `path` is the store file, or `none` when it is missing
 (teardown / never submitted). Via `qhost:HOST`, `path` is
-`HOST:~/.distsshqueue/jobs.toml` so `~` is not this laptop. `Jobs
+`HOST:~/.distsshqueue/jobs.toml` so `~` is not this client. `Jobs`
 (empty)` is a live store with zero rows; `(none)` is no file. `serve`
 is the live process (`running` / `stopped` / `none`). `enable` is the
 OS unit file on this host (LaunchAgent / systemd), or `none`. After

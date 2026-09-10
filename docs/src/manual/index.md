@@ -21,8 +21,9 @@ Kit `go` / `ride` / `drive` / `size` / `plan` / `pool` flags stay in the
 
 ## Client vs queue host
 
-`qhost:HOST` is a **client** token (like Kit `child:NAME`). From a
-laptop, put it on the command line (leading or right after the verb).
+`qhost:HOST` is a **client** token (like Kit `child:NAME`). Not already
+on the queue host: put it on the command line (leading or right after
+the verb).
 `DISTSSHQUEUE_HOST` alone does not hop. On the queue host, omit
 `qhost:`. After `teardown`, `status` without `qhost:` asks for `setup`
 first (the config is gone), or `qhost:HOST` if this was a client hop.
@@ -43,7 +44,7 @@ Not `DISTSSHQUEUE_QHOST` (that is `status` / `watch` display).
 
 `serve` is “run the process”. `enable` is “register that process with
 the OS” (LaunchAgent / systemd). The queue host is **macOS or Linux**.
-`enable` does not make a laptop or WSL2 the always-on box. `disable`
+`enable` does not make a client or WSL2 the always-on box. `disable`
 is the opposite of `enable`, not of `serve`.
 
 ## [Job record](@id Manual-job-record)
@@ -98,7 +99,7 @@ Kit results stay under `{project}/.distsshqueue/{kind}/`.
 A scheduler inside DistSSHKit, weakdeps from Queue to DistSSHKit, a glue
 package, lab-wide slot ceilings or occupancy packing, preemption /
 fair-share / priorities / reservations / backfill, HTTP or a listen
-socket, a sleeping laptop as `serve`, auto-retry of crashed
+socket, a client that sleeps as `serve`, auto-retry of crashed
 `:running` jobs, a Queue-owned copy of Kit's result trees, and native
 Windows. Day-to-day consequences of the single FIFO:
 [Introduction](@ref DistSSHQueue.jl).

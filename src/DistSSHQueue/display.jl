@@ -228,14 +228,21 @@ function _id_chrome(id::AbstractString, ids::AbstractVector{<:AbstractString})::
     return first(String(id), min(_ID_PREFIX_MIN, length(id)))
 end
 
-const _ERROR_CELL_MAX = 60
+"""Queue wording in front of a known Kit line (status `error` and `Job.error`)."""
+function queue_explain_error(msg::AbstractString)::String
+    s = String(msg)
+    startswith(s, "this job includes parent:N;") && return s
+    if occursin("is only for --juliaup (kit parent machine)", s)
+        return "this job includes parent:N; per-job setup! only rsyncs child: (the queue host is already here). " * s
+    end
+    return s
+end
 
 function _job_error_disp(j::Job)::String
     e = j.error
     e isa AbstractString || return ""
-    firstline = first(split(e, '\n'; limit=2))
-    length(firstline) > _ERROR_CELL_MAX && return string(firstline[1:_ERROR_CELL_MAX], "…")
-    return firstline
+    explained = queue_explain_error(e)
+    return first(split(explained, '\n'; limit=2))
 end
 
 function _q_state_color(state::Symbol)
@@ -260,7 +267,7 @@ function print_queue_usage(io::IO=stdout)
         "  julia -m DistSSHQueue --version",
     )
     DistSSHKit.print_help_blank(io)
-    DistSSHKit.print_help_section("Client"; io=io)
+    DistSSHKit.print_help_section("Commands"; io=io)
     DistSSHKit.print_help_lines(io,
         "  status [-q] [--tail N|full]  Snapshot; --interval is live",
         "  list-host             Host tokens and juliaup default",
@@ -268,7 +275,7 @@ function print_queue_usage(io::IO=stdout)
         "  plan                  Kit plan on the queue host",
         "  pool                  Kit pool on the queue host",
         "  watch [-q] [--tail N|full]    Same as status --interval",
-        "  submit go|ride|drive … Enqueue DistSSHKit (`pool:N` sets every host)",
+        "  submit go|ride|drive … Enqueue DistSSHKit (argv after submit)",
         "  cancel <id>           Drop queued or stop running",
         "  fetch <id>            Copy a finished Kit leaf (prefix, UUID, or ticket)",
         "  teardown -y           Stop serve and remove queue-host files",
@@ -286,12 +293,22 @@ function print_queue_usage(io::IO=stdout)
         "  teardown -y           Same, locally",
     )
     DistSSHKit.print_help_blank(io)
+    DistSSHKit.print_help_section("DistSSHKit"; io=io)
+    DistSSHKit.print_help_lines(io,
+        "  After `submit`: same argv as DistSSHKit (`drive parent:4 child:NAME:N SCRIPT.jl`).",
+        "  Replay: `julia --project=. -m DistSSHKit drive parent:4 SCRIPT.jl` (this machine, now).",
+        "  `qhost:HOST` is the SSH name of the queue machine, not a Kit slot (`parent:4`, not `qhost:4`).",
+        "  A leading `go` / `ride` / `drive` on DistSSHQueue is DistSSHKit, not enqueue.",
+    )
+    DistSSHKit.print_help_blank(io)
     DistSSHKit.print_help_section("Examples"; io=io)
     DistSSHKit.print_help_lines(io,
         "  julia --project=. -m DistSSHQueue setup",
         "  julia --project=. -m DistSSHQueue qhost:HOST status",
         "  julia --project=. -m DistSSHQueue qhost:HOST plan SCRIPT.jl",
-        "  julia --project=. -m DistSSHQueue qhost:HOST go parent SCRIPT.jl",
+        "  julia --project=. -m DistSSHQueue qhost:HOST submit drive parent:4 SCRIPT.jl",
+        "  julia --project=. -m DistSSHQueue qhost:HOST submit \\",
+        "      drive parent:4 child:NAME:N SCRIPT.jl",
     )
     DistSSHKit.print_help_blank(io)
     println(io, "Run `julia -m DistSSHQueue <command> -h` for flags.")

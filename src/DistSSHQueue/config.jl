@@ -69,7 +69,8 @@ end
 
 """Kit placement tokens in `hosts`, with optional max `:N`.
 
-Missing `hosts`: allow all. Empty array: allow none.
+Missing `hosts`: CLI submit with a placement token errors (`add-host first`).
+Empty array: allow none. Library `Queue(; allowed=nothing)` still skips the list.
 Same tokens as DistSSHKit: `parent[:N]` / `child:NAME[:N]`. Not a bare SSH name.
 A leftover `allowed` key is read the same way until `add-host` rewrites it to `hosts`.
 """
@@ -157,7 +158,7 @@ function parse_host_caps(raws)::HostAllow
     return out
 end
 
-"""First `add-host` creates `hosts` (submit is no longer allow-all).
+"""First `add-host` creates `hosts` (CLI submit can name those tokens).
 
 Tokens are Kit's (`parent[:N]` / `child:NAME[:N]`). `:N` is an optional max.
 """
@@ -174,7 +175,7 @@ function remove_host_names!(path::AbstractString, raws)
     isempty(extra) && throw(ArgumentError("remove-host needs a Kit token (`parent` / `child:NAME`)"))
     isfile(path) || throw(ArgumentError("no config.toml; add-host first"))
     cur = config_host_names(load_config(; path=path))
-    cur === nothing && throw(ArgumentError("no hosts= in config; submit accepts any Kit name"))
+    cur === nothing && throw(ArgumentError("no hosts= in config; add-host first"))
     for n in keys(extra)
         haskey(cur, n) || throw(ArgumentError("Kit name $(repr(n)) is not on hosts"))
     end

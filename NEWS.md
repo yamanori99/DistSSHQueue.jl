@@ -3,11 +3,20 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
+- Submit/status copy: missing config `hosts` plus a placement token is
+  an error (`no add-host list; … add-host first`). Status `error` is the full first line (no
+  60-character chop). Known Kit `--juliaup` / `parent` setup text is
+  prefixed with Queue's `parent:N` vs `child:` rsync note. `qhost:4`
+  is not a Kit slot (`Use parent:4`). After `qhost:`, submit chrome is
+  `queue: qhost:HOST`, not `queue: local`. Root `--help` lists Queue
+  `Commands` then a `DistSSHKit` section (`submit drive parent:4 …`).
+  `qhost:HOST` is the SSH name of the queue machine, not a Kit slot.
+  DistSSHKit argv replays with `julia --project=. -m DistSSHKit …`.
 - After `teardown`, `status` (and other client verbs) without `qhost:`
-  say `setup` first, or `qhost:HOST` if this is a laptop hop. Not
+  say `setup` first, or `qhost:HOST` if this is a client hop. Not
   “you forgot `qhost:`” on the box that just wiped `~/.distsshqueue`.
 - `qhost:` stage is `~/.distsshqueue/stage/<uuid>/` (the job id). A
-  second submit from the same laptop tree does not `rsync --delete`
+  second submit from the same client tree does not `rsync --delete`
   the running copy. Worker-root collision does not treat two of those
   stage dirs as different projects (a pinned
   `DISTRIBUTED_REMOTE_PROJECT_ROOT` is then allowed). `submit!` refuses
@@ -223,7 +232,7 @@ Home is `~/.distsshqueue`, ENV is `DISTSSHQUEUE_*`, OS unit is
 - `qhost:` `submit` / `go` / `drive` rsync the client job tree to
   `~/.distsshqueue/stage/<uuid>/` (the job id, a new directory every
   submit) and set `DISTRIBUTED_PROJECT_ROOT` there. A second submit from
-  the same laptop tree does not `rsync --delete` a running copy. Omit
+  the same client tree does not `rsync --delete` a running copy. Omit
   `qhost:` does not rsync. `DISTSSHQUEUE_NO_STAGE=1` skips (tests).
   Kit still copies queue host → workers.
 - `qhost:` runs `julia --startup-file=no --project=~/.distsshqueue/env` (not the
@@ -259,7 +268,7 @@ Home is `~/.distsshqueue`, ENV is `DISTSSHQUEUE_*`, OS unit is
 
 - `add-host` / `remove-host` on the queue host. Tokens `parent[:N]` /
   `child:NAME[:N]`. Optional `:N` is a max. First add creates the list;
-  missing key is allow-all; empty array allows none. Leftover `allowed` is
+  missing key: CLI submit with a placement token errors (`add-host first`); empty array allows none. Leftover `allowed` is
   still read until rewritten. Next `submit` re-reads (do not restart
   `serve`). CLI `submit` follows config; library `submit!` uses
   `Queue(; allowed=…)` unless `follow_config=true`. `submit!` rejects

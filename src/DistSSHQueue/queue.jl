@@ -578,6 +578,11 @@ function _submit!(q::Queue, kind::Symbol, script::AbstractString, hosts; kwargs.
         lock(q.lock) do
             q.follow_config && (q.allowed = fresh)
             allow = q.allowed
+            if q.follow_config && allow === nothing && !isempty(toks)
+                throw(ArgumentError(
+                    "no add-host list; $(repr(toks[1])) is not in inventory (add-host first)",
+                ))
+            end
             for t in toks
                 reject_host_token!(allow, t)
             end
@@ -680,7 +685,7 @@ function _finish!(q::Queue, id::AbstractString, state::Symbol, err; result_path=
             end
             j.state = state
             j.finished_at = now(UTC)
-            j.error = err === nothing ? nothing : String(err)
+            j.error = err === nothing ? nothing : queue_explain_error(String(err))
             delete!(j.kwargs, "phase")
             if result_path !== nothing
                 j.result_path = String(result_path)
