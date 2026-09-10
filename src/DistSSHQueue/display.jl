@@ -416,7 +416,10 @@ function queue_command_help(verb::AbstractString)
     ))
     v == "list-host" && return (("  list-host",), (h,))
     v == "cancel" && return (("  cancel ID",), (h,))
-    v == "fetch" && return (("  fetch ID",), (h,))
+    v == "fetch" && return (("  fetch ID",), (
+        ("--progress", "rsync `--info=progress2` on `qhost:` pull"),
+        h,
+    ))
     v == "submit" && return ((
         "  submit go|ride|drive …",
         "  `submit go --help` for DistSSHKit flags (same for ride / drive).",

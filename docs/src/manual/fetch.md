@@ -18,6 +18,8 @@ Also: [First job](@ref Tutorial-Client), [Walkthrough](@ref Tutorial-Walkthrough
 Run it from the same `cwd` / `DISTRIBUTED_PROJECT_ROOT` as `submit`.
 The dest is `{project}/.distsshqueue/{go|ride|drive}/{stem}_{id8}/`.
 stdout is that path, one line. Re-run rsyncs into the same leaf.
+`qhost:` fetch prints `rsync ← HOST:…` on stderr when the copy starts
+(`DISTSSHKIT_QUIET` hides it).
 
 On the queue host (omit `qhost:`), fetch prints the leaf path
 and does not copy. The leaf is under the job project (or still under
@@ -35,6 +37,7 @@ fetchable. The argument is the ticket path, the full UUID, or the
 | --- | --- |
 | `<id>` | Unique 8-character prefix (`status`) or the full UUID (`submit` stdout) |
 | ticket | `.distsshqueue/tickets/<uuid>` (same job; no need to copy stdout) |
+| `--progress` | `qhost:` rsync `--info=progress2` (`DISTSSHKIT_PROGRESS`) |
 | `-h` / `--help` | Queue usage |
 
 No `--output-dir`. Kit worker collect is not repeated.

@@ -86,7 +86,7 @@ queue host (Kit rsync excludes: `.gitignore`, `.git/`, `.distsshkit/`,
 Kit leaf back onto that same tree. Omit `qhost:`:
 the script is checked on this machine. Job id prints as a bare stdout line. CLI `submit` also prints
 `queue: local (HOSTNAME)` (or `queue: qhost:HOST` when you passed `qhost:`) then `Queued  N` on stderr (`(R running)` when a job is already running);
-`DISTSSHKIT_QUIET` hides that. Missing config `hosts`: a `parent` / `child:` token is an error (`add-host first`). `hosts = []` allows none.
+`DISTSSHKIT_QUIET` hides that. A `qhost:` rsync prints `rsync → HOST:…` when it starts (fetch: `rsync ←`). `DISTSSHKIT_PROGRESS` / `--progress` adds rsync `--info=progress2`. Missing config `hosts`: a `parent` / `child:` token is an error (`add-host first`). `hosts = []` allows none.
 
 Two different projects
 that Kit would deploy to the same worker path are refused (no
