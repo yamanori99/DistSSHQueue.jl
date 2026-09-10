@@ -392,25 +392,53 @@ end
         mkpath(joinpath(d, ".git"))
         @test DistSSHQueue._queue_kit_check_git(String(d))
         rm(joinpath(d, ".git"); recursive=true)
+        write(joinpath(d, ".git"), "gitdir: /tmp/linked.git\n")
+        @test DistSSHQueue._queue_kit_check_git(String(d))
+        rm(joinpath(d, ".git"))
         @test !DistSSHQueue._queue_kit_check_git(String(d))
         j = DistSSHQueue.Job(;
             kind=:go,
             script=script,
-            hosts=["parent:1"],
+            hosts=["child:w1:1"],
             kwargs=Dict{String,Any}("project" => String(d)),
         )
+        modes = Symbol[]
+        fake_setup!(_, mode::Symbol) = (push!(modes, mode); (; ok=true))
         phases = String[]
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
-            DistSSHQueue._queue_kit_setup!(j, ph -> ph isa AbstractString && push!(phases, String(ph)))
+            DistSSHQueue._queue_kit_setup!(
+                j,
+                ph -> ph isa AbstractString && push!(phases, String(ph));
+                kit_setup! = fake_setup!,
+            )
         end
-        @test phases == ["instantiate"]
+        @test modes == [:rsync, :instantiate]
+        @test phases == ["rsync", "instantiate"]
         mkpath(joinpath(d, ".git"))
+        empty!(modes)
         empty!(phases)
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
-            DistSSHQueue._queue_kit_setup!(j, ph -> ph isa AbstractString && push!(phases, String(ph)))
+            DistSSHQueue._queue_kit_setup!(
+                j,
+                ph -> ph isa AbstractString && push!(phases, String(ph));
+                kit_setup! = fake_setup!,
+            )
         end
-        @test phases == ["instantiate"]
-        @test DistSSHQueue._queue_kit_check_git(String(d))
+        @test modes == [:rsync, :instantiate, :check]
+        @test phases == ["rsync", "instantiate", "check"]
+        rm(joinpath(d, ".git"); recursive=true)
+        write(joinpath(d, ".git"), "gitdir: /tmp/linked.git\n")
+        empty!(modes)
+        empty!(phases)
+        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+            DistSSHQueue._queue_kit_setup!(
+                j,
+                ph -> ph isa AbstractString && push!(phases, String(ph));
+                kit_setup! = fake_setup!,
+            )
+        end
+        @test modes == [:rsync, :instantiate, :check]
+        @test phases == ["rsync", "instantiate", "check"]
     end
 end
 

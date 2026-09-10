@@ -450,10 +450,13 @@ function _require_kit_setup_ok!(result, step::AbstractString)
     throw(ErrorException("DistSSHKit setup! $(step) failed"))
 end
 
-"""Kit `:check` needs a checkout. Stage trees omit `.git/` (#238; DistSSHKit#370)."""
-_queue_kit_check_git(proj::AbstractString)::Bool = isdir(joinpath(String(proj), ".git"))
+"""Kit `:check` needs a checkout. Stage trees omit `.git/` (#238; DistSSHKit#370).
 
-function _queue_kit_setup!(j::Job, on_phase)
+`ispath` so a linked worktree (`.git` file) still runs `:check`.
+"""
+_queue_kit_check_git(proj::AbstractString)::Bool = ispath(joinpath(String(proj), ".git"))
+
+function _queue_kit_setup!(j::Job, on_phase; kit_setup! = DistSSHKit.setup!)
     _queue_env_on(NO_KIT_SETUP_ENV) && return nothing
     proj = get(j.kwargs, "project", nothing)
     proj isa AbstractString || (proj = job_project())
@@ -463,15 +466,15 @@ function _queue_kit_setup!(j::Job, on_phase)
     if session !== nothing
         on_phase("rsync")
         # Kit rsync refuses a nonempty remote. Later jobs still instantiate.
-        DistSSHKit.setup!(session, :rsync)
+        kit_setup!(session, :rsync)
     end
     on_phase("instantiate")
     _queue_local_instantiate!(String(proj))
     if session !== nothing
-        _require_kit_setup_ok!(DistSSHKit.setup!(session, :instantiate), "instantiate")
+        _require_kit_setup_ok!(kit_setup!(session, :instantiate), "instantiate")
         if _queue_kit_check_git(String(proj))
             on_phase("check")
-            _require_kit_setup_ok!(DistSSHKit.setup!(session, :check), "check")
+            _require_kit_setup_ok!(kit_setup!(session, :check), "check")
         end
     end
     return nothing
