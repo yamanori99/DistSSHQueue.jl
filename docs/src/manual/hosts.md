@@ -26,7 +26,10 @@ Also: [Prepare](@ref Tutorial-Prepare), [submit](@ref Manual-submit),
 Write Kit tokens into config `hosts`
 (`parent[:N]` / `child:NAME[:N]`). `parent` is slots on this queue
 host, not an SSH Host named parent. `child:NAME` is SSH `Host NAME`.
-Optional `:N` is a per-name max. Bare `host1` is not a token.
+`add-host child:` prints a warning: anyone who can `submit` as this
+queue-host user (including `qhost:`) can use those names via DistSSHKit
+(`DISTSSHKIT_QUIET` hides it). See [Requirements](@ref) (one trust
+domain). Optional `:N` is a per-name max.
 
 | | |
 | --- | --- |

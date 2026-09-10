@@ -1275,20 +1275,36 @@ exit 0
         end
         write(cfg, DistSSHQueue.default_config_body(; store=joinpath(d, "jobs.toml")))
         withenv("DISTSSHQUEUE_CONFIG" => cfg, "PATH" => path) do
+            code_p, out_p, _ = capture_stdio() do
+                DistSSHQueue.main(["add-host", "parent"])
+            end
+            @test code_p == 0
+            @test !occursin("Warning:", out_p)
             code, out, _ = capture_stdio() do
                 DistSSHQueue.main(["add-host", "parent", "child:host1"])
             end
             @test code == 0
             @test occursin("child:host1", out)
+            @test occursin("Warning:", out)
+            @test occursin("reachable via DistSSHKit", out)
+            @test occursin("including qhost:", out)
             @test DistSSHQueue.config_host_names(DistSSHQueue.load_config()) ==
                   DistSSHQueue.HostAllow("parent" => nothing, "host1" => nothing)
+            withenv("DISTSSHKIT_QUIET" => "1") do
+                code_q, out_q, _ = capture_stdio() do
+                    DistSSHQueue.main(["add-host", "child:host2"])
+                end
+                @test code_q == 0
+                @test occursin("child:host2", out_q)
+                @test !occursin("Warning:", out_q)
+            end
             code2, out2, _ = capture_stdio() do
                 DistSSHQueue.main(["remove-host", "parent"])
             end
             @test code2 == 0
             @test occursin("host1", out2)
             @test DistSSHQueue.config_host_names(DistSSHQueue.load_config()) ==
-                  DistSSHQueue.HostAllow("host1" => nothing)
+                  DistSSHQueue.HostAllow("host1" => nothing, "host2" => nothing)
             bad2, _, err2 = capture_stdio() do
                 DistSSHQueue.main(["add-host", "--hosts"])
             end

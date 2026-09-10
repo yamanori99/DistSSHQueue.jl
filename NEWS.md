@@ -3,6 +3,9 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
+- `add-host child:` warns that those SSH names are reachable via DistSSHKit
+  from this queue host (`DISTSSHKIT_QUIET` hides it). Parent-only is quiet.
+  Not a confirm prompt.
 - `list-host` is a `status`-style card: NAME / TOKEN / MAX / JULIA
   on the first line, then indented `ssh` (parent) or `host` / `hostname` /
   `user` / `port` (`ssh -G`; no IdentityFile). Not one wide SSH column.

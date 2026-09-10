@@ -35,8 +35,10 @@ Defaults work without `config.toml`. `--force` rewrites it. Use it for
 
 `add-host` writes Kit tokens into config `hosts`
 (`parent[:N]` / `child:NAME[:N]`). `parent` is this queue host;
-`child:NAME` is SSH. First add creates the list. CLI submit with a
-placement token and no `hosts` is an error. Optional `:N` is a max. No `serve` restart: the next
+`child:NAME` is SSH. `add-host child:` warns that submitters as this user
+can reach that SSH name ([Requirements](@ref)). First add creates the
+list. CLI submit with a placement token and no `hosts` is an error.
+Optional `:N` is a max. No `serve` restart: the next
 `submit` re-reads the file. `list-host` NAME for parent is the hostname;
 TOKEN stays `parent`. JULIA is that host's `juliaup default`
 (`-` if missing, SSH/`status` fails, or no `*` row).
