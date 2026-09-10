@@ -30,10 +30,10 @@ Optional `:N` is a per-name max. Bare `host1` is not a token.
 
 | | |
 | --- | --- |
-| Missing `hosts` | CLI: named tokens error (`add-host first`) |
-| First `add-host` | Creates the list |
+| Missing `hosts` | Named tokens error unless leftover `allowed` (`add-host first`) |
+| First `add-host` | Creates `hosts` |
 | `hosts = []` | Last `remove-host`; submit accepts none |
-| Leftover `allowed` | Still read until rewritten to `hosts` |
+| Leftover `allowed` | Inventory until `add-host` rewrites it to `hosts` |
 
 No `serve` restart. Next [`submit`](@ref Manual-submit) re-reads the
 file. A `:running` Kit job is not stopped.
