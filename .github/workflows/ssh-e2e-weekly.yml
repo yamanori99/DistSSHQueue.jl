@@ -198,7 +198,7 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: .ci-cache/wsl-julia
-          key: wsl-julia-max-${{ hashFiles('Project.toml', 'test/Project.toml') }}
+          key: wsl-julia-max-${{ hashFiles('Project.toml', 'test/Project.toml', '.github/julia-slots.env') }}
           restore-keys: |
             wsl-julia-max-
       # wsl-bash does not inherit Actions env (set -u → unbound GITHUB_TOKEN).
