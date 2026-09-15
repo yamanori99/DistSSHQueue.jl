@@ -198,9 +198,8 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: .ci-cache/wsl-julia
-          key: wsl-julia-max-${{ hashFiles('Project.toml', 'test/Project.toml') }}
-          restore-keys: |
-            wsl-julia-max-
+          key: wsl-julia-max-${{ hashFiles('Project.toml', 'test/Project.toml', '.github/julia-slots.env') }}
+          # No restore-keys: a prefix hit would unpack an older slot's julia.tgz.
       # wsl-bash does not inherit Actions env (set -u → unbound GITHUB_TOKEN).
       - name: docker-ssh up + SSH E2E in WSL2
         shell: wsl-bash {0}

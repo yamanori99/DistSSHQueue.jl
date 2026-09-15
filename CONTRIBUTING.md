@@ -79,7 +79,11 @@ Exactly three pins, in [`.github/julia-slots.env`](.github/julia-slots.env). Do 
 
 JETLS is min plus `JULIA_SLOT_JETLS_MAX` (job name still `JETLS - max`). That pin lags when `max` / `tip` move past what JETLS lists (today 1.12.2–1.13). Raise it only after JETLS supports that runtime. No JETLS **tip**.
 
-When a new RC lands, change `JULIA_SLOT_MAX` only. If that RC is a new **major.minor**, bump the worker Dockerfile / WSL `--default-channel` in the same PR (E2E pair). When bumping compat, raise `JULIA_SLOT_MIN` only.
+When a new RC lands, change `JULIA_SLOT_MAX` only (`~x.y.0-0` so
+setup-julia includes prereleases). When that minor GAs, drop the tilde
+and pin `x.y`. If that RC is a new **major.minor**, bump the worker
+Dockerfile / WSL `--default-channel` in the same PR (E2E pair). When
+bumping compat, raise `JULIA_SLOT_MIN` only.
 
 ### PR CI
 
@@ -91,7 +95,8 @@ Documenter min is
 `Assets` (`draw SVG`) runs if `docs/src/assets/` or that workflow
 changed. Linux E2E (max) uses the same **path filter** as **main** push
 (`src/**`, `test/**`, `testenv/**` minus markdown under those trees,
-`Project.toml`, `test/Project.toml`, `.github/workflows/CI.yml`). It also
+`Project.toml`, `test/Project.toml`, `.github/julia-slots.env`,
+`.github/workflows/CI.yml`). It also
 runs on **`cut`**, **E2E weekly** (`ssh-e2e-weekly.yml`; `CI.yml` has no
 `schedule`), and `workflow_dispatch`. Tip `Pkg.test` / Aqua
 stay on **main**, **CI weekly**, and `cut`. Registry tree stays on **main**

@@ -59,6 +59,7 @@ jobs:
               - "!testenv/**/*.md"
               - "Project.toml"
               - "test/Project.toml"
+              - ".github/julia-slots.env"
               - ".github/workflows/CI.yml"
       - id: gate
         env:
