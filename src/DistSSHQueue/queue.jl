@@ -450,6 +450,21 @@ function _require_kit_setup_ok!(result, step::AbstractString)
     throw(ErrorException("DistSSHKit setup! $(step) failed"))
 end
 
+"""Copy the newest `{proj}/.distsshkit/setup/*.log` onto the Kit leaf."""
+function _copy_kit_setup_log!(proj::AbstractString, output_dir::Union{Nothing,AbstractString})
+    output_dir === nothing && return nothing
+    dest = String(output_dir)
+    isempty(strip(dest)) && return nothing
+    logdir = joinpath(String(proj), ".distsshkit", "setup")
+    isdir(logdir) || return nothing
+    logs = filter(f -> endswith(lowercase(f), ".log"), readdir(logdir; join=true))
+    isempty(logs) && return nothing
+    newest = logs[argmax(mtime.(logs))]
+    mkpath(dest)
+    cp(newest, joinpath(dest, "setup_failure.log"); force=true)
+    return nothing
+end
+
 function _queue_kit_setup!(j::Job, on_phase; kit_setup! = DistSSHKit.setup!)
     _queue_env_on(NO_KIT_SETUP_ENV) && return nothing
     proj = get(j.kwargs, "project", nothing)
@@ -465,9 +480,14 @@ function _queue_kit_setup!(j::Job, on_phase; kit_setup! = DistSSHKit.setup!)
     on_phase("instantiate")
     _queue_local_instantiate!(String(proj))
     if session !== nothing
-        _require_kit_setup_ok!(kit_setup!(session, :instantiate), "instantiate")
-        on_phase("check")
-        _require_kit_setup_ok!(kit_setup!(session, :check), "check")
+        try
+            _require_kit_setup_ok!(kit_setup!(session, :instantiate), "instantiate")
+            on_phase("check")
+            _require_kit_setup_ok!(kit_setup!(session, :check), "check")
+        catch
+            _copy_kit_setup_log!(String(proj), kit_output_dir(j))
+            rethrow()
+        end
     end
     return nothing
 end

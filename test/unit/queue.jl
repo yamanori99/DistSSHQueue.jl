@@ -409,6 +409,35 @@ end
     end
 end
 
+@testset "kit setup failure copies setup log onto the leaf" begin
+    mktempdir() do d
+        write(joinpath(d, "Project.toml"), "[deps]\n")
+        script = joinpath(d, "s.jl")
+        write(script, "1\n")
+        logdir = joinpath(d, ".distsshkit", "setup")
+        mkpath(logdir)
+        write(joinpath(logdir, "setup_new.log"), "instantiate failed\n")
+        j = DistSSHQueue.Job(;
+            kind=:drive,
+            script=script,
+            hosts=["child:w1:1"],
+            kwargs=Dict{String,Any}("project" => String(d)),
+        )
+        DistSSHQueue.ensure_kit_output_dir!(j)
+        leaf = DistSSHQueue.kit_output_dir(j)
+        @test leaf !== nothing
+        fake_setup!(_, mode::Symbol) = mode === :instantiate ? (; ok=false) : (; ok=true)
+        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+            @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
+                j, Returns(nothing); kit_setup! = fake_setup!,
+            )
+        end
+        copied = joinpath(leaf, "setup_failure.log")
+        @test isfile(copied)
+        @test occursin("instantiate failed", read(copied, String))
+    end
+end
+
 @testset "instantiate skips queue-env and empty JULIA_DEPOT_PATH" begin
     mktempdir() do d
         qenv = joinpath(d, "env")

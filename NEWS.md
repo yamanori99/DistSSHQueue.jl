@@ -15,6 +15,10 @@ Next patch after `0.5.1`. DistSSHKit **0.7.x** (≥0.7.3). Not a cut yet.
   ([#238](https://github.com/yamanori99/DistSSHQueue.jl/issues/238)) is
   gone. Julia major.minor mismatch still fails `:check` unless Kit
   `--ignore-julia-version`.
+- If Kit `setup!` fails, `serve` copies the newest
+  `{project}/.distsshkit/setup/*.log` onto the job leaf as
+  `setup_failure.log` so `fetch` is not an empty drive tree
+  ([#237](https://github.com/yamanori99/DistSSHQueue.jl/issues/237)).
 
 ## 0.5.1
 
