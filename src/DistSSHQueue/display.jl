@@ -71,9 +71,18 @@ function _job_result_disp(j::Job; verbose::Bool=false)::String
     return _q_short(r)
 end
 
-"""UTC `DateTime` shifted by this process's current local offset (DST at `now`)."""
+"""UTC `DateTime` as this host's local wall clock at that instant (DST at `dt`)."""
 function _utc_to_local(dt::DateTime)::DateTime
-    return dt + (now() - now(UTC))
+    tm = Libc.TmStruct(floor(Int, datetime2unix(dt)))
+    return DateTime(
+        tm.year + 1900,
+        tm.month + 1,
+        tm.mday,
+        tm.hour,
+        tm.min,
+        tm.sec,
+        millisecond(dt),
+    )
 end
 
 function _job_queued_disp(j::Job)::String

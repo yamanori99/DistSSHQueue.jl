@@ -25,7 +25,8 @@ OS unit file on this host (LaunchAgent / systemd), or `none`. After
 Bare `status` is a snapshot. `watch` is `status --interval` (default
 `0.5`). `--tail N` shows the last N jobs (`full` is all; omitting
 `--tail` is full). Each job is a card: `ID STATE KIND SCRIPT` then
-detail lines (`queued`, `elapsed` / `wall`, folded `hosts`). `-q` is the first
+detail lines (`queued` is local wall time at submit, including DST;
+`elapsed` / `wall`, folded `hosts`). `-q` is the first
 line only. `--verbose` keeps the full host token list. While Kit setup is in
 progress, STATE shows `rsync` / `instantiate` / `check` (`instantiate`
 includes the queue-host project; Kit steps are `child:` only). A

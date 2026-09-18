@@ -1784,6 +1784,24 @@ end
     quiet = sprint(io -> DistSSHQueue.print_jobs_table([done]; io=io, quiet=true))
     @test !occursin("queued", quiet)
     @test !occursin("hosts", quiet)
+    if !Sys.iswindows()
+        winter = DateTime(2026, 1, 15, 12, 0)
+        summer = DateTime(2026, 7, 15, 12, 0)
+        old_tz = get(ENV, "TZ", nothing)
+        try
+            ENV["TZ"] = "America/New_York"
+            ccall(:tzset, Cvoid, ())
+            @test DistSSHQueue._utc_to_local(winter) == DateTime(2026, 1, 15, 7, 0)
+            @test DistSSHQueue._utc_to_local(summer) == DateTime(2026, 7, 15, 8, 0)
+        finally
+            if old_tz === nothing
+                delete!(ENV, "TZ")
+            else
+                ENV["TZ"] = old_tz
+            end
+            ccall(:tzset, Cvoid, ())
+        end
+    end
 end
 
 @testset "go with job_id still runs the user script" begin
