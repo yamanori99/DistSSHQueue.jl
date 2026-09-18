@@ -90,15 +90,17 @@ end
 
 function _job_elapsed_disp(j::Job)::String
     j.state === :running || return ""
-    j.started_at === nothing && return ""
-    return _human_span(j.started_at, now(UTC))
+    started = j.started_at
+    started isa DateTime || return ""
+    return _human_span(started, now(UTC))
 end
 
 function _job_wall_disp(j::Job)::String
     j.state in (:done, :failed, :cancelled) || return ""
-    j.started_at === nothing && return ""
+    started = j.started_at
+    started isa DateTime || return ""
     fin = something(j.finished_at, now(UTC))
-    return _human_span(j.started_at, fin)
+    return _human_span(started, fin)
 end
 
 const _HOSTS_KEEP = 2
