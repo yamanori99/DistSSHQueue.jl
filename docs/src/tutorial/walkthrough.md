@@ -22,9 +22,9 @@ julia -m DistSSHQueue serve
 ```
 
 `add-host` does not deploy. `serve` instantiates the job project on
-this host, then Kit `setup!` (rsync / instantiate; `check` only if
-the job tree has `.git/`) on `child:` hosts. A `qhost:` stage has
-no `.git/`, so that hop skips `:check`. Optional: `setup --juliaup`
+this host, then Kit `setup!` (rsync / instantiate / `check`) on
+`child:` hosts. A `qhost:` stage has no `.git/`; DistSSHKit **0.7.3+**
+warns on that instead of failing `:check`. Optional: `setup --juliaup`
 when major.minor differs.
 
 From a client: create the env, then `pkg> add DistSSHQueue` in it
@@ -33,7 +33,7 @@ needs `qhost:HOST` on the command line.
 
 ## Client: go on parent
 
-Job directory. Queue loadable (`julia --project=.`). DistSSHKit **0.7.x** (≥0.7.2)
+Job directory. Queue loadable (`julia --project=.`). DistSSHKit **0.7.x** (≥0.7.3)
 comes with Queue. `demo install` copies into `distsshkit_demos/`.
 Listed `parent` / `child:NAME` need `:N`.
 

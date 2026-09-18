@@ -20,7 +20,7 @@ Supported on **macOS, Linux, and WSL2 Ubuntu** (not native Windows).
 
 Even small labs and individuals can keep one always-on machine, add
 SSH hosts, and use them together as a small set of compute nodes.
-Julia **1.12+**, DistSSHKit **0.7.x** (≥0.7.2).
+Julia **1.12+**, DistSSHKit **0.7.x** (≥0.7.3).
 
 ## Install
 
@@ -35,9 +35,6 @@ Or, equivalently, via the `Pkg` API:
 ```julia
 julia> import Pkg; Pkg.add("DistSSHQueue")
 ```
-
-DistSSHKit **0.7.x** (≥0.7.2) comes from General with it. Do not `Pkg.develop`
-Kit for ordinary Queue work.
 
 The queue host also needs **`ssh`**, **`rsync`**, and (only for git
 deploys) **`git`** — `pkg> add` does not install them. Full requirements:
@@ -213,8 +210,8 @@ julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 `submit` starts `serve` on the queue host if none is running. `serve`
 instantiates the job project on the queue host and runs Kit `setup!`
 on `child:` hosts before each job (you do not hand-run DistSSHKit
-`setup` on the stage tree). Kit `:check` runs only when the job tree
-has `.git/`; a `qhost:` stage omits it. Job ids are a
+`setup` on the stage tree). Kit `:check` always runs there
+(DistSSHKit **0.7.3+** warns if a `qhost:` stage has no `.git/`). Job ids are a
 bare stdout line; stderr shows `Queued  N` unless `DISTSSHKIT_QUIET` is set.
 `fetch` copies the finished Kit leaf onto this job tree.
 

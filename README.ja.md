@@ -18,7 +18,7 @@ DistSSHQueue は、何人かで同じマシンを使い、ジョブを順番に�
 対応は **macOS、Linux、WSL2 Ubuntu** (ネイティブ Windows は対象外)。
 
 小さな研究室や個人でも、常時起動のマシンを 1 台置き、SSH接続したマシンとまとめて小さな計算ノードとして使うことが出来る。
-Julia **1.12+**、DistSSHKit **0.7.x** (≥0.7.2)。
+Julia **1.12+**、DistSSHKit **0.7.x** (≥0.7.3)。
 
 ## インストール
 
@@ -33,9 +33,6 @@ pkg> add DistSSHQueue
 ```julia
 julia> import Pkg; Pkg.add("DistSSHQueue")
 ```
-
-DistSSHKit **0.7.x** (≥0.7.2) は General から付いてくる。通常の Queue 作業で
-Kit を `Pkg.develop` しない。
 
 キューホストには **`ssh`**、**`rsync`**、および (git デプロイを使うときだけ) **`git`** も必要。
 `pkg> add` では入らない。詳細な利用条件については以下:
@@ -211,8 +208,8 @@ julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 `submit` は、`serve` が無ければキューホスト上で起動する。`serve` が
 ジョブ木をキューホスト上で `Pkg.instantiate` し、`child:` には Kit
 `setup!` を走らせる (stage で DistSSHKit `setup` を手で打たない)。
-Kit `:check` はジョブ木に `.git/` があるときだけ。`qhost:` の stage
-は `.git/` を送らないので、その hop では `:check` を飛ばす。
+Kit `:check` は `child:` で常に走る。`qhost:` の stage は `.git/`
+を送らないが、DistSSHKit **0.7.3+** はそれを fail ではなく警告にする。
 ジョブ id は
 stdout 1 行。stderr に `Queued  N` (`DISTSSHKIT_QUIET` で隠す)。
 `fetch` は終わった Kit leaf をこのジョブ木へ戻す。

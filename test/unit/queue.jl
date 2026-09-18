@@ -383,19 +383,11 @@ end
     @test_throws ErrorException DistSSHQueue._require_kit_setup_ok!((; ok=false), "check")
 end
 
-@testset "kit setup :check only when the job project has .git" begin
+@testset "kit setup always runs :check after instantiate" begin
     mktempdir() do d
         write(joinpath(d, "Project.toml"), "[deps]\n")
         script = joinpath(d, "s.jl")
         write(script, "1\n")
-        @test !DistSSHQueue._queue_kit_check_git(String(d))
-        mkpath(joinpath(d, ".git"))
-        @test DistSSHQueue._queue_kit_check_git(String(d))
-        rm(joinpath(d, ".git"); recursive=true)
-        write(joinpath(d, ".git"), "gitdir: /tmp/linked.git\n")
-        @test DistSSHQueue._queue_kit_check_git(String(d))
-        rm(joinpath(d, ".git"))
-        @test !DistSSHQueue._queue_kit_check_git(String(d))
         j = DistSSHQueue.Job(;
             kind=:go,
             script=script,
@@ -405,31 +397,6 @@ end
         modes = Symbol[]
         fake_setup!(_, mode::Symbol) = (push!(modes, mode); (; ok=true))
         phases = String[]
-        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
-            DistSSHQueue._queue_kit_setup!(
-                j,
-                ph -> ph isa AbstractString && push!(phases, String(ph));
-                kit_setup! = fake_setup!,
-            )
-        end
-        @test modes == [:rsync, :instantiate]
-        @test phases == ["rsync", "instantiate"]
-        mkpath(joinpath(d, ".git"))
-        empty!(modes)
-        empty!(phases)
-        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
-            DistSSHQueue._queue_kit_setup!(
-                j,
-                ph -> ph isa AbstractString && push!(phases, String(ph));
-                kit_setup! = fake_setup!,
-            )
-        end
-        @test modes == [:rsync, :instantiate, :check]
-        @test phases == ["rsync", "instantiate", "check"]
-        rm(joinpath(d, ".git"); recursive=true)
-        write(joinpath(d, ".git"), "gitdir: /tmp/linked.git\n")
-        empty!(modes)
-        empty!(phases)
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             DistSSHQueue._queue_kit_setup!(
                 j,
