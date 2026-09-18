@@ -15,6 +15,12 @@ Next patch after `0.5.1`. DistSSHKit **0.7.x** (≥0.7.3). Not a cut yet.
   ([#238](https://github.com/yamanori99/DistSSHQueue.jl/issues/238)) is
   gone. Julia major.minor mismatch still fails `:check` unless Kit
   `--ignore-julia-version`.
+- `fetch --into PATH` lands the Kit leaf in that directory (the path
+  *is* the dest; it may be outside the job project). Same-id re-fetch
+  skips unless `--force`. A non-empty dest without this job's
+  `.distsshqueue-fetch-id` is refused
+  ([#246](https://github.com/yamanori99/DistSSHQueue.jl/issues/246),
+  [#248](https://github.com/yamanori99/DistSSHQueue.jl/issues/248)).
 
 ## 0.5.1
 

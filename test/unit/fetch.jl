@@ -187,3 +187,43 @@ end
         @test DistSSHQueue.resolve_fetch_job_id(first(id, 8); root=proj) == first(id, 8)
     end
 end
+
+@testset "fetch --into dest and marker skip/force" begin
+    id = "aaaaaaaa-1111-4000-8000-000000000001"
+    id2 = "bbbbbbbb-2222-4000-8000-000000000002"
+    src = "/qh/.distsshqueue/drive/demo_aaaaaaaa"
+    mktempdir() do d
+        dest = joinpath(d, "payoff456")
+        @test DistSSHQueue.check_fetch_dest(dest, id) === :copy
+        mkpath(dest)
+        @test DistSSHQueue.check_fetch_dest(dest, id) === :copy
+        DistSSHQueue.write_fetch_marker!(dest, id)
+        write(joinpath(dest, "out.tsv"), "1\n")
+        @test DistSSHQueue.check_fetch_dest(dest, id) === :skip
+        @test DistSSHQueue.check_fetch_dest(dest, id; force=true) === :copy
+        @test_throws ArgumentError DistSSHQueue.check_fetch_dest(dest, id2)
+        DistSSHQueue.write_fetch_marker!(dest, id2)
+        @test_throws ArgumentError DistSSHQueue.check_fetch_dest(dest, id)
+        other = joinpath(d, "occupied")
+        mkpath(other)
+        write(joinpath(other, "keep.txt"), "x\n")
+        @test_throws ArgumentError DistSSHQueue.check_fetch_dest(other, id)
+        @test DistSSHQueue.check_fetch_dest(other, id; force=true) === :copy
+        rest, into, force, progress = DistSSHQueue.peel_fetch_opts(
+            ["--into", dest, "--force", "--progress", id],
+        )
+        @test rest == [id]
+        @test into == dest
+        @test force
+        @test progress
+        withenv("DISTRIBUTED_PROJECT_ROOT" => d) do
+            rel = DistSSHQueue.resolve_into_path("data/payoff")
+            @test rel == DistSSHKit.canonical_local_path(joinpath(d, "data", "payoff"))
+            abs = DistSSHQueue.resolve_into_path(joinpath(d, "outside"))
+            @test abs == DistSSHKit.canonical_local_path(joinpath(d, "outside"))
+            got = DistSSHQueue.fetch_dest_target(id, src, "/qh/.distsshqueue"; into=joinpath(d, "outside"))
+            @test got == DistSSHKit.canonical_local_path(joinpath(d, "outside"))
+            @test !startswith(got, DistSSHKit.canonical_local_path(d) * "/.distsshqueue")
+        end
+    end
+end

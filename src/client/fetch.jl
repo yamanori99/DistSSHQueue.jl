@@ -213,6 +213,95 @@ function local_fetch_dest(
     return fetch_dest(job_project(), kind, leaf)
 end
 
+const FETCH_MARKER = ".distsshqueue-fetch-id"
+
+function fetch_marker_path(dest::AbstractString)::String
+    return joinpath(String(dest), FETCH_MARKER)
+end
+
+function write_fetch_marker!(dest::AbstractString, id::AbstractString)
+    mkpath(String(dest))
+    write(fetch_marker_path(dest), String(id) * "\n")
+    return nothing
+end
+
+function read_fetch_marker(dest::AbstractString)::Union{Nothing,String}
+    p = fetch_marker_path(dest)
+    isfile(p) || return nothing
+    s = strip(read(p, String))
+    return isempty(s) ? nothing : String(s)
+end
+
+function resolve_into_path(into::AbstractString)::String
+    raw = String(into)
+    p = isabspath(raw) ? raw : joinpath(job_project(), raw)
+    return DistSSHKit.canonical_local_path(p)
+end
+
+"""Dest leaf: default Queue leaf, or `--into PATH` itself (may be outside the project)."""
+function fetch_dest_target(
+    id::AbstractString,
+    result_path::AbstractString,
+    store_root::AbstractString;
+    into::Union{Nothing,AbstractString}=nothing,
+    canonicalize::Bool=false,
+)::String
+    into === nothing && return local_fetch_dest(
+        id, result_path, store_root; canonicalize=canonicalize,
+    )
+    require_fetchable_leaf(id, result_path)
+    return resolve_into_path(into)
+end
+
+"""`:copy` or `:skip`. Non-empty dest without this job's marker needs `--force`."""
+function check_fetch_dest(
+    dest::AbstractString,
+    id::AbstractString;
+    force::Bool=false,
+)::Symbol
+    force && return :copy
+    ispath(dest) || return :copy
+    isdir(dest) || throw(ArgumentError("fetch: dest exists and is not a directory"))
+    isempty(readdir(dest; join=false)) && return :copy
+    marked = read_fetch_marker(dest)
+    marked == String(id) && return :skip
+    if marked === nothing
+        throw(ArgumentError("fetch: dest is not empty (pass --force to replace)"))
+    end
+    throw(ArgumentError(
+        "fetch: dest already has job $(first(marked, 8)) (pass --force to replace)",
+    ))
+end
+
+function peel_fetch_opts(payload::Vector{String})
+    progress = rsync_progress_on(payload)
+    force = false
+    into = nothing
+    rest = String[]
+    i = 1
+    while i <= length(payload)
+        a = payload[i]
+        if a == "--progress"
+            progress = true
+            i += 1
+        elseif a == "--force"
+            force = true
+            i += 1
+        elseif a == "--into"
+            i < length(payload) || throw(ArgumentError("fetch: --into needs PATH"))
+            into = String(payload[i + 1])
+            i += 2
+        elseif startswith(a, "--into=")
+            into = String(chopprefix(a, "--into="))
+            i += 1
+        else
+            push!(rest, a)
+            i += 1
+        end
+    end
+    return rest, into, force, progress
+end
+
 function fetch_cli(
     qhost::Union{Nothing,AbstractString},
     gjulia::Union{Nothing,AbstractString},
@@ -224,8 +313,7 @@ function fetch_cli(
     dest, spec = coalesce_remote(qhost, gjulia, host, rjulia)
     hop = (explicit || rest_explicit) ? dest : nothing
     qe = coalesce_queue_env(gqenv, qenv)
-    progress = rsync_progress_on(payload)
-    payload = String[a for a in payload if a != "--progress"]
+    payload, into, force, progress = peel_fetch_opts(payload)
     isempty(payload) && throw(ArgumentError("fetch: need a job id"))
     payload[1] in ("-h", "--help") && (show_usage(; command="fetch"); return 0)
     length(payload) == 1 || throw(ArgumentError("fetch: extra arguments"))
@@ -246,8 +334,14 @@ function fetch_cli(
     st, path = parse_fetch_source(hop_print(hop, spec, expr; queue_env=qe))
     st in FETCH_READY || throw(ArgumentError("job $(repr(id)) is $(st)"))
     qroot = dirname(dirname(posix_dir(path)))
-    out = local_fetch_dest(id, path, qroot)
+    out = fetch_dest_target(id, path, qroot; into=into)
+    if check_fetch_dest(out, id; force=force) === :skip
+        !_queue_env_on("DISTSSHKIT_QUIET") && println(stderr, "already fetched (use --force to replace)")
+        println(out)
+        return 0
+    end
     rsync_from_qhost!(hop, path, out; progress=progress)
+    write_fetch_marker!(out, id)
     println(out)
     return 0
 end

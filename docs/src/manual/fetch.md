@@ -16,8 +16,13 @@ Also: [First job](@ref Tutorial-Client), [Walkthrough](@ref Tutorial-Walkthrough
 [status](@ref Manual-status).
 
 Run it from the same `cwd` / `DISTRIBUTED_PROJECT_ROOT` as `submit`.
-The dest is `{project}/.distsshqueue/{go|ride|drive}/{stem}_{id8}/`.
-stdout is that path, one line. Re-run rsyncs into the same leaf.
+The dest is `{project}/.distsshqueue/{go|ride|drive}/{stem}_{id8}/`,
+or `--into PATH` itself (that directory **is** the leaf; no extra
+`{stem}_{id8}` folder). `--into` may be outside the job project.
+stdout is that path, one line. Re-run of the same id into the same dest
+skips rsync (`already fetched` on stderr) unless `--force`.
+A dest that already has files and no matching `.distsshqueue-fetch-id`
+is refused without `--force`.
 `qhost:` fetch prints `rsync ← HOST:…` on stderr when the copy starts
 (`DISTSSHKIT_QUIET` hides it).
 
@@ -37,6 +42,8 @@ fetchable. The argument is the ticket path, the full UUID, or the
 | --- | --- |
 | `<id>` | Unique 8-character prefix (`status`) or the full UUID (`submit` stdout) |
 | ticket | `.distsshqueue/tickets/<uuid>` (same job; no need to copy stdout) |
+| `--into PATH` | Dest directory (the leaf). Relative to the job project; absolute paths may be outside it |
+| `--force` | Replace dest even if it already has this or another job |
 | `--progress` | `qhost:` rsync `--info=progress2` (`DISTSSHKIT_PROGRESS`) |
 | `-h` / `--help` | Queue usage |
 
