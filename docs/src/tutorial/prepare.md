@@ -42,8 +42,8 @@ instantiate unless the depot already has the registry and packages
 list. CLI submit with a placement token and no `hosts` is an error.
 Optional `:N` is a max. No `serve` restart: the next
 `submit` re-reads the file. `list-host` NAME for parent is the hostname;
-TOKEN stays `parent`. JULIA is that host's `juliaup default`
-(`-` if missing, SSH/`status` fails, or no `*` row).
+TOKEN stays `parent`. JULIA is that host's `juliaup default` patch
+(`1.12.7`; `-` if missing, SSH/`status` fails, or no Version on the `*` row).
 
 Do not `cd` the stage tree and run DistSSHKit `setup` by hand. `serve`
 `Pkg.instantiate`s that tree on the queue host, then Kit `setup!`

@@ -1196,6 +1196,11 @@ end
 end
 
 @testset "CLI list-host lists names and ssh -G fields" begin
+    @test DistSSHQueue._juliaup_patch_from_status("     *  1.13     1.13.2+0.aarch64.apple.darwin14") ==
+          "1.13.2"
+    @test DistSSHQueue._juliaup_patch_from_status("* 1.13") == "-"
+    @test DistSSHQueue._juliaup_patch_from_status("* release  1.11.6+0.x86_64") == "1.11.6"
+    @test DistSSHQueue._juliaup_patch_from_status("") == "-"
     mktempdir() do d
         cfg = joinpath(d, "config.toml")
         fake = joinpath(d, "fakebin")
@@ -1214,7 +1219,7 @@ for a in "\$@"; do
     exit 0
   fi
 done
-printf '%s\\n' "* 1.13"
+printf '%s\\n' "* 1.13   1.13.2+0.x86_64-linux-gnu"
 exit 0
 """,
         )
@@ -1225,7 +1230,7 @@ exit 0
             """
 #!/bin/sh
 [ "\$1" = "status" ] || exit 1
-printf '%s\\n' "* 1.12"
+printf '%s\\n' "* 1.12   1.12.7+0.x86_64-linux-gnu"
 exit 0
 """,
         )
@@ -1261,8 +1266,9 @@ exit 0
             @test occursin("MAX", out)
             @test occursin("JULIA", out)
             @test !occursin("JULIAUP", out)
-            @test occursin("1.12", out)
-            @test occursin("1.13", out)
+            @test occursin("1.12.7", out)
+            @test occursin("1.13.2", out)
+            @test !occursin("1.12.7+", out)
         end
         write(cfg, "hosts = [\"parent\", \"child:host1\"]\n")
         withenv(

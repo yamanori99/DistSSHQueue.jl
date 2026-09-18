@@ -52,8 +52,9 @@ JULIA on the first line, then indented `ssh -G` fields (`host` /
 `hostname` / `user` / `port`). NAME for `parent` is this queue host's
 hostname; TOKEN stays `parent` (copy-paste for `submit`, including
 `parent:N`). Children: NAME is the SSH Host, TOKEN is `child:NAME`.
-JULIA is that host's `juliaup default` (`juliaup status` `*` row); `-`
-if juliaup is missing, SSH or `status` fails, or there is no `*` row.
+JULIA is that host's `juliaup default` patch (`1.12.7` from the `*`
+Version column); `-` if juliaup is missing, SSH or `status` fails, or
+there is no Version on the `*` row.
 `ssh -G` runs on the queue host. No private keys or IdentityFile.
 Locally, parent `ssh` is `this machine`. Via `qhost:`, it is
 `queue host` — NAME is still the queue host's hostname, not the client's.
