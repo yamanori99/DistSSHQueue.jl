@@ -45,11 +45,11 @@ TOKEN stays `parent`. JULIA is that host's `juliaup default`
 
 Do not `cd` the stage tree and run DistSSHKit `setup` by hand. `serve`
 `Pkg.instantiate`s that tree on the queue host, then Kit `setup!`
-(`rsync` → `instantiate`, then `check` only if the tree has `.git/`)
+(`rsync` → `instantiate` → `check`)
 on `child:` hosts, unless
-`DISTSSHQUEUE_NO_KIT_SETUP=1`. A `qhost:` stage omits `.git/`, so
-`:check` is skipped there (Kit still fatals on a missing local
-commit; Queue does not run that exam on a snapshot). Leave
+`DISTSSHQUEUE_NO_KIT_SETUP=1`. A `qhost:` stage omits `.git/`;
+DistSSHKit **0.7.3+** warns on a missing local git commit instead of
+failing `:check`. Leave
 `DISTRIBUTED_REMOTE_PROJECT_ROOT` unset in queue `config.toml` so Kit
 uses `~/parent/Repo.jl` per clone.
 [kit Prepare](https://yamanori99.github.io/DistSSHKit.jl/stable/tutorial/prepare/).
@@ -74,7 +74,7 @@ julia --project=.
 pkg> add DistSSHQueue
 ```
 
-That pulls DistSSHKit **0.7.x** (≥0.7.2) from General. A different dir is
+That pulls DistSSHKit **0.7.x** (≥0.7.3) from General. A different dir is
 `--queue-env DIR` on `enable` and on client `qhost:`.
 
 ## Survive reboot (optional)

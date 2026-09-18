@@ -3,6 +3,19 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
+## Unreleased
+
+Next patch after `0.5.1`. DistSSHKit **0.7.x** (≥0.7.3). Not a cut yet.
+
+- DistSSHKit **0.7.x** (≥0.7.3). Kit `:check` treats a missing local git
+  commit as a warning, not a fail
+  ([DistSSHKit#370](https://github.com/yamanori99/DistSSHKit.jl/issues/370)).
+  `serve` always runs `:check` on `child:` hosts, including a `qhost:`
+  stage that has no `.git/`. The 0.5.1 skip
+  ([#238](https://github.com/yamanori99/DistSSHQueue.jl/issues/238)) is
+  gone. Julia major.minor mismatch still fails `:check` unless Kit
+  `--ignore-julia-version`.
+
 ## 0.5.1
 
 Patch after `0.5.0`. DistSSHKit **0.7.x** (≥0.7.2).
