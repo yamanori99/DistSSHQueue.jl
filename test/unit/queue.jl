@@ -1056,7 +1056,9 @@ end
                 end
                 @test code_ok == 0
                 @test occursin(r"Queued\s+1\b", err_ok)
+                @test occursin("(no running)", err_ok)
                 @test occursin("queue: local", err_ok)
+                @test !occursin("qhost: local", err_ok)
                 @test !occursin("no add-host list", err_ok)
                 @test !occursin("Queued", out_ok)
                 id1 = strip(out_ok)
@@ -1066,8 +1068,9 @@ end
                         DistSSHQueue.main(["submit", "go", "parent:1", "job.jl"])
                     end
                     @test code_h == 0
-                    @test occursin("queue: qhost:mini-tak-ts", err_h)
+                    @test occursin("qhost: local", err_h)
                     @test !occursin("queue: local", err_h)
+                    @test !occursin("queue: qhost:", err_h)
                 end
                 code2, out2, err2 = capture_stdio() do
                     DistSSHQueue.main(["submit", "go", "parent:1", "job.jl"])
@@ -1193,6 +1196,11 @@ end
 end
 
 @testset "CLI list-host lists names and ssh -G fields" begin
+    @test DistSSHQueue._juliaup_patch_from_status("     *  1.13     1.13.2+0.aarch64.apple.darwin14") ==
+          "1.13.2"
+    @test DistSSHQueue._juliaup_patch_from_status("* 1.13") == "-"
+    @test DistSSHQueue._juliaup_patch_from_status("* release  1.11.6+0.x86_64") == "1.11.6"
+    @test DistSSHQueue._juliaup_patch_from_status("") == "-"
     mktempdir() do d
         cfg = joinpath(d, "config.toml")
         fake = joinpath(d, "fakebin")
@@ -1211,7 +1219,7 @@ for a in "\$@"; do
     exit 0
   fi
 done
-printf '%s\\n' "* 1.13"
+printf '%s\\n' "* 1.13   1.13.2+0.x86_64-linux-gnu"
 exit 0
 """,
         )
@@ -1222,7 +1230,7 @@ exit 0
             """
 #!/bin/sh
 [ "\$1" = "status" ] || exit 1
-printf '%s\\n' "* 1.12"
+printf '%s\\n' "* 1.12   1.12.7+0.x86_64-linux-gnu"
 exit 0
 """,
         )
@@ -1258,8 +1266,9 @@ exit 0
             @test occursin("MAX", out)
             @test occursin("JULIA", out)
             @test !occursin("JULIAUP", out)
-            @test occursin("1.12", out)
-            @test occursin("1.13", out)
+            @test occursin("1.12.7", out)
+            @test occursin("1.13.2", out)
+            @test !occursin("1.12.7+", out)
         end
         write(cfg, "hosts = [\"parent\", \"child:host1\"]\n")
         withenv(
@@ -1314,6 +1323,9 @@ exit 0
             @test occursin("Warning:", out)
             @test occursin("reachable via DistSSHKit", out)
             @test occursin("including qhost:", out)
+            @test occursin("outbound internet", out)
+            @test occursin("unless the depot", out)
+            @test occursin("instantiate", out)
             @test DistSSHQueue.config_host_names(DistSSHQueue.load_config()) ==
                   DistSSHQueue.HostAllow("parent" => nothing, "host1" => nothing)
             withenv("DISTSSHKIT_QUIET" => "1") do

@@ -109,7 +109,7 @@ function submit_cli(store::AbstractString, kind::Symbol, script::AbstractString,
     if !_kit_env_on("DISTSSHKIT_QUIET")
         qh = qhost_display_from_env()
         if qh !== nothing && !isempty(strip(qh))
-            println(stderr, "queue: qhost:$(strip(qh))")
+            println(stderr, "qhost: local ($(gethostname()))")
         else
             println(stderr, "queue: local ($(gethostname()))")
         end
@@ -118,7 +118,7 @@ function submit_cli(store::AbstractString, kind::Symbol, script::AbstractString,
         if nr > 0
             println(stderr, "Queued  $(nq)  ($(nr) running)")
         else
-            println(stderr, "Queued  $(nq)")
+            println(stderr, "Queued  $(nq)  (no running)")
         end
     end
     ensure_serve!(store)

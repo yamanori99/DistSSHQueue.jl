@@ -128,7 +128,10 @@ function main(args::Vector{String}=copy(ARGS))::Cint
             r === nothing || return r
             return watch_cli(_rest())
         elseif sub == "submit"
-            r = maybe_remote(hop, gjulia, "submit", rest; queue_env=gqenv, explicit=explicit)
+            r = maybe_remote(
+                hop, gjulia, "submit", rest;
+                label_qhost=true, queue_env=gqenv, explicit=explicit,
+            )
             r === nothing || return r
             return submit_main(_rest())
         elseif is_kit_execute_kind(Symbol(sub))
