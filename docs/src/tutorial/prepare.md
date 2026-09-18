@@ -36,7 +36,9 @@ Defaults work without `config.toml`. `--force` rewrites it. Use it for
 `add-host` writes Kit tokens into config `hosts`
 (`parent[:N]` / `child:NAME[:N]`). `parent` is this queue host;
 `child:NAME` is SSH. `add-host child:` warns that submitters as this user
-can reach that SSH name ([Requirements](@ref)). First add creates the
+can reach that SSH name, and that the child needs outbound internet for
+instantiate unless the depot already has the registry and packages
+([Requirements](@ref)). First add creates the
 list. CLI submit with a placement token and no `hosts` is an error.
 Optional `:N` is a max. No `serve` restart: the next
 `submit` re-reads the file. `list-host` NAME for parent is the hostname;

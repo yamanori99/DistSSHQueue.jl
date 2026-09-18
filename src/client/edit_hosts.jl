@@ -65,6 +65,12 @@ function warn_child_submit_reach(tokens)
     DistSSHKit.print_err(
         "  Anyone who can submit as this user (including qhost:) can use $(those).\n",
     )
+    DistSSHKit.print_err(
+        "  Warning: child hosts need outbound internet for Kit instantiate unless the depot already has the registry and packages.\n",
+    )
+    DistSSHKit.print_err(
+        "  SSH/rsync success is not enough if instantiate still has to fetch.\n",
+    )
     return nothing
 end
 

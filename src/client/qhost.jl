@@ -280,7 +280,8 @@ end
 
 `label_qhost` sets `DISTSSHQUEUE_QHOST` to the client token (not a CLI flag;
 re-passing `qhost:` would recurse). `status` / `watch` print that token on the
-Store `qhost` line and prefix `path`. `list-host` only uses it to say
+Store `qhost` line and prefix `path`. `submit` uses it for `qhost: local`
+chrome. `list-host` only uses it to say
 `queue host` instead of `this machine`; NAME is `gethostname()`.
 """
 function maybe_remote(
