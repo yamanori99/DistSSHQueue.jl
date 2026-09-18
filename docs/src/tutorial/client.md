@@ -83,7 +83,7 @@ before `execute!`. Kit `:check` always runs on `child:` hosts
 (DistSSHKit **0.7.3+** warns if a `qhost:` stage has no `.git/`). `status` / `watch` print
 `qhost` (or `local (hostname)` when you omitted it). `watch` is
 `status --interval` until Ctrl-C; it does not stop `serve`. Job ids print as a bare
-stdout line. `submit` also prints `Queued  N` on stderr unless
+stdout line. `submit` also prints `Queued  N (no running)` on stderr unless
 `DISTSSHKIT_QUIET` is set. A `qhost:` rsync prints `rsync → HOST:…` when
 it starts (fetch: `rsync ←`). After `qhost:` submit,
 `.distsshqueue/tickets/<uuid>` marks the job on this client. `fetch`
