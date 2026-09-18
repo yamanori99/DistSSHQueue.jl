@@ -15,6 +15,13 @@ Next patch after `0.5.1`. DistSSHKit **0.7.x** (≥0.7.3). Not a cut yet.
   ([#238](https://github.com/yamanori99/DistSSHQueue.jl/issues/238)) is
   gone. Julia major.minor mismatch still fails `:check` unless Kit
   `--ignore-julia-version`.
+- After `qhost:` submit, stderr says `qhost: local (hostname)` on the
+  hopped process, not `queue: local` ([#236](https://github.com/yamanori99/DistSSHQueue.jl/issues/236)).
+  `Queued N (no running)` when nothing is running yet
+  (matches `Queued N (R running)`).
+- `add-host child:` also warns that those hosts need outbound internet
+  for Kit instantiate ([#235](https://github.com/yamanori99/DistSSHQueue.jl/issues/235)).
+  `DISTSSHKIT_QUIET` hides it.
 
 ## 0.5.1
 

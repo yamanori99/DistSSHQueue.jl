@@ -1056,7 +1056,9 @@ end
                 end
                 @test code_ok == 0
                 @test occursin(r"Queued\s+1\b", err_ok)
+                @test occursin("(no running)", err_ok)
                 @test occursin("queue: local", err_ok)
+                @test !occursin("qhost: local", err_ok)
                 @test !occursin("no add-host list", err_ok)
                 @test !occursin("Queued", out_ok)
                 id1 = strip(out_ok)
@@ -1066,8 +1068,9 @@ end
                         DistSSHQueue.main(["submit", "go", "parent:1", "job.jl"])
                     end
                     @test code_h == 0
-                    @test occursin("queue: qhost:mini-tak-ts", err_h)
+                    @test occursin("qhost: local", err_h)
                     @test !occursin("queue: local", err_h)
+                    @test !occursin("queue: qhost:", err_h)
                 end
                 code2, out2, err2 = capture_stdio() do
                     DistSSHQueue.main(["submit", "go", "parent:1", "job.jl"])
@@ -1314,6 +1317,8 @@ exit 0
             @test occursin("Warning:", out)
             @test occursin("reachable via DistSSHKit", out)
             @test occursin("including qhost:", out)
+            @test occursin("outbound internet", out)
+            @test occursin("instantiate", out)
             @test DistSSHQueue.config_host_names(DistSSHQueue.load_config()) ==
                   DistSSHQueue.HostAllow("parent" => nothing, "host1" => nothing)
             withenv("DISTSSHKIT_QUIET" => "1") do
