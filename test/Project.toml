@@ -1,7 +1,16 @@
 [deps]
+Dates = "ade2ca70-88c6-4ff9-8d1c-f9bfaddbfc13"
 DistSSHKit = "ceec0504-c968-4be5-b215-667cae0e8f81"
 DistSSHQueue = "24254401-70d8-4a51-8ea4-cfab19f5bc73"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[sources]
+DistSSHQueue = {path = ".."}
+
+[compat]
+Dates = "1"
+DistSSHKit = "0.7.3"
+Test = "1"
 
 [sources]
 DistSSHQueue = {path = ".."}
