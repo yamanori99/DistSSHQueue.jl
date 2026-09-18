@@ -1318,6 +1318,7 @@ exit 0
             @test occursin("reachable via DistSSHKit", out)
             @test occursin("including qhost:", out)
             @test occursin("outbound internet", out)
+            @test occursin("unless the depot", out)
             @test occursin("instantiate", out)
             @test DistSSHQueue.config_host_names(DistSSHQueue.load_config()) ==
                   DistSSHQueue.HostAllow("parent" => nothing, "host1" => nothing)

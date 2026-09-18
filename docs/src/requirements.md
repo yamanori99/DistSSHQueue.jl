@@ -72,7 +72,9 @@ passwordless SSH to every listed worker. The queue host and its workers
 are **one trust domain** — the intended lab premise (shared shell
 access), not a place for untrusted submitters. `add-host child:` reminds
 the person who just added inventory. `add-host child:` also warns that
-Kit instantiate on that host needs outbound internet (registry / `Pkg`).
+Kit instantiate on that host needs outbound internet unless the depot
+already has the registry and packages (a nonempty `~/.julia` is not
+enough by itself).
 Same idea as
 [kit Requirements](https://yamanori99.github.io/DistSSHKit.jl/stable/requirements/);
 how to report a vulnerability stays in [SECURITY.md](https://github.com/yamanori99/DistSSHQueue.jl/blob/main/SECURITY.md).

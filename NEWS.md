@@ -20,7 +20,8 @@ Next patch after `0.5.1`. DistSSHKit **0.7.x** (≥0.7.3). Not a cut yet.
   `Queued N (no running)` when nothing is running yet
   (matches `Queued N (R running)`).
 - `add-host child:` also warns that those hosts need outbound internet
-  for Kit instantiate ([#235](https://github.com/yamanori99/DistSSHQueue.jl/issues/235)).
+  for Kit instantiate unless the depot already has the registry and
+  packages ([#235](https://github.com/yamanori99/DistSSHQueue.jl/issues/235)).
   `DISTSSHKIT_QUIET` hides it.
 
 ## 0.5.1

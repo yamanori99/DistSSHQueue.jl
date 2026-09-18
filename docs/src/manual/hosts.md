@@ -29,8 +29,10 @@ host, not an SSH Host named parent. `child:NAME` is SSH `Host NAME`.
 `add-host child:` prints a warning: anyone who can `submit` as this
 queue-host user (including `qhost:`) can use those names via DistSSHKit
 (`DISTSSHKIT_QUIET` hides it). A second line: those hosts need outbound
-internet for Kit `instantiate` (registry / `Pkg`). SSH/rsync success is
-not enough if `~/.julia` is empty. See [Requirements](@ref) (one trust
+internet for Kit `instantiate` unless the Julia depot already has the
+registry and packages. SSH/rsync success is not enough if instantiate
+still has to fetch. A nonempty `~/.julia` is not that test. See
+[Requirements](@ref) (one trust
 domain). Optional `:N` is a per-name max.
 
 | | |
