@@ -25,7 +25,8 @@ OS unit file on this host (LaunchAgent / systemd), or `none`. After
 Bare `status` is a snapshot. `watch` is `status --interval` (default
 `0.5`). `--tail N` shows the last N jobs (`full` is all; omitting
 `--tail` is full). Each job is a card: `ID STATE KIND SCRIPT` then
-detail lines. `-q` is the first line only. While Kit setup is in
+detail lines (`queued`, `elapsed` / `wall`, folded `hosts`). `-q` is the first
+line only. `--verbose` keeps the full host token list. While Kit setup is in
 progress, STATE shows `rsync` / `instantiate` / `check` (`instantiate`
 includes the queue-host project; Kit steps are `child:` only). A
 `qhost:` stage still reaches `check`; DistSSHKit **0.7.3+** warns if
@@ -44,7 +45,7 @@ Live does not stop `serve`. Ctrl-C leaves it running.
 | Flag | Meaning |
 | --- | --- |
 | `-q` / `--quiet` | Table only (`DISTSSHKIT_QUIET`) |
-| `--progress` / `--verbose` | Keep chrome (exclusive with `-q`) |
+| `--progress` / `--verbose` | Keep chrome (exclusive with `-q`). `--verbose` also unfolds `hosts` |
 | `--interval S` | Live redraw (`watch` default `0.5`) |
 | `--tail N\|full` | Last N jobs; omit or `full` for all |
 | `-h` / `--help` | Queue usage |

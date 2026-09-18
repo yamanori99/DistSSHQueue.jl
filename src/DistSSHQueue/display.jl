@@ -71,6 +71,45 @@ function _job_result_disp(j::Job; verbose::Bool=false)::String
     return _q_short(r)
 end
 
+"""UTC `DateTime` shifted by this process's current local offset (DST at `now`)."""
+function _utc_to_local(dt::DateTime)::DateTime
+    return dt + (now() - now(UTC))
+end
+
+function _job_queued_disp(j::Job)::String
+    return Dates.format(_utc_to_local(j.queued_at), dateformat"yyyy-mm-dd HH:MM")
+end
+
+function _human_span(from::DateTime, to::DateTime)::String
+    s = max(0, Dates.value(Millisecond(to - from)) ÷ 1000)
+    h, rem = divrem(s, 3600)
+    m, _ = divrem(rem, 60)
+    h > 0 && return string(h, "h", lpad(string(m), 2, '0'), "m")
+    return string(m, "m")
+end
+
+function _job_elapsed_disp(j::Job)::String
+    j.state === :running || return ""
+    j.started_at === nothing && return ""
+    return _human_span(j.started_at, now(UTC))
+end
+
+function _job_wall_disp(j::Job)::String
+    j.state in (:done, :failed, :cancelled) || return ""
+    j.started_at === nothing && return ""
+    fin = something(j.finished_at, now(UTC))
+    return _human_span(j.started_at, fin)
+end
+
+const _HOSTS_KEEP = 2
+
+function _job_hosts_disp(j::Job; verbose::Bool=false)::String
+    verbose && return join(j.hosts, "  ")
+    n = length(j.hosts)
+    n <= _HOSTS_KEEP && return join(j.hosts, "  ")
+    return string(join(j.hosts[1:_HOSTS_KEEP], "  "), "  +", n - _HOSTS_KEEP)
+end
+
 function _tail_jobs(rows::Vector{Job}, tail::Union{Nothing,Int})
     tail === nothing && return rows, 0
     n = length(rows)
@@ -121,7 +160,19 @@ function print_jobs_table(
         print(io, "  ", _q_cell(kinds[i], w_k), "  ", _q_cell(scripts[i], w_sc))
         println(io)
         quiet && continue
-        hosts = join(j.hosts, "  ")
+        DistSSHKit.print_colored(io, "    queued   ", :light_black, false)
+        println(io, _job_queued_disp(j))
+        el = _job_elapsed_disp(j)
+        isempty(el) || begin
+            DistSSHKit.print_colored(io, "    elapsed  ", :light_black, false)
+            println(io, el)
+        end
+        wall = _job_wall_disp(j)
+        isempty(wall) || begin
+            DistSSHKit.print_colored(io, "    wall     ", :light_black, false)
+            println(io, wall)
+        end
+        hosts = _job_hosts_disp(j; verbose=verbose)
         isempty(hosts) || begin
             DistSSHKit.print_colored(io, "    hosts    ", :light_black, false)
             println(io, hosts)
