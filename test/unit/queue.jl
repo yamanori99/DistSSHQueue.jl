@@ -203,6 +203,42 @@ end
     end
 end
 
+@testset "drive without output_dir does not pin a Queue leaf" begin
+    mktempdir() do d
+        script = joinpath(d, "hold.jl")
+        write(script, "1\n")
+        ev = Base.Event()
+        q = Queue(; runner = _ -> wait(ev))
+        id = submit!(q, script, "parent:1"; kind = :drive, project = d)
+        @test step!(q) == 1
+        j = job(q, id)
+        @test get(j.kwargs, "output_dir", nothing) === nothing
+        @test j.result_path === nothing
+        @test DistSSHQueue.kit_sidecar_dir(j) === nothing
+        notify(ev)
+        _wait_state(q, id, :done)
+    end
+end
+
+@testset "kit_sidecar_dir prefers run_dir over the artifact leaf" begin
+    mktempdir() do d
+        out = joinpath(d, "out")
+        run = joinpath(d, "run")
+        mkpath(out)
+        mkpath(run)
+        j = DistSSHQueue.Job(;
+            kind = :go,
+            script = "a.jl",
+            hosts = ["parent:1"],
+            result_path = out,
+            kwargs = Dict{String, Any}("output_dir" => out, "run_dir" => run),
+        )
+        @test DistSSHQueue.kit_output_dir(j) == out
+        @test DistSSHQueue.kit_run_dir(j) == run
+        @test DistSSHQueue.kit_sidecar_dir(j) == run
+    end
+end
+
 @testset "load! keeps running without submit output_dir when kit.pid is live" begin
     mktempdir() do d
         script = joinpath(d, "hold.jl")
@@ -424,7 +460,7 @@ end
             hosts = ["child:w1:1"],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
-        DistSSHQueue.ensure_kit_output_dir!(j)
+        DistSSHQueue._allocate_queue_leaf!(j)
         leaf = DistSSHQueue.kit_output_dir(j)
         @test leaf !== nothing
         fake_setup!(_, mode::Symbol) = mode === :instantiate ? (; ok = false) : (; ok = true)
@@ -458,7 +494,7 @@ end
             hosts = ["child:w1:1"],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
-        DistSSHQueue.ensure_kit_output_dir!(j)
+        DistSSHQueue._allocate_queue_leaf!(j)
         leaf = DistSSHQueue.kit_output_dir(j)
         @test leaf !== nothing
         fake_setup!(_, mode::Symbol) = mode === :rsync ? error("rsync failed") : (; ok = true)
@@ -487,7 +523,7 @@ end
             hosts = ["child:w1:1"],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
-        DistSSHQueue.ensure_kit_output_dir!(j)
+        DistSSHQueue._allocate_queue_leaf!(j)
         leaf = DistSSHQueue.kit_output_dir(j)
         @test leaf !== nothing
         rm(leaf; recursive = true)
@@ -590,7 +626,7 @@ end
     end
 end
 
-@testset "drive leaf is project/.distsshqueue/kind/stem_id8" begin
+@testset "drive without Queue output_dir leaves init_output_dir! to the script" begin
     mktempdir() do d
         sdir = joinpath(d, "with_kit")
         mkpath(sdir)
@@ -608,22 +644,15 @@ end
         @test step!(q) == 1
         _wait_state(q, id, :done)
         j = job(q, id)
-        p = DistSSHKit.canonical_local_path(something(j.result_path))
-        @test occursin(first(id, 8), basename(p))
-        @test basename(dirname(p)) == "drive"
-        @test basename(dirname(dirname(p))) == ".distsshqueue"
-        @test dirname(dirname(dirname(p))) == DistSSHKit.canonical_local_path(d)
-        @test !startswith(relpath(p, DistSSHKit.canonical_local_path(d)), "..")
-        DistSSHQueue.require_fetchable_leaf(id, p)
+        @test j.result_path === nothing
+        @test get(j.kwargs, "output_dir", nothing) === nothing
         mod = Module()
         Base.include(mod, script)
-        got = withenv("DISTRIBUTED_OUTPUT_DIR" => p) do
+        got = withenv("DISTRIBUTED_OUTPUT_DIR" => nothing) do
             @eval mod init_output_dir!(String[])
         end
-        @test DistSSHKit.canonical_local_path(got) == p
-        write(joinpath(p, "square_results.csv"), "param,result\n")
-        @test isfile(joinpath(p, "square_results.csv"))
-        @test !isdir(joinpath(sdir, "output"))
+        @test DistSSHKit.canonical_local_path(got) ==
+            DistSSHKit.canonical_local_path(joinpath(sdir, "output"))
     end
 end
 
