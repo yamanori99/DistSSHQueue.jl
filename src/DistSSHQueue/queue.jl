@@ -472,22 +472,26 @@ function _queue_kit_setup!(j::Job, on_phase; kit_setup! = DistSSHKit.setup!)
     isdir(String(proj)) || return nothing
     children = _kit_setup_child_tokens(j.hosts)
     session = isempty(children) ? nothing : _kit_setup_session(j, String(proj); workers=children)
-    if session !== nothing
+    if session === nothing
+        on_phase("instantiate")
+        _queue_local_instantiate!(String(proj))
+        return nothing
+    end
+    try
         on_phase("rsync")
         # Kit rsync refuses a nonempty remote. Later jobs still instantiate.
         kit_setup!(session, :rsync)
-    end
-    on_phase("instantiate")
-    _queue_local_instantiate!(String(proj))
-    if session !== nothing
+        on_phase("instantiate")
+        _queue_local_instantiate!(String(proj))
+        _require_kit_setup_ok!(kit_setup!(session, :instantiate), "instantiate")
+        on_phase("check")
+        _require_kit_setup_ok!(kit_setup!(session, :check), "check")
+    catch
         try
-            _require_kit_setup_ok!(kit_setup!(session, :instantiate), "instantiate")
-            on_phase("check")
-            _require_kit_setup_ok!(kit_setup!(session, :check), "check")
-        catch
             _copy_kit_setup_log!(String(proj), kit_output_dir(j))
-            rethrow()
+        catch
         end
+        rethrow()
     end
     return nothing
 end
