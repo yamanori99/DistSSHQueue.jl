@@ -479,6 +479,8 @@ function queue_command_help(verb::AbstractString)
     v == "list-host" && return (("  list-host",), (h,))
     v == "cancel" && return (("  cancel ID",), (h,))
     v == "fetch" && return (("  fetch ID",), (
+        ("--into PATH", "Dest directory (the leaf; may be outside the project)"),
+        ("--force", "Copy even if dest already has this or another job (does not delete dest-only files)"),
         ("--progress", "rsync `--info=progress2` on `qhost:` pull"),
         h,
     ))

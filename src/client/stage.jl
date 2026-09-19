@@ -245,7 +245,7 @@ function rsync_to_qhost!(
     return nothing
 end
 
-"""Pull one remote directory into `local_dest` (`--delete` stays inside that leaf)."""
+"""Pull one remote directory into `local_dest`. Additive: dest-only files stay."""
 function rsync_from_qhost!(
     host::AbstractString,
     remote_abs::AbstractString,
@@ -259,7 +259,7 @@ function rsync_from_qhost!(
     print_rsync_start(host, remote; pulling=true)
     flags = String["-az"]
     progress && push!(flags, "--info=progress2")
-    append!(flags, String["--delete", "-e", _ssh_transport()])
+    append!(flags, String["-e", _ssh_transport()])
     run(
         pipeline(
             Cmd(vcat(_rsync_bin(), flags, String[src, dest * "/"]));

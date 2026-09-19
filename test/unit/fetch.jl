@@ -63,14 +63,21 @@ end
         notify(hold)
         _wait_fetch_state(q2, running, :done)
         line = DistSSHQueue.fetch_source(running; store=store)
-        st, path = DistSSHQueue.parse_fetch_source(line)
+        st, path, src_id = DistSSHQueue.parse_fetch_source(line)
         @test st === :done
         @test path == leaf[]
+        @test src_id == running
         DistSSHQueue.require_fetchable_leaf(running, path)
         custom = joinpath(proj, "out")
         @test_throws ArgumentError DistSSHQueue.require_fetchable_leaf(running, custom)
         pref = first(running, 8)
         @test DistSSHQueue.fetch_source(pref; store=store) == line
+        st2, path2, old_id = DistSSHQueue.parse_fetch_source(
+            string(:done, '\t', path),
+        )
+        @test st2 === :done
+        @test path2 == path
+        @test old_id === nothing
         stray_store = joinpath(d, "stray.toml")
         stray_id = Ref{String}()
         q3 = Queue(; store=stray_store, runner=_ -> "/tmp/go/S_" * first(stray_id[], 8))
@@ -185,5 +192,55 @@ end
         ) == id
         @test DistSSHQueue.resolve_fetch_job_id(id; root=proj) == id
         @test DistSSHQueue.resolve_fetch_job_id(first(id, 8); root=proj) == first(id, 8)
+    end
+end
+
+@testset "fetch --into dest and marker skip/force" begin
+    id = "aaaaaaaa-1111-4000-8000-000000000001"
+    id2 = "bbbbbbbb-2222-4000-8000-000000000002"
+    src = "/qh/.distsshqueue/drive/demo_aaaaaaaa"
+    mktempdir() do d
+        dest = joinpath(d, "payoff456")
+        @test DistSSHQueue.check_fetch_dest(dest, id) === :copy
+        mkpath(dest)
+        @test DistSSHQueue.check_fetch_dest(dest, id) === :copy
+        DistSSHQueue.write_fetch_marker!(dest, id)
+        write(joinpath(dest, "out.tsv"), "1\n")
+        @test DistSSHQueue.check_fetch_dest(dest, id) === :skip
+        @test DistSSHQueue.check_fetch_dest(dest, first(id, 8)) === :skip
+        DistSSHQueue.write_fetch_marker!(dest, first(id, 8))
+        @test DistSSHQueue.check_fetch_dest(dest, id) === :skip
+        DistSSHQueue.write_fetch_marker!(dest, id)
+        @test DistSSHQueue.read_fetch_marker(dest) == id
+        as_file = joinpath(d, "not-a-dir")
+        write(as_file, "x\n")
+        @test_throws ArgumentError DistSSHQueue.check_fetch_dest(as_file, id)
+        @test_throws ArgumentError DistSSHQueue.check_fetch_dest(as_file, id; force=true)
+        DistSSHQueue.write_fetch_marker!(dest, id)
+        @test DistSSHQueue.check_fetch_dest(dest, id; force=true) === :copy
+        @test_throws ArgumentError DistSSHQueue.check_fetch_dest(dest, id2)
+        DistSSHQueue.write_fetch_marker!(dest, id2)
+        @test_throws ArgumentError DistSSHQueue.check_fetch_dest(dest, id)
+        other = joinpath(d, "occupied")
+        mkpath(other)
+        write(joinpath(other, "keep.txt"), "x\n")
+        @test_throws ArgumentError DistSSHQueue.check_fetch_dest(other, id)
+        @test DistSSHQueue.check_fetch_dest(other, id; force=true) === :copy
+        rest, into, force, progress = DistSSHQueue.peel_fetch_opts(
+            ["--into", dest, "--force", "--progress", id],
+        )
+        @test rest == [id]
+        @test into == dest
+        @test force
+        @test progress
+        withenv("DISTRIBUTED_PROJECT_ROOT" => d) do
+            rel = DistSSHQueue.resolve_into_path("data/payoff")
+            @test rel == DistSSHKit.canonical_local_path(joinpath(d, "data", "payoff"))
+            abs = DistSSHQueue.resolve_into_path(joinpath(d, "outside"))
+            @test abs == DistSSHKit.canonical_local_path(joinpath(d, "outside"))
+            got = DistSSHQueue.fetch_dest_target(id, src, "/qh/.distsshqueue"; into=joinpath(d, "outside"))
+            @test got == DistSSHKit.canonical_local_path(joinpath(d, "outside"))
+            @test !startswith(got, DistSSHKit.canonical_local_path(d) * "/.distsshqueue")
+        end
     end
 end

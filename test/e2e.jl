@@ -737,7 +737,21 @@ end
                         fetched = read_cli(addenv(qh(["fetch", id_f]), client_env...))
                         @test occursin(first(id_f, 8), fetched)
                         @test isfile(joinpath(fetched, "kit.result"))
+                        into_f = joinpath(JOB_PROJECT, "e2e_fetch_into")
+                        isdir(into_f) && rm(into_f; recursive=true)
+                        mkpath(into_f)
+                        write(joinpath(into_f, "old_result.csv"), "keep\n")
+                        fetched_into = read_cli(addenv(
+                            qh(["fetch", id_f, "--into", into_f, "--force"]),
+                            client_env...,
+                        ))
+                        @test fetched_into == DistSSHKit.canonical_local_path(into_f) ||
+                            occursin("e2e_fetch_into", fetched_into)
+                        @test isfile(joinpath(into_f, "old_result.csv"))
+                        @test isfile(joinpath(into_f, "kit.result"))
+                        @test read(joinpath(into_f, "old_result.csv"), String) == "keep\n"
                         rm(fetched; recursive=true, force=true)
+                        rm(into_f; recursive=true, force=true)
 
                         # Occupy serve on this box (`parent:1`); a worker
                         # `pi_echo` finishes before cancel. Submit the queued row
