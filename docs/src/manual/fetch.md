@@ -16,7 +16,8 @@ Also: [First job](@ref Tutorial-Client), [Walkthrough](@ref Tutorial-Walkthrough
 [status](@ref Manual-status).
 
 Run it from the same `cwd` / `DISTRIBUTED_PROJECT_ROOT` as `submit`.
-The dest is `{project}/.distsshqueue/{go|ride|drive}/{stem}_{id8}/`,
+The dest is `{project}/.distsshqueue/{go|ride|drive}/{stem}_{id8}/`
+(not the Kit `{project}/.distsshkit/{kind}/…` source),
 or `--into PATH` itself (that directory **is** the leaf; no extra
 `{stem}_{id8}` folder). `--into` may be outside the job project.
 One dest holds one job. stdout is that path, one line. Fetch copies
@@ -29,8 +30,8 @@ dest-only files. The marker stores the canonical job UUID (an 8-character
 prefix fetch still matches). `qhost:` fetch prints `rsync ← HOST:…`
 on stderr when the copy starts (`DISTSSHKIT_QUIET` hides it).
 
-On the queue host (omit `qhost:`), fetch prints the leaf path
-and does not copy. The leaf is under the job project (or still under
+On the queue host (omit `qhost:`), fetch prints the Kit source path
+and does not copy. That path is under the job project (or still under
 `dirname(store)` for an explicit `--output-dir` there). Failed and cancelled jobs with a leaf are
 fetchable. If Kit `setup!` failed before `execute!`, that leaf may
 contain `setup_failure.log` (copied from `{project}/.distsshkit/setup/`)
@@ -56,8 +57,7 @@ No `--output-dir`. Kit worker collect is not repeated.
 
 ## Refused
 
-`:queued`, `:running`, missing `result_path`, a path outside the
-queue store directory, a path that is not under `go` / `ride` /
-`drive`, and a leaf basename that does not contain the 8-character
-id (`submit --output-dir` unless that dir already follows this leaf
-name).
+`:queued`, `:running`, missing `result_path`, and a path outside the
+job project and the queue store directory. Kit `runs/` (sidecars) is
+not a fetch source. `submit --output-dir` under the project is
+fetchable; dest is still `{kind}/{stem}_{id8}` unless `--into`.

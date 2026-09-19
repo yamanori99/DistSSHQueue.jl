@@ -238,17 +238,12 @@ unit; skip that file if you only `serve` in a terminal.
     Project.toml
     Manifest.toml
   stage/<uuid>/         client tree after each qhost: submit
-  go/                   Kit leaf `{stem}_{id8}/`
-    SCRIPT_807e3753/
-      kit.pid
-      kit.result
-  ride/
-  drive/
 
 ~/org/Repo.jl/          example: logged in, no qhost: (cwd / DISTRIBUTED_PROJECT_ROOT)
   Project.toml          compute deps
   Manifest.toml
   SCRIPT.jl
+  .distsshkit/go/       Kit artifact
   .distsshqueue/go/     after fetch
     SCRIPT_807e3753/
 ```

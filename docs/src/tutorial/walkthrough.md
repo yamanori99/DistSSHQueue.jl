@@ -52,9 +52,9 @@ julia --project=. -m DistSSHQueue qhost:HOST fetch <id>  # 8-char prefix or full
 julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
-`fetch` copies the Kit leaf
-`{project}/.distsshqueue/go/<stem>_<id8>/` (on `HOST`, that project is
-the stage tree) onto the same layout on this job tree. Run it from the
+`fetch` copies the Kit leaf onto
+`{project}/.distsshqueue/go/<stem>_<id8>/` on this job tree (on `HOST`,
+Kit writes under the stage tree's `.distsshkit/`). Run it from the
 same directory as `submit`.
 
 ## Worker (`child:NAME`)

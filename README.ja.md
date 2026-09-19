@@ -160,14 +160,15 @@ worker へコピーする。`fetch` は終わった Kit leaf を戻す。
 ~/org/Repo.jl/          例: ログイン済み、qhost: なし (cwd / DISTRIBUTED_PROJECT_ROOT)
   Project.toml          計算の依存
   SCRIPT.jl
+  .distsshkit/runs/go/
+    SCRIPT_<UTC>_<id>/  run.toml, kit.pid
   .distsshkit/go/
-    SCRIPT_<UTC>_<id>/  result_path
-      kit.pid
+    SCRIPT_<UTC>[_<id>]/  result_path
       kit.result
   .distsshkit/ride/
-    SCRIPT_<UTC>_<id>/  同じ allocate
+    SCRIPT_<UTC>[_<id>]/  同じ allocate
   .distsshkit/drive/
-    SCRIPT_<UTC>_<id>/  同じ allocate。demo の output/ ではない
+    SCRIPT_<UTC>[_<id>]/  同じ allocate。demo の output/ ではない
 ```
 
 `enable` (任意。この端末の `serve` だけなら不要):

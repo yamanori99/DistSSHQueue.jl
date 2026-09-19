@@ -192,9 +192,13 @@ end
         @test step!(q) == 1
         j = job(q, id)
         @test j.state === :running
-        @test j.result_path !== nothing
-        @test isdir(j.result_path)
-        @test get(j.kwargs, "output_dir", nothing) == j.result_path
+        @test j.result_path === nothing
+        @test get(j.kwargs, "output_dir", nothing) === nothing
+        @test !cancel!(q, id)
+        run = joinpath(d, ".distsshkit", "runs", "go", "hold_x")
+        mkpath(run)
+        DistSSHQueue._set_running_kit_meta!(q, id; run_dir = run)
+        @test DistSSHQueue.kit_run_dir(job(q, id)) == run
         @test cancel!(q, id)
         @test job(q, id).state === :cancelled
         notify(ev)
@@ -210,6 +214,23 @@ end
         ev = Base.Event()
         q = Queue(; runner = _ -> wait(ev))
         id = submit!(q, script, "parent:1"; kind = :drive, project = d)
+        @test step!(q) == 1
+        j = job(q, id)
+        @test get(j.kwargs, "output_dir", nothing) === nothing
+        @test j.result_path === nothing
+        @test DistSSHQueue.kit_sidecar_dir(j) === nothing
+        notify(ev)
+        _wait_state(q, id, :done)
+    end
+end
+
+@testset "go without output_dir does not pin a Queue leaf" begin
+    mktempdir() do d
+        script = joinpath(d, "hold.jl")
+        write(script, "1\n")
+        ev = Base.Event()
+        q = Queue(; runner = _ -> wait(ev))
+        id = submit!(q, script, "parent:1"; project = d)
         @test step!(q) == 1
         j = job(q, id)
         @test get(j.kwargs, "output_dir", nothing) === nothing
@@ -248,15 +269,17 @@ end
         q = Queue(; store, runner = _ -> wait(ev))
         id = submit!(q, script, "parent:1"; project = d)
         @test step!(q) == 1
-        dir = job(q, id).result_path
-        @test dir !== nothing
-        write(joinpath(dir, "kit.pid"), string(getpid()))
+        @test job(q, id).result_path === nothing
+        run = joinpath(d, ".distsshkit", "runs", "go", "hold_x")
+        mkpath(run)
+        write(joinpath(run, "kit.pid"), string(getpid()))
+        DistSSHQueue._set_running_kit_meta!(q, id; run_dir = run)
         q2 = Queue(; store, runner = _ -> error("must not re-run"))
         load!(q2)
         loaded = job(q2, id)
         @test loaded.state === :running
         @test DistSSHQueue.kit_child_alive(loaded)
-        @test loaded.result_path == dir
+        @test DistSSHQueue.kit_run_dir(loaded) == run
         notify(ev)
         _wait_state(q, id, :done)
     end

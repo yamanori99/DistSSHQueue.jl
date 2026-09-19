@@ -207,13 +207,27 @@ function kit_result_path(result)::Union{Nothing, String}
     return isempty(s) ? nothing : s
 end
 
+function kit_artifact_from_run_dir(rd::Union{Nothing, AbstractString})::Union{Nothing, String}
+    rd === nothing && return nothing
+    srd = strip(String(rd))
+    isempty(srd) && return nothing
+    raw = DistSSHKit.read_kit_run_toml(srd)
+    raw === nothing && return nothing
+    od = get(raw, "output_dir", nothing)
+    od isa AbstractString || return nothing
+    s = strip(od)
+    return isempty(s) ? nothing : s
+end
+
 function kit_result_path(j::Job, result)::Union{Nothing, String}
     p = kit_result_path(result)
     p !== nothing && return p
     od = get(j.kwargs, "output_dir", nothing)
-    od === nothing && return nothing
-    s = strip(String(od))
-    return isempty(s) ? nothing : s
+    if od isa AbstractString
+        s = strip(String(od))
+        !isempty(s) && return s
+    end
+    return kit_artifact_from_run_dir(kit_run_dir(j))
 end
 
 """Throw with the richest detail the result carries (`KitRunResult`: `failed_step`
@@ -276,20 +290,11 @@ function kit_sidecar_dir(j::Job)::Union{Nothing, String}
     return kit_output_dir(j)
 end
 
-"""Set Kit `output_dir` before spawn so `:running` cancel and restart adopt need no submitter path.
+"""Queue dest leaf for `fetch` when Kit never created an artifact dir (setup fail).
 
-Skipped for `:drive` with no submit `output_dir` so `init_output_dir!` can
-choose the artifact leaf (DistSSHKit 0.8). `go` / `ride` still get a
-default leaf `{project}/.distsshqueue/{kind}/{stem}_{id8}/` (same layout as
-`fetch` dest). Kit remote slots use `relpath(output, project)`, so a leaf
-next to `jobs.toml` (outside the job tree) makes `child:` `go` exit 1.
-No-op if the bag already has `output_dir`.
+Does not pin `output_dir` on a normal start. DistSSHKit 0.8 owns
+`.distsshkit/{kind}/…` / `init_output_dir!`.
 """
-function ensure_kit_output_dir!(j::Job; store::Union{Nothing, AbstractString} = nothing)
-    j.kind === :drive && kit_output_dir(j) === nothing && return nothing
-    return _allocate_queue_leaf!(j; store = store)
-end
-
 function _allocate_queue_leaf!(j::Job; store::Union{Nothing, AbstractString} = nothing)
     kit_output_dir(j) !== nothing && return nothing
     isfile(j.script) || return nothing
@@ -786,7 +791,6 @@ function _start!(q::Queue, j::Job)
     j.state = :running
     j.started_at = now(UTC)
     q.live_id = j.id
-    ensure_kit_output_dir!(j; store = q.store)
     _persist!(q)
     runner = q.runner
     id = j.id

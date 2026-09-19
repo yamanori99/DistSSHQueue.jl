@@ -164,8 +164,23 @@ end
                     id = strip(read(addenv(qcli(["submit", "go", "parent:1", "hold.jl"]), env...), String))
                     @test !isempty(id)
                     row = wait_job(env, id, (:running,))
-                    @test row.result_path !== nothing
-                    wait_kit_pid(joinpath(row.result_path, "kit.pid"))
+                    sidecar = nothing
+                    for _ in 1:300
+                        rd = get(row.kwargs, "run_dir", nothing)
+                        if rd isa AbstractString && isfile(joinpath(rd, "kit.pid"))
+                            sidecar = rd
+                            break
+                        end
+                        rp = row.result_path
+                        if rp isa AbstractString && isfile(joinpath(rp, "kit.pid"))
+                            sidecar = rp
+                            break
+                        end
+                        sleep(0.1)
+                        row = wait_job(env, id, (:running,))
+                    end
+                    sidecar === nothing && error("timeout waiting for kit.pid")
+                    wait_kit_pid(joinpath(sidecar, "kit.pid"))
                     @test row.state === :running
                     c = strip(read(addenv(qcli(["cancel", id]), env...), String))
                     @test c == id

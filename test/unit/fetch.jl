@@ -30,6 +30,15 @@ end
     @test_throws ArgumentError DistSSHQueue.require_fetchable_leaf(
         "807e3753-0000-4000-8000-000000000001", stray,
     )
+    kit_go = "/job/.distsshkit/go/S_20260101T000000Z"
+    @test DistSSHQueue.path_has_kit_artifact_leaf(kit_go)
+    @test !DistSSHQueue.path_has_queue_leaf(kit_go)
+    DistSSHQueue.require_fetchable_leaf("807e3753-0000-4000-8000-000000000001", kit_go)
+    runs = "/job/.distsshkit/runs/go/S_20260101T000000Z"
+    @test !DistSSHQueue.path_has_kit_artifact_leaf(runs)
+    @test_throws ArgumentError DistSSHQueue.require_fetchable_leaf(
+        "807e3753-0000-4000-8000-000000000001", runs,
+    )
 end
 
 @testset "fetch_source exact id and states" begin
@@ -65,21 +74,23 @@ end
         notify(hold)
         _wait_fetch_state(q2, running, :done)
         line = DistSSHQueue.fetch_source(running; store = store)
-        st, path, src_id = DistSSHQueue.parse_fetch_source(line)
+        st, path, src_id, dest_rel = DistSSHQueue.parse_fetch_source(line)
         @test st === :done
         @test path == leaf[]
         @test src_id == running
+        @test dest_rel == "go/S_" * first(running, 8)
         DistSSHQueue.require_fetchable_leaf(running, path)
         custom = joinpath(proj, "out")
         @test_throws ArgumentError DistSSHQueue.require_fetchable_leaf(running, custom)
         pref = first(running, 8)
         @test DistSSHQueue.fetch_source(pref; store = store) == line
-        st2, path2, old_id = DistSSHQueue.parse_fetch_source(
+        st2, path2, old_id, dest2 = DistSSHQueue.parse_fetch_source(
             string(:done, '\t', path),
         )
         @test st2 === :done
         @test path2 == path
         @test old_id === nothing
+        @test dest2 === nothing
         stray_store = joinpath(d, "stray.toml")
         stray_id = Ref{String}()
         q3 = Queue(; store = stray_store, runner = _ -> "/tmp/go/S_" * first(stray_id[], 8))
