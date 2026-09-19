@@ -436,6 +436,11 @@ end
         copied = joinpath(leaf, "setup_failure.log")
         @test isfile(copied)
         @test occursin("instantiate failed", read(copied, String))
+        # A newer `.log` directory must not win over the file.
+        mkpath(joinpath(logdir, "setup_dir.log"))
+        rm(copied)
+        DistSSHQueue._copy_kit_setup_log!(String(d), leaf)
+        @test occursin("instantiate failed", read(copied, String))
     end
 end
 

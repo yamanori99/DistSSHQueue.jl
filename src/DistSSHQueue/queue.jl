@@ -457,7 +457,7 @@ function _copy_kit_setup_log!(proj::AbstractString, output_dir::Union{Nothing,Ab
     isempty(strip(dest)) && return nothing
     logdir = joinpath(String(proj), ".distsshkit", "setup")
     isdir(logdir) || return nothing
-    logs = filter(f -> endswith(lowercase(f), ".log"), readdir(logdir; join=true))
+    logs = filter(f -> isfile(f) && endswith(lowercase(f), ".log"), readdir(logdir; join=true))
     isempty(logs) && return nothing
     newest = logs[argmax(mtime.(logs))]
     mkpath(dest)
