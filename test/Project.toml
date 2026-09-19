@@ -11,10 +11,3 @@ DistSSHQueue = {path = ".."}
 Dates = "1"
 DistSSHKit = "0.7.3"
 Test = "1"
-
-[sources]
-DistSSHQueue = {path = ".."}
-
-[compat]
-DistSSHKit = "0.7.3"
-Test = "1"
