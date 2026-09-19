@@ -18,7 +18,9 @@ Next patch after `0.5.1`. DistSSHKit **0.7.x** (≥0.7.3). Not a cut yet.
 - `fetch --into PATH` lands the Kit leaf in that directory (the path
   *is* the dest; it may be outside the job project). Same-id re-fetch
   skips unless `--force`. A non-empty dest without this job's
-  `.distsshqueue-fetch-id` is refused
+  `.distsshqueue-fetch-id` is refused. The copy is additive (no
+  `rsync --delete`); dest-only files stay. The marker is the
+  canonical job UUID
   ([#246](https://github.com/yamanori99/DistSSHQueue.jl/issues/246),
   [#248](https://github.com/yamanori99/DistSSHQueue.jl/issues/248)).
 - `status` / `watch` print submit time (`queued`, local `YYYY-mm-dd HH:MM`

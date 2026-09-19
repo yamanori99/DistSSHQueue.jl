@@ -85,7 +85,7 @@ function require_fetchable_leaf(id::AbstractString, result_path::AbstractString)
     return nothing
 end
 
-"""One machine line: `state<TAB>abs-path`. Used by `hop_print`, not `main`."""
+"""One machine line: `state<TAB>abs-path<TAB>canonical-uuid`. Used by `hop_print`, not `main`."""
 function fetch_source(id::AbstractString; store::AbstractString=store_path())::String
     q = Queue(; store=store)
     load!(q)
@@ -101,17 +101,25 @@ function fetch_source(id::AbstractString; store::AbstractString=store_path())::S
     ))
     require_fetchable_leaf(id, p)
     require_fetch_in_known_root(j, p, store)
-    return string(j.state, FETCH_SOURCE_SEP, p)
+    return string(j.state, FETCH_SOURCE_SEP, p, FETCH_SOURCE_SEP, j.id)
 end
 
+"""`state`, abs-path, and optional canonical UUID (old hosts omit the third field)."""
 function parse_fetch_source(line::AbstractString)
     s = String(line)
     i = findfirst(==(FETCH_SOURCE_SEP), s)
     i === nothing && throw(ArgumentError("fetch: bad source line"))
+    j = findlast(==(FETCH_SOURCE_SEP), s)
     st = Symbol(s[1:prevind(s, i)])
-    path = s[nextind(s, i):end]
-    isempty(path) && throw(ArgumentError("fetch: bad source line"))
-    return st, path
+    if j === nothing || i == j
+        path = s[nextind(s, i):end]
+        isempty(path) && throw(ArgumentError("fetch: bad source line"))
+        return st, path, nothing
+    end
+    path = s[nextind(s, i):prevind(s, j)]
+    id = s[nextind(s, j):end]
+    (isempty(path) || isempty(id)) && throw(ArgumentError("fetch: bad source line"))
+    return st, path, id
 end
 
 """Client-only marker after `qhost:` submit. Not a Kit leaf (`go/` / `drive/`)."""
@@ -213,6 +221,8 @@ function local_fetch_dest(
     return fetch_dest(job_project(), kind, leaf)
 end
 
+# One dest, one job. Do not append more ids here. Multi-job accumulation
+# uses a stamp dir such as `.distsshqueue-fetch-id.d/<uuid>`, not this file.
 const FETCH_MARKER = ".distsshqueue-fetch-id"
 
 function fetch_marker_path(dest::AbstractString)::String
@@ -223,6 +233,15 @@ function write_fetch_marker!(dest::AbstractString, id::AbstractString)
     mkpath(String(dest))
     write(fetch_marker_path(dest), String(id) * "\n")
     return nothing
+end
+
+"""True when `marked` and `id` name the same job (full UUID, or one 8-char prefix)."""
+function same_fetch_job(marked::AbstractString, id::AbstractString)::Bool
+    a = String(marked)
+    b = String(id)
+    a == b && return true
+    (length(a) == 8 || length(b) == 8) || return false
+    return _job_id8(a) == _job_id8(b)
 end
 
 function read_fetch_marker(dest::AbstractString)::Union{Nothing,String}
@@ -259,12 +278,12 @@ function check_fetch_dest(
     id::AbstractString;
     force::Bool=false,
 )::Symbol
+    ispath(dest) && !isdir(dest) && throw(ArgumentError("fetch: dest exists and is not a directory"))
     force && return :copy
     ispath(dest) || return :copy
-    isdir(dest) || throw(ArgumentError("fetch: dest exists and is not a directory"))
     isempty(readdir(dest; join=false)) && return :copy
     marked = read_fetch_marker(dest)
-    marked == String(id) && return :skip
+    marked !== nothing && same_fetch_job(marked, id) && return :skip
     if marked === nothing
         throw(ArgumentError("fetch: dest is not empty (pass --force to replace)"))
     end
@@ -322,7 +341,7 @@ function fetch_cli(
         "fetch: job id needs 8 characters (status prefix) or the full UUID",
     ))
     if hop === nothing
-        st, path = parse_fetch_source(fetch_source(id))
+        st, path, _ = parse_fetch_source(fetch_source(id))
         st in FETCH_READY || throw(ArgumentError("job $(repr(id)) is $(st)"))
         println(path)
         return 0
@@ -331,17 +350,19 @@ function fetch_cli(
         "qhost fetch needs rsync (unset DISTSSHQUEUE_NO_STAGE / DISTSSHKIT_TEST_SSH)",
     ))
     expr = "using DistSSHQueue; print(DistSSHQueue.fetch_source($(repr(id))))"
-    st, path = parse_fetch_source(hop_print(hop, spec, expr; queue_env=qe))
+    st, path, parsed_id = parse_fetch_source(hop_print(hop, spec, expr; queue_env=qe))
     st in FETCH_READY || throw(ArgumentError("job $(repr(id)) is $(st)"))
+    job_id = something(parsed_id, id)
     qroot = dirname(dirname(posix_dir(path)))
-    out = fetch_dest_target(id, path, qroot; into=into)
-    if check_fetch_dest(out, id; force=force) === :skip
+    out = fetch_dest_target(job_id, path, qroot; into=into)
+    if check_fetch_dest(out, job_id; force=force) === :skip
+        write_fetch_marker!(out, job_id)
         !_queue_env_on("DISTSSHKIT_QUIET") && println(stderr, "already fetched (use --force to replace)")
         println(out)
         return 0
     end
     rsync_from_qhost!(hop, path, out; progress=progress)
-    write_fetch_marker!(out, id)
+    write_fetch_marker!(out, job_id)
     println(out)
     return 0
 end

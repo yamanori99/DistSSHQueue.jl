@@ -63,14 +63,21 @@ end
         notify(hold)
         _wait_fetch_state(q2, running, :done)
         line = DistSSHQueue.fetch_source(running; store=store)
-        st, path = DistSSHQueue.parse_fetch_source(line)
+        st, path, src_id = DistSSHQueue.parse_fetch_source(line)
         @test st === :done
         @test path == leaf[]
+        @test src_id == running
         DistSSHQueue.require_fetchable_leaf(running, path)
         custom = joinpath(proj, "out")
         @test_throws ArgumentError DistSSHQueue.require_fetchable_leaf(running, custom)
         pref = first(running, 8)
         @test DistSSHQueue.fetch_source(pref; store=store) == line
+        st2, path2, old_id = DistSSHQueue.parse_fetch_source(
+            string(:done, '\t', path),
+        )
+        @test st2 === :done
+        @test path2 == path
+        @test old_id === nothing
         stray_store = joinpath(d, "stray.toml")
         stray_id = Ref{String}()
         q3 = Queue(; store=stray_store, runner=_ -> "/tmp/go/S_" * first(stray_id[], 8))
@@ -200,6 +207,16 @@ end
         DistSSHQueue.write_fetch_marker!(dest, id)
         write(joinpath(dest, "out.tsv"), "1\n")
         @test DistSSHQueue.check_fetch_dest(dest, id) === :skip
+        @test DistSSHQueue.check_fetch_dest(dest, first(id, 8)) === :skip
+        DistSSHQueue.write_fetch_marker!(dest, first(id, 8))
+        @test DistSSHQueue.check_fetch_dest(dest, id) === :skip
+        DistSSHQueue.write_fetch_marker!(dest, id)
+        @test DistSSHQueue.read_fetch_marker(dest) == id
+        as_file = joinpath(d, "not-a-dir")
+        write(as_file, "x\n")
+        @test_throws ArgumentError DistSSHQueue.check_fetch_dest(as_file, id)
+        @test_throws ArgumentError DistSSHQueue.check_fetch_dest(as_file, id; force=true)
+        DistSSHQueue.write_fetch_marker!(dest, id)
         @test DistSSHQueue.check_fetch_dest(dest, id; force=true) === :copy
         @test_throws ArgumentError DistSSHQueue.check_fetch_dest(dest, id2)
         DistSSHQueue.write_fetch_marker!(dest, id2)
