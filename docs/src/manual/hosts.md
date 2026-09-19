@@ -28,7 +28,11 @@ Write Kit tokens into config `hosts`
 host, not an SSH Host named parent. `child:NAME` is SSH `Host NAME`.
 `add-host child:` prints a warning: anyone who can `submit` as this
 queue-host user (including `qhost:`) can use those names via DistSSHKit
-(`DISTSSHKIT_QUIET` hides it). See [Requirements](@ref) (one trust
+(`DISTSSHKIT_QUIET` hides it). A second line: those hosts need outbound
+internet for Kit `instantiate` unless the Julia depot already has the
+registry and packages. SSH/rsync success is not enough if instantiate
+still has to fetch. A nonempty `~/.julia` is not that test. See
+[Requirements](@ref) (one trust
 domain). Optional `:N` is a per-name max.
 
 | | |
@@ -48,8 +52,9 @@ JULIA on the first line, then indented `ssh -G` fields (`host` /
 `hostname` / `user` / `port`). NAME for `parent` is this queue host's
 hostname; TOKEN stays `parent` (copy-paste for `submit`, including
 `parent:N`). Children: NAME is the SSH Host, TOKEN is `child:NAME`.
-JULIA is that host's `juliaup default` (`juliaup status` `*` row); `-`
-if juliaup is missing, SSH or `status` fails, or there is no `*` row.
+JULIA is that host's `juliaup default` patch (`1.12.7` from the `*`
+Version column); `-` if juliaup is missing, SSH or `status` fails, or
+there is no Version on the `*` row.
 `ssh -G` runs on the queue host. No private keys or IdentityFile.
 Locally, parent `ssh` is `this machine`. Via `qhost:`, it is
 `queue host` — NAME is still the queue host's hostname, not the client's.

@@ -1,4 +1,5 @@
 using Test
+using Dates
 using DistSSHKit
 using DistSSHQueue
 
@@ -1056,7 +1057,9 @@ end
                 end
                 @test code_ok == 0
                 @test occursin(r"Queued\s+1\b", err_ok)
+                @test occursin("(no running)", err_ok)
                 @test occursin("queue: local", err_ok)
+                @test !occursin("qhost: local", err_ok)
                 @test !occursin("no add-host list", err_ok)
                 @test !occursin("Queued", out_ok)
                 id1 = strip(out_ok)
@@ -1066,8 +1069,9 @@ end
                         DistSSHQueue.main(["submit", "go", "parent:1", "job.jl"])
                     end
                     @test code_h == 0
-                    @test occursin("queue: qhost:mini-tak-ts", err_h)
+                    @test occursin("qhost: local", err_h)
                     @test !occursin("queue: local", err_h)
+                    @test !occursin("queue: qhost:", err_h)
                 end
                 code2, out2, err2 = capture_stdio() do
                     DistSSHQueue.main(["submit", "go", "parent:1", "job.jl"])
@@ -1193,6 +1197,11 @@ end
 end
 
 @testset "CLI list-host lists names and ssh -G fields" begin
+    @test DistSSHQueue._juliaup_patch_from_status("     *  1.13     1.13.2+0.aarch64.apple.darwin14") ==
+          "1.13.2"
+    @test DistSSHQueue._juliaup_patch_from_status("* 1.13") == "-"
+    @test DistSSHQueue._juliaup_patch_from_status("* release  1.11.6+0.x86_64") == "1.11.6"
+    @test DistSSHQueue._juliaup_patch_from_status("") == "-"
     mktempdir() do d
         cfg = joinpath(d, "config.toml")
         fake = joinpath(d, "fakebin")
@@ -1211,7 +1220,7 @@ for a in "\$@"; do
     exit 0
   fi
 done
-printf '%s\\n' "* 1.13"
+printf '%s\\n' "* 1.13   1.13.2+0.x86_64-linux-gnu"
 exit 0
 """,
         )
@@ -1222,7 +1231,7 @@ exit 0
             """
 #!/bin/sh
 [ "\$1" = "status" ] || exit 1
-printf '%s\\n' "* 1.12"
+printf '%s\\n' "* 1.12   1.12.7+0.x86_64-linux-gnu"
 exit 0
 """,
         )
@@ -1258,8 +1267,9 @@ exit 0
             @test occursin("MAX", out)
             @test occursin("JULIA", out)
             @test !occursin("JULIAUP", out)
-            @test occursin("1.12", out)
-            @test occursin("1.13", out)
+            @test occursin("1.12.7", out)
+            @test occursin("1.13.2", out)
+            @test !occursin("1.12.7+", out)
         end
         write(cfg, "hosts = [\"parent\", \"child:host1\"]\n")
         withenv(
@@ -1314,6 +1324,9 @@ exit 0
             @test occursin("Warning:", out)
             @test occursin("reachable via DistSSHKit", out)
             @test occursin("including qhost:", out)
+            @test occursin("outbound internet", out)
+            @test occursin("unless the depot", out)
+            @test occursin("instantiate", out)
             @test DistSSHQueue.config_host_names(DistSSHQueue.load_config()) ==
                   DistSSHQueue.HostAllow("parent" => nothing, "host1" => nothing)
             withenv("DISTSSHKIT_QUIET" => "1") do
@@ -1732,6 +1745,62 @@ end
         @test occursin(joinpath("demos", "pi_echo.jl"), listed) || occursin("demos/pi_echo.jl", listed)
         @test !occursin(stage * "/", listed)
         @test occursin(DistSSHKit.short_path(stage), listed)
+    end
+end
+
+@testset "status cards show queued time, wall, and folded hosts" begin
+    qat = DateTime(2026, 9, 10, 4, 20)
+    done = DistSSHQueue.Job(;
+        id="bbbbbbbb-1111-4000-8000-000000000001",
+        kind=:drive,
+        script="d.jl",
+        hosts=["parent:5", "child:mini-alpha:8", "child:mini-beta:8", "child:mini-gamma:8"],
+        state=:done,
+        queued_at=qat,
+        started_at=qat,
+        finished_at=qat + Hour(1) + Minute(4),
+    )
+    run = DistSSHQueue.Job(;
+        id="bbbbbbbb-2222-4000-8000-000000000002",
+        kind=:go,
+        script="g.jl",
+        hosts=["parent:1"],
+        state=:running,
+        queued_at=qat,
+        started_at=now(UTC) - Minute(12) - Second(30),
+    )
+    listed = sprint(io -> DistSSHQueue.print_jobs_table([done, run]; io=io))
+    @test occursin("queued", listed)
+    local_q = DistSSHQueue._job_queued_disp(done)
+    @test occursin(local_q, listed)
+    @test occursin("wall", listed)
+    @test occursin("1h04m", listed)
+    @test occursin("elapsed", listed)
+    @test DistSSHQueue._human_span(qat, qat + Minute(12)) == "12m"
+    @test occursin("parent:5  child:mini-alpha:8  +2", listed)
+    @test !occursin("child:mini-gamma:8", listed)
+    full = sprint(io -> DistSSHQueue.print_jobs_table([done]; io=io, verbose=true))
+    @test occursin("child:mini-gamma:8", full)
+    quiet = sprint(io -> DistSSHQueue.print_jobs_table([done]; io=io, quiet=true))
+    @test !occursin("queued", quiet)
+    @test !occursin("hosts", quiet)
+    if !Sys.iswindows()
+        winter = DateTime(2026, 1, 15, 12, 0)
+        summer = DateTime(2026, 7, 15, 12, 0)
+        old_tz = get(ENV, "TZ", nothing)
+        try
+            ENV["TZ"] = "America/New_York"
+            ccall(:tzset, Cvoid, ())
+            @test DistSSHQueue._utc_to_local(winter) == DateTime(2026, 1, 15, 7, 0)
+            @test DistSSHQueue._utc_to_local(summer) == DateTime(2026, 7, 15, 8, 0)
+        finally
+            if old_tz === nothing
+                delete!(ENV, "TZ")
+            else
+                ENV["TZ"] = old_tz
+            end
+            ccall(:tzset, Cvoid, ())
+        end
     end
 end
 
