@@ -244,8 +244,6 @@ unit; skip that file if you only `serve` in a terminal.
   Manifest.toml
   SCRIPT.jl
   .distsshkit/go/       Kit artifact
-  .distsshqueue/go/     after fetch
-    SCRIPT_807e3753/
 ```
 
 `enable` unit (same `julia --project=<queue-env> -m DistSSHQueue serve`):
@@ -260,7 +258,7 @@ and Kit dirs do not change.
 
 No Queue table. Kit default `~/parent/Repo.jl` from that clone (do not
 pin `DISTRIBUTED_REMOTE_PROJECT_ROOT` in shared queue config). Collect
-lands on the queue host `{project}/.distsshqueue/{kind}/` dir above.
+lands on the queue host `{project}/.distsshkit/{kind}/` dir above.
 
 ```text
 <remote project root>/

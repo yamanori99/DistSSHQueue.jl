@@ -201,9 +201,32 @@ end
         @test DistSSHQueue.kit_run_dir(job(q, id)) == run
         @test cancel!(q, id)
         @test job(q, id).state === :cancelled
+        @test job(q, id).result_path === nothing
         notify(ev)
         sleep(0.05)
         @test job(q, id).state === :cancelled
+    end
+end
+
+@testset "cancel running records run.toml output_dir not runs/" begin
+    mktempdir() do d
+        script = joinpath(d, "hold.jl")
+        write(script, "1\n")
+        ev = Base.Event()
+        q = Queue(; runner = _ -> wait(ev))
+        id = submit!(q, script, "parent:1"; project = d)
+        @test step!(q) == 1
+        run = joinpath(d, ".distsshkit", "runs", "go", "hold_x")
+        art = joinpath(d, ".distsshkit", "go", "hold_leaf")
+        mkpath(run)
+        mkpath(art)
+        write(joinpath(run, "run.toml"), "output_dir = $(repr(art))\n")
+        DistSSHQueue._set_running_kit_meta!(q, id; run_dir = run)
+        @test DistSSHQueue.kit_artifact_from_sidecar(run) == art
+        @test cancel!(q, id)
+        @test job(q, id).result_path == art
+        notify(ev)
+        sleep(0.05)
     end
 end
 
