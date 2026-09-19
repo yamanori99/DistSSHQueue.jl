@@ -239,18 +239,21 @@ function local_fetch_dest(
     return fetch_dest(job_project(), kind, leaf)
 end
 
-# One dest, one job. Do not append more ids here. Multi-job accumulation
-# uses a stamp dir such as `.distsshqueue-fetch-id.d/<uuid>`, not this file.
+# Stamp dir: one empty file per job. Do not append ids to FETCH_MARKER
+# (legacy single-file marker from #256; still read, then migrated).
 const FETCH_MARKER = ".distsshqueue-fetch-id"
+const FETCH_STAMP_DIR = ".distsshqueue-fetch-id.d"
 
 function fetch_marker_path(dest::AbstractString)::String
     return joinpath(String(dest), FETCH_MARKER)
 end
 
-function write_fetch_marker!(dest::AbstractString, id::AbstractString)
-    mkpath(String(dest))
-    write(fetch_marker_path(dest), String(id) * "\n")
-    return nothing
+function fetch_stamp_dir(dest::AbstractString)::String
+    return joinpath(String(dest), FETCH_STAMP_DIR)
+end
+
+function fetch_stamp_path(dest::AbstractString, id::AbstractString)::String
+    return joinpath(fetch_stamp_dir(dest), String(id))
 end
 
 """True when `marked` and `id` name the same job (full UUID, or one 8-char prefix)."""
@@ -267,6 +270,36 @@ function read_fetch_marker(dest::AbstractString)::Union{Nothing, String}
     isfile(p) || return nothing
     s = strip(read(p, String))
     return isempty(s) ? nothing : String(s)
+end
+
+function fetch_stamp_ids(dest::AbstractString)::Vector{String}
+    ids = String[]
+    legacy = read_fetch_marker(dest)
+    legacy !== nothing && push!(ids, legacy)
+    d = fetch_stamp_dir(dest)
+    isdir(d) || return ids
+    for name in readdir(d; join = false)
+        (isempty(name) || startswith(name, '.')) && continue
+        isfile(joinpath(d, name)) || continue
+        push!(ids, String(name))
+    end
+    return ids
+end
+
+function dest_has_this_job(dest::AbstractString, id::AbstractString)::Bool
+    return any(s -> same_fetch_job(s, id), fetch_stamp_ids(dest))
+end
+
+function write_fetch_marker!(dest::AbstractString, id::AbstractString)
+    mkpath(String(dest))
+    mkpath(fetch_stamp_dir(dest))
+    legacy = read_fetch_marker(dest)
+    if legacy !== nothing
+        write(fetch_stamp_path(dest, legacy), "")
+        rm(fetch_marker_path(dest); force = true)
+    end
+    write(fetch_stamp_path(dest, id), "")
+    return nothing
 end
 
 function resolve_into_path(into::AbstractString)::String
@@ -290,7 +323,7 @@ function fetch_dest_target(
     return resolve_into_path(into)
 end
 
-"""`:copy` or `:skip`. Non-empty dest without this job's marker needs `--force`."""
+"""`:copy` or `:skip`. Non-empty dest with no stamp yet needs `--force`."""
 function check_fetch_dest(
         dest::AbstractString,
         id::AbstractString;
@@ -300,16 +333,11 @@ function check_fetch_dest(
     force && return :copy
     ispath(dest) || return :copy
     isempty(readdir(dest; join = false)) && return :copy
-    marked = read_fetch_marker(dest)
-    marked !== nothing && same_fetch_job(marked, id) && return :skip
-    if marked === nothing
-        throw(ArgumentError("fetch: dest is not empty (pass --force to replace)"))
-    end
-    throw(
-        ArgumentError(
-            "fetch: dest already has job $(first(marked, 8)) (pass --force to replace)",
-        )
+    dest_has_this_job(dest, id) && return :skip
+    isempty(fetch_stamp_ids(dest)) && throw(
+        ArgumentError("fetch: dest is not empty (pass --force to replace)"),
     )
+    return :copy
 end
 
 function peel_fetch_opts(payload::Vector{String})

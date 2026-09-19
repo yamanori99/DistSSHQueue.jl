@@ -215,21 +215,35 @@ end
         DistSSHQueue.write_fetch_marker!(dest, first(id, 8))
         @test DistSSHQueue.check_fetch_dest(dest, id) === :skip
         DistSSHQueue.write_fetch_marker!(dest, id)
-        @test DistSSHQueue.read_fetch_marker(dest) == id
+        @test id in DistSSHQueue.fetch_stamp_ids(dest)
+        @test DistSSHQueue.read_fetch_marker(dest) === nothing
         as_file = joinpath(d, "not-a-dir")
         write(as_file, "x\n")
         @test_throws ArgumentError DistSSHQueue.check_fetch_dest(as_file, id)
         @test_throws ArgumentError DistSSHQueue.check_fetch_dest(as_file, id; force = true)
         DistSSHQueue.write_fetch_marker!(dest, id)
         @test DistSSHQueue.check_fetch_dest(dest, id; force = true) === :copy
-        @test_throws ArgumentError DistSSHQueue.check_fetch_dest(dest, id2)
+        @test DistSSHQueue.check_fetch_dest(dest, id2) === :copy
         DistSSHQueue.write_fetch_marker!(dest, id2)
-        @test_throws ArgumentError DistSSHQueue.check_fetch_dest(dest, id)
+        @test DistSSHQueue.check_fetch_dest(dest, id) === :skip
+        @test DistSSHQueue.check_fetch_dest(dest, id2) === :skip
         other = joinpath(d, "occupied")
         mkpath(other)
         write(joinpath(other, "keep.txt"), "x\n")
         @test_throws ArgumentError DistSSHQueue.check_fetch_dest(other, id)
         @test DistSSHQueue.check_fetch_dest(other, id; force = true) === :copy
+        DistSSHQueue.write_fetch_marker!(other, id)
+        @test DistSSHQueue.check_fetch_dest(other, id2) === :copy
+        legacy = joinpath(d, "legacy")
+        mkpath(legacy)
+        write(joinpath(legacy, "keep.txt"), "x\n")
+        write(joinpath(legacy, DistSSHQueue.FETCH_MARKER), id * "\n")
+        @test DistSSHQueue.check_fetch_dest(legacy, id) === :skip
+        @test DistSSHQueue.check_fetch_dest(legacy, id2) === :copy
+        DistSSHQueue.write_fetch_marker!(legacy, id2)
+        @test DistSSHQueue.read_fetch_marker(legacy) === nothing
+        @test id in DistSSHQueue.fetch_stamp_ids(legacy)
+        @test id2 in DistSSHQueue.fetch_stamp_ids(legacy)
         rest, into, force, progress = DistSSHQueue.peel_fetch_opts(
             ["--into", dest, "--force", "--progress", id],
         )

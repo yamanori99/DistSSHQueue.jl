@@ -21,12 +21,14 @@ Next patch after `0.5.1`. DistSSHKit **0.7.x** (≥0.7.3). Not a cut yet.
   `--ignore-julia-version`.
 - `fetch --into PATH` lands the Kit leaf in that directory (the path
   *is* the dest; it may be outside the job project). Same-id re-fetch
-  skips unless `--force`. A non-empty dest without this job's
-  `.distsshqueue-fetch-id` is refused. The copy is additive (no
-  `rsync --delete`); dest-only files stay. The marker is the
-  canonical job UUID
+  skips unless `--force`. A non-empty dest with no stamp yet is
+  refused; `--force` adopts it, then later jobs copy without
+  `--force`. Stamps are `.distsshqueue-fetch-id.d/<uuid>`. The copy is
+  additive (no `rsync --delete`); dest-only files stay. Same basename
+  from two jobs overwrites
   ([#246](https://github.com/yamanori99/DistSSHQueue.jl/issues/246),
-  [#248](https://github.com/yamanori99/DistSSHQueue.jl/issues/248)).
+  [#248](https://github.com/yamanori99/DistSSHQueue.jl/issues/248),
+  [#259](https://github.com/yamanori99/DistSSHQueue.jl/issues/259)).
 - If Kit `setup!` fails, `serve` copies the newest
   `{project}/.distsshkit/setup/*.log` onto the job leaf as
   `setup_failure.log` so `fetch` is not an empty drive tree

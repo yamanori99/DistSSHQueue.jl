@@ -19,15 +19,19 @@ Run it from the same `cwd` / `DISTRIBUTED_PROJECT_ROOT` as `submit`.
 The dest is `{project}/.distsshqueue/{go|ride|drive}/{stem}_{id8}/`,
 or `--into PATH` itself (that directory **is** the leaf; no extra
 `{stem}_{id8}` folder). `--into` may be outside the job project.
-One dest holds one job. stdout is that path, one line. Fetch copies
-the Kit leaf; files that exist only on dest stay. Same-name files
-take the Kit leaf's content. Re-run of the same id into the same dest skips rsync
-(`already fetched` on stderr) unless `--force`. A dest that already
-has files and no matching `.distsshqueue-fetch-id` is refused without
-`--force`. `--force` only skips that refusal; it does not delete
-dest-only files. The marker stores the canonical job UUID (an 8-character
-prefix fetch still matches). `qhost:` fetch prints `rsync ← HOST:…`
-on stderr when the copy starts (`DISTSSHKIT_QUIET` hides it).
+Several jobs may land in the same `--into` dir. stdout is that path,
+one line. Fetch copies the Kit leaf; files that exist only on dest stay.
+Same-name files take the Kit leaf's content (the tool does not rename;
+put a job id in output names if two jobs share a basename). Re-run of
+the same id into the same dest skips rsync (`already fetched` on stderr)
+unless `--force`. A dest that already has files and no stamp yet is
+refused without `--force`. After `--force` adopts that dest, later jobs
+copy without `--force`. `--force` does not delete dest-only files.
+Stamps are empty files `.distsshqueue-fetch-id.d/<uuid>` (a leftover
+`.distsshqueue-fetch-id` file still counts, then migrates). An
+8-character prefix fetch still matches. `qhost:` fetch prints
+`rsync ← HOST:…` on stderr when the copy starts (`DISTSSHKIT_QUIET`
+hides it).
 
 On the queue host (omit `qhost:`), fetch prints the leaf path
 and does not copy. The leaf is under the job project (or still under
@@ -47,8 +51,8 @@ instead of job output. The argument is the ticket path, the full UUID, or the
 | --- | --- |
 | `<id>` | Unique 8-character prefix (`status`) or the full UUID (`submit` stdout) |
 | ticket | `.distsshqueue/tickets/<uuid>` (same job; no need to copy stdout) |
-| `--into PATH` | Dest directory (the leaf). Relative to the job project; absolute paths may be outside it. One job per dest |
-| `--force` | Copy even if dest already has this or another job. Does not delete dest-only files |
+| `--into PATH` | Dest directory (the leaf). Relative to the job project; absolute paths may be outside it. Several jobs may share it |
+| `--force` | Copy if dest is non-empty with no stamp yet, or re-copy this job. Does not delete dest-only files |
 | `--progress` | `qhost:` rsync `--info=progress2` (`DISTSSHKIT_PROGRESS`) |
 | `-h` / `--help` | Queue usage |
 
