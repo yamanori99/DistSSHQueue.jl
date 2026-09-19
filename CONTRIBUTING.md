@@ -7,7 +7,7 @@ Internals of this repo.
 
 This is a **separate** package from DistSSHKit: FIFO `serve` in front of one Kit `go` / `ride` / `drive`, not a bigger Kit. Placement tokens, `execute!`, `kit.pid` / `kit.result`, `terminate_run!`, demo argv, and rsync/collect are Kit's. Queue records table state and the path Kit already wrote.
 
-Julia slots match Kit (`min` / `max` / `tip` in `.github/julia-slots.env`). SSH E2E is this repo's `testenv/docker-ssh` (Kit-shaped workers). CI is `Pkg.test` (unit + child CLI / `parent:1`), JETLS, Aqua, Linux SSH E2E on slot **max** (`test/e2e.jl`: `serve` API, queue-host CLI, `qhost:` over loopback OpenSSH) on path-filtered PRs / **main** / `cut` / weekly / dispatch, Gitleaks, schedule-only **E2E weekly** (Linux / macOS Intel / WSL), and schedule-only **CI weekly**.
+Julia slots match Kit (`min` / `max` / `tip` in `.github/julia-slots.env`). SSH E2E is this repo's `testenv/docker-ssh` (Kit-shaped workers). CI is `Pkg.test` (unit + child CLI / `parent:1`), JETLS, Aqua, Linux SSH E2E on slot **max** (`test/e2e.jl`: `serve` API, queue-host CLI, `qhost:` over loopback OpenSSH) on path-filtered PRs / **main** / `cut` / weekly / dispatch, Gitleaks, light **Runic** `--check` (soft on PRs; monthly on `main`), schedule-only **E2E weekly** (Linux / macOS Intel / WSL), and schedule-only **CI weekly**.
 
 ## Requirements
 
@@ -51,6 +51,8 @@ Run this on slot **min** and **max** (and **tip** if you have nightly). Layout: 
 Checkout `Pkg.test()` is not a Registry tarball. After changing those gates (child CLI project, `ssh` spawn), and before a General cut, run the disposable copy in [test/README.md](test/README.md#registry-tree). CI runs that shape on **main** and **cut** (slot tip; not a required check).
 
 ```bash
+julia -e 'using Pkg; Pkg.Apps.add("Runic")'   # once
+runic --inplace src test docs testenv   # before push; not `.` (markdown out of scope)
 ./.github/jetls-check.sh    # hint+; same files as CI
 ./.github/aqua-check.sh     # latest registry Aqua; not part of Pkg.test()
 ./testenv/docker-ssh/scripts/up.sh --e2e
@@ -59,6 +61,32 @@ julia --project=docs --color=yes docs/make.jl
 julia --project=docs/src/assets/logo -e 'using Pkg; Pkg.instantiate()'
 julia --project=docs/src/assets/logo docs/src/assets/logo/draw.jl   # SVG; add --png for rasters
 gitleaks detect --source .
+```
+
+[Runic](https://github.com/fredrikekre/Runic.jl) CI
+(`fredrikekre/runic-action@v1`, `version: '1'`) runs `--check` on every
+tracked `.jl`. Format `docs/*.jl` and `testenv/**/*.jl` too if you change
+them. A Runic minor may make `--check` red: re-run
+`runic --inplace src test docs testenv` and push.
+Optional: after a bulk format squash, add the landed SHA to
+[`.git-blame-ignore-revs`](.git-blame-ignore-revs) if blame is noisy.
+Local blame:
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
+VS Code: recommend
+[Custom Local Formatters](https://marketplace.visualstudio.com/items?itemName=jkillingsworth.custom-local-formatters)
+(`.vscode/extensions.json`). User `settings.json` (do not commit):
+
+```json
+"customLocalFormatters.formatters": [
+    {
+      "command": "runic",
+      "languages": ["julia"]
+    }
+]
 ```
 
 JETLS CI uses [`.github/actions/jetls-check`](.github/actions/jetls-check/action.yml) (installs `JETLS.jl` `@release` after `julia-actions/cache`). After a bump, re-read [cli-check](https://aviatesk.github.io/JETLS.jl/dev/cli-check/) and keep failing on hint+.
@@ -102,6 +130,12 @@ runs on **`cut`**, **E2E weekly** (`ssh-e2e-weekly.yml`; `CI.yml` has no
 stay on **main**, **CI weekly**, and `cut`. Registry tree stays on **main**
 and `cut` (ci-cut), not ordinary PRs.
 
+[Runic](https://github.com/fredrikekre/Runic.jl) is a separate light
+workflow ([`.github/workflows/runic.yml`](.github/workflows/runic.yml)).
+It is not a substitute for `Pkg.test`. Soft on PRs (not in the
+required-name list). Monthly cron on `main` opens Issue
+`Runic monthly failed` (`ci`) when `--check` is red.
+
 These files **alone** skip the heavy jobs (UI: skipping; Pkg.test /
 JETLS / Aqua do not start). Documenter still runs when `docs/**`, README,
 `src/**`, or `Project.toml` changed; otherwise it is skipped too.
@@ -109,7 +143,8 @@ Linux E2E is skipped on allowlisted markdown-only PRs (same skipping UI):
 
 - `README.md`, `README.ja.md`, `CONTRIBUTING.md`, `NEWS.md`,
   `SECURITY.md`, `LICENSE`
-- `.gitignore`, `.github/pull_request_template.md`, `.coderabbit.yaml`
+- `.gitignore`, `.git-blame-ignore-revs`,
+  `.github/pull_request_template.md`, `.coderabbit.yaml`
 - `docs/**`, and markdown under `test/` / `testenv/`
 
 A new root markdown file stays heavy until listed in
@@ -144,6 +179,7 @@ Required to merge (ruleset `main` uses these names). Tip jobs are allow-failure.
 | --- | --- | --- |
 | Sunday 04:00 JST, Run workflow, or a `cut` squash to `main` | `E2E weekly` | `ubuntu-latest`, `macos-15-intel`, WSL2 → `ubuntu-24.04`. Linux job uploads E2E Codecov. Not a PR check. Failure opens (or comments on) Issue `E2E weekly failed`; a later all-green run closes it. A red **Linux** job after a `cut` merge adds `cut-hold`. Intel / WSL red does not. Compat-only `Project.toml` edits start the workflow but skip the matrix. |
 | Sunday 10:00 JST, or Run workflow | `CI weekly` | Same `Pkg.test` / JETLS / Aqua slots as a PR (no coverage). Not a PR check. Catches max / Aqua / JETLS `@release` drift when nothing merged that week. Failure of min/max jobs opens Issue `CI weekly failed` (`ci`); tip is omitted from that notify. `cache-gc` keeps one Actions cache per restore-key prefix. |
+| 1st 10:00 JST, or Run workflow | `Runic` | `runic --check` on tracked `.jl` (`version: '1'`). Not a required PR check. Catches Runic minor drift when nothing formatted that month. Failure opens Issue `Runic monthly failed` (`ci`). |
 
 ## Pull requests
 
@@ -229,7 +265,7 @@ Every tracked path must match some `area:*` glob (`gen-labeler.sh --check`). Glo
 | --- | --- |
 | `src/client/**` | `area:client` |
 | `src/qhost/**` | `area:qhost` |
-| Leftover queue (`src/DistSSHQueue.jl`, `src/DistSSHQueue/**`, matching unit tests, shared `test/integration/cli.jl`, package meta) | `area:queue` |
+| Leftover queue (`src/DistSSHQueue.jl`, `src/DistSSHQueue/**`, matching unit tests, shared `test/integration/cli.jl`, package meta including `.git-blame-ignore-revs`) | `area:queue` |
 | Harness under `test/` (not `unit/` / `integration/`) and `testenv/**` | `area:test` |
 | `test/e2e.jl` | `area:client` and `area:qhost` as well |
 | `docs/**` | `area:docs` |

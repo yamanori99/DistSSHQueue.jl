@@ -9,12 +9,12 @@ Does not print private keys or IdentityFile.
 
 const _SSH_G_KEYS = ("host", "hostname", "user", "port")
 
-function ssh_g_connect(name::AbstractString)::Dict{String,String}
-    out = Dict{String,String}()
+function ssh_g_connect(name::AbstractString)::Dict{String, String}
+    out = Dict{String, String}()
     h = String(name)
     try
-        dump = read(pipeline(Cmd(["ssh", "-n", DistSSHKit.ssh_opts()..., "-G", h]); stderr=devnull))
-        for line in eachsplit(String(dump), '\n'; keepempty=false)
+        dump = read(pipeline(Cmd(["ssh", "-n", DistSSHKit.ssh_opts()..., "-G", h]); stderr = devnull))
+        for line in eachsplit(String(dump), '\n'; keepempty = false)
             sp = findfirst(isspace, line)
             sp === nothing && continue
             key = lowercase(String(SubString(line, 1, prevind(line, sp))))
@@ -88,7 +88,7 @@ end
 Version column.
 """
 function _juliaup_patch_from_status(status_out::AbstractString)::String
-    for line in eachsplit(String(status_out), '\n'; keepempty=false)
+    for line in eachsplit(String(status_out), '\n'; keepempty = false)
         s = strip(line)
         isempty(s) && continue
         startswith(s, "Default") && continue
@@ -97,7 +97,7 @@ function _juliaup_patch_from_status(status_out::AbstractString)::String
         m === nothing && continue
         cap = m.captures[1]
         cap isa AbstractString || continue
-        return String(first(split(String(cap), '+'; limit=2)))
+        return String(first(split(String(cap), '+'; limit = 2)))
     end
     return "-"
 end
@@ -115,7 +115,7 @@ function _juliaup_default_disp(name::AbstractString)::String
         out = read(
             pipeline(
                 DistSSHKit._host_sync_remote_shell_cmd(String(name), _juliaup_status_sh());
-                stderr=devnull,
+                stderr = devnull,
             ),
             String,
         )
@@ -126,11 +126,11 @@ function _juliaup_default_disp(name::AbstractString)::String
 end
 
 function print_list_host(
-    names::Union{Nothing, HostAllow};
-    io::IO=stdout,
-    qhost::Union{Nothing,AbstractString}=qhost_display_from_env(),
-)
-    DistSSHKit.print_help_chrome("DistSSHQueue list-host"; io=io)
+        names::Union{Nothing, HostAllow};
+        io::IO = stdout,
+        qhost::Union{Nothing, AbstractString} = qhost_display_from_env(),
+    )
+    DistSSHKit.print_help_chrome("DistSSHQueue list-host"; io = io)
     if names === nothing
         println(io, "  (no hosts= in config; add-host first)")
         return nothing
@@ -169,7 +169,7 @@ function print_list_host(
             "  ",
         )
         println(io, julias[i])
-        _print_host_ssh_card(io, n; hopped=hopped)
+        _print_host_ssh_card(io, n; hopped = hopped)
     end
     return nothing
 end
@@ -179,7 +179,7 @@ function list_host_cli(args::Vector{String})::Cint
     while i <= length(args)
         a = args[i]
         if a in ("-h", "--help")
-            show_usage(; command="list-host")
+            show_usage(; command = "list-host")
             return 0
         end
         throw(ArgumentError("unknown list-host option: $(a)"))

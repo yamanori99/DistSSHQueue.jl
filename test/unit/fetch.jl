@@ -2,8 +2,8 @@ using Test
 using DistSSHKit
 using DistSSHQueue
 
-function _wait_fetch_state(q, id, want::Symbol; tries::Int=200)
-    for _ = 1:tries
+function _wait_fetch_state(q, id, want::Symbol; tries::Int = 200)
+    for _ in 1:tries
         job(q, id).state === want && return nothing
         sleep(0.01)
     end
@@ -39,30 +39,32 @@ end
         script = joinpath(proj, "S.jl")
         write(script, "1\n")
         queued_store = joinpath(d, "queued.toml")
-        q = Queue(; store=queued_store, runner=_ -> nothing)
-        queued = submit!(q, script, "parent:1"; project=proj)
-        @test_throws ArgumentError DistSSHQueue.fetch_source(queued; store=queued_store)
-        @test_throws ArgumentError DistSSHQueue.fetch_source("no-such-id"; store=queued_store)
+        q = Queue(; store = queued_store, runner = _ -> nothing)
+        queued = submit!(q, script, "parent:1"; project = proj)
+        @test_throws ArgumentError DistSSHQueue.fetch_source(queued; store = queued_store)
+        @test_throws ArgumentError DistSSHQueue.fetch_source("no-such-id"; store = queued_store)
 
         store = joinpath(d, "jobs.toml")
         hold = Base.Event()
         leaf = Ref{String}()
-        q2 = Queue(; store=store, runner=function (_)
-            wait(hold)
-            return leaf[]
-        end)
-        running = submit!(q2, script, "parent:1"; project=proj)
+        q2 = Queue(;
+            store = store, runner = function (_)
+                wait(hold)
+                return leaf[]
+            end
+        )
+        running = submit!(q2, script, "parent:1"; project = proj)
         leaf[] = joinpath(d, ".distsshkit", "go", "S_" * first(running, 8))
         mkpath(leaf[])
         @test step!(q2) == 1
-        for _ = 1:200
+        for _ in 1:200
             job(q2, running).state === :running && break
             sleep(0.01)
         end
         @test job(q2, running).state === :running
         notify(hold)
         _wait_fetch_state(q2, running, :done)
-        line = DistSSHQueue.fetch_source(running; store=store)
+        line = DistSSHQueue.fetch_source(running; store = store)
         st, path, src_id = DistSSHQueue.parse_fetch_source(line)
         @test st === :done
         @test path == leaf[]
@@ -71,7 +73,7 @@ end
         custom = joinpath(proj, "out")
         @test_throws ArgumentError DistSSHQueue.require_fetchable_leaf(running, custom)
         pref = first(running, 8)
-        @test DistSSHQueue.fetch_source(pref; store=store) == line
+        @test DistSSHQueue.fetch_source(pref; store = store) == line
         st2, path2, old_id = DistSSHQueue.parse_fetch_source(
             string(:done, '\t', path),
         )
@@ -80,12 +82,12 @@ end
         @test old_id === nothing
         stray_store = joinpath(d, "stray.toml")
         stray_id = Ref{String}()
-        q3 = Queue(; store=stray_store, runner=_ -> "/tmp/go/S_" * first(stray_id[], 8))
-        stray_id[] = submit!(q3, script, "parent:1"; project=proj)
+        q3 = Queue(; store = stray_store, runner = _ -> "/tmp/go/S_" * first(stray_id[], 8))
+        stray_id[] = submit!(q3, script, "parent:1"; project = proj)
         @test step!(q3) == 1
         _wait_fetch_state(q3, stray_id[], :done)
         err = try
-            DistSSHQueue.fetch_source(stray_id[]; store=stray_store)
+            DistSSHQueue.fetch_source(stray_id[]; store = stray_store)
             nothing
         catch e
             e
@@ -103,13 +105,15 @@ end
         write(script, "1\n")
         store = joinpath(d, "jobs.toml")
         idbox = Ref{String}()
-        q = Queue(; store=store, runner=function (_)
-            leaf = joinpath(d, ".distsshkit", "go", "S_" * first(idbox[], 8))
-            mkpath(leaf)
-            write(joinpath(leaf, "kit.result"), "ok\n")
-            return leaf
-        end)
-        id = submit!(q, script, "parent:1"; project=proj)
+        q = Queue(;
+            store = store, runner = function (_)
+                leaf = joinpath(d, ".distsshkit", "go", "S_" * first(idbox[], 8))
+                mkpath(leaf)
+                write(joinpath(leaf, "kit.result"), "ok\n")
+                return leaf
+            end
+        )
+        id = submit!(q, script, "parent:1"; project = proj)
         idbox[] = id
         @test step!(q) == 1
         _wait_fetch_state(q, id, :done)
@@ -168,7 +172,7 @@ end
         @test DistSSHQueue.job_id_from_submit_stdout("Queued  1\n") === nothing
         @test DistSSHQueue.job_id_from_submit_stdout(id * "\n") == id
         dest = DistSSHQueue.write_submit_ticket(
-            proj, id * "\n"; script=script, qhost="mini",
+            proj, id * "\n"; script = script, qhost = "mini",
         )
         @test dest == DistSSHQueue.submit_ticket_path(proj, id)
         @test occursin(joinpath(".distsshqueue", "tickets"), dest)
@@ -186,12 +190,12 @@ end
         @test isfile(dest2)
         @test length(readdir(DistSSHQueue.submit_ticket_dir(proj))) == 2
         @test DistSSHQueue.write_submit_ticket(proj, "not-an-id\n") === nothing
-        @test DistSSHQueue.resolve_fetch_job_id(dest; root=proj) == id
+        @test DistSSHQueue.resolve_fetch_job_id(dest; root = proj) == id
         @test DistSSHQueue.resolve_fetch_job_id(
-            joinpath(".distsshqueue", "tickets", id); root=proj,
+            joinpath(".distsshqueue", "tickets", id); root = proj,
         ) == id
-        @test DistSSHQueue.resolve_fetch_job_id(id; root=proj) == id
-        @test DistSSHQueue.resolve_fetch_job_id(first(id, 8); root=proj) == first(id, 8)
+        @test DistSSHQueue.resolve_fetch_job_id(id; root = proj) == id
+        @test DistSSHQueue.resolve_fetch_job_id(first(id, 8); root = proj) == first(id, 8)
     end
 end
 
@@ -215,9 +219,9 @@ end
         as_file = joinpath(d, "not-a-dir")
         write(as_file, "x\n")
         @test_throws ArgumentError DistSSHQueue.check_fetch_dest(as_file, id)
-        @test_throws ArgumentError DistSSHQueue.check_fetch_dest(as_file, id; force=true)
+        @test_throws ArgumentError DistSSHQueue.check_fetch_dest(as_file, id; force = true)
         DistSSHQueue.write_fetch_marker!(dest, id)
-        @test DistSSHQueue.check_fetch_dest(dest, id; force=true) === :copy
+        @test DistSSHQueue.check_fetch_dest(dest, id; force = true) === :copy
         @test_throws ArgumentError DistSSHQueue.check_fetch_dest(dest, id2)
         DistSSHQueue.write_fetch_marker!(dest, id2)
         @test_throws ArgumentError DistSSHQueue.check_fetch_dest(dest, id)
@@ -225,7 +229,7 @@ end
         mkpath(other)
         write(joinpath(other, "keep.txt"), "x\n")
         @test_throws ArgumentError DistSSHQueue.check_fetch_dest(other, id)
-        @test DistSSHQueue.check_fetch_dest(other, id; force=true) === :copy
+        @test DistSSHQueue.check_fetch_dest(other, id; force = true) === :copy
         rest, into, force, progress = DistSSHQueue.peel_fetch_opts(
             ["--into", dest, "--force", "--progress", id],
         )
@@ -238,7 +242,7 @@ end
             @test rel == DistSSHKit.canonical_local_path(joinpath(d, "data", "payoff"))
             abs = DistSSHQueue.resolve_into_path(joinpath(d, "outside"))
             @test abs == DistSSHKit.canonical_local_path(joinpath(d, "outside"))
-            got = DistSSHQueue.fetch_dest_target(id, src, "/qh/.distsshqueue"; into=joinpath(d, "outside"))
+            got = DistSSHQueue.fetch_dest_target(id, src, "/qh/.distsshqueue"; into = joinpath(d, "outside"))
             @test got == DistSSHKit.canonical_local_path(joinpath(d, "outside"))
             @test !startswith(got, DistSSHKit.canonical_local_path(d) * "/.distsshqueue")
         end
