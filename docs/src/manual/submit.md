@@ -87,7 +87,9 @@ queue host (Kit rsync excludes: `.gitignore`, `.git/`, `.distsshkit/`,
 (every `qhost:` submit from this tree; not the Kit leaf). [`fetch`](@ref Manual-fetch) copies one finished
 Kit leaf back onto that same tree. Omit `qhost:`:
 the script is checked on this machine. Job id prints as a bare stdout line. CLI `submit` also prints
-`queue: local (HOSTNAME)` (or `queue: qhost:HOST` when you passed `qhost:`) then `Queued  N` on stderr (`(R running)` when a job is already running);
+`queue: local (HOSTNAME)` (or `qhost: local (HOSTNAME)` on the hopped
+process when you passed `qhost:`) then `Queued  N (no running)` on stderr
+(`(R running)` when a job is already running);
 `DISTSSHKIT_QUIET` hides that. A `qhost:` rsync prints `rsync → HOST:…` when it starts (fetch: `rsync ←`). `DISTSSHKIT_PROGRESS` / `--progress` adds rsync `--info=progress2`. Missing config `hosts`: a `parent` / `child:` token is an error (`add-host first`). `hosts = []` allows none.
 
 Two different projects

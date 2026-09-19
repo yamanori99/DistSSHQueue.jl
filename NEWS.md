@@ -19,6 +19,21 @@ Next patch after `0.5.1`. DistSSHKit **0.7.x** (≥0.7.3). Not a cut yet.
   `{project}/.distsshkit/setup/*.log` onto the job leaf as
   `setup_failure.log` so `fetch` is not an empty drive tree
   ([#237](https://github.com/yamanori99/DistSSHQueue.jl/issues/237)).
+- `status` / `watch` print submit time (`queued`, local `YYYY-mm-dd HH:MM`
+  at that instant, including DST), `elapsed` while running, `wall` when
+  finished, and fold extra host tokens (`+N`; `--verbose` keeps the full
+  list) ([#247](https://github.com/yamanori99/DistSSHQueue.jl/issues/247)).
+- `list-host` JULIA shows the default channel's installed patch
+  (`1.12.7`, not `1.12`) ([#245](https://github.com/yamanori99/DistSSHQueue.jl/issues/245)).
+  Named channels use that channel's Version column. `-` when unread.
+- After `qhost:` submit, stderr says `qhost: local (hostname)` on the
+  hopped process, not `queue: local` ([#236](https://github.com/yamanori99/DistSSHQueue.jl/issues/236)).
+  `Queued N (no running)` when nothing is running yet
+  (matches `Queued N (R running)`).
+- `add-host child:` also warns that those hosts need outbound internet
+  for Kit instantiate unless the depot already has the registry and
+  packages ([#235](https://github.com/yamanori99/DistSSHQueue.jl/issues/235)).
+  `DISTSSHKIT_QUIET` hides it.
 
 ## 0.5.1
 
