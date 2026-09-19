@@ -13,7 +13,7 @@ const WANT_PNG = "--png" in ARGS
 const OUT = @__DIR__
 const ASSETS = dirname(OUT)
 const SOCIAL = joinpath(ASSETS, "social")
-const INK = (0.07, 0.08, 0.10)
+const INK = (0.07, 0.08, 0.1)
 const PLUM = (0.584, 0.345, 0.698)
 const PAPER = (1.0, 1.0, 1.0)
 const NIGHT = (0.06, 0.07, 0.08)
@@ -64,23 +64,23 @@ const MARK_FIT = 0.78
 const MARK_CY = (TITLE_Y + 2 * (MARK_Y + MARK_SIZE / 2)) / 3
 const MARK_SLOT_Y = MARK_CY - MARK_SIZE / 2
 
-pal_light() = (; dark=false, bg=PAPER, q=PLUM, ue=INK, last=INK)
-pal_dark() = (; dark=true, bg=NIGHT, q=PLUM, ue=INK_ON_DARK, last=INK_ON_DARK)
+pal_light() = (; dark = false, bg = PAPER, q = PLUM, ue = INK, last = INK)
+pal_dark() = (; dark = true, bg = NIGHT, q = PLUM, ue = INK_ON_DARK, last = INK_ON_DARK)
 
-function layout_row(; n=5)
+function layout_row(; n = 5)
     xs = ntuple(i -> (i - 1) * (SIDE + GAP), n)
-    return (; xs, total=xs[n] + SIDE)
+    return (; xs, total = xs[n] + SIDE)
 end
 
 function mod_rect(x0, i)
     xl = x0 + (i - 1) * (SIDE + GAP)
-    return (; xl, xr=xl + SIDE, yt=-SIDE, yb=0.0)
+    return (; xl, xr = xl + SIDE, yt = -SIDE, yb = 0.0)
 end
 
 function stroke_ue!()
     setline(STROKE)
     setlinecap("butt")
-    setlinejoin("round")
+    return setlinejoin("round")
 end
 
 function sq_u!(m; color)
@@ -98,17 +98,17 @@ function sq_u!(m; color)
     line(Point(xr - r, yb))
     curve(Point(xr - r + k, yb), Point(xr, yb - r + k), Point(xr, yb - r))
     line(Point(xr, yt))
-    strokepath()
+    return strokepath()
 end
 
-function sq_e_play!(m; color, fill=false)
+function sq_e_play!(m; color, fill = false)
     setcolor(color...)
     cy = (m.yt + m.yb) / 2
     if fill
         poly(
             [Point(m.xl, m.yt), Point(m.xr, cy), Point(m.xl, m.yb)];
-            action=:fill,
-            close=true,
+            action = :fill,
+            close = true,
         )
         return
     end
@@ -116,10 +116,10 @@ function sq_e_play!(m; color, fill=false)
     xl, xr, yt, yb = m.xl + d, m.xr - d, m.yt + d, m.yb - d
     stroke_ue!()
     setlinecap("round")
-    poly(
+    return poly(
         [Point(xl, yt), Point(xr, (yt + yb) / 2), Point(xl, yb)];
-        action=:stroke,
-        close=true,
+        action = :stroke,
+        close = true,
     )
 end
 
@@ -128,11 +128,12 @@ function draw_ueue!(x0, pal)
     for (j, kind) in enumerate(kinds)
         m = mod_rect(x0, j + 1)
         if kind == :u
-            sq_u!(m; color=pal.ue)
+            sq_u!(m; color = pal.ue)
         else
-            sq_e_play!(m; color=(j == 4 ? pal.last : pal.ue), fill=(j == 4))
+            sq_e_play!(m; color = (j == 4 ? pal.last : pal.ue), fill = (j == 4))
         end
     end
+    return
 end
 
 function draw_q!(x0, pal)
@@ -153,7 +154,7 @@ function draw_q!(x0, pal)
     line(Point(x0r, y0 + r))
     curve(Point(x0r, y0 + r - k), Point(x0r + r - k, y0), Point(x0r + r, y0))
     closepath()
-    fillpath()
+    return fillpath()
 end
 
 function layout_mark()
@@ -161,23 +162,23 @@ function layout_mark()
     cx = L.total / 2
     cy = -SIDE / 2
     x0 = -cx + L.total * OPTICAL_DX
-    return (; L, x0, w=L.total, h=SIDE, cy)
+    return (; L, x0, w = L.total, h = SIDE, cy)
 end
 
 function draw_mark!(pal)
     g = layout_mark()
-    @layer begin
+    return @layer begin
         translate(0, -g.cy)
         draw_q!(g.x0, pal)
         draw_ueue!(g.x0, pal)
     end
 end
 
-function mark!(; pal, canvas=CANVAS, margin=MARGIN, paint_bg=true)
+function mark!(; pal, canvas = CANVAS, margin = MARGIN, paint_bg = true)
     paint_bg && background(pal.bg...)
     g = layout_mark()
     s = canvas * (1 - 2 * margin) / max(g.w, g.h)
-    @layer begin
+    return @layer begin
         scale(s)
         draw_mark!(pal)
     end
@@ -187,14 +188,14 @@ function save_mark(name, pal)
     if WANT_PNG
         Drawing(CANVAS, CANVAS, joinpath(OUT, "$name.png"))
         origin()
-        mark!(; pal, paint_bg=true)
+        mark!(; pal, paint_bg = true)
         finish()
     end
     Drawing(CANVAS, CANVAS, joinpath(OUT, "$name.svg"))
     origin()
-    mark!(; pal, paint_bg=false)
+    mark!(; pal, paint_bg = false)
     finish()
-    println("wrote $name")
+    return println("wrote $name")
 end
 
 function install_documenter!()
@@ -205,9 +206,10 @@ function install_documenter!()
     for (src, dst) in pairs
         from = joinpath(OUT, src)
         to = joinpath(ASSETS, dst)
-        cp(from, to; force=true)
+        cp(from, to; force = true)
         println("copied $dst")
     end
+    return
 end
 
 function social_lockup_x()
@@ -217,14 +219,14 @@ function social_lockup_x()
     group_w = MARK_SIZE + MARK_GAP + TEXT_ADV - ink_left
     side = (SOCIAL_W - group_w) / 2
     mark_x = round(Int, side - ink_left + LOCKUP_DX)
-    return (; mark_x, text_x=mark_x + MARK_SIZE + MARK_GAP)
+    return (; mark_x, text_x = mark_x + MARK_SIZE + MARK_GAP)
 end
 
 function svg_inner(svg::AbstractString)
     s = strip(svg)
     if startswith(s, "<?xml")
         i = findfirst("?>", s)
-        i !== nothing && (s = lstrip(s[last(i) + 1:end]))
+        i !== nothing && (s = lstrip(s[(last(i) + 1):end]))
     end
     m = match(r"^<svg[^>]*>([\s\S]*)</svg>\s*$", s)
     m === nothing && error("could not strip outer <svg>")
@@ -240,29 +242,29 @@ function write_mark_slot(path)
         scale(s)
         draw_mark!(pal_light())
     end
-    finish()
+    return finish()
 end
 
 function build_social(inner)
     x = social_lockup_x()
-    slot_y = round(MARK_SLOT_Y; digits=3)
+    slot_y = round(MARK_SLOT_Y; digits = 3)
     return """<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="$(SOCIAL_W)" height="$(SOCIAL_H)" viewBox="0 0 $(SOCIAL_W) $(SOCIAL_H)">
-  <!-- social-preview-static: 1280×640; safe $(SAFE_X)×$(SAFE_Y); mark | title lockup -->
-  <rect width="$(SOCIAL_W)" height="$(SOCIAL_H)" fill="#ffffff"/>
-  <svg x="$(x.mark_x)" y="$(slot_y)" width="$(MARK_SIZE)" height="$(MARK_SIZE)" viewBox="0 0 $(MARK_SIZE) $(MARK_SIZE)">
-$(inner)
-  </svg>
-  <text x="$(x.text_x)" y="$(TITLE_Y)" dominant-baseline="middle" fill="#0f172a" font-family="$(FONT)" font-size="$(TITLE_SIZE)" font-weight="800">$(TITLE)</text>
-  <text x="$(x.text_x)" y="$(TAGLINE_Y1)" dominant-baseline="middle" fill="#475569" font-family="$(FONT)" font-size="$(TAGLINE_SIZE)" font-weight="500">$(TAGLINE_1)</text>
-  <text x="$(x.text_x)" y="$(TAGLINE_Y2)" dominant-baseline="middle" fill="#475569" font-family="$(FONT)" font-size="$(TAGLINE_SIZE)" font-weight="500">$(TAGLINE_2)</text>
-</svg>
-"""
+    <svg xmlns="http://www.w3.org/2000/svg" width="$(SOCIAL_W)" height="$(SOCIAL_H)" viewBox="0 0 $(SOCIAL_W) $(SOCIAL_H)">
+      <!-- social-preview-static: 1280×640; safe $(SAFE_X)×$(SAFE_Y); mark | title lockup -->
+      <rect width="$(SOCIAL_W)" height="$(SOCIAL_H)" fill="#ffffff"/>
+      <svg x="$(x.mark_x)" y="$(slot_y)" width="$(MARK_SIZE)" height="$(MARK_SIZE)" viewBox="0 0 $(MARK_SIZE) $(MARK_SIZE)">
+    $(inner)
+      </svg>
+      <text x="$(x.text_x)" y="$(TITLE_Y)" dominant-baseline="middle" fill="#0f172a" font-family="$(FONT)" font-size="$(TITLE_SIZE)" font-weight="800">$(TITLE)</text>
+      <text x="$(x.text_x)" y="$(TAGLINE_Y1)" dominant-baseline="middle" fill="#475569" font-family="$(FONT)" font-size="$(TAGLINE_SIZE)" font-weight="500">$(TAGLINE_1)</text>
+      <text x="$(x.text_x)" y="$(TAGLINE_Y2)" dominant-baseline="middle" fill="#475569" font-family="$(FONT)" font-size="$(TAGLINE_SIZE)" font-weight="500">$(TAGLINE_2)</text>
+    </svg>
+    """
 end
 
 function png_ihdr_size(path::AbstractString)
     isfile(path) || return nothing
-    open(path, "r") do io
+    return open(path, "r") do io
         sig = read(io, 8)
         sig == UInt8[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] || return nothing
         ntoh(read(io, UInt32)) == 13 || return nothing
@@ -320,7 +322,7 @@ function downscale_png!(src::AbstractString, dest::AbstractString; w::Int, h::In
     sips = Sys.which("sips")
     if sips !== nothing
         try
-            run(pipeline(`$sips -z $h $w $src --out $dest`; stdout=devnull, stderr=devnull))
+            run(pipeline(`$sips -z $h $w $src --out $dest`; stdout = devnull, stderr = devnull))
             return isfile(dest) && filesize(dest) > 0
         catch
         end
@@ -336,7 +338,7 @@ function raster_square!(svg_path, png_path; size::Int)
     end
     Drawing(size, size, png_path)
     origin()
-    mark!(; pal=pal_light(), canvas=size, paint_bg=false)
+    mark!(; pal = pal_light(), canvas = size, paint_bg = false)
     finish()
     return png_matches_size(png_path, size, size)
 end
@@ -346,7 +348,7 @@ function save_favicon_svg!()
     s = strip(src)
     if startswith(s, "<?xml")
         i = findfirst("?>", s)
-        i !== nothing && (s = lstrip(s[last(i) + 1:end]))
+        i !== nothing && (s = lstrip(s[(last(i) + 1):end]))
     end
     m = match(r"^<svg[^>]*>([\s\S]*)</svg>\s*$", s)
     m === nothing && error("could not strip outer <svg> for favicon")
@@ -360,10 +362,10 @@ function save_favicon_svg!()
         write(
             path,
             """<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="512" height="512" viewBox="$(FAVICON_VIEWBOX)">
-$(inner)
-</svg>
-""",
+            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="512" height="512" viewBox="$(FAVICON_VIEWBOX)">
+            $(inner)
+            </svg>
+            """,
         )
         println("wrote $name")
         dst = joinpath(srcroot, name)
@@ -372,24 +374,25 @@ $(inner)
             symlink(joinpath("assets", name), name)
         end
     end
+    return
 end
 
 function save_favicon()
     save_favicon_svg!()
     WANT_PNG || return
     ico = joinpath(ASSETS, "favicon.ico")
-    d = mktempdir(ASSETS; prefix=".favicon-")
-    try
+    d = mktempdir(ASSETS; prefix = ".favicon-")
+    return try
         function raster_one(svg_name, png32_name)
             svg = joinpath(ASSETS, svg_name)
             pngs = Pair{Int, String}[]
             for px in FAVICON_PX
                 src = joinpath(d, "$(first(splitext(svg_name)))-$(px).png")
-                raster_square!(svg, src; size=px) || error("$svg_name $(px)px raster failed")
+                raster_square!(svg, src; size = px) || error("$svg_name $(px)px raster failed")
                 push!(pngs, px => src)
             end
             dest = joinpath(ASSETS, png32_name)
-            cp(first(p for p in pngs if p[1] == 32)[2], dest; force=true)
+            cp(first(p for p in pngs if p[1] == 32)[2], dest; force = true)
             println("wrote $png32_name ($(filesize(dest)) bytes)")
             return pngs
         end
@@ -406,7 +409,7 @@ function save_favicon()
             end
         end
     finally
-        rm(d; recursive=true, force=true)
+        rm(d; recursive = true, force = true)
     end
 end
 
@@ -418,7 +421,7 @@ function raster_social!(svg_path, png_path)
     end
     Drawing(SOCIAL_W, SOCIAL_H, png_path)
     placeimage(readsvg(svg_path), Point(0, 0))
-    finish()
+    return finish()
 end
 
 function save_social()
@@ -429,7 +432,7 @@ function save_social()
     write(svg_path, build_social(svg_inner(read(slot, String))))
     rm(slot)
     WANT_PNG && raster_social!(svg_path, joinpath(SOCIAL, "social-preview-static.png"))
-    println("wrote social-preview-static")
+    return println("wrote social-preview-static")
 end
 
 function main()
@@ -439,7 +442,7 @@ function main()
     save_social()
     save_favicon_svg!()
     save_favicon()
-    if WANT_PNG
+    return if WANT_PNG
         stamp = joinpath(ASSETS, ".raster-stamp-png")
         write(stamp, string(Dates.now(Dates.UTC), "Z\n"))
         println("wrote .raster-stamp-png")
