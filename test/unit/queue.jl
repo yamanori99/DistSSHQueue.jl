@@ -1,4 +1,5 @@
 using Test
+using Dates
 using DistSSHKit
 using DistSSHQueue
 
@@ -1744,6 +1745,62 @@ end
         @test occursin(joinpath("demos", "pi_echo.jl"), listed) || occursin("demos/pi_echo.jl", listed)
         @test !occursin(stage * "/", listed)
         @test occursin(DistSSHKit.short_path(stage), listed)
+    end
+end
+
+@testset "status cards show queued time, wall, and folded hosts" begin
+    qat = DateTime(2026, 9, 10, 4, 20)
+    done = DistSSHQueue.Job(;
+        id="bbbbbbbb-1111-4000-8000-000000000001",
+        kind=:drive,
+        script="d.jl",
+        hosts=["parent:5", "child:mini-alpha:8", "child:mini-beta:8", "child:mini-gamma:8"],
+        state=:done,
+        queued_at=qat,
+        started_at=qat,
+        finished_at=qat + Hour(1) + Minute(4),
+    )
+    run = DistSSHQueue.Job(;
+        id="bbbbbbbb-2222-4000-8000-000000000002",
+        kind=:go,
+        script="g.jl",
+        hosts=["parent:1"],
+        state=:running,
+        queued_at=qat,
+        started_at=now(UTC) - Minute(12) - Second(30),
+    )
+    listed = sprint(io -> DistSSHQueue.print_jobs_table([done, run]; io=io))
+    @test occursin("queued", listed)
+    local_q = DistSSHQueue._job_queued_disp(done)
+    @test occursin(local_q, listed)
+    @test occursin("wall", listed)
+    @test occursin("1h04m", listed)
+    @test occursin("elapsed", listed)
+    @test DistSSHQueue._human_span(qat, qat + Minute(12)) == "12m"
+    @test occursin("parent:5  child:mini-alpha:8  +2", listed)
+    @test !occursin("child:mini-gamma:8", listed)
+    full = sprint(io -> DistSSHQueue.print_jobs_table([done]; io=io, verbose=true))
+    @test occursin("child:mini-gamma:8", full)
+    quiet = sprint(io -> DistSSHQueue.print_jobs_table([done]; io=io, quiet=true))
+    @test !occursin("queued", quiet)
+    @test !occursin("hosts", quiet)
+    if !Sys.iswindows()
+        winter = DateTime(2026, 1, 15, 12, 0)
+        summer = DateTime(2026, 7, 15, 12, 0)
+        old_tz = get(ENV, "TZ", nothing)
+        try
+            ENV["TZ"] = "America/New_York"
+            ccall(:tzset, Cvoid, ())
+            @test DistSSHQueue._utc_to_local(winter) == DateTime(2026, 1, 15, 7, 0)
+            @test DistSSHQueue._utc_to_local(summer) == DateTime(2026, 7, 15, 8, 0)
+        finally
+            if old_tz === nothing
+                delete!(ENV, "TZ")
+            else
+                ENV["TZ"] = old_tz
+            end
+            ccall(:tzset, Cvoid, ())
+        end
     end
 end
 

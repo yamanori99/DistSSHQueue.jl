@@ -15,6 +15,10 @@ Next patch after `0.5.1`. DistSSHKit **0.7.x** (≥0.7.3). Not a cut yet.
   ([#238](https://github.com/yamanori99/DistSSHQueue.jl/issues/238)) is
   gone. Julia major.minor mismatch still fails `:check` unless Kit
   `--ignore-julia-version`.
+- `status` / `watch` print submit time (`queued`, local `YYYY-mm-dd HH:MM`
+  at that instant, including DST), `elapsed` while running, `wall` when
+  finished, and fold extra host tokens (`+N`; `--verbose` keeps the full
+  list) ([#247](https://github.com/yamanori99/DistSSHQueue.jl/issues/247)).
 - `list-host` JULIA shows the default channel's installed patch
   (`1.12.7`, not `1.12`) ([#245](https://github.com/yamanori99/DistSSHQueue.jl/issues/245)).
   Named channels use that channel's Version column. `-` when unread.
