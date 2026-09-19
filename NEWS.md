@@ -23,6 +23,10 @@ Next patch after `0.5.1`. DistSSHKit **0.7.x** (≥0.7.3). Not a cut yet.
   canonical job UUID
   ([#246](https://github.com/yamanori99/DistSSHQueue.jl/issues/246),
   [#248](https://github.com/yamanori99/DistSSHQueue.jl/issues/248)).
+- If Kit `setup!` fails, `serve` copies the newest
+  `{project}/.distsshkit/setup/*.log` onto the job leaf as
+  `setup_failure.log` so `fetch` is not an empty drive tree
+  ([#237](https://github.com/yamanori99/DistSSHQueue.jl/issues/237)).
 - `status` / `watch` print submit time (`queued`, local `YYYY-mm-dd HH:MM`
   at that instant, including DST), `elapsed` while running, `wall` when
   finished, and fold extra host tokens (`+N`; `--verbose` keeps the full
