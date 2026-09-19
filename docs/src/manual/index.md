@@ -58,8 +58,11 @@ is the opposite of `enable`, not of `serve`.
 Each row: `id` (UUID), `kind` (`:go` / `:ride` / `:drive`), `script`, `hosts`,
 `state` (`:queued` / `:running` / `:done` / `:failed` / `:cancelled`),
 `queued_at` / `started_at` / `finished_at`, `error`, and `result_path`
-— Kit's artifact directory. If `go` / `ride` omitted `--output-dir`, `serve`
-sets one under `{project}/.distsshqueue/{kind}/{stem}_{id8}/` when the row
+— normally Kit's artifact directory. If Kit `setup!` fails before that
+path exists, `serve` still allocates a Queue leaf with
+`setup_failure.log` ([fetch](@ref Manual-fetch)). If `go` / `ride` omitted
+`--output-dir`, `serve` sets one under
+`{project}/.distsshqueue/{kind}/{stem}_{id8}/` when the row
 becomes `:running`. Detached `drive` does not pin `output_dir` (Kit
 `init_output_dir!` / `run.toml`). `serve` records Kit `run_dir` so `cancel`
 and a later `serve` find `kit.pid`. Queue does not keep a second copy of
