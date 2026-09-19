@@ -752,7 +752,13 @@ function _start!(q::Queue, j::Job)
             end
             _finish!(q, id, :done, nothing; result_path=path)
         catch e
-            _finish!(q, id, :failed, sprint(showerror, e))
+            _finish!(
+                q,
+                id,
+                :failed,
+                sprint(showerror, e);
+                result_path=kit_output_dir(snap),
+            )
         end
     end
     return nothing

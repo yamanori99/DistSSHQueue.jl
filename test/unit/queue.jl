@@ -493,11 +493,39 @@ end
         rm(leaf; recursive=true)
         write(String(leaf), "not a directory\n")
         fake_setup!(_, mode::Symbol) = mode === :instantiate ? (; ok=false) : (; ok=true)
-        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+        thrown = withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
                 j, Returns(nothing); kit_setup! = fake_setup!,
             )
         end
+        @test occursin("setup! instantiate failed", thrown.value.msg)
+    end
+end
+
+@testset "setup failure with explicit output_dir is fetchable" begin
+    mktempdir() do d
+        store = joinpath(d, "jobs.toml")
+        script = joinpath(d, "s.jl")
+        write(script, "1\n")
+        id = "aaaaaaaa-1111-4000-8000-000000000001"
+        leaf = joinpath(d, ".distsshqueue", "drive", "s_aaaaaaaa")
+        mkpath(leaf)
+        q = Queue(; store=store, runner=_ -> error("DistSSHKit setup! instantiate failed"))
+        submit!(
+            q,
+            script,
+            "parent:1";
+            id=id,
+            kind=:drive,
+            project=d,
+            output_dir=leaf,
+        )
+        @test step!(q) == 1
+        _wait_state(q, id, :failed)
+        @test job(q, id).result_path == leaf
+        src = DistSSHQueue.fetch_source(id; store=store)
+        @test startswith(src, "failed\t")
+        @test occursin(leaf, src)
     end
 end
 
