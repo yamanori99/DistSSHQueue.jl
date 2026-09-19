@@ -5,13 +5,16 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
-Next patch after `0.5.1`. DistSSHKit **0.7.x** (≥0.7.3). Not a cut yet.
+Next patch after `0.5.1`. DistSSHKit **0.8.x**. Not a cut yet.
 
+- DistSSHKit **0.8.x**. Detached `drive` is not given a Queue-pinned
+  `output_dir` (`init_output_dir!` chooses the artifact leaf). `serve`
+  records Kit `run_dir` for `kit.pid` / `terminate_run!`.
 - [Runic](https://github.com/fredrikekre/Runic.jl) `--check` on PRs
   (soft; not a merge gate) and monthly cron (Issue
   `Runic monthly failed`)
   ([#181](https://github.com/yamanori99/DistSSHQueue.jl/issues/181)).
-- DistSSHKit **0.7.x** (≥0.7.3). Kit `:check` treats a missing local git
+- DistSSHKit **0.8.x**. Kit `:check` treats a missing local git
   commit as a warning, not a fail
   ([DistSSHKit#370](https://github.com/yamanori99/DistSSHKit.jl/issues/370)).
   `serve` always runs `:check` on `child:` hosts, including a `qhost:`

@@ -243,6 +243,7 @@ function execute_kwargs(j::Job)
         k === :yes && continue
         k === :job_id && continue
         v === nothing && continue
+        k === :run_dir && continue
         DistSSHKit.execute_detached_accepts(k; kind = j.kind) || continue
         push!(acc, k => v)
     end
@@ -260,14 +261,36 @@ function kit_output_dir(j::Job)::Union{Nothing, String}
     return isempty(s) ? nothing : s
 end
 
+"""Kit run bundle (`run.toml` / `kit.pid`), from the job bag when `serve` recorded it."""
+function kit_run_dir(j::Job)::Union{Nothing, String}
+    rd = get(j.kwargs, "run_dir", nothing)
+    rd === nothing && return nothing
+    s = strip(String(rd))
+    return isempty(s) ? nothing : s
+end
+
+"""Dir for `kit.pid` / `terminate_run!`: Kit `runs/` first, else the artifact leaf."""
+function kit_sidecar_dir(j::Job)::Union{Nothing, String}
+    rd = kit_run_dir(j)
+    rd !== nothing && return rd
+    return kit_output_dir(j)
+end
+
 """Set Kit `output_dir` before spawn so `:running` cancel and restart adopt need no submitter path.
 
-Default leaf is `{project}/.distsshqueue/{kind}/{stem}_{id8}/` (same
-layout as `fetch` dest). Kit remote slots use `relpath(output, project)`,
-so a leaf next to `jobs.toml` (outside the job tree) makes `child:` `go`
-exit 1. No-op if the bag already has `output_dir`.
+Skipped for `:drive` with no submit `output_dir` so `init_output_dir!` can
+choose the artifact leaf (DistSSHKit 0.8). `go` / `ride` still get a
+default leaf `{project}/.distsshqueue/{kind}/{stem}_{id8}/` (same layout as
+`fetch` dest). Kit remote slots use `relpath(output, project)`, so a leaf
+next to `jobs.toml` (outside the job tree) makes `child:` `go` exit 1.
+No-op if the bag already has `output_dir`.
 """
 function ensure_kit_output_dir!(j::Job; store::Union{Nothing, AbstractString} = nothing)
+    j.kind === :drive && kit_output_dir(j) === nothing && return nothing
+    return _allocate_queue_leaf!(j; store = store)
+end
+
+function _allocate_queue_leaf!(j::Job; store::Union{Nothing, AbstractString} = nothing)
     kit_output_dir(j) !== nothing && return nothing
     isfile(j.script) || return nothing
     proj = get(j.kwargs, "project", nothing)
@@ -290,7 +313,7 @@ end
 
 """Whether DistSSHKit's detached `kit.pid` still names this run (pid + start key)."""
 function kit_child_alive(j::Job)::Bool
-    dir = kit_output_dir(j)
+    dir = kit_sidecar_dir(j)
     dir === nothing && return false
     return DistSSHKit.kit_pid_file_running(dir)
 end
@@ -309,7 +332,7 @@ kit_run_error_text(::Job, result) = kit_run_error_text(result)
 
 """Pid gone: prefer `kit.result`, else `:failed` (`serve` lost `KitProcess`)."""
 function settle_lost_kit_child!(j::Job)
-    dir = kit_output_dir(j)
+    dir = kit_sidecar_dir(j)
     rec = dir === nothing ? nothing : DistSSHKit.kit_result_from_dir(dir)
     j.finished_at = now(UTC)
     if rec === nothing
@@ -355,8 +378,11 @@ function run_kit(j::Job, on_spawn; on_phase = Returns(nothing), still_running = 
         job_id = j.id,
         execute_kwargs(j)...,
     )::DistSSHKit.KitProcess
-    spawned = kit_result_path(kp)
-    on_spawn(spawned)
+    rd = kp.run_dir
+    if rd !== nothing
+        j.kwargs["run_dir"] = rd
+    end
+    on_spawn((; run_dir = rd, output_dir = kit_result_path(kp)))
     result = wait(kp)
     require_kit_ok(result)
     return kit_result_path(j, result)
@@ -498,6 +524,7 @@ function _queue_kit_setup!(j::Job, on_phase; kit_setup! = DistSSHKit.setup!)
         _require_kit_setup_ok!(kit_setup!(session, :check), "check")
     catch
         try
+            _allocate_queue_leaf!(j)
             _copy_kit_setup_log!(String(proj), kit_output_dir(j))
         catch
         end
@@ -660,7 +687,7 @@ function submit!(q::Queue, script::AbstractString, hosts::AbstractVector{<:Abstr
     return _submit!(q, kind, script, hosts; kwargs...)
 end
 
-"""Cancel `:queued`, or `:running` via DistSSHKit `terminate_run!` when the Kit output dir is known."""
+"""Cancel `:queued`, or `:running` via DistSSHKit `terminate_run!` when the Kit sidecar dir is known."""
 function cancel!(q::Queue, id::AbstractString)::Bool
     action = _with_store(q) do
         lock(q.lock) do
@@ -675,21 +702,38 @@ function cancel!(q::Queue, id::AbstractString)::Bool
                 return :queued
             end
             j.state === :running || return :no
-            out_dir = kit_output_dir(j)
-            out_dir === nothing && return :no
-            return (out_dir, j.kind, j.id)
+            side = kit_sidecar_dir(j)
+            side === nothing && return :no
+            return (side, kit_output_dir(j), j.kind, j.id)
         end
     end
-    if action isa Tuple{String, Symbol, String}
-        running_dir, running_kind, running_id = action
-        DistSSHKit.terminate_run!(running_dir; kind = running_kind)
-        _finish!(q, running_id, :cancelled, nothing; result_path = running_dir)
+    if action isa Tuple{String, Union{Nothing, String}, Symbol, String}
+        running_side, running_out, running_kind, running_id = action
+        DistSSHKit.terminate_run!(running_side; kind = running_kind)
+        rec = DistSSHKit.kit_result_from_dir(running_side)
+        path = if rec !== nothing && rec.output_dir !== nothing
+            rec.output_dir
+        elseif running_out !== nothing
+            running_out
+        else
+            running_side
+        end
+        _finish!(q, running_id, :cancelled, nothing; result_path = path)
         return true
     end
     return action === :queued
 end
 
 function _set_running_result_path!(q::Queue, id::AbstractString, path::AbstractString)
+    return _set_running_kit_meta!(q, id; result_path = path)
+end
+
+function _set_running_kit_meta!(
+        q::Queue,
+        id::AbstractString;
+        run_dir = nothing,
+        result_path = nothing,
+    )
     return _with_store(q) do
         lock(q.lock) do
             reload_keep_live!(q)
@@ -697,7 +741,12 @@ function _set_running_result_path!(q::Queue, id::AbstractString, path::AbstractS
             i === nothing && return nothing
             j = q.jobs[i]
             j.state === :running || return nothing
-            j.result_path = String(path)
+            if run_dir isa AbstractString && !isempty(strip(String(run_dir)))
+                j.kwargs["run_dir"] = String(run_dir)
+            end
+            if result_path isa AbstractString && !isempty(strip(String(result_path)))
+                j.result_path = String(result_path)
+            end
             _persist!(q)
             return nothing
         end
@@ -743,7 +792,15 @@ function _start!(q::Queue, j::Job)
     id = j.id
     snap = copy(j)
     on_spawn = function (p)
-        p isa AbstractString && _set_running_result_path!(q, id, p)
+        if p isa NamedTuple
+            _set_running_kit_meta!(
+                q, id;
+                run_dir = get(p, :run_dir, nothing),
+                result_path = get(p, :output_dir, nothing),
+            )
+        elseif p isa AbstractString
+            _set_running_result_path!(q, id, p)
+        end
         return nothing
     end
     Threads.@spawn begin
@@ -794,7 +851,7 @@ function adopt_running!(q::Queue)
     end
     snap === nothing && return nothing
     id = snap.id
-    dir = kit_output_dir(snap)
+    dir = kit_sidecar_dir(snap)
     Threads.@spawn begin
         while true
             live = lock(q.lock) do

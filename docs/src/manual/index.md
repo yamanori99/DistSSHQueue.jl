@@ -58,12 +58,12 @@ is the opposite of `enable`, not of `serve`.
 Each row: `id` (UUID), `kind` (`:go` / `:ride` / `:drive`), `script`, `hosts`,
 `state` (`:queued` / `:running` / `:done` / `:failed` / `:cancelled`),
 `queued_at` / `started_at` / `finished_at`, `error`, and `result_path`
-— Kit's output directory. If submit omitted `--output-dir`, `serve`
-sets one under `{project}/.distsshqueue/{kind}/{stem}_{id8}/` when the row becomes
-`:running` (so `cancel` and a later `serve` can find `kit.pid`). Drive
-is that unique leaf, not shared `.distsshkit/drive` and not demo
-`output/`. Queue
-does not keep a second copy of Kit's result tree. Kit kwargs (`args`,
+— Kit's artifact directory. If `go` / `ride` omitted `--output-dir`, `serve`
+sets one under `{project}/.distsshqueue/{kind}/{stem}_{id8}/` when the row
+becomes `:running`. Detached `drive` does not pin `output_dir` (Kit
+`init_output_dir!` / `run.toml`). `serve` records Kit `run_dir` so `cancel`
+and a later `serve` find `kit.pid`. Queue does not keep a second copy of
+Kit's result tree. Kit kwargs (`args`,
 `project`, `output_dir`, …) travel as an opaque bag through DistSSHKit's
 `execute!` allow-list. `serve` also passes `job_id` (the row UUID)
 so Kit progress lines can carry `job=`. `serve` instantiates the job
@@ -86,9 +86,10 @@ will not start the next FIFO job). A `:running` row with no live
 `kit.pid` is `:done` or `:failed` from DistSSHKit `ok` in `kit.result`
 when that file exists, otherwise `:failed`. Drive listed `parent` /
 `child` hosts must join, stay, and collect unless the job passed
-`--best-effort` (Kit 0.7;
+`--best-effort` (Kit 0.8;
 [kit drive](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/drive/)).
-Kit results stay under `{project}/.distsshqueue/{kind}/`.
+Kit `go` / `ride` results stay under `{project}/.distsshqueue/{kind}/` when
+Queue allocated the leaf. Drive artifacts follow Kit.
 
 ## Shared peel
 
