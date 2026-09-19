@@ -252,7 +252,20 @@ function fetch_stamp_dir(dest::AbstractString)::String
     return joinpath(String(dest), FETCH_STAMP_DIR)
 end
 
+const FETCH_STAMP_ID =
+    r"^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-fA-F]{8})$"
+
+function is_fetch_stamp_id(id::AbstractString)::Bool
+    return occursin(FETCH_STAMP_ID, String(id))
+end
+
+function require_fetch_stamp_id(id::AbstractString)
+    is_fetch_stamp_id(id) || throw(ArgumentError("fetch: bad stamp id $(repr(id))"))
+    return nothing
+end
+
 function fetch_stamp_path(dest::AbstractString, id::AbstractString)::String
+    require_fetch_stamp_id(id)
     return joinpath(fetch_stamp_dir(dest), String(id))
 end
 
@@ -275,11 +288,11 @@ end
 function fetch_stamp_ids(dest::AbstractString)::Vector{String}
     ids = String[]
     legacy = read_fetch_marker(dest)
-    legacy !== nothing && push!(ids, legacy)
+    legacy !== nothing && is_fetch_stamp_id(legacy) && push!(ids, legacy)
     d = fetch_stamp_dir(dest)
     isdir(d) || return ids
     for name in readdir(d; join = false)
-        (isempty(name) || startswith(name, '.')) && continue
+        is_fetch_stamp_id(name) || continue
         isfile(joinpath(d, name)) || continue
         push!(ids, String(name))
     end
@@ -295,7 +308,7 @@ function write_fetch_marker!(dest::AbstractString, id::AbstractString)
     mkpath(fetch_stamp_dir(dest))
     legacy = read_fetch_marker(dest)
     if legacy !== nothing
-        write(fetch_stamp_path(dest, legacy), "")
+        is_fetch_stamp_id(legacy) && write(fetch_stamp_path(dest, legacy), "")
         rm(fetch_marker_path(dest); force = true)
     end
     write(fetch_stamp_path(dest, id), "")

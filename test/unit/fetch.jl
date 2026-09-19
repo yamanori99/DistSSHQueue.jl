@@ -244,6 +244,16 @@ end
         @test DistSSHQueue.read_fetch_marker(legacy) === nothing
         @test id in DistSSHQueue.fetch_stamp_ids(legacy)
         @test id2 in DistSSHQueue.fetch_stamp_ids(legacy)
+        @test_throws ArgumentError DistSSHQueue.write_fetch_marker!(dest, "aaaaaaaa/../../target")
+        @test_throws ArgumentError DistSSHQueue.fetch_stamp_path(dest, "aaaaaaaa/../../target")
+        poison = joinpath(d, "poison")
+        mkpath(poison)
+        write(joinpath(poison, "keep.txt"), "x\n")
+        write(joinpath(poison, DistSSHQueue.FETCH_MARKER), "aaaaaaaa/../../target\n")
+        DistSSHQueue.write_fetch_marker!(poison, id)
+        @test DistSSHQueue.read_fetch_marker(poison) === nothing
+        @test id in DistSSHQueue.fetch_stamp_ids(poison)
+        @test !ispath(joinpath(d, "target"))
         rest, into, force, progress = DistSSHQueue.peel_fetch_opts(
             ["--into", dest, "--force", "--progress", id],
         )
