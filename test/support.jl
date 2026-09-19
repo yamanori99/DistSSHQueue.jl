@@ -5,7 +5,7 @@
 # `DistSSHKit.use_colors()` false (`stdout isa TTY`), so ANSI does not leak
 # into `Pkg.test()` output.
 function capture_stdio(f)
-    mktemp() do out_path, out_io
+    return mktemp() do out_path, out_io
         mktemp() do err_path, err_io
             value = redirect_stdout(out_io) do
                 redirect_stderr(err_io) do

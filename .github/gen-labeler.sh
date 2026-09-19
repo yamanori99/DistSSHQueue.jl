@@ -5,8 +5,8 @@
 #   - src/client/** → area:client
 #   - src/qhost/** → area:qhost
 #   - leftover DistSSHQueue modules, matching unit tests, shared CLI
-#     tests, package meta → area:queue (every tracked path must match some
-#     area:*)
+#     tests, package meta (LICENSE, Project.toml, .git-blame-ignore-revs,
+#     …) → area:queue (every tracked path must match some area:*)
 #   - test harness → area:test (`testenv/**` plus each `test/<name>` that is
 #     not a product-test tree). Do not emit `!` globs into
 #     any-glob-to-any-file: labeler ORs them as "not this path" and tags
@@ -91,6 +91,7 @@ EOF
           - "src/DistSSHQueue/**"
           - ".gitattributes"
           - ".gitignore"
+          - ".git-blame-ignore-revs"
           - ".vscode/**"
           - "LICENSE"
           - "Project.toml"

@@ -3,14 +3,14 @@ using DistSSHQueue
 using Base64
 using Downloads
 
-DocMeta.setdocmeta!(DistSSHQueue, :DocTestSetup, :(using DistSSHQueue); recursive=true)
+DocMeta.setdocmeta!(DistSSHQueue, :DocTestSetup, :(using DistSSHQueue); recursive = true)
 
 """Nanosoldier SVG with square corners (`rx=0`), for README / docs."""
 function _refresh_pkgeval_badge!()
     dest = joinpath(@__DIR__, "src", "assets", "pkgeval.svg")
     url = "https://juliaci.github.io/NanosoldierReports/pkgeval_badges/D/DistSSHQueue.svg"
     try
-        svg = String(take!(Downloads.download(url, IOBuffer(); timeout=15)))
+        svg = String(take!(Downloads.download(url, IOBuffer(); timeout = 15)))
         occursin("PkgEval", svg) || return
         svg = replace(svg, r"rx=\"\d+\"" => "rx=\"0\"")
         svg = replace(svg, r"<linearGradient[\s\S]*?</linearGradient>" => "")
@@ -28,14 +28,14 @@ const FAVICON_PNG_B64 = base64encode(read(joinpath(@__DIR__, "src", "assets", "f
 const FAVICON_DARK_PNG_B64 = base64encode(read(joinpath(@__DIR__, "src", "assets", "favicon-dark.png")))
 
 makedocs(;
-    modules=[DistSSHQueue],
-    authors="Takanori Yamamoto, Honoka Ampuku, and contributors",
-    sitename="DistSSHQueue.jl",
-    format=Documenter.HTML(;
-        prettyurls=get(ENV, "CI", nothing) == "true",
-        canonical="https://yamanori99.github.io/DistSSHQueue.jl",
-        edit_link="main",
-        assets=[
+    modules = [DistSSHQueue],
+    authors = "Takanori Yamamoto, Honoka Ampuku, and contributors",
+    sitename = "DistSSHQueue.jl",
+    format = Documenter.HTML(;
+        prettyurls = get(ENV, "CI", nothing) == "true",
+        canonical = "https://yamanori99.github.io/DistSSHQueue.jl",
+        edit_link = "main",
+        assets = [
             "assets/custom.css",
             RawHTMLHeadContent(
                 """<link id="docs-favicon" rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,$(FAVICON_PNG_B64)" data-light="data:image/png;base64,$(FAVICON_PNG_B64)" data-dark="data:image/png;base64,$(FAVICON_DARK_PNG_B64)"/>""",
@@ -43,7 +43,7 @@ makedocs(;
             "assets/favicon-theme.js",
         ],
     ),
-    pages=[
+    pages = [
         "Introduction" => "index.md",
         "First Steps" => [
             "Requirements" => "requirements.md",
@@ -62,8 +62,8 @@ makedocs(;
         ],
         "API" => "api.md",
     ],
-    checkdocs=:none,
-    warnonly=[:missing_docs, :docs_block, :cross_references],
+    checkdocs = :none,
+    warnonly = [:missing_docs, :docs_block, :cross_references],
 )
 
 function rewrite_favicon_types!(build)
@@ -89,14 +89,14 @@ function rewrite_favicon_types!(build)
             end
         end
     end
-    println("rewrote favicon type on $n HTML pages")
+    return println("rewrote favicon type on $n HTML pages")
 end
 
 rewrite_favicon_types!(joinpath(@__DIR__, "build"))
 
 deploydocs(;
-    repo="github.com/yamanori99/DistSSHQueue.jl.git",
-    devbranch="main",
-    push_preview=true,
-    versions=["stable" => "v^", "v#.#", "dev" => "dev"],
+    repo = "github.com/yamanori99/DistSSHQueue.jl.git",
+    devbranch = "main",
+    push_preview = true,
+    versions = ["stable" => "v^", "v#.#", "dev" => "dev"],
 )

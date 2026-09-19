@@ -27,7 +27,7 @@ using DistSSHQueue
         end
         missing = joinpath(d, "nope.toml")
         withenv("DISTSSHQUEUE_CONFIG" => missing, "DISTSSHQUEUE_STORE" => nothing) do
-            @test DistSSHQueue.load_config() == Dict{String,Any}()
+            @test DistSSHQueue.load_config() == Dict{String, Any}()
             @test DistSSHQueue.store_path() == DistSSHQueue.default_store_path()
         end
         pop!(ENV, "DISTSSHQUEUE_TEST_FROM_CFG", nothing)
@@ -39,14 +39,16 @@ end
     mktempdir() do d
         store = joinpath(d, "jobs.toml")
         n = Threads.Atomic{Int}(0)
-        tasks = [@async begin
-            for _ in 1:40
-                DistSSHQueue.with_store_lock(store) do
-                    Threads.atomic_add!(n, 1)
-                    sleep(0.001)
+        tasks = [
+            @async begin
+                for _ in 1:40
+                    DistSSHQueue.with_store_lock(store) do
+                        Threads.atomic_add!(n, 1)
+                        sleep(0.001)
+                    end
                 end
-            end
-        end for _ in 1:4]
+            end for _ in 1:4
+        ]
         foreach(wait, tasks)
         @test n[] == 160
     end
@@ -139,12 +141,12 @@ end
     mktempdir() do d
         store = joinpath(d, "jobs.toml")
         write(store, "jobs = []\n")
-        holder = run(pipeline(`sleep 30`; stdout=devnull, stderr=devnull); wait=false)
+        holder = run(pipeline(`sleep 30`; stdout = devnull, stderr = devnull); wait = false)
         try
             write(DistSSHQueue.store_pid_path(store), string(getpid(holder)))
-            q = DistSSHQueue.Queue(; store=store, runner=_ -> nothing)
+            q = DistSSHQueue.Queue(; store = store, runner = _ -> nothing)
             _, out, _ = capture_stdio() do
-                DistSSHQueue.serve!(q; interval=0.02)
+                DistSSHQueue.serve!(q; interval = 0.02)
             end
             @test occursin("Already running", out)
             @test occursin("status or watch", out)
@@ -160,14 +162,14 @@ end
     mktempdir() do d
         store = joinpath(d, "jobs.toml")
         write(store, "jobs = []\n")
-        q = DistSSHQueue.Queue(; store=store, runner=_ -> nothing)
+        q = DistSSHQueue.Queue(; store = store, runner = _ -> nothing)
         _, out, _ = capture_stdio() do
-            t = @async DistSSHQueue.serve!(q; interval=0.02)
+            t = @async DistSSHQueue.serve!(q; interval = 0.02)
             for _ in 1:200
                 DistSSHQueue.serve_pid(store) == getpid() && break
                 sleep(0.02)
             end
-            rm(d; force=true, recursive=true)
+            rm(d; force = true, recursive = true)
             for _ in 1:200
                 istaskdone(t) && break
                 sleep(0.02)
@@ -195,7 +197,7 @@ end
     DistSSHQueue._join_serve_spin!(spin)
     @test istaskdone(spin)
     hit = @async sleep(30)
-    schedule(hit, InterruptException(); error=true)
+    schedule(hit, InterruptException(); error = true)
     DistSSHQueue._join_serve_spin!(hit)
     @test istaskdone(hit)
 end
@@ -205,15 +207,15 @@ end
         store = joinpath(d, "jobs.toml")
         write(store, "jobs = []\n")
         DistSSHQueue.set_stopped!(store)
-        q = DistSSHQueue.Queue(; store=store, runner=_ -> nothing)
+        q = DistSSHQueue.Queue(; store = store, runner = _ -> nothing)
         capture_stdio() do
-            t = @async DistSSHQueue.serve!(q; interval=0.02)
+            t = @async DistSSHQueue.serve!(q; interval = 0.02)
             for _ in 1:100
                 DistSSHQueue.serve_stopped(store) || break
                 sleep(0.02)
             end
             @test !DistSSHQueue.serve_stopped(store)
-            schedule(t, InterruptException(); error=true)
+            schedule(t, InterruptException(); error = true)
             try
                 wait(t)
             catch
@@ -226,171 +228,175 @@ end
     mktempdir() do d
         dedicated = joinpath(d, "env")
         fallback = DistSSHKit.canonical_local_path(dirname(Base.active_project()))
-        @test DistSSHQueue.default_queue_env(; dedicated=dedicated) == fallback
+        @test DistSSHQueue.default_queue_env(; dedicated = dedicated) == fallback
         mkpath(dedicated)
         write(joinpath(dedicated, "Project.toml"), "name = \"x\"\n")
-        @test DistSSHQueue.default_queue_env(; dedicated=dedicated) == dedicated
+        @test DistSSHQueue.default_queue_env(; dedicated = dedicated) == dedicated
     end
 end
 
 @testset "extract_remote_opts" begin
     withenv("DISTSSHQUEUE_HOST" => nothing) do
-    withenv("JULIA_DISTRIBUTED_EXE" => nothing) do
-        host, rjulia, qenv, payload, explicit = DistSSHQueue.extract_remote_opts(["qhost:qbox", "status"])
-        @test host == "qbox"
-        @test rjulia === nothing
-        @test qenv === nothing
-        @test payload == ["status"]
-        @test explicit === true
-        dest, spec = DistSSHQueue.coalesce_remote(host, rjulia, nothing, nothing)
-        @test dest == "qbox"
-        @test spec == "auto"
-        h2, j2, q2, p2, e2 = DistSSHQueue.extract_remote_opts(["--hosts", "other", "status"])
-        @test h2 === nothing
-        @test j2 === nothing
-        @test q2 === nothing
-        @test p2 == ["--hosts", "other", "status"]
-        @test e2 === false
-        h3, _, _, p3, e3 = DistSSHQueue.extract_remote_opts(["go", "--hosts", "child:w:2", "S.jl"])
-        @test h3 === nothing
-        @test p3 == ["go", "--hosts", "child:w:2", "S.jl"]
-        @test e3 === false
-        h4, j4, _, p4, _ = DistSSHQueue.extract_remote_opts(["go", "--julia", "/opt/julia", "S.jl"])
-        @test h4 === nothing
-        @test j4 === nothing
-        @test p4 == ["go", "--julia", "/opt/julia", "S.jl"]
-        hv, _, _, pv, ev = DistSSHQueue.extract_remote_opts(["status", "qhost:qbox"])
-        @test hv == "qbox"
-        @test pv == ["status"]
-        @test ev === true
-    end
-    withenv("JULIA_DISTRIBUTED_EXE" => "/opt/from-env/julia") do
-        h, j, _, p, _ = DistSSHQueue.extract_remote_opts(["qhost:qbox", "status"])
-        _, spec = DistSSHQueue.coalesce_remote(h, j, nothing, nothing)
-        @test spec == "/opt/from-env/julia"
-        @test p == ["status"]
-    end
-
-    host2, rjulia2, qenv2, payload2, ex2 = DistSSHQueue.extract_remote_opts([
-        "qhost:qbox", "--remote-julia", "/opt/julia", "go", "parent:1", "S.jl",
-    ])
-    @test host2 == "qbox"
-    @test rjulia2 == "/opt/julia"
-    @test qenv2 === nothing
-    @test payload2 == ["go", "parent:1", "S.jl"]
-    @test ex2 === true
-    @test_throws ArgumentError DistSSHQueue.extract_remote_opts(["--qhost", "qbox", "status"])
-    @test DistSSHQueue.parse_qhost_token("qhost:user@box") == "user@box"
-    @test_throws ArgumentError DistSSHQueue.parse_qhost_token("child:w:2")
-    err4 = try
-        DistSSHQueue.parse_qhost_token("qhost:4")
-        ""
-    catch e
-        e isa ArgumentError ? e.msg : sprint(showerror, e)
-    end
-    @test occursin("parent:4", err4)
-    @test occursin("not Kit slots", err4)
-    twice = try
-        DistSSHQueue.extract_remote_opts(["qhost:box", "drive", "qhost:4", "child:w:1"])
-        ""
-    catch e
-        e isa ArgumentError ? e.msg : sprint(showerror, e)
-    end
-    @test occursin("parent:4", twice)
-
-    host_go, julia_go, _, payload_go, _ = DistSSHQueue.extract_remote_opts(["go", "child:w1:2", "S.jl"])
-    @test host_go === nothing
-    @test julia_go === nothing
-    @test payload_go == ["go", "child:w1:2", "S.jl"]
-
-    @test_throws ArgumentError DistSSHQueue.coalesce_remote("a", nothing, "b", nothing)
-    @test_throws ArgumentError DistSSHQueue.reject_qhost_on_local("setup", "qbox")
-    @test_throws ArgumentError DistSSHQueue.reject_qhost_on_local("enable", "qbox")
-    @test_throws ArgumentError DistSSHQueue.reject_qhost_on_local("add-host", "qbox")
-    @test_throws ArgumentError DistSSHQueue.reject_qhost_on_local("remove-host", "qbox")
-    DistSSHQueue.reject_qhost_on_local("status", "qbox")
-    DistSSHQueue.reject_qhost_on_local("list-host", "qbox")
-    DistSSHQueue.reject_qhost_on_local("setup", nothing)
-    withenv(DistSSHQueue.QHOST_DEFAULT_ENV => "qbox") do
-        code_env, _, err_env = capture_stdio() do
-            DistSSHQueue.main(["setup", "-h"])
+        withenv("JULIA_DISTRIBUTED_EXE" => nothing) do
+            host, rjulia, qenv, payload, explicit = DistSSHQueue.extract_remote_opts(["qhost:qbox", "status"])
+            @test host == "qbox"
+            @test rjulia === nothing
+            @test qenv === nothing
+            @test payload == ["status"]
+            @test explicit === true
+            dest, spec = DistSSHQueue.coalesce_remote(host, rjulia, nothing, nothing)
+            @test dest == "qbox"
+            @test spec == "auto"
+            h2, j2, q2, p2, e2 = DistSSHQueue.extract_remote_opts(["--hosts", "other", "status"])
+            @test h2 === nothing
+            @test j2 === nothing
+            @test q2 === nothing
+            @test p2 == ["--hosts", "other", "status"]
+            @test e2 === false
+            h3, _, _, p3, e3 = DistSSHQueue.extract_remote_opts(["go", "--hosts", "child:w:2", "S.jl"])
+            @test h3 === nothing
+            @test p3 == ["go", "--hosts", "child:w:2", "S.jl"]
+            @test e3 === false
+            h4, j4, _, p4, _ = DistSSHQueue.extract_remote_opts(["go", "--julia", "/opt/julia", "S.jl"])
+            @test h4 === nothing
+            @test j4 === nothing
+            @test p4 == ["go", "--julia", "/opt/julia", "S.jl"]
+            hv, _, _, pv, ev = DistSSHQueue.extract_remote_opts(["status", "qhost:qbox"])
+            @test hv == "qbox"
+            @test pv == ["status"]
+            @test ev === true
         end
-        @test code_env == 0
-        @test !occursin("runs on the queue host", err_env)
-    end
-    code, _, err = capture_stdio() do
-        DistSSHQueue.main(["qhost:qbox", "add-host", "host1"])
-    end
-    @test code == 1
-    @test occursin("runs on the queue host", err)
-    code2, _, err2 = capture_stdio() do
-        DistSSHQueue.main(["qhost:qbox", "remove-host", "host1"])
-    end
-    @test code2 == 1
-    @test occursin("runs on the queue host", err2)
+        withenv("JULIA_DISTRIBUTED_EXE" => "/opt/from-env/julia") do
+            h, j, _, p, _ = DistSSHQueue.extract_remote_opts(["qhost:qbox", "status"])
+            _, spec = DistSSHQueue.coalesce_remote(h, j, nothing, nothing)
+            @test spec == "/opt/from-env/julia"
+            @test p == ["status"]
+        end
 
-    host4, _, _, payload4, e4 = DistSSHQueue.extract_remote_opts(String[])
-    @test host4 === nothing
-    @test payload4 == String[]
-    @test e4 === false
+        host2, rjulia2, qenv2, payload2, ex2 = DistSSHQueue.extract_remote_opts(
+            [
+                "qhost:qbox", "--remote-julia", "/opt/julia", "go", "parent:1", "S.jl",
+            ]
+        )
+        @test host2 == "qbox"
+        @test rjulia2 == "/opt/julia"
+        @test qenv2 === nothing
+        @test payload2 == ["go", "parent:1", "S.jl"]
+        @test ex2 === true
+        @test_throws ArgumentError DistSSHQueue.extract_remote_opts(["--qhost", "qbox", "status"])
+        @test DistSSHQueue.parse_qhost_token("qhost:user@box") == "user@box"
+        @test_throws ArgumentError DistSSHQueue.parse_qhost_token("child:w:2")
+        err4 = try
+            DistSSHQueue.parse_qhost_token("qhost:4")
+            ""
+        catch e
+            e isa ArgumentError ? e.msg : sprint(showerror, e)
+        end
+        @test occursin("parent:4", err4)
+        @test occursin("not Kit slots", err4)
+        twice = try
+            DistSSHQueue.extract_remote_opts(["qhost:box", "drive", "qhost:4", "child:w:1"])
+            ""
+        catch e
+            e isa ArgumentError ? e.msg : sprint(showerror, e)
+        end
+        @test occursin("parent:4", twice)
 
-    withenv("DISTSSHQUEUE_HOST" => "qbox") do
-        hd, _, _, pd, ed = DistSSHQueue.extract_remote_opts(["status"])
-        @test hd == "qbox"
-        @test pd == ["status"]
-        @test ed === false
-        ht, _, _, _, et = DistSSHQueue.extract_remote_opts(["qhost:other", "status"])
-        @test ht == "other"
-        @test et === true
-    end
-    withenv("DISTSSHQUEUE_HOST" => "qhost:qbox") do
-        hp, _, _, _, ep = DistSSHQueue.extract_remote_opts(["status"])
-        @test hp == "qbox"
-        @test ep === false
-    end
+        host_go, julia_go, _, payload_go, _ = DistSSHQueue.extract_remote_opts(["go", "child:w1:2", "S.jl"])
+        @test host_go === nothing
+        @test julia_go === nothing
+        @test payload_go == ["go", "child:w1:2", "S.jl"]
 
-    _, _, qe, pl, _ = DistSSHQueue.extract_remote_opts([
-        "qhost:qbox", "--queue-env", "~/test-queue", "list-host",
-    ])
-    @test qe == "~/test-queue"
-    @test pl == ["list-host"]
-    @test DistSSHQueue.coalesce_queue_env(qe, nothing) == "~/test-queue"
-    @test DistSSHQueue.coalesce_queue_env(nothing, nothing) ==
-          DistSSHQueue.HOP_QUEUE_ENV_DEFAULT
-    withenv(DistSSHQueue.QUEUE_ENV_ENV => "/opt/qenv") do
-        @test DistSSHQueue.coalesce_queue_env(nothing, nothing) == "/opt/qenv"
-        @test DistSSHQueue.coalesce_queue_env("~/test-queue", nothing) == "~/test-queue"
-    end
-    @test DistSSHQueue.hop_julia_prefix("~/.distsshqueue/env") ==
-          ["--startup-file=no", "--project=~/.distsshqueue/env"]
-    @test DistSSHQueue.hop_julia_prefix("@") == ["--startup-file=no"]
-    code3, _, err3 = capture_stdio() do
-        DistSSHQueue.main(["qhost:qbox", "--project", ".", "list-host"])
-    end
-    @test code3 == 1
-    @test occursin("--queue-env", err3)
-    @test occursin("not forwarded", err3)
+        @test_throws ArgumentError DistSSHQueue.coalesce_remote("a", nothing, "b", nothing)
+        @test_throws ArgumentError DistSSHQueue.reject_qhost_on_local("setup", "qbox")
+        @test_throws ArgumentError DistSSHQueue.reject_qhost_on_local("enable", "qbox")
+        @test_throws ArgumentError DistSSHQueue.reject_qhost_on_local("add-host", "qbox")
+        @test_throws ArgumentError DistSSHQueue.reject_qhost_on_local("remove-host", "qbox")
+        DistSSHQueue.reject_qhost_on_local("status", "qbox")
+        DistSSHQueue.reject_qhost_on_local("list-host", "qbox")
+        DistSSHQueue.reject_qhost_on_local("setup", nothing)
+        withenv(DistSSHQueue.QHOST_DEFAULT_ENV => "qbox") do
+            code_env, _, err_env = capture_stdio() do
+                DistSSHQueue.main(["setup", "-h"])
+            end
+            @test code_env == 0
+            @test !occursin("runs on the queue host", err_env)
+        end
+        code, _, err = capture_stdio() do
+            DistSSHQueue.main(["qhost:qbox", "add-host", "host1"])
+        end
+        @test code == 1
+        @test occursin("runs on the queue host", err)
+        code2, _, err2 = capture_stdio() do
+            DistSSHQueue.main(["qhost:qbox", "remove-host", "host1"])
+        end
+        @test code2 == 1
+        @test occursin("runs on the queue host", err2)
+
+        host4, _, _, payload4, e4 = DistSSHQueue.extract_remote_opts(String[])
+        @test host4 === nothing
+        @test payload4 == String[]
+        @test e4 === false
+
+        withenv("DISTSSHQUEUE_HOST" => "qbox") do
+            hd, _, _, pd, ed = DistSSHQueue.extract_remote_opts(["status"])
+            @test hd == "qbox"
+            @test pd == ["status"]
+            @test ed === false
+            ht, _, _, _, et = DistSSHQueue.extract_remote_opts(["qhost:other", "status"])
+            @test ht == "other"
+            @test et === true
+        end
+        withenv("DISTSSHQUEUE_HOST" => "qhost:qbox") do
+            hp, _, _, _, ep = DistSSHQueue.extract_remote_opts(["status"])
+            @test hp == "qbox"
+            @test ep === false
+        end
+
+        _, _, qe, pl, _ = DistSSHQueue.extract_remote_opts(
+            [
+                "qhost:qbox", "--queue-env", "~/test-queue", "list-host",
+            ]
+        )
+        @test qe == "~/test-queue"
+        @test pl == ["list-host"]
+        @test DistSSHQueue.coalesce_queue_env(qe, nothing) == "~/test-queue"
+        @test DistSSHQueue.coalesce_queue_env(nothing, nothing) ==
+            DistSSHQueue.HOP_QUEUE_ENV_DEFAULT
+        withenv(DistSSHQueue.QUEUE_ENV_ENV => "/opt/qenv") do
+            @test DistSSHQueue.coalesce_queue_env(nothing, nothing) == "/opt/qenv"
+            @test DistSSHQueue.coalesce_queue_env("~/test-queue", nothing) == "~/test-queue"
+        end
+        @test DistSSHQueue.hop_julia_prefix("~/.distsshqueue/env") ==
+            ["--startup-file=no", "--project=~/.distsshqueue/env"]
+        @test DistSSHQueue.hop_julia_prefix("@") == ["--startup-file=no"]
+        code3, _, err3 = capture_stdio() do
+            DistSSHQueue.main(["qhost:qbox", "--project", ".", "list-host"])
+        end
+        @test code3 == 1
+        @test occursin("--queue-env", err3)
+        @test occursin("not forwarded", err3)
     end
 end
 
 @testset "config host names" begin
     H = DistSSHQueue.HostAllow
-    @test DistSSHQueue.config_host_names(Dict{String,Any}()) === nothing
-    @test DistSSHQueue.config_host_names(Dict{String,Any}("store" => "x")) === nothing
-    @test DistSSHQueue.config_host_names(Dict{String,Any}("hosts" => [" parent ", "child:host1"])) ==
-          H("parent" => nothing, "host1" => nothing)
-    @test DistSSHQueue.config_host_names(Dict{String,Any}("hosts" => ["child:host1", "parent:2"])) ==
-          H("host1" => nothing, "parent" => 2)
-    @test DistSSHQueue.config_host_names(Dict{String,Any}("allowed" => ["child:host1", "parent:2"])) ==
-          H("host1" => nothing, "parent" => 2)
+    @test DistSSHQueue.config_host_names(Dict{String, Any}()) === nothing
+    @test DistSSHQueue.config_host_names(Dict{String, Any}("store" => "x")) === nothing
+    @test DistSSHQueue.config_host_names(Dict{String, Any}("hosts" => [" parent ", "child:host1"])) ==
+        H("parent" => nothing, "host1" => nothing)
+    @test DistSSHQueue.config_host_names(Dict{String, Any}("hosts" => ["child:host1", "parent:2"])) ==
+        H("host1" => nothing, "parent" => 2)
+    @test DistSSHQueue.config_host_names(Dict{String, Any}("allowed" => ["child:host1", "parent:2"])) ==
+        H("host1" => nothing, "parent" => 2)
     @test DistSSHQueue.kit_ssh_name("child:host1:4") == "host1"
     @test DistSSHQueue.kit_ssh_name("parent") == "parent"
     @test_throws ArgumentError DistSSHQueue.kit_ssh_name("host1")
-    @test DistSSHQueue.config_host_names(Dict{String,Any}("hosts" => Any[])) == H()
-    @test_throws ArgumentError DistSSHQueue.config_host_names(Dict{String,Any}("hosts" => ["host1"]))
-    @test_throws ArgumentError DistSSHQueue.config_host_names(Dict{String,Any}("hosts" => "parent"))
+    @test DistSSHQueue.config_host_names(Dict{String, Any}("hosts" => Any[])) == H()
+    @test_throws ArgumentError DistSSHQueue.config_host_names(Dict{String, Any}("hosts" => ["host1"]))
+    @test_throws ArgumentError DistSSHQueue.config_host_names(Dict{String, Any}("hosts" => "parent"))
     @test_throws ArgumentError DistSSHQueue.config_host_names(
-        Dict{String,Any}("hosts" => ["parent"], "allowed" => ["child:host1"]),
+        Dict{String, Any}("hosts" => ["parent"], "allowed" => ["child:host1"]),
     )
 end
 
@@ -401,8 +407,8 @@ end
         DistSSHQueue.write_config_template(cfg)
         DistSSHQueue.add_host_names!(cfg, ["parent", "child:host1"])
         text = read(cfg, String)
-        @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path=cfg)) ==
-              H("parent" => nothing, "host1" => nothing)
+        @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = cfg)) ==
+            H("parent" => nothing, "host1" => nothing)
         @test occursin("hosts = [", text)
         @test occursin("child:host1", text)
         @test occursin("[env]", text)
@@ -412,29 +418,29 @@ end
         @test !occursin("DISTRIBUTED_REMOTE_PROJECT_ROOT = ", text)
         @test !occursin("# hosts", text)
         DistSSHQueue.add_host_names!(cfg, ["child:host1"])
-        @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path=cfg)) ==
-              H("parent" => nothing, "host1" => nothing)
+        @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = cfg)) ==
+            H("parent" => nothing, "host1" => nothing)
         DistSSHQueue.add_host_names!(cfg, ["child:host1:4"])
-        @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path=cfg)) ==
-              H("parent" => nothing, "host1" => 4)
+        @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = cfg)) ==
+            H("parent" => nothing, "host1" => 4)
         @test occursin("child:host1:4", read(cfg, String))
         DistSSHQueue.remove_host_names!(cfg, ["parent"])
-        @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path=cfg)) ==
-              H("host1" => 4)
+        @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = cfg)) ==
+            H("host1" => 4)
         DistSSHQueue.remove_host_names!(cfg, ["child:host1"])
-        @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path=cfg)) ==
-              H()
+        @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = cfg)) ==
+            H()
         @test occursin("hosts = []", read(cfg, String))
         @test_throws ArgumentError DistSSHQueue.remove_host_names!(cfg, ["child:host1"])
         @test_throws ArgumentError DistSSHQueue.add_host_names!(cfg, ["host1"])
         missing = joinpath(d, "none.toml")
         DistSSHQueue.add_host_names!(missing, ["child:host1"])
         @test isfile(missing)
-        @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path=missing)) ==
-              H("host1" => nothing)
+        @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = missing)) ==
+            H("host1" => nothing)
         @test_throws ArgumentError DistSSHQueue.add_host_names!(cfg, String[])
         @test DistSSHQueue.replace_or_insert_hosts_line("store = \"x\"\n", "hosts = []") ==
-              "store = \"x\"\nhosts = []\n"
+            "store = \"x\"\nhosts = []\n"
         old = joinpath(d, "old.toml")
         write(old, "store = \"x\"\nallowed = [\"parent\"]\n")
         DistSSHQueue.add_host_names!(old, ["child:host1"])
@@ -442,8 +448,8 @@ end
         @test occursin("hosts = [", migrated)
         @test occursin("child:host1", migrated)
         @test !occursin("allowed =", migrated)
-        @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path=old)) ==
-              H("parent" => nothing, "host1" => nothing)
+        @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = old)) ==
+            H("parent" => nothing, "host1" => nothing)
     end
 end
 

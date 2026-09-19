@@ -27,7 +27,7 @@ using DistSSHQueue
         k = DistSSHQueue.new_job_id()
         @test DistSSHQueue.new_job_id() != k
         @test occursin(r"^[0-9a-fA-F-]{36}$", k)
-        @test DistSSHQueue.remote_stage_root(k; home="/qh") == "/qh/.distsshqueue/stage/" * k
+        @test DistSSHQueue.remote_stage_root(k; home = "/qh") == "/qh/.distsshqueue/stage/" * k
     end
     @test DistSSHQueue.should_stage("status", ["--interval", "1"]) == false
     @test DistSSHQueue.should_submit_ticket("submit", ["go", "S.jl"])
@@ -45,16 +45,16 @@ using DistSSHQueue
     @test ".distsshqueue/" in opts
     @test ".distsshkit/" in opts
     @test ".git/" in opts
-    @test "--info=progress2" in DistSSHQueue.stage_rsync_push_opts("ssh"; progress=true)
+    @test "--info=progress2" in DistSSHQueue.stage_rsync_push_opts("ssh"; progress = true)
     buf = IOBuffer()
-    DistSSHQueue.print_rsync_start("qh", "/Users/me/.distsshqueue/stage/abc"; io=buf)
+    DistSSHQueue.print_rsync_start("qh", "/Users/me/.distsshqueue/stage/abc"; io = buf)
     @test occursin("rsync → qh:", String(take!(buf)))
     buf2 = IOBuffer()
-    DistSSHQueue.print_rsync_start("qh", "/tmp/leaf"; pulling=true, io=buf2)
+    DistSSHQueue.print_rsync_start("qh", "/tmp/leaf"; pulling = true, io = buf2)
     @test occursin("rsync ← qh:", String(take!(buf2)))
     withenv("DISTSSHKIT_QUIET" => "1") do
         bufq = IOBuffer()
-        DistSSHQueue.print_rsync_start("qh", "/x"; io=bufq)
+        DistSSHQueue.print_rsync_start("qh", "/x"; io = bufq)
         @test isempty(String(take!(bufq)))
         @test DistSSHQueue.rsync_progress_on(["--progress"]) == false
     end

@@ -5,9 +5,9 @@ function _kit_env_on(name::AbstractString)::Bool
 end
 
 function _set_status_watch_mode(
-    mode::Union{Nothing,Symbol},
-    v::Symbol,
-)::Symbol
+        mode::Union{Nothing, Symbol},
+        v::Symbol,
+    )::Symbol
     if mode !== nothing && mode !== v
         throw(ArgumentError("cannot combine --quiet (-q), --progress, and --verbose"))
     end
@@ -21,14 +21,18 @@ end
 """
 function peel_status_watch_verbosity(args::Vector{String})
     mode = nothing
-    n = count(identity, (
-        _kit_env_on("DISTSSHKIT_QUIET"),
-        _kit_env_on("DISTSSHKIT_PROGRESS"),
-        _kit_env_on("DISTSSHKIT_VERBOSE"),
-    ))
-    n > 1 && throw(ArgumentError(
-        "cannot combine DISTSSHKIT_QUIET, DISTSSHKIT_PROGRESS, and DISTSSHKIT_VERBOSE",
-    ))
+    n = count(
+        identity, (
+            _kit_env_on("DISTSSHKIT_QUIET"),
+            _kit_env_on("DISTSSHKIT_PROGRESS"),
+            _kit_env_on("DISTSSHKIT_VERBOSE"),
+        )
+    )
+    n > 1 && throw(
+        ArgumentError(
+            "cannot combine DISTSSHKIT_QUIET, DISTSSHKIT_PROGRESS, and DISTSSHKIT_VERBOSE",
+        )
+    )
     _kit_env_on("DISTSSHKIT_QUIET") && (mode = _set_status_watch_mode(mode, :quiet))
     (_kit_env_on("DISTSSHKIT_PROGRESS") || _kit_env_on("DISTSSHKIT_VERBOSE")) &&
         (mode = _set_status_watch_mode(mode, :chrome))
@@ -55,10 +59,10 @@ end
 
 """Remaining flags after verbosity. `default_interval === nothing` is a snapshot (`status`)."""
 function peel_status_watch_interval(
-    rest::Vector{String};
-    verb::AbstractString,
-    default_interval::Union{Nothing,Float64},
-)::Tuple{Symbol,Union{Nothing,Float64},Union{Nothing,Int}}
+        rest::Vector{String};
+        verb::AbstractString,
+        default_interval::Union{Nothing, Float64},
+    )::Tuple{Symbol, Union{Nothing, Float64}, Union{Nothing, Int}}
     interval = default_interval
     tail = nothing
     i = 1
@@ -87,22 +91,22 @@ function peel_status_watch_interval(
 end
 
 function show_status(
-    store::AbstractString;
-    io::IO=stdout,
-    qhost::Union{Nothing,AbstractString}=qhost_display_from_env(),
-    quiet::Bool=false,
-    tail::Union{Nothing,Int}=nothing,
-    verbose::Bool=false,
-)
+        store::AbstractString;
+        io::IO = stdout,
+        qhost::Union{Nothing, AbstractString} = qhost_display_from_env(),
+        quiet::Bool = false,
+        tail::Union{Nothing, Int} = nothing,
+        verbose::Bool = false,
+    )
     rows = isfile(store) ? read_jobs(store) : Job[]
     shown, hidden = _tail_jobs(rows, tail)
     return print_status_table(
-        store, shown; io=io, qhost=qhost, quiet=quiet, hidden=hidden, verbose=verbose,
+        store, shown; io = io, qhost = qhost, quiet = quiet, hidden = hidden, verbose = verbose,
     )
 end
 
 function status_cli(args::Vector{String})::Cint
-    return _status_watch_cli(args; verb="status", default_interval=nothing)
+    return _status_watch_cli(args; verb = "status", default_interval = nothing)
 end
 
 """`ssh -t` for `qhost:` `status` / `watch` when the client stdout is a TTY.
@@ -111,18 +115,18 @@ Do not also require `--interval` on `rest` (snapshot hops would be a pipe
 and Kit `use_colors()` would drop ANSI).
 """
 function status_watch_hop_tty(
-    ::AbstractVector{<:AbstractString};
-    client_tty::Bool=stdout isa Base.TTY,
-)::Bool
+        ::AbstractVector{<:AbstractString};
+        client_tty::Bool = stdout isa Base.TTY,
+    )::Bool
     return client_tty
 end
 
 function _watch_paint!(
-    io::IO,
-    text::AbstractString,
-    prev::Ref{String};
-    clear::Bool=io isa Base.TTY,
-)
+        io::IO,
+        text::AbstractString,
+        prev::Ref{String};
+        clear::Bool = io isa Base.TTY,
+    )
     s = String(text)
     s == prev[] && return nothing
     prev[] = s
@@ -146,7 +150,7 @@ function _watch_redraw!(f, io::IO, prev::Ref{String})
     return nothing
 end
 
-function watch_ticks_from_env()::Union{Nothing,Int}
+function watch_ticks_from_env()::Union{Nothing, Int}
     raw = strip(get(ENV, WATCH_TICKS_ENV, ""))
     isempty(raw) && return nothing
     n = tryparse(Int, raw)
@@ -161,15 +165,15 @@ product CLI. The verb `watch` stays; a later monitor package may own that
 name (Kit `kit.progress` watchers).
 """
 function watch!(
-    store::AbstractString;
-    interval::Float64=0.5,
-    ticks::Union{Nothing,Int}=nothing,
-    io::IO=stdout,
-    qhost::Union{Nothing,AbstractString}=qhost_display_from_env(),
-    quiet::Bool=false,
-    tail::Union{Nothing,Int}=nothing,
-    verbose::Bool=false,
-)::Cint
+        store::AbstractString;
+        interval::Float64 = 0.5,
+        ticks::Union{Nothing, Int} = nothing,
+        io::IO = stdout,
+        qhost::Union{Nothing, AbstractString} = qhost_display_from_env(),
+        quiet::Bool = false,
+        tail::Union{Nothing, Int} = nothing,
+        verbose::Bool = false,
+    )::Cint
     interval > 0 || throw(ArgumentError("watch: --interval must be > 0"))
     ticks === nothing || ticks >= 1 || throw(ArgumentError("watch: $WATCH_TICKS_ENV must be >= 1"))
     n = 0
@@ -182,12 +186,12 @@ function watch!(
             if quiet || io isa Base.TTY
                 _watch_redraw!(io, prev) do buf
                     print_watch_frame(
-                        store, shown; io=buf, qhost=qhost, quiet=quiet,
-                        hidden=hidden, verbose=verbose,
+                        store, shown; io = buf, qhost = qhost, quiet = quiet,
+                        hidden = hidden, verbose = verbose,
                     )
                 end
             else
-                print_watch_compact(store, shown; io=io)
+                print_watch_compact(store, shown; io = io)
             end
             ticks !== nothing && n >= ticks && break
             sleep(interval)
@@ -199,27 +203,27 @@ function watch!(
 end
 
 function watch_cli(args::Vector{String})::Cint
-    return _status_watch_cli(args; verb="watch", default_interval=0.5)
+    return _status_watch_cli(args; verb = "watch", default_interval = 0.5)
 end
 
 function _status_watch_cli(
-    args::Vector{String};
-    verb::AbstractString,
-    default_interval::Union{Nothing,Float64},
-)::Cint
+        args::Vector{String};
+        verb::AbstractString,
+        default_interval::Union{Nothing, Float64},
+    )::Cint
     mode, rest = peel_status_watch_verbosity(args)
     kind, interval, tail = peel_status_watch_interval(
-        rest; verb=verb, default_interval=default_interval,
+        rest; verb = verb, default_interval = default_interval,
     )
-    kind === :help && (show_usage(; command=verb); return 0)
+    kind === :help && (show_usage(; command = verb); return 0)
     quiet = mode === :quiet
     verbose = mode === :chrome && any(a -> a in ("--verbose", "--progress"), args)
     if interval === nothing
-        show_status(store_path(); quiet=quiet, tail=tail, verbose=verbose)
+        show_status(store_path(); quiet = quiet, tail = tail, verbose = verbose)
         return 0
     end
     return watch!(
-        store_path(); interval=interval, ticks=watch_ticks_from_env(), quiet=quiet,
-        tail=tail, verbose=verbose,
+        store_path(); interval = interval, ticks = watch_ticks_from_env(), quiet = quiet,
+        tail = tail, verbose = verbose,
     )
 end

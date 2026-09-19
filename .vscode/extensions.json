@@ -1,7 +1,7 @@
 {
   "recommendations": [
     "julialang.language-julia",
-    "singularitti.vscode-julia-formatter",
+    "jkillingsworth.custom-local-formatters",
     "tamasfe.even-better-toml",
     "davidanson.vscode-markdownlint",
     "github.vscode-github-actions",

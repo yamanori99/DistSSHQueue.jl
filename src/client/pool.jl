@@ -12,7 +12,7 @@ function clamp_pool_slots(slots::Int, allow::Union{Nothing, HostAllow}, host::Ab
     return min(slots, cap)
 end
 
-function print_queue_pool_submit(pool, allow::Union{Nothing, HostAllow}=nothing)
+function print_queue_pool_submit(pool, allow::Union{Nothing, HostAllow} = nothing)
     parts = String[]
     for row in pool.hosts
         row.ok || continue
@@ -31,8 +31,9 @@ function pool_cli(args::Vector{String})::Cint
     if opts.show_help
         DistSSHKit.show_pool_usage()
         DistSSHKit.print_help_blank()
-        DistSSHKit.print_help_section("Queue"; io=stdout)
-        DistSSHKit.print_help_lines(stdout,
+        DistSSHKit.print_help_section("Queue"; io = stdout)
+        DistSSHKit.print_help_lines(
+            stdout,
             "  Same flags as DistSSHKit pool. Runs on the queue host (cwd / project).",
             "  julia -m DistSSHQueue [qhost:HOST] pool [parent] [child:NAME...]",
             "  Omit tokens to pool config hosts. Does not enqueue.",
@@ -64,23 +65,23 @@ function pool_cli(args::Vector{String})::Cint
     DistSSHKit.writeln_field("Project", DistSSHKit.short_path(project))
     DistSSHKit.kit_println()
     session = DistSSHKit.KitSession(;
-        project=project,
-        workers=tokens,
-        quiet=opts.cli_session.quiet,
-        verbosity=opts.cli_session.verbosity,
-        yes=opts.cli_session.yes,
+        project = project,
+        workers = tokens,
+        quiet = opts.cli_session.quiet,
+        verbosity = opts.cli_session.verbosity,
+        yes = opts.cli_session.yes,
     )
     result = DistSSHKit.pool!(
         session;
-        gb_per_worker=opts.gb_per_worker,
-        mem_headroom=opts.mem_headroom,
-        parent_gb=opts.parent_gb,
+        gb_per_worker = opts.gb_per_worker,
+        mem_headroom = opts.mem_headroom,
+        parent_gb = opts.parent_gb,
     )
     DistSSHKit.print_pool(result)
     print_pool_inventory_notes!(;
-        gb_per_worker=opts.gb_per_worker,
-        mem_headroom=opts.mem_headroom,
-        parent_gb=opts.parent_gb,
+        gb_per_worker = opts.gb_per_worker,
+        mem_headroom = opts.mem_headroom,
+        parent_gb = opts.parent_gb,
     )
     warn_julia_major_minor(tokens)
     any(row -> row.ok && clamp_pool_slots(row.slots, allow, row.host) > 0, result.hosts) &&

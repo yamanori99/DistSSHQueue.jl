@@ -6,15 +6,17 @@ From a client: `qhost:HOST size …`.
 """
 
 function size_hosts_from_allow(
-    include_parent::Bool,
-    hosts::Vector{String},
-    allow::Union{Nothing, HostAllow},
-)::Tuple{Bool, Vector{String}}
+        include_parent::Bool,
+        hosts::Vector{String},
+        allow::Union{Nothing, HostAllow},
+    )::Tuple{Bool, Vector{String}}
     isempty(hosts) || return include_parent, String[String(h) for h in hosts]
     include_parent && return include_parent, String[String(h) for h in hosts]
-    allow === nothing && throw(ArgumentError(
-        "size: pass `parent` / `child:NAME`, or add-host first",
-    ))
+    allow === nothing && throw(
+        ArgumentError(
+            "size: pass `parent` / `child:NAME`, or add-host first",
+        )
+    )
     isempty(allow) && throw(ArgumentError("size: hosts = []; add-host first"))
     out = String[]
     parent = false
@@ -45,8 +47,9 @@ function size_cli(args::Vector{String})::Cint
     if opts.show_help
         DistSSHKit.show_size_usage()
         DistSSHKit.print_help_blank()
-        DistSSHKit.print_help_section("Queue"; io=stdout)
-        DistSSHKit.print_help_lines(stdout,
+        DistSSHKit.print_help_section("Queue"; io = stdout)
+        DistSSHKit.print_help_lines(
+            stdout,
             "  Same flags as DistSSHKit size. Runs on the queue host (cwd / project).",
             "  julia -m DistSSHQueue [qhost:HOST] size [parent] [child:NAME...]",
             "  Omit tokens to size config hosts. Does not enqueue.",
@@ -76,14 +79,14 @@ function size_cli(args::Vector{String})::Cint
         hosts,
         samples,
         opts;
-        show_peak=(opts.probe !== nothing && opts.gb_per_worker === nothing),
+        show_peak = (opts.probe !== nothing && opts.gb_per_worker === nothing),
     )
     plan = DistSSHKit.compute_worker_plan(
         all_hosts,
         hosts,
         DistSSHKit.per_worker_gb_dict(samples);
-        mem_headroom=opts.mem_headroom,
-        parent_gb=opts.parent_gb,
+        mem_headroom = opts.mem_headroom,
+        parent_gb = opts.parent_gb,
     )
     print_queue_size_submit(include_parent, hosts, plan)
     return 0

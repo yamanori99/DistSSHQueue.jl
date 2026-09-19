@@ -7,6 +7,10 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 Next patch after `0.5.1`. DistSSHKit **0.7.x** (≥0.7.3). Not a cut yet.
 
+- [Runic](https://github.com/fredrikekre/Runic.jl) `--check` on PRs
+  (soft; not a merge gate) and monthly cron (Issue
+  `Runic monthly failed`)
+  ([#181](https://github.com/yamanori99/DistSSHQueue.jl/issues/181)).
 - DistSSHKit **0.7.x** (≥0.7.3). Kit `:check` treats a missing local git
   commit as a warning, not a fail
   ([DistSSHKit#370](https://github.com/yamanori99/DistSSHKit.jl/issues/370)).

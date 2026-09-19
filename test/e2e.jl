@@ -92,9 +92,9 @@ end
 function stage_kit_demos!(proj::AbstractString)
     kit = kit_root()
     for (subdir, names) in (
-        ("without_kit", ("pi_file.jl", "pi_echo.jl")),
-        ("with_kit", ("square_file.jl", "square_echo.jl")),
-    )
+            ("without_kit", ("pi_file.jl", "pi_echo.jl")),
+            ("with_kit", ("square_file.jl", "square_echo.jl")),
+        )
         dest = joinpath(proj, "demos", subdir)
         mkpath(dest)
         for name in names
@@ -109,7 +109,7 @@ end
 # Poll until `id` is terminal. Does not start a later queued job once `id` is done.
 function drive_until_terminal!(q, id; tries = 600, sleep_s = 0.2)
     terminal = (:done, :failed, :cancelled)
-    for _ = 1:tries
+    for _ in 1:tries
         st = job(q, id).state
         st in terminal && return st
         step!(q)
@@ -151,10 +151,12 @@ end
 
 function e2e_qcmd(test_project::AbstractString, args)
     return DistSSHQueue.with_serve_tag(
-        Cmd(String[
-            E2E_JULIA, "--startup-file=no", "--project=$test_project",
-            "-m", "DistSSHQueue", String[string(a) for a in args]...,
-        ]),
+        Cmd(
+            String[
+                E2E_JULIA, "--startup-file=no", "--project=$test_project",
+                "-m", "DistSSHQueue", String[string(a) for a in args]...,
+            ]
+        ),
     )
 end
 
@@ -163,11 +165,11 @@ end
 # like a job STATE. Default 150×0.2s (~30 s) is enough for local E2E;
 # the `client qhost:` testset passes tries=600 for Colima on macos-15-intel
 # (autoserve hop + nested Docker).
-function wait_store_job(store::AbstractString, id::AbstractString, states; tries=150, sleep_s=0.2)
+function wait_store_job(store::AbstractString, id::AbstractString, states; tries = 150, sleep_s = 0.2)
     want = Set{Symbol}(states)
     sid = String(id)
     last = DistSSHQueue.Job[]
-    for _ = 1:tries
+    for _ in 1:tries
         last = try
             DistSSHQueue.with_store_lock(store) do
                 isfile(store) ? DistSSHQueue.read_jobs(store) : DistSSHQueue.Job[]
@@ -194,13 +196,13 @@ end
 # CLI for assertions. Product chrome (`Wrote`, `Started serve`, expected
 # `Error:`) stays off the test log; stdout is still returned when captured.
 function run_cli(cmd::Cmd)
-    return run(pipeline(ignorestatus(cmd); stdout=devnull, stderr=devnull))
+    return run(pipeline(ignorestatus(cmd); stdout = devnull, stderr = devnull))
 end
 
 function read_cli(cmd::Cmd)::String
     err = IOBuffer()
     try
-        return strip(read(pipeline(cmd; stderr=err), String))
+        return strip(read(pipeline(cmd; stderr = err), String))
     catch
         msg = strip(String(take!(err)))
         isempty(msg) || println(stderr, msg)
@@ -251,7 +253,7 @@ function write_loopback_sshd(dir::AbstractString, port::Int, controller_key::Abs
     hostkey = joinpath(dir, "ssh_host_ed25519_key")
     isfile(hostkey) || run(`ssh-keygen -t ed25519 -f $hostkey -N "" -q`)
     auth = joinpath(dir, "authorized_keys")
-    cp(string(controller_key, ".pub"), auth; force=true)
+    cp(string(controller_key, ".pub"), auth; force = true)
     chmod(auth, 0o600)
     cfg = joinpath(dir, "sshd_config")
     lines = String[
@@ -280,8 +282,8 @@ function start_loopback_sshd(dir::AbstractString, port::Int, controller_key::Abs
     cfg = write_loopback_sshd(dir, port, controller_key)
     log = joinpath(dir, "sshd.log")
     sshd = find_sshd()
-    proc = run(`$sshd -D -f $cfg -E $log`; wait=false)::Base.Process
-    for _ = 1:50
+    proc = run(`$sshd -D -f $cfg -E $log`; wait = false)::Base.Process
+    for _ in 1:50
         process_running(proc) || break
         try
             sock = Sockets.connect(Sockets.IPv4(127, 0, 0, 1), port)
@@ -310,34 +312,34 @@ function stop_loopback_sshd(proc::Base.Process)
 end
 
 function write_ssh_config_with_qhost(
-    path::AbstractString,
-    port::Int,
-    user::AbstractString,
-    ssh_config::AbstractString,
-    controller_key::AbstractString,
-)
+        path::AbstractString,
+        port::Int,
+        user::AbstractString,
+        ssh_config::AbstractString,
+        controller_key::AbstractString,
+    )
     body = read(ssh_config, String)
     write(
         path,
         body * """
 
-Host distsshqueue-qh
-  HostName 127.0.0.1
-  User $(user)
-  Port $(port)
-  IdentityFile $(controller_key)
-  IdentitiesOnly yes
-  BatchMode yes
-  ConnectTimeout 10
-  StrictHostKeyChecking accept-new
-  UserKnownHostsFile $(joinpath(dirname(path), "known_hosts"))
-  TCPKeepAlive yes
-""",
+            Host distsshqueue-qh
+              HostName 127.0.0.1
+              User $(user)
+              Port $(port)
+              IdentityFile $(controller_key)
+              IdentitiesOnly yes
+              BatchMode yes
+              ConnectTimeout 10
+              StrictHostKeyChecking accept-new
+              UserKnownHostsFile $(joinpath(dirname(path), "known_hosts"))
+              TCPKeepAlive yes
+            """,
     )
     return path
 end
 
-function write_remote_julia(path::AbstractString, env::Dict{String,String})
+function write_remote_julia(path::AbstractString, env::Dict{String, String})
     exports = String[]
     for (k, v) in env
         push!(exports, "export $k=$(DistSSHQueue.sh_single_quote(v))")
@@ -345,10 +347,10 @@ function write_remote_julia(path::AbstractString, env::Dict{String,String})
     write(
         path,
         """
-#!/bin/sh
-$(join(exports, "\n"))
-exec $(DistSSHQueue.sh_single_quote(E2E_JULIA)) "\$@"
-""",
+        #!/bin/sh
+        $(join(exports, "\n"))
+        exec $(DistSSHQueue.sh_single_quote(E2E_JULIA)) "\$@"
+        """,
     )
     chmod(path, 0o755)
     return path
@@ -493,7 +495,7 @@ end
                 store_c = joinpath(d, "cancel.toml")
                 echo = joinpath(JOB_PROJECT, "demos", "without_kit", "pi_echo.jl")
                 h = Queue(; store = store_c)
-                outs = [joinpath(JOB_PROJECT, "e2e_kit_out", "skip_$i") for i = 1:3]
+                outs = [joinpath(JOB_PROJECT, "e2e_kit_out", "skip_$i") for i in 1:3]
                 for o in outs
                     isdir(o) && rm(o; recursive = true)
                 end
@@ -568,7 +570,7 @@ end
                 script = joinpath(JOB_PROJECT, "demos", "without_kit", "pi_echo.jl")
                 @test isfile(script)
 
-                host_env = Dict{String,String}(
+                host_env = Dict{String, String}(
                     "HOME" => e2e_home,
                     "JULIA_DEPOT_PATH" => julia_depot_path_env(),
                     "DISTSSHQUEUE_CONFIG" => cfg,
@@ -598,12 +600,18 @@ end
                         joinpath(".config", "systemd", "user", "distsshqueue.serve.service")
                     end
                     unit = joinpath(e2e_home, rel)
-                    @test unit == (Sys.isapple() ? DistSSHQueue.launch_agent_path(; home=e2e_home) :
-                        DistSSHQueue.systemd_user_path(; home=e2e_home))
+                    @test unit == (
+                        Sys.isapple() ? DistSSHQueue.launch_agent_path(; home = e2e_home) :
+                            DistSSHQueue.systemd_user_path(; home = e2e_home)
+                    )
                     @test isfile(unit)
-                    @test !isfile(joinpath(e2e_home, Sys.isapple() ?
-                        joinpath(".config", "systemd", "user", "distsshqueue.serve.service") :
-                        joinpath("Library", "LaunchAgents", "org.distsshqueue.serve.plist")))
+                    @test !isfile(
+                        joinpath(
+                            e2e_home, Sys.isapple() ?
+                                joinpath(".config", "systemd", "user", "distsshqueue.serve.service") :
+                                joinpath("Library", "LaunchAgents", "org.distsshqueue.serve.plist")
+                        )
+                    )
                     body = read(unit, String)
                     @test occursin("DistSSHQueue", body)
                     @test occursin("serve", body)
@@ -615,10 +623,12 @@ end
                     # Glue only: header + submit template footer. Table layout is Kit E2E.
                     size_env = merge(env, Dict("DISTSSHKIT_QUIET" => "0"))
                     inspect_hosts = ["parent", "child:$(HOSTS[1])"]
-                    size_out = read_cli(addenv(
-                        qcmd(["size", "--gb-per-worker", "1.5", inspect_hosts...]),
-                        size_env...,
-                    ))
+                    size_out = read_cli(
+                        addenv(
+                            qcmd(["size", "--gb-per-worker", "1.5", inspect_hosts...]),
+                            size_env...,
+                        )
+                    )
                     @test occursin("DistSSHQueue size", size_out)
                     @test occursin("Suggested submit (template):", size_out)
                     @test occursin("child:$(HOSTS[1]):", size_out)
@@ -630,20 +640,22 @@ end
                         occursin("submit drive", plan_out)
                     @test occursin("child:$(HOSTS[1]):", plan_out)
 
-                    pool_out = read_cli(addenv(
-                        qcmd(["pool", "--gb-per-worker", "1.5", inspect_hosts...]),
-                        size_env...,
-                    ))
+                    pool_out = read_cli(
+                        addenv(
+                            qcmd(["pool", "--gb-per-worker", "1.5", inspect_hosts...]),
+                            size_env...,
+                        )
+                    )
                     @test occursin("DistSSHQueue pool", pool_out)
                     @test occursin("Suggested submit (template):", pool_out)
                     @test occursin("no RSS; use size to measure", pool_out)
                     @test occursin("child:$(HOSTS[1]):", pool_out)
                     @test !isfile(store)
 
-                    serve_proc = run(pipeline(addenv(qcmd(["serve", "--interval", "0.2"]), env...); stdout=devnull, stderr=devnull); wait=false)
+                    serve_proc = run(pipeline(addenv(qcmd(["serve", "--interval", "0.2"]), env...); stdout = devnull, stderr = devnull); wait = false)
                     try
                         outdir = joinpath(JOB_PROJECT, "e2e_kit_out", "cli_on_host")
-                        isdir(outdir) && rm(outdir; recursive=true)
+                        isdir(outdir) && rm(outdir; recursive = true)
                         id = read_cli(addenv(qcmd(["submit", "go", token, "--output-dir", outdir, script, GO_N...]), env...))
                         @test !isempty(id)
                         wait_store_job(store, id, (:done,))
@@ -679,7 +691,7 @@ end
                             SSH_CONFIG, controller_key,
                         )
                         probe_err = IOBuffer()
-                        probe = run(pipeline(ignorestatus(`ssh -F $ssh_cfg -o ConnectTimeout=5 -o LogLevel=ERROR distsshqueue-qh true`); stdout=devnull, stderr=probe_err))
+                        probe = run(pipeline(ignorestatus(`ssh -F $ssh_cfg -o ConnectTimeout=5 -o LogLevel=ERROR distsshqueue-qh true`); stdout = devnull, stderr = probe_err))
                         if probe.exitcode != 0
                             client = String(take!(probe_err))
                             server = read(joinpath(sshd_dir, "sshd.log"), String)
@@ -691,7 +703,7 @@ end
                         # must reach it. Do not instantiate that Manifest on
                         # workers (path-dev Kit).
                         write(gi, replace(gi_body, r"^Manifest\.toml\r?\n?"m => ""))
-                        remote_env = Dict{String,String}(
+                        remote_env = Dict{String, String}(
                             "HOME" => e2e_home,
                             "JULIA_DEPOT_PATH" => julia_depot_path_env(),
                             "JULIA_PROJECT" => test_project,
@@ -704,7 +716,7 @@ end
                             DistSSHQueue.NO_KIT_SETUP_ENV => "1",
                         )
                         wrapper = write_remote_julia(joinpath(d, "remote-julia"), remote_env)
-                        client_env = Dict{String,String}(
+                        client_env = Dict{String, String}(
                             "DISTSSHKIT_YES" => "1",
                             "DISTSSHQUEUE_WATCH_TICKS" => "1",
                             "DISTRIBUTED_SSH_OPTS" => "-F $ssh_cfg",
@@ -713,16 +725,16 @@ end
                         qh(rest) = qcmd(["qhost:distsshqueue-qh", "--remote-julia", wrapper, "--queue-env", test_project, rest...])
 
                         reject_err = IOBuffer()
-                        rejected = run(pipeline(ignorestatus(addenv(qh(["setup"]), client_env...)); stdout=devnull, stderr=reject_err))
+                        rejected = run(pipeline(ignorestatus(addenv(qh(["setup"]), client_env...)); stdout = devnull, stderr = reject_err))
                         @test rejected.exitcode != 0
                         @test occursin("client token", String(take!(reject_err)))
 
                         outdir = joinpath(JOB_PROJECT, "e2e_kit_out", "qhost")
-                        isdir(outdir) && rm(outdir; recursive=true)
+                        isdir(outdir) && rm(outdir; recursive = true)
                         id1 = read_cli(addenv(qh(["submit", "go", token, "--output-dir", outdir, script, GO_N...]), client_env...))
                         @test !isempty(id1)
                         @test isfile(DistSSHQueue.submit_ticket_path(JOB_PROJECT, id1))
-                        wait_store_job(qh_store, id1, (:done,); tries=600)
+                        wait_store_job(qh_store, id1, (:done,); tries = 600)
                         listed = read_cli(addenv(qh(["status"]), client_env...))
                         @test status_shows_id(listed, id1)
                         @test occursin("done", listed)
@@ -732,26 +744,28 @@ end
 
                         id_f = read_cli(addenv(qh(["submit", "go", token, script, GO_N...]), client_env...))
                         @test !isempty(id_f)
-                        row_f = wait_store_job(qh_store, id_f, (:done,); tries=600)
+                        row_f = wait_store_job(qh_store, id_f, (:done,); tries = 600)
                         @test row_f.state === :done
                         fetched = read_cli(addenv(qh(["fetch", id_f]), client_env...))
                         @test occursin(first(id_f, 8), fetched)
                         @test isfile(joinpath(fetched, "kit.result"))
                         into_f = joinpath(JOB_PROJECT, "e2e_fetch_into")
-                        isdir(into_f) && rm(into_f; recursive=true)
+                        isdir(into_f) && rm(into_f; recursive = true)
                         mkpath(into_f)
                         write(joinpath(into_f, "old_result.csv"), "keep\n")
-                        fetched_into = read_cli(addenv(
-                            qh(["fetch", id_f, "--into", into_f, "--force"]),
-                            client_env...,
-                        ))
+                        fetched_into = read_cli(
+                            addenv(
+                                qh(["fetch", id_f, "--into", into_f, "--force"]),
+                                client_env...,
+                            )
+                        )
                         @test fetched_into == DistSSHKit.canonical_local_path(into_f) ||
                             occursin("e2e_fetch_into", fetched_into)
                         @test isfile(joinpath(into_f, "old_result.csv"))
                         @test isfile(joinpath(into_f, "kit.result"))
                         @test read(joinpath(into_f, "old_result.csv"), String) == "keep\n"
-                        rm(fetched; recursive=true, force=true)
-                        rm(into_f; recursive=true, force=true)
+                        rm(fetched; recursive = true, force = true)
+                        rm(into_f; recursive = true, force = true)
 
                         # Occupy serve on this box (`parent:1`); a worker
                         # `pi_echo` finishes before cancel. Submit the queued row
@@ -759,15 +773,15 @@ end
                         hold = joinpath(d, "hold.jl")
                         write(hold, "while true; sleep(1); end\n")
                         cancel_out = joinpath(JOB_PROJECT, "e2e_kit_out", "qhost_cancel")
-                        isdir(cancel_out) && rm(cancel_out; recursive=true)
+                        isdir(cancel_out) && rm(cancel_out; recursive = true)
                         id2 = read_cli(addenv(qh(["submit", "go", "parent:1", "--output-dir", cancel_out, hold]), client_env...))
-                        wait_store_job(qh_store, id2, (:running,); tries=600)
+                        wait_store_job(qh_store, id2, (:running,); tries = 600)
                         isfile(joinpath(cancel_out, "kit.pid")) || sleep(0.5)
                         id3 = read_cli(addenv(qh(["submit", "go", token, script, GO_N...]), client_env...))
-                        wait_store_job(qh_store, id3, (:queued,); tries=600)
+                        wait_store_job(qh_store, id3, (:queued,); tries = 600)
                         cancelled = read_cli(addenv(qh(["cancel", id3]), client_env...))
                         @test cancelled == id3
-                        wait_store_job(qh_store, id3, (:cancelled,); tries=600)
+                        wait_store_job(qh_store, id3, (:cancelled,); tries = 600)
                         after = read_cli(addenv(qh(["status"]), client_env...))
                         @test status_shows_id(after, id2)
                         @test occursin("cancelled", after)

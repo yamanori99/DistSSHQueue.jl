@@ -7,11 +7,11 @@ mutable struct Job
     hosts::Vector{String}
     state::Symbol
     queued_at::DateTime
-    started_at::Union{Nothing,DateTime}
-    finished_at::Union{Nothing,DateTime}
-    error::Union{Nothing,String}
-    result_path::Union{Nothing,String}
-    kwargs::Dict{String,Any}
+    started_at::Union{Nothing, DateTime}
+    finished_at::Union{Nothing, DateTime}
+    error::Union{Nothing, String}
+    result_path::Union{Nothing, String}
+    kwargs::Dict{String, Any}
 end
 
 """DistSSHKit `execute!` kinds Queue can enqueue. Inspect verbs (`size` / `plan` / `pool`) are not this list."""
@@ -24,18 +24,18 @@ new_job_id()::String = string(Base.UUID(rand(UInt128)))
 """Hop ENV: stage dir UUID must match `jobs.toml`."""
 const JOB_ID_ENV = "DISTSSHQUEUE_JOB_ID"
 function Job(;
-    id::AbstractString=new_job_id(),
-    kind::Symbol,
-    script::AbstractString,
-    hosts::AbstractVector{<:AbstractString},
-    state::Symbol=:queued,
-    queued_at::DateTime=now(UTC),
-    started_at=nothing,
-    finished_at=nothing,
-    error=nothing,
-    result_path=nothing,
-    kwargs::Dict{String,Any}=Dict{String,Any}(),
-)
+        id::AbstractString = new_job_id(),
+        kind::Symbol,
+        script::AbstractString,
+        hosts::AbstractVector{<:AbstractString},
+        state::Symbol = :queued,
+        queued_at::DateTime = now(UTC),
+        started_at = nothing,
+        finished_at = nothing,
+        error = nothing,
+        result_path = nothing,
+        kwargs::Dict{String, Any} = Dict{String, Any}(),
+    )
     is_kit_execute_kind(kind) || throw(ArgumentError("kind must be one of $KIT_EXECUTE_KINDS"))
     state in (:queued, :running, :done, :failed, :cancelled) ||
         throw(ArgumentError("bad job state $state"))

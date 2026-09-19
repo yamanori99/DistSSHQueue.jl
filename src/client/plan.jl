@@ -19,8 +19,9 @@ function plan_cli(args::Vector{String})::Cint
     if opts.show_help
         DistSSHKit.show_plan_usage()
         DistSSHKit.print_help_blank()
-        DistSSHKit.print_help_section("Queue"; io=stdout)
-        DistSSHKit.print_help_lines(stdout,
+        DistSSHKit.print_help_section("Queue"; io = stdout)
+        DistSSHKit.print_help_lines(
+            stdout,
             "  Same flags as DistSSHKit plan. Runs on the queue host (cwd / project).",
             "  julia -m DistSSHQueue [qhost:HOST] plan [parent] [child:NAME...] SCRIPT.jl",
             "  Does not enqueue.",
@@ -36,12 +37,12 @@ function plan_cli(args::Vector{String})::Cint
     DistSSHKit.kit_println()
     kp = DistSSHKit.plan(
         script;
-        workers=opts.tokens,
-        project=project,
-        gb_per_worker=opts.gb_per_worker,
-        probe=opts.probe,
-        mem_headroom=opts.mem_headroom,
-        parent_gb=opts.parent_gb,
+        workers = opts.tokens,
+        project = project,
+        gb_per_worker = opts.gb_per_worker,
+        probe = opts.probe,
+        mem_headroom = opts.mem_headroom,
+        parent_gb = opts.parent_gb,
     )
     DistSSHKit.print_plan(kp)
     kp.ok && print_queue_plan_submit(kp)

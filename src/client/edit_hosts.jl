@@ -1,6 +1,6 @@
 """CLI `add-host` / `remove-host`: write Kit placement tokens into config `hosts`."""
 
-function _remote_julia_mm(host::AbstractString)::Union{Nothing,Tuple{Int,Int}}
+function _remote_julia_mm(host::AbstractString)::Union{Nothing, Tuple{Int, Int}}
     DistSSHKit.is_parent_host_name(host) && return (VERSION.major, VERSION.minor)
     path = try
         DistSSHKit.resolve_remote_julia(String(host), "auto")
@@ -78,7 +78,7 @@ function add_host_cli(args::Vector{String})::Cint
     names = String[]
     for a in args
         if a in ("-h", "--help")
-            show_usage(; command="add-host")
+            show_usage(; command = "add-host")
             return 0
         end
         startswith(a, "-") && throw(ArgumentError("unknown add-host option: $(a)"))
@@ -95,7 +95,7 @@ function remove_host_cli(args::Vector{String})::Cint
     names = String[]
     for a in args
         if a in ("-h", "--help")
-            show_usage(; command="remove-host")
+            show_usage(; command = "remove-host")
             return 0
         end
         startswith(a, "-") && throw(ArgumentError("unknown remove-host option: $(a)"))

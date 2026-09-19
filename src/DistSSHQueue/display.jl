@@ -14,7 +14,7 @@ end
 const _ID_PREFIX_MIN = 8
 
 """Path relative to `root`, or `nothing` if it is not inside."""
-function _rel_under(path::AbstractString, root::AbstractString)::Union{Nothing,String}
+function _rel_under(path::AbstractString, root::AbstractString)::Union{Nothing, String}
     p = DistSSHKit.canonical_local_path(String(path))
     r = DistSSHKit.canonical_local_path(String(root))
     p == r && return "."
@@ -60,7 +60,7 @@ function _job_state_disp(j::Job)::String
     return String(j.state)
 end
 
-function _job_result_disp(j::Job; verbose::Bool=false)::String
+function _job_result_disp(j::Job; verbose::Bool = false)::String
     r = j.result_path
     r isa AbstractString || return ""
     verbose || return basename(rstrip(String(r), '/'))
@@ -114,14 +114,14 @@ end
 
 const _HOSTS_KEEP = 2
 
-function _job_hosts_disp(j::Job; verbose::Bool=false)::String
+function _job_hosts_disp(j::Job; verbose::Bool = false)::String
     verbose && return join(j.hosts, "  ")
     n = length(j.hosts)
     n <= _HOSTS_KEEP && return join(j.hosts, "  ")
     return string(join(j.hosts[1:_HOSTS_KEEP], "  "), "  +", n - _HOSTS_KEEP)
 end
 
-function _tail_jobs(rows::Vector{Job}, tail::Union{Nothing,Int})
+function _tail_jobs(rows::Vector{Job}, tail::Union{Nothing, Int})
     tail === nothing && return rows, 0
     n = length(rows)
     n <= tail && return rows, 0
@@ -129,14 +129,14 @@ function _tail_jobs(rows::Vector{Job}, tail::Union{Nothing,Int})
 end
 
 function print_jobs_table(
-    rows::Vector{Job};
-    io::IO=stdout,
-    present::Bool=true,
-    quiet::Bool=false,
-    hidden::Int=0,
-    verbose::Bool=false,
-)
-    DistSSHKit.print_help_section("Jobs"; io=io)
+        rows::Vector{Job};
+        io::IO = stdout,
+        present::Bool = true,
+        quiet::Bool = false,
+        hidden::Int = 0,
+        verbose::Bool = false,
+    )
+    DistSSHKit.print_help_section("Jobs"; io = io)
     if !present
         DistSSHKit.print_colored(io, "  (none)", :light_black, false)
         println(io)
@@ -151,10 +151,10 @@ function print_jobs_table(
     states = String[_job_state_disp(j) for j in rows]
     kinds = String[String(j.kind) for j in rows]
     scripts = String[_job_script_disp(j) for j in rows]
-    w_id = max(2, maximum(length, ids; init=2))
-    w_st = max(5, maximum(length, states; init=5))
-    w_k = max(4, maximum(length, kinds; init=4))
-    w_sc = max(6, maximum(length, scripts; init=6))
+    w_id = max(2, maximum(length, ids; init = 2))
+    w_st = max(5, maximum(length, states; init = 5))
+    w_k = max(4, maximum(length, kinds; init = 4))
+    w_sc = max(6, maximum(length, scripts; init = 6))
     headers = String["ID", "STATE", "KIND", "SCRIPT"]
     widths = Int[w_id, w_st, w_k, w_sc]
     head = join((_q_cell(headers[i], widths[i]) for i in eachindex(headers)), "  ")
@@ -183,7 +183,7 @@ function print_jobs_table(
             DistSSHKit.print_colored(io, "    wall     ", :light_black, false)
             println(io, wall)
         end
-        hosts = _job_hosts_disp(j; verbose=verbose)
+        hosts = _job_hosts_disp(j; verbose = verbose)
         isempty(hosts) || begin
             DistSSHKit.print_colored(io, "    hosts    ", :light_black, false)
             println(io, hosts)
@@ -193,7 +193,7 @@ function print_jobs_table(
             DistSSHKit.print_colored(io, "    project  ", :light_black, false)
             println(io, proj)
         end
-        res = _job_result_disp(j; verbose=verbose)
+        res = _job_result_disp(j; verbose = verbose)
         isempty(res) || begin
             DistSSHKit.print_colored(io, "    result   ", :light_black, false)
             println(io, res)
@@ -215,19 +215,20 @@ function print_jobs_table(
 end
 
 function print_status_table(
-    store::AbstractString,
-    rows::Vector{Job};
-    io::IO=stdout,
-    qhost::Union{Nothing,AbstractString}=nothing,
-    quiet::Bool=false,
-    live::Bool=false,
-    hidden::Int=0,
-    verbose::Bool=false,
-)
+        store::AbstractString,
+        rows::Vector{Job};
+        io::IO = stdout,
+        qhost::Union{Nothing, AbstractString} = nothing,
+        quiet::Bool = false,
+        live::Bool = false,
+        hidden::Int = 0,
+        verbose::Bool = false,
+    )
     present = isfile(store)
     if !quiet
-        DistSSHKit.print_help_section("Store"; io=io)
-        DistSSHKit.print_help_lines(io,
+        DistSSHKit.print_help_section("Store"; io = io)
+        DistSSHKit.print_help_lines(
+            io,
             "  path   $(_store_path_disp(store, present, qhost))",
             "  serve  $(_serve_disp(store))",
             "  enable $(_enable_disp())",
@@ -235,7 +236,7 @@ function print_status_table(
         )
         DistSSHKit.print_help_blank(io)
     end
-    print_jobs_table(rows; io=io, present=present, quiet=quiet, hidden=hidden, verbose=verbose)
+    print_jobs_table(rows; io = io, present = present, quiet = quiet, hidden = hidden, verbose = verbose)
     if live && !quiet
         DistSSHKit.print_help_blank(io)
         DistSSHKit.print_help_lines(io, "Ctrl-C stops watch; serve stays.")
@@ -244,24 +245,24 @@ function print_status_table(
 end
 
 function print_watch_frame(
-    store::AbstractString,
-    rows::Vector{Job};
-    io::IO=stdout,
-    qhost::Union{Nothing,AbstractString}=nothing,
-    quiet::Bool=false,
-    hidden::Int=0,
-    verbose::Bool=false,
-)
+        store::AbstractString,
+        rows::Vector{Job};
+        io::IO = stdout,
+        qhost::Union{Nothing, AbstractString} = nothing,
+        quiet::Bool = false,
+        hidden::Int = 0,
+        verbose::Bool = false,
+    )
     return print_status_table(
-        store, rows; io=io, qhost=qhost, quiet=quiet, live=true, hidden=hidden, verbose=verbose,
+        store, rows; io = io, qhost = qhost, quiet = quiet, live = true, hidden = hidden, verbose = verbose,
     )
 end
 
 """Shortest unique prefixes (`minlen` or more) for `ids`, same order."""
 function _unique_prefixes(
-    ids::AbstractVector{<:AbstractString};
-    minlen::Int=_ID_PREFIX_MIN,
-)::Vector{String}
+        ids::AbstractVector{<:AbstractString};
+        minlen::Int = _ID_PREFIX_MIN,
+    )::Vector{String}
     n = length(ids)
     out = Vector{String}(undef, n)
     for i in 1:n
@@ -304,7 +305,7 @@ function _job_error_disp(j::Job)::String
     e = j.error
     e isa AbstractString || return ""
     explained = queue_explain_error(e)
-    return first(split(explained, '\n'; limit=2))
+    return first(split(explained, '\n'; limit = 2))
 end
 
 function _q_state_color(state::Symbol)
@@ -315,7 +316,7 @@ function _q_state_color(state::Symbol)
     return :light_black
 end
 
-function println_queue_version(io::IO=stdout)
+function println_queue_version(io::IO = stdout)
     kv = DistSSHKit.dist_ssh_kit_version()
     println(io, "DistSSHQueue $(pkgversion(DistSSHQueue)) (DistSSHKit $(kv))")
     return nothing
@@ -327,9 +328,9 @@ function help_verb_line(verb::AbstractString, gloss::AbstractString)
 end
 
 function print_queue_usage(
-    io::IO=stdout;
-    topic::Union{Nothing,AbstractString}=nothing,
-)
+        io::IO = stdout;
+        topic::Union{Nothing, AbstractString} = nothing,
+    )
     t = topic === nothing ? "" : strip(String(topic))
     isempty(t) && return print_queue_root_usage(io)
     t == "client" && return print_queue_client_usage(io)
@@ -337,24 +338,27 @@ function print_queue_usage(
     throw(ArgumentError("unknown help topic: $(t) (client / qhost)"))
 end
 
-function print_queue_root_usage(io::IO=stdout)
-    DistSSHKit.print_help_chrome("DistSSHQueue"; io=io)
+function print_queue_root_usage(io::IO = stdout)
+    DistSSHKit.print_help_chrome("DistSSHQueue"; io = io)
     println_queue_version(io)
     DistSSHKit.print_help_blank(io)
-    DistSSHKit.print_help_section("Client / qhost"; io=io)
-    DistSSHKit.print_help_lines(io,
+    DistSSHKit.print_help_section("Client / qhost"; io = io)
+    DistSSHKit.print_help_lines(
+        io,
         help_verb_line("Client", "job `--project=.`; `qhost:HOST` is SSH to the queue"),
         help_verb_line("Queue host", "`serve`; `--queue-env` (`~/.distsshqueue/env`)"),
     )
     DistSSHKit.print_help_blank(io)
-    DistSSHKit.print_help_section("Usage"; io=io)
-    DistSSHKit.print_help_lines(io,
+    DistSSHKit.print_help_section("Usage"; io = io)
+    DistSSHKit.print_help_lines(
+        io,
         help_verb_line("Client", "julia --project=. -m DistSSHQueue [qhost:HOST] …"),
         help_verb_line("Queue host", "julia -m DistSSHQueue …"),
     )
     DistSSHKit.print_help_blank(io)
-    DistSSHKit.print_help_section("Help"; io=io)
-    DistSSHKit.print_help_lines(io,
+    DistSSHKit.print_help_section("Help"; io = io)
+    DistSSHKit.print_help_lines(
+        io,
         "  --help client",
         "  --help qhost",
     )
@@ -363,10 +367,11 @@ function print_queue_root_usage(io::IO=stdout)
     return nothing
 end
 
-function print_queue_client_usage(io::IO=stdout)
-    DistSSHKit.print_help_chrome("DistSSHQueue --help client"; io=io)
-    DistSSHKit.print_help_section("Jobs"; io=io)
-    DistSSHKit.print_help_lines(io,
+function print_queue_client_usage(io::IO = stdout)
+    DistSSHKit.print_help_chrome("DistSSHQueue --help client"; io = io)
+    DistSSHKit.print_help_section("Jobs"; io = io)
+    DistSSHKit.print_help_lines(
+        io,
         help_verb_line("submit", "Enqueue DistSSHKit"),
         help_verb_line("status", "Snapshot of the store"),
         help_verb_line("watch", "Live status"),
@@ -374,22 +379,25 @@ function print_queue_client_usage(io::IO=stdout)
         help_verb_line("fetch", "Copy a finished Kit leaf"),
     )
     DistSSHKit.print_help_blank(io)
-    DistSSHKit.print_help_section("Hosts"; io=io)
-    DistSSHKit.print_help_lines(io,
+    DistSSHKit.print_help_section("Hosts"; io = io)
+    DistSSHKit.print_help_lines(
+        io,
         help_verb_line("list-host", "Inventory cards (juliaup default)"),
         help_verb_line("size", "Kit size on the queue host"),
         help_verb_line("plan", "Kit plan on the queue host"),
         help_verb_line("pool", "Kit pool on the queue host"),
     )
     DistSSHKit.print_help_blank(io)
-    DistSSHKit.print_help_section("Examples"; io=io)
-    DistSSHKit.print_help_lines(io,
+    DistSSHKit.print_help_section("Examples"; io = io)
+    DistSSHKit.print_help_lines(
+        io,
         "  julia --project=. -m DistSSHQueue qhost:HOST status",
         "  julia --project=. -m DistSSHQueue qhost:HOST submit drive parent:4 SCRIPT.jl",
     )
     DistSSHKit.print_help_blank(io)
-    DistSSHKit.print_help_section("See DistSSHKit"; io=io)
-    DistSSHKit.print_help_lines(io,
+    DistSSHKit.print_help_section("See DistSSHKit"; io = io)
+    DistSSHKit.print_help_lines(
+        io,
         "  Same argv as DistSSHKit (`go` / `ride` / `drive parent:4 child:NAME:N …`).",
         "  `julia --project=. -m DistSSHKit --help`",
     )
@@ -398,32 +406,36 @@ function print_queue_client_usage(io::IO=stdout)
     return nothing
 end
 
-function print_queue_host_usage(io::IO=stdout)
-    DistSSHKit.print_help_chrome("DistSSHQueue --help qhost"; io=io)
-    DistSSHKit.print_help_section("Setup"; io=io)
-    DistSSHKit.print_help_lines(io,
+function print_queue_host_usage(io::IO = stdout)
+    DistSSHKit.print_help_chrome("DistSSHQueue --help qhost"; io = io)
+    DistSSHKit.print_help_section("Setup"; io = io)
+    DistSSHKit.print_help_lines(
+        io,
         help_verb_line("setup", "Write config.toml if missing"),
         help_verb_line("add-host", "Add Kit tokens"),
         help_verb_line("remove-host", "Drop Kit tokens"),
     )
     DistSSHKit.print_help_blank(io)
-    DistSSHKit.print_help_section("Serve"; io=io)
-    DistSSHKit.print_help_lines(io,
+    DistSSHKit.print_help_section("Serve"; io = io)
+    DistSSHKit.print_help_lines(
+        io,
         help_verb_line("serve", "Run serve in this terminal"),
         help_verb_line("stop", "Stop serve, keep files"),
         help_verb_line("enable", "Start serve after reboot"),
         help_verb_line("disable", "Remove that OS registration"),
     )
     DistSSHKit.print_help_blank(io)
-    DistSSHKit.print_help_section("Examples"; io=io)
-    DistSSHKit.print_help_lines(io,
+    DistSSHKit.print_help_section("Examples"; io = io)
+    DistSSHKit.print_help_lines(
+        io,
         "  julia -m DistSSHQueue setup",
         "  julia -m DistSSHQueue add-host parent child:NAME",
         "  julia -m DistSSHQueue serve",
     )
     DistSSHKit.print_help_blank(io)
-    DistSSHKit.print_help_section("Danger"; io=io)
-    DistSSHKit.print_help_lines(io,
+    DistSSHKit.print_help_section("Danger"; io = io)
+    DistSSHKit.print_help_lines(
+        io,
         help_verb_line("teardown", "Stop serve and remove `~/.distsshqueue`"),
         help_verb_line("", "Needs `-y`. Job trees stay."),
     )
@@ -451,12 +463,12 @@ function print_queue_command_usage(io::IO, verb::AbstractString)
     v == "setup" && return print_setup_usage(io)
     v == "teardown" && return print_teardown_usage(io)
     usage, flags = queue_command_help(v)
-    DistSSHKit.print_help_chrome("DistSSHQueue $v"; io=io)
-    DistSSHKit.print_help_section("Usage"; io=io)
+    DistSSHKit.print_help_chrome("DistSSHQueue $v"; io = io)
+    DistSSHKit.print_help_section("Usage"; io = io)
     DistSSHKit.print_help_lines(io, usage...)
     isempty(flags) && return nothing
     DistSSHKit.print_help_blank(io)
-    DistSSHKit.print_help_section("Flags"; io=io)
+    DistSSHKit.print_help_section("Flags"; io = io)
     DistSSHKit.print_help_lines(io, [help_verb_line(f, g) for (f, g) in flags]...)
     return nothing
 end
@@ -464,60 +476,76 @@ end
 function queue_command_help(verb::AbstractString)
     v = String(verb)
     h = ("--help / -h", "This page")
-    v == "status" && return (("  status",), (
-        ("-q / --quiet", "Table only"),
-        ("--interval SEC", "Refresh like watch"),
-        ("--tail N|full", "How many jobs to show"),
-        h,
-    ))
-    v == "watch" && return (("  watch",), (
-        ("-q / --quiet", "Table only"),
-        ("--interval SEC", "Refresh interval (default 0.5)"),
-        ("--tail N|full", "How many jobs to show"),
-        h,
-    ))
+    v == "status" && return (
+        ("  status",), (
+            ("-q / --quiet", "Table only"),
+            ("--interval SEC", "Refresh like watch"),
+            ("--tail N|full", "How many jobs to show"),
+            h,
+        ),
+    )
+    v == "watch" && return (
+        ("  watch",), (
+            ("-q / --quiet", "Table only"),
+            ("--interval SEC", "Refresh interval (default 0.5)"),
+            ("--tail N|full", "How many jobs to show"),
+            h,
+        ),
+    )
     v == "list-host" && return (("  list-host",), (h,))
     v == "cancel" && return (("  cancel ID",), (h,))
-    v == "fetch" && return (("  fetch ID",), (
-        ("--into PATH", "Dest directory (the leaf; may be outside the project)"),
-        ("--force", "Copy even if dest already has this or another job (does not delete dest-only files)"),
-        ("--progress", "rsync `--info=progress2` on `qhost:` pull"),
-        h,
-    ))
-    v == "submit" && return ((
-        "  submit go|ride|drive …",
-        "  `submit go --help` for DistSSHKit flags (same for ride / drive).",
-    ), (h,))
+    v == "fetch" && return (
+        ("  fetch ID",), (
+            ("--into PATH", "Dest directory (the leaf; may be outside the project)"),
+            ("--force", "Copy even if dest already has this or another job (does not delete dest-only files)"),
+            ("--progress", "rsync `--info=progress2` on `qhost:` pull"),
+            h,
+        ),
+    )
+    v == "submit" && return (
+        (
+            "  submit go|ride|drive …",
+            "  `submit go --help` for DistSSHKit flags (same for ride / drive).",
+        ), (h,),
+    )
     v == "add-host" && return (("  add-host [parent] [child:NAME...]",), (h,))
     v == "remove-host" && return (("  remove-host [parent] [child:NAME...]",), (h,))
-    v == "serve" && return (("  serve",), (
-        ("--interval SEC", "Poll the store (default 0.2)"),
-        h,
-    ))
+    v == "serve" && return (
+        ("  serve",), (
+            ("--interval SEC", "Poll the store (default 0.2)"),
+            h,
+        ),
+    )
     v == "stop" && return (("  stop",), (h,))
-    v == "enable" && return (("  enable",), (
-        ("--julia PATH", "Julia for the OS unit"),
-        ("--queue-env DIR", "Queue env (not job `--project=`)"),
-        ("--write-only", "Write the unit file; do not load it"),
-        h,
-    ))
-    v == "disable" && return (("  disable",), (
-        ("--write-only", "Do not unload the OS unit"),
-        h,
-    ))
+    v == "enable" && return (
+        ("  enable",), (
+            ("--julia PATH", "Julia for the OS unit"),
+            ("--queue-env DIR", "Queue env (not job `--project=`)"),
+            ("--write-only", "Write the unit file; do not load it"),
+            h,
+        ),
+    )
+    v == "disable" && return (
+        ("  disable",), (
+            ("--write-only", "Do not unload the OS unit"),
+            h,
+        ),
+    )
     throw(ArgumentError("no command help for $(v)"))
 end
 
-function print_setup_usage(io::IO=stdout)
-    DistSSHKit.print_help_chrome("DistSSHQueue setup"; io=io)
-    DistSSHKit.print_help_section("Usage"; io=io)
-    DistSSHKit.print_help_lines(io,
+function print_setup_usage(io::IO = stdout)
+    DistSSHKit.print_help_chrome("DistSSHQueue setup"; io = io)
+    DistSSHKit.print_help_section("Usage"; io = io)
+    DistSSHKit.print_help_lines(
+        io,
         "  julia -m DistSSHQueue setup [--force]",
         "  julia -m DistSSHQueue setup --juliaup [parent] [child:NAME...]",
     )
     DistSSHKit.print_help_blank(io)
-    DistSSHKit.print_help_section("Flags"; io=io)
-    DistSSHKit.print_help_lines(io,
+    DistSSHKit.print_help_section("Flags"; io = io)
+    DistSSHKit.print_help_lines(
+        io,
         help_verb_line("--force", "Rewrite config.toml (not with --juliaup)"),
         help_verb_line("--juliaup", "Align Julia on Kit hosts"),
         help_verb_line("--config PATH", "Config file"),
@@ -526,15 +554,17 @@ function print_setup_usage(io::IO=stdout)
     return nothing
 end
 
-function print_teardown_usage(io::IO=stdout)
-    DistSSHKit.print_help_chrome("DistSSHQueue teardown"; io=io)
-    DistSSHKit.print_help_section("Usage"; io=io)
-    DistSSHKit.print_help_lines(io,
+function print_teardown_usage(io::IO = stdout)
+    DistSSHKit.print_help_chrome("DistSSHQueue teardown"; io = io)
+    DistSSHKit.print_help_section("Usage"; io = io)
+    DistSSHKit.print_help_lines(
+        io,
         "  teardown",
     )
     DistSSHKit.print_help_blank(io)
-    DistSSHKit.print_help_section("Flags"; io=io)
-    DistSSHKit.print_help_lines(io,
+    DistSSHKit.print_help_section("Flags"; io = io)
+    DistSSHKit.print_help_lines(
+        io,
         help_verb_line("-y / --yes", "Required to delete (or DISTSSHKIT_YES)"),
         help_verb_line("--write-only", "Do not stop serve or unload the OS unit"),
         help_verb_line("--home DIR", "Home for ~/.distsshqueue"),
@@ -545,23 +575,23 @@ function print_teardown_usage(io::IO=stdout)
     return nothing
 end
 
-function print_wrote(path::AbstractString; io::IO=stdout)
+function print_wrote(path::AbstractString; io::IO = stdout)
     DistSSHKit.print_colored(io, "Wrote  ", :green, false)
     println(io, _q_short(path))
     return nothing
 end
 
-function print_removed(path::AbstractString; io::IO=stdout)
+function print_removed(path::AbstractString; io::IO = stdout)
     DistSSHKit.print_colored(io, "Removed  ", :green, false)
     println(io, _q_short(path))
     return nothing
 end
 
 function print_present(
-    path::AbstractString;
-    io::IO=stdout,
-    note::AbstractString="  (unchanged; --force to rewrite)",
-)
+        path::AbstractString;
+        io::IO = stdout,
+        note::AbstractString = "  (unchanged; --force to rewrite)",
+    )
     DistSSHKit.print_colored(io, "Present  ", :light_black, false)
     print(io, _q_short(path))
     DistSSHKit.print_colored(io, note, :light_black, false)
@@ -569,8 +599,8 @@ function print_present(
     return nothing
 end
 
-function print_serve_banner(pid::Integer, store::AbstractString; io::IO=stdout)
-    DistSSHKit.print_help_chrome("DistSSHQueue serve"; io=io)
+function print_serve_banner(pid::Integer, store::AbstractString; io::IO = stdout)
+    DistSSHKit.print_help_chrome("DistSSHQueue serve"; io = io)
     DistSSHKit.print_help_lines(io, "  pid $pid  store $(_q_short(store))")
     return nothing
 end
@@ -597,11 +627,11 @@ function _clip_cols(s::AbstractString, cols::Int)::String
 end
 
 function _serve_live_text(
-    frame::Char,
-    j::Union{Nothing,Job},
-    ids::AbstractVector{<:AbstractString}=String[];
-    cols::Int=0,
-)::String
+        frame::Char,
+        j::Union{Nothing, Job},
+        ids::AbstractVector{<:AbstractString} = String[];
+        cols::Int = 0,
+    )::String
     j === nothing && return _clip_cols("  $frame  idle", cols)
     sid = isempty(ids) ? first(j.id, min(_ID_PREFIX_MIN, length(j.id))) : _id_chrome(j.id, ids)
     body = "  $frame  running  $sid  $(j.kind)  $(_job_script_disp(j))"
@@ -609,38 +639,40 @@ function _serve_live_text(
 end
 
 function print_serve_live_line(
-    frame::Char,
-    j::Union{Nothing,Job},
-    ids::AbstractVector{<:AbstractString}=String[];
-    io::IO=stdout,
-)
+        frame::Char,
+        j::Union{Nothing, Job},
+        ids::AbstractVector{<:AbstractString} = String[];
+        io::IO = stdout,
+    )
     cols = io isa Base.TTY ? displaysize(io)[2] : 0
-    s = _serve_live_text(frame, j, ids; cols=cols)
+    s = _serve_live_text(frame, j, ids; cols = cols)
     print(io, '\r', s, "\e[K")
     flush(io)
     return nothing
 end
 
-function print_serve_idle_note(; io::IO=stdout)
+function print_serve_idle_note(; io::IO = stdout)
     DistSSHKit.print_help_lines(io, _SERVE_CTRLC)
     return nothing
 end
 
-function print_serve_gone(store::AbstractString; io::IO=stdout)
+function print_serve_gone(store::AbstractString; io::IO = stdout)
     DistSSHKit.print_colored(io, "Stopping serve", :yellow, false)
     println(io)
-    DistSSHKit.print_help_lines(io,
+    DistSSHKit.print_help_lines(
+        io,
         "  store  $(_q_short(store)) (pidfile gone; removed or taken over)",
         "  A DistSSHKit job already running is not killed.",
     )
     return nothing
 end
 
-function print_serve_already(pid::Integer, store::AbstractString; io::IO=stdout)
-    DistSSHKit.print_help_chrome("DistSSHQueue serve"; io=io)
+function print_serve_already(pid::Integer, store::AbstractString; io::IO = stdout)
+    DistSSHKit.print_help_chrome("DistSSHQueue serve"; io = io)
     DistSSHKit.print_colored(io, "Already running", :cyan, false)
     println(io)
-    DistSSHKit.print_help_lines(io,
+    DistSSHKit.print_help_lines(
+        io,
         "  pid    $pid",
         "  store  $(_q_short(store))",
         "  Use status or watch. stop, then serve, to restart.",
@@ -648,20 +680,22 @@ function print_serve_already(pid::Integer, store::AbstractString; io::IO=stdout)
     return nothing
 end
 
-function print_serve_started(log::AbstractString; io::IO=stderr)
+function print_serve_started(log::AbstractString; io::IO = stderr)
     DistSSHKit.print_colored(io, "Started serve", :cyan, false)
     println(io)
-    DistSSHKit.print_help_lines(io,
+    DistSSHKit.print_help_lines(
+        io,
         "  host  $(gethostname())",
         "  log   $(_q_short(log))",
     )
     return nothing
 end
 
-function print_serve_stopped(store::AbstractString, was_running::Bool; io::IO=stdout)
+function print_serve_stopped(store::AbstractString, was_running::Bool; io::IO = stdout)
     DistSSHKit.print_colored(io, "Stopped serve", :yellow, false)
     println(io)
-    DistSSHKit.print_help_lines(io,
+    DistSSHKit.print_help_lines(
+        io,
         "  store  $(_q_short(store))",
         was_running ? "  serve was running; sent SIGTERM" : "  no serve was running",
         "  submit will not auto-start; run serve to resume.",
@@ -676,11 +710,11 @@ function _serve_disp(store::AbstractString)::String
 end
 
 """OS unit file from `enable`, if present on this host (queue host after `qhost:`)."""
-function _enable_unit_path(; home::AbstractString=homedir())::Union{Nothing,String}
+function _enable_unit_path(; home::AbstractString = homedir())::Union{Nothing, String}
     paths = if Sys.isapple()
-        (launch_agent_path(; home=home), legacy_launch_agent_path(; home=home))
+        (launch_agent_path(; home = home), legacy_launch_agent_path(; home = home))
     elseif Sys.islinux()
-        (systemd_user_path(; home=home), legacy_systemd_user_path(; home=home))
+        (systemd_user_path(; home = home), legacy_systemd_user_path(; home = home))
     else
         return nothing
     end
@@ -690,17 +724,17 @@ function _enable_unit_path(; home::AbstractString=homedir())::Union{Nothing,Stri
     return nothing
 end
 
-function _enable_disp(; home::AbstractString=homedir())::String
-    p = _enable_unit_path(; home=home)
+function _enable_disp(; home::AbstractString = homedir())::String
+    p = _enable_unit_path(; home = home)
     p === nothing && return "none"
     return _q_short(p)
 end
 
 function _store_path_disp(
-    store::AbstractString,
-    present::Bool,
-    qhost::Union{Nothing,AbstractString},
-)::String
+        store::AbstractString,
+        present::Bool,
+        qhost::Union{Nothing, AbstractString},
+    )::String
     present || return "none"
     short = _q_short(store)
     if qhost === nothing || isempty(String(qhost))
@@ -709,7 +743,7 @@ function _store_path_disp(
     return "$(String(qhost)):$short"
 end
 
-function _qhost_disp(qhost::Union{Nothing,AbstractString})::String
+function _qhost_disp(qhost::Union{Nothing, AbstractString})::String
     hn = gethostname()
     if qhost === nothing || isempty(String(qhost))
         return "local ($hn)"
@@ -719,10 +753,10 @@ function _qhost_disp(qhost::Union{Nothing,AbstractString})::String
 end
 
 function print_watch_compact(
-    store::AbstractString,
-    rows::Vector{Job};
-    io::IO=stdout,
-)
+        store::AbstractString,
+        rows::Vector{Job};
+        io::IO = stdout,
+    )
     nrun = count(j -> j.state === :running, rows)
     nq = count(j -> j.state === :queued, rows)
     println(io, "  serve $(_serve_disp(store))  running $nrun  queued $nq")

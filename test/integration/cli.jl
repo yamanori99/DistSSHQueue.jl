@@ -20,11 +20,11 @@ function store_jobs(env)
     return DistSSHQueue.read_jobs(env["DISTSSHQUEUE_STORE"])
 end
 
-function wait_job(env, id, states; tries=900, sleep_s=0.2)
+function wait_job(env, id, states; tries = 900, sleep_s = 0.2)
     want = Set{Symbol}(states)
     sid = String(id)
     last = DistSSHQueue.Job[]
-    for _ = 1:tries
+    for _ in 1:tries
         last = store_jobs(env)
         i = findfirst(j -> j.id == sid, last)
         if i !== nothing && last[i].state in want
@@ -35,8 +35,8 @@ function wait_job(env, id, states; tries=900, sleep_s=0.2)
     error("timeout waiting for $sid in $want; last=$last")
 end
 
-function wait_kit_pid(path::AbstractString; tries=300, sleep_s=0.1)
-    for _ = 1:tries
+function wait_kit_pid(path::AbstractString; tries = 300, sleep_s = 0.1)
+    for _ in 1:tries
         isfile(path) && return nothing
         sleep(sleep_s)
     end
@@ -76,21 +76,21 @@ function write_fake_ssh(path::AbstractString, log::AbstractString)
     write(
         path,
         """
-#!/bin/sh
-{
-  for a in "\$@"; do
-    printf '%s\\n' "\$a"
-  done
-  printf '%s\\n' "---"
-} >> $(DistSSHQueue.sh_single_quote(log))
-for a in "\$@"; do
-  if [ "\$a" = "--version" ]; then
-    printf '%s\\n' "julia version 1.12.7"
-    exit 0
-  fi
-done
-exit 0
-""",
+        #!/bin/sh
+        {
+          for a in "\$@"; do
+            printf '%s\\n' "\$a"
+          done
+          printf '%s\\n' "---"
+        } >> $(DistSSHQueue.sh_single_quote(log))
+        for a in "\$@"; do
+          if [ "\$a" = "--version" ]; then
+            printf '%s\\n' "julia version 1.12.7"
+            exit 0
+          fi
+        done
+        exit 0
+        """,
     )
     chmod(path, 0o755)
     return path
@@ -102,7 +102,7 @@ end
             base, _, store, jobdir = cli_env(d)
             env = merge(base, Dict("DISTSSHQUEUE_NO_AUTOSERVE" => "1"))
             serve_cmd = addenv(qcli(["serve", "--interval", "0.1"]), env...)
-            proc = run(serve_cmd; wait=false)
+            proc = run(serve_cmd; wait = false)
             try
                 cd(jobdir) do
                     id = strip(read(addenv(qcli(["submit", "go", "parent:1", "hello.jl"]), env...), String))
@@ -169,7 +169,7 @@ end
                     @test row.state === :running
                     c = strip(read(addenv(qcli(["cancel", id]), env...), String))
                     @test c == id
-                    done = wait_job(env, id, (:cancelled,); tries=200)
+                    done = wait_job(env, id, (:cancelled,); tries = 200)
                     @test done.state === :cancelled
                 end
             finally
@@ -186,29 +186,37 @@ end
             write_fake_ssh(joinpath(fake, "ssh"), log)
             path = fake * ":" * get(ENV, "PATH", "")
             withenv(env..., "PATH" => path) do
-                @test DistSSHQueue.main([
-                    "qhost:qbox",
-                    "--remote-julia", JULIA,
-                    "status",
-                ]) == 0
-                @test DistSSHQueue.main([
-                    "qhost:qbox",
-                    "--remote-julia", JULIA,
-                    "watch",
-                ]) == 0
-                @test DistSSHQueue.main([
-                    "qhost:qbox",
-                    "--remote-julia", JULIA,
-                    "list-host",
-                ]) == 0
-                code_go = DistSSHQueue.main([
-                    "qhost:qbox",
-                    "--remote-julia", JULIA,
-                    "go",
-                    "--hosts",
-                    "child:w:2",
-                    "hello.jl",
-                ])
+                @test DistSSHQueue.main(
+                    [
+                        "qhost:qbox",
+                        "--remote-julia", JULIA,
+                        "status",
+                    ]
+                ) == 0
+                @test DistSSHQueue.main(
+                    [
+                        "qhost:qbox",
+                        "--remote-julia", JULIA,
+                        "watch",
+                    ]
+                ) == 0
+                @test DistSSHQueue.main(
+                    [
+                        "qhost:qbox",
+                        "--remote-julia", JULIA,
+                        "list-host",
+                    ]
+                ) == 0
+                code_go = DistSSHQueue.main(
+                    [
+                        "qhost:qbox",
+                        "--remote-julia", JULIA,
+                        "go",
+                        "--hosts",
+                        "child:w:2",
+                        "hello.jl",
+                    ]
+                )
                 @test code_go == 1
             end
             withenv(
@@ -268,16 +276,20 @@ end
             leftover = joinpath(bindir, "dskq")
             write(leftover, "#!/bin/sh\n")
             withenv("DISTSSHQUEUE_CONFIG" => nothing, "DISTSSHQUEUE_STORE" => nothing) do
-                @test DistSSHQueue.main([
-                    "setup",
-                    "--config", joinpath(data, "config.toml"),
-                ]) == 0
-                @test DistSSHQueue.main([
-                    "teardown",
-                    "--home", home,
-                    "-y",
-                    "--write-only",
-                ]) == 0
+                @test DistSSHQueue.main(
+                    [
+                        "setup",
+                        "--config", joinpath(data, "config.toml"),
+                    ]
+                ) == 0
+                @test DistSSHQueue.main(
+                    [
+                        "teardown",
+                        "--home", home,
+                        "-y",
+                        "--write-only",
+                    ]
+                ) == 0
             end
             @test !isfile(leftover)
             @test !isdir(data)

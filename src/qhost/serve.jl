@@ -53,7 +53,7 @@ function spawn_detached_serve!(julia::AbstractString, project::AbstractString, l
     if Sys.iswindows()
         io = open(log, "a")
         cmd = with_serve_tag(`$julia --startup-file=no --project=$project -m DistSSHQueue serve`)
-        run(pipeline(detach(cmd); stdin=devnull, stdout=io, stderr=io); wait=false)
+        run(pipeline(detach(cmd); stdin = devnull, stdout = io, stderr = io); wait = false)
         close(io)
         return nothing
     end
@@ -74,11 +74,11 @@ function reap_serve_tag!(tag::AbstractString)
     try
         for line in eachline(`ps axeww`)
             occursin(needle, line) || continue
-            pid = tryparse(Int, first(split(strip(line); limit=2)))
+            pid = tryparse(Int, first(split(strip(line); limit = 2)))
             pid === nothing && continue
             pid == self && continue
             try
-                run(pipeline(`kill $pid`; stdout=devnull, stderr=devnull))
+                run(pipeline(`kill $pid`; stdout = devnull, stderr = devnull))
             catch
             end
         end
@@ -91,7 +91,7 @@ function reap_serve_tag!(tag::AbstractString)
             pid === nothing && continue
             pid == self && continue
             try
-                run(pipeline(`kill $pid`; stdout=devnull, stderr=devnull))
+                run(pipeline(`kill $pid`; stdout = devnull, stderr = devnull))
             catch
             end
         end
@@ -104,16 +104,16 @@ function serve_cli(args::Vector{String})::Cint
     i = 1
     while i <= length(args)
         if args[i] == "--interval" && i < length(args)
-            interval = parse(Float64, args[i+1])
+            interval = parse(Float64, args[i + 1])
             i += 2
         elseif args[i] in ("-h", "--help")
-            show_usage(; command="serve")
+            show_usage(; command = "serve")
             return 0
         else
             throw(ArgumentError("unknown serve option: $(args[i])"))
         end
     end
-    serve(; store=store_path(), interval=interval)
+    serve(; store = store_path(), interval = interval)
     return 0
 end
 
@@ -121,7 +121,7 @@ end
 `submit` will not auto-serve until an explicit `serve` clears the latch."""
 function stop_cli(args::Vector{String})::Cint
     for a in args
-        a in ("-h", "--help") && (show_usage(; command="stop"); return 0)
+        a in ("-h", "--help") && (show_usage(; command = "stop"); return 0)
         throw(ArgumentError("unknown stop option: $(a)"))
     end
     store = store_path()

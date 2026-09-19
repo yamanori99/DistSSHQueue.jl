@@ -1,6 +1,6 @@
 using TOML
 
-function default_store_path(; home::AbstractString=homedir())::String
+function default_store_path(; home::AbstractString = homedir())::String
     return joinpath(home, ".distsshqueue", "jobs.toml")
 end
 
@@ -25,19 +25,20 @@ function with_store_lock(f, path::String)
         try
             return f()
         finally
-            rm(lockdir; force=true, recursive=true)
+            rm(lockdir; force = true, recursive = true)
         end
     end
+    return
 end
 
-function _dt(x)::Union{Nothing,DateTime}
+function _dt(x)::Union{Nothing, DateTime}
     x === nothing && return nothing
     x isa DateTime && return x
     return DateTime(String(x))
 end
 
-function job_to_toml(j::Job)::Dict{String,Any}
-    return Dict{String,Any}(
+function job_to_toml(j::Job)::Dict{String, Any}
+    return Dict{String, Any}(
         "id" => j.id,
         "kind" => String(j.kind),
         "script" => j.script,
@@ -48,7 +49,7 @@ function job_to_toml(j::Job)::Dict{String,Any}
         "finished_at" => j.finished_at === nothing ? "" : string(j.finished_at),
         "error" => j.error === nothing ? "" : j.error,
         "result_path" => j.result_path === nothing ? "" : j.result_path,
-        "kwargs" => Dict{String,Any}(j.kwargs),
+        "kwargs" => Dict{String, Any}(j.kwargs),
     )
 end
 
@@ -57,26 +58,26 @@ function job_from_toml(d::AbstractDict)::Job
     result_path = String(get(d, "result_path", ""))
     started = String(get(d, "started_at", ""))
     finished = String(get(d, "finished_at", ""))
-    kw = get(d, "kwargs", Dict{String,Any}())
+    kw = get(d, "kwargs", Dict{String, Any}())
     return Job(;
-        id=String(d["id"]),
-        kind=Symbol(d["kind"]),
-        script=String(d["script"]),
-        hosts=String[String(h) for h in d["hosts"]],
-        state=Symbol(d["state"]),
-        queued_at=_dt(d["queued_at"]),
-        started_at=isempty(started) ? nothing : _dt(started),
-        finished_at=isempty(finished) ? nothing : _dt(finished),
-        error=isempty(err) ? nothing : err,
-        result_path=isempty(result_path) ? nothing : result_path,
-        kwargs=Dict{String,Any}(String(k) => v for (k, v) in kw),
+        id = String(d["id"]),
+        kind = Symbol(d["kind"]),
+        script = String(d["script"]),
+        hosts = String[String(h) for h in d["hosts"]],
+        state = Symbol(d["state"]),
+        queued_at = _dt(d["queued_at"]),
+        started_at = isempty(started) ? nothing : _dt(started),
+        finished_at = isempty(finished) ? nothing : _dt(finished),
+        error = isempty(err) ? nothing : err,
+        result_path = isempty(result_path) ? nothing : result_path,
+        kwargs = Dict{String, Any}(String(k) => v for (k, v) in kw),
     )
 end
 
 function save_jobs(path::AbstractString, jobs::AbstractVector{Job})
     p = String(path)
     mkpath(dirname(p))
-    data = Dict{String,Any}("jobs" => [job_to_toml(j) for j in jobs])
+    data = Dict{String, Any}("jobs" => [job_to_toml(j) for j in jobs])
     open(p, "w") do io
         TOML.print(io, data)
     end
@@ -118,14 +119,14 @@ end
 
 function _process_alive_fallback(pid::Integer)::Bool
     try
-        return success(run(pipeline(`kill -0 $pid`; stdout=devnull, stderr=devnull)))
+        return success(run(pipeline(`kill -0 $pid`; stdout = devnull, stderr = devnull)))
     catch
         return false
     end
 end
 
 """Live serve pid from the store pidfile, or `nothing`."""
-function serve_pid(store::AbstractString)::Union{Nothing,Int}
+function serve_pid(store::AbstractString)::Union{Nothing, Int}
     p = store_pid_path(store)
     isfile(p) || return nothing
     pid = tryparse(Int, strip(read(p, String)))
@@ -161,7 +162,7 @@ function record_test_serve_pid!(pid::Integer)
     return nothing
 end
 
-remove_pid_file(store::AbstractString) = rm(store_pid_path(store); force=true)
+remove_pid_file(store::AbstractString) = rm(store_pid_path(store); force = true)
 
 """Latch that `stop` leaves next to the store so `submit` will not auto-serve.
 An explicit `serve` clears it; that is the only thing that resumes serve."""
@@ -175,7 +176,7 @@ function set_stopped!(store::AbstractString)
     return nothing
 end
 
-clear_stopped!(store::AbstractString) = rm(store_stop_path(store); force=true)
+clear_stopped!(store::AbstractString) = rm(store_stop_path(store); force = true)
 
 """SIGTERM a serve recorded in the store pidfile. Does not kill this process."""
 function stop_serve!(store::AbstractString)::Bool
@@ -189,7 +190,7 @@ function stop_serve!(store::AbstractString)::Bool
     pid == getpid() && return false
     if process_alive(pid)
         try
-            run(pipeline(`kill $pid`; stdout=devnull, stderr=devnull))
+            run(pipeline(`kill $pid`; stdout = devnull, stderr = devnull))
         catch
         end
         for _ in 1:40

@@ -2,22 +2,24 @@
 mutable struct Queue
     lock::ReentrantLock
     jobs::Vector{Job}
-    store::Union{Nothing,String}
+    store::Union{Nothing, String}
     runner::Function
-    live_id::Union{Nothing,String}
+    live_id::Union{Nothing, String}
     allowed::Union{Nothing, HostAllow}
     follow_config::Bool
 end
 
 function Queue(;
-    store::Union{Nothing,AbstractString}=nothing,
-    runner::Function=run_kit,
-    allowed::Union{Nothing,AbstractVector,AbstractSet,AbstractDict}=nothing,
-    follow_config::Bool=false,
-)
-    follow_config && allowed !== nothing && throw(ArgumentError(
-        "`follow_config` reads config hosts; omit `allowed`",
-    ))
+        store::Union{Nothing, AbstractString} = nothing,
+        runner::Function = run_kit,
+        allowed::Union{Nothing, AbstractVector, AbstractSet, AbstractDict} = nothing,
+        follow_config::Bool = false,
+    )
+    follow_config && allowed !== nothing && throw(
+        ArgumentError(
+            "`follow_config` reads config hosts; omit `allowed`",
+        )
+    )
     st = store === nothing ? nothing : String(store)
     names = if follow_config
         config_host_names(load_config())
@@ -57,7 +59,7 @@ end
 
 Not the Julia `--project=` that loaded DistSSHQueue.
 """
-function job_project(; cwd::AbstractString=pwd())::String
+function job_project(; cwd::AbstractString = pwd())::String
     env = strip(get(ENV, "DISTRIBUTED_PROJECT_ROOT", ""))
     isempty(env) || return DistSSHKit.canonical_local_path(env)
     host = DistSSHKit.resolve_pkg_project_dir(cwd)
@@ -111,11 +113,13 @@ function reject_worker_root_collision!(jobs::Vector{Job}, project::AbstractStrin
         op == proj && continue
         is_qhost_stage_project(proj) && is_qhost_stage_project(op) && continue
         kit_worker_root(op, j.kwargs) == root || continue
-        throw(ArgumentError(
-            "project $(proj) and $(op) both deploy to $(root) on workers. " *
-            "Use a unique ~/parent/Repo.jl; do not pin DISTRIBUTED_REMOTE_PROJECT_ROOT in shared config. " *
-            "Queue does not rename or setup --delete.",
-        ))
+        throw(
+            ArgumentError(
+                "project $(proj) and $(op) both deploy to $(root) on workers. " *
+                    "Use a unique ~/parent/Repo.jl; do not pin DISTRIBUTED_REMOTE_PROJECT_ROOT in shared config. " *
+                    "Queue does not rename or setup --delete.",
+            )
+        )
     end
     return nothing
 end
@@ -149,30 +153,36 @@ function reject_host_token!(allow::Union{Nothing, HostAllow}, t::AbstractString)
     parsed = DistSSHKit.parse_placement_token(t)
     allow === nothing && return parsed
     if !haskey(allow, parsed.name)
-        throw(ArgumentError(
-            "Kit name $(repr(parsed.name)) is not allowed (token $(repr(t)))",
-        ))
+        throw(
+            ArgumentError(
+                "Kit name $(repr(parsed.name)) is not allowed (token $(repr(t)))",
+            )
+        )
     end
     cap = allow[parsed.name]
     cap === nothing && return parsed
     jobn = parsed.n
     if jobn === nothing
-        throw(ArgumentError(
-            "Kit name $(repr(parsed.name)) needs :N (max $(cap); token $(repr(t)))",
-        ))
+        throw(
+            ArgumentError(
+                "Kit name $(repr(parsed.name)) needs :N (max $(cap); token $(repr(t)))",
+            )
+        )
     end
     if jobn > cap
-        throw(ArgumentError(
-            "Kit :N $(jobn) exceeds max $(cap) for $(repr(parsed.name)) (token $(repr(t)))",
-        ))
+        throw(
+            ArgumentError(
+                "Kit :N $(jobn) exceeds max $(cap) for $(repr(parsed.name)) (token $(repr(t)))",
+            )
+        )
     end
     return parsed
 end
 
 
-function kit_kwargs(d::Dict{String,Any})
+function kit_kwargs(d::Dict{String, Any})
     isempty(d) && return NamedTuple()
-    acc = Pair{Symbol,Any}[]
+    acc = Pair{Symbol, Any}[]
     for (k, v) in d
         key = Symbol(k)
         val = if key === :sync && v isa AbstractString && (v == "sync" || v == "rsync")
@@ -189,7 +199,7 @@ function kit_kwargs(d::Dict{String,Any})
     return (; acc...)
 end
 
-function kit_result_path(result)::Union{Nothing,String}
+function kit_result_path(result)::Union{Nothing, String}
     hasproperty(result, :output_dir) || return nothing
     p = getproperty(result, :output_dir)
     p === nothing && return nothing
@@ -197,7 +207,7 @@ function kit_result_path(result)::Union{Nothing,String}
     return isempty(s) ? nothing : s
 end
 
-function kit_result_path(j::Job, result)::Union{Nothing,String}
+function kit_result_path(j::Job, result)::Union{Nothing, String}
     p = kit_result_path(result)
     p !== nothing && return p
     od = get(j.kwargs, "output_dir", nothing)
@@ -228,12 +238,12 @@ Allow-list is DistSSHKit `execute_detached_accepts`.
 """
 function execute_kwargs(j::Job)
     raw = kit_kwargs(j.kwargs)
-    acc = Pair{Symbol,Any}[]
+    acc = Pair{Symbol, Any}[]
     for (k, v) in pairs(raw)
         k === :yes && continue
         k === :job_id && continue
         v === nothing && continue
-        DistSSHKit.execute_detached_accepts(k; kind=j.kind) || continue
+        DistSSHKit.execute_detached_accepts(k; kind = j.kind) || continue
         push!(acc, k => v)
     end
     push!(acc, :yes => true)
@@ -241,7 +251,7 @@ function execute_kwargs(j::Job)
 end
 
 """`output_dir` already recorded, else the job bag (Kit may still pick a default)."""
-function kit_output_dir(j::Job)::Union{Nothing,String}
+function kit_output_dir(j::Job)::Union{Nothing, String}
     p = j.result_path
     p !== nothing && return p
     od = get(j.kwargs, "output_dir", nothing)
@@ -257,7 +267,7 @@ layout as `fetch` dest). Kit remote slots use `relpath(output, project)`,
 so a leaf next to `jobs.toml` (outside the job tree) makes `child:` `go`
 exit 1. No-op if the bag already has `output_dir`.
 """
-function ensure_kit_output_dir!(j::Job; store::Union{Nothing,AbstractString}=nothing)
+function ensure_kit_output_dir!(j::Job; store::Union{Nothing, AbstractString} = nothing)
     kit_output_dir(j) !== nothing && return nothing
     isfile(j.script) || return nothing
     proj = get(j.kwargs, "project", nothing)
@@ -333,7 +343,7 @@ function _job_still_running(q::Queue, id::AbstractString)::Bool
     return running[]
 end
 
-function run_kit(j::Job, on_spawn; on_phase=Returns(nothing), still_running=Returns(true))
+function run_kit(j::Job, on_spawn; on_phase = Returns(nothing), still_running = Returns(true))
     _queue_kit_setup!(j, on_phase)
     on_phase(nothing)
     still_running() || return something(kit_output_dir(j), "")
@@ -341,8 +351,8 @@ function run_kit(j::Job, on_spawn; on_phase=Returns(nothing), still_running=Retu
         j.kind,
         j.script,
         j.hosts;
-        detached=true,
-        job_id=j.id,
+        detached = true,
+        job_id = j.id,
         execute_kwargs(j)...,
     )::DistSSHKit.KitProcess
     spawned = kit_result_path(kp)
@@ -374,14 +384,14 @@ function _set_job_phase!(q::Queue, id::AbstractString, ph)
 end
 
 """Kit session for per-job `setup!`. Same `remote` as `execute_kwargs` → `execute!`."""
-function _kit_setup_session(j::Job, proj::AbstractString; workers=j.hosts)
+function _kit_setup_session(j::Job, proj::AbstractString; workers = j.hosts)
     r = get(j.kwargs, "remote", nothing)
     remote = r isa AbstractString && !isempty(strip(String(r))) ? String(r) : nothing
     return DistSSHKit.KitSession(;
-        project=String(proj),
-        workers=workers,
-        remote=remote,
-        yes=true,
+        project = String(proj),
+        workers = workers,
+        remote = remote,
+        yes = true,
     )
 end
 
@@ -416,7 +426,7 @@ end
 const _PKG_DEPOT_LOCK = ReentrantLock()
 
 function _with_pkg_depots(f)
-    lock(_PKG_DEPOT_LOCK) do
+    return lock(_PKG_DEPOT_LOCK) do
         old = copy(DEPOT_PATH)
         depots = pkg_depots_for_instantiate()
         empty!(DEPOT_PATH)
@@ -451,17 +461,17 @@ function _require_kit_setup_ok!(result, step::AbstractString)
 end
 
 """Copy the newest `{proj}/.distsshkit/setup/*.log` onto the Kit leaf."""
-function _copy_kit_setup_log!(proj::AbstractString, output_dir::Union{Nothing,AbstractString})
+function _copy_kit_setup_log!(proj::AbstractString, output_dir::Union{Nothing, AbstractString})
     output_dir === nothing && return nothing
     dest = String(output_dir)
     isempty(strip(dest)) && return nothing
     logdir = joinpath(String(proj), ".distsshkit", "setup")
     isdir(logdir) || return nothing
-    logs = filter(f -> isfile(f) && endswith(lowercase(f), ".log"), readdir(logdir; join=true))
+    logs = filter(f -> isfile(f) && endswith(lowercase(f), ".log"), readdir(logdir; join = true))
     isempty(logs) && return nothing
     newest = logs[argmax(mtime.(logs))]
     mkpath(dest)
-    cp(newest, joinpath(dest, "setup_failure.log"); force=true)
+    cp(newest, joinpath(dest, "setup_failure.log"); force = true)
     return nothing
 end
 
@@ -471,7 +481,7 @@ function _queue_kit_setup!(j::Job, on_phase; kit_setup! = DistSSHKit.setup!)
     proj isa AbstractString || (proj = job_project())
     isdir(String(proj)) || return nothing
     children = _kit_setup_child_tokens(j.hosts)
-    session = isempty(children) ? nothing : _kit_setup_session(j, String(proj); workers=children)
+    session = isempty(children) ? nothing : _kit_setup_session(j, String(proj); workers = children)
     if session === nothing
         on_phase("instantiate")
         _queue_local_instantiate!(String(proj))
@@ -514,7 +524,7 @@ end
 
 """Load `store` (stale `:running` → `:failed`)."""
 function load!(q::Queue)
-    _with_store(q) do
+    return _with_store(q) do
         lock(q.lock) do
             _load_from_store!(q, q.store)
             return nothing
@@ -528,7 +538,7 @@ function _load_from_store!(q::Queue, store::String)
     return nothing
 end
 
-function _live_running(q::Queue)::Union{Nothing,Job}
+function _live_running(q::Queue)::Union{Nothing, Job}
     live = q.live_id
     live === nothing && return nothing
     i = _index_id(q.jobs, live)
@@ -578,14 +588,14 @@ end
 
 """Copy of the table."""
 function jobs(q::Queue)::Vector{Job}
-    lock(q.lock) do
+    return lock(q.lock) do
         return Job[copy(j) for j in q.jobs]
     end
 end
 
 """Copy of one row. `id` may be a unique prefix of the stored UUID."""
 function job(q::Queue, id::AbstractString)::Job
-    lock(q.lock) do
+    return lock(q.lock) do
         full = _resolve_id(q.jobs, id)
         i = _index_id(q.jobs, full)
         return copy(q.jobs[i])
@@ -595,17 +605,19 @@ end
 function _submit!(q::Queue, kind::Symbol, script::AbstractString, hosts; kwargs...)
     toks = String[String(x) for x in hosts]
     fresh = q.follow_config ? config_host_names(load_config()) : nothing
-    kw = Dict{String,Any}(String(k) => v for (k, v) in pairs(kwargs))
+    kw = Dict{String, Any}(String(k) => v for (k, v) in pairs(kwargs))
     haskey(kw, "project") || (kw["project"] = job_project())
     script_path = resolve_script(script)
-    _with_store(q) do
+    return _with_store(q) do
         lock(q.lock) do
             q.follow_config && (q.allowed = fresh)
             allow = q.allowed
             if q.follow_config && allow === nothing && !isempty(toks)
-                throw(ArgumentError(
-                    "no add-host list; $(repr(toks[1])) is not in inventory (add-host first)",
-                ))
+                throw(
+                    ArgumentError(
+                        "no add-host list; $(repr(toks[1])) is not in inventory (add-host first)",
+                    )
+                )
             end
             for t in toks
                 reject_host_token!(allow, t)
@@ -617,9 +629,9 @@ function _submit!(q::Queue, kind::Symbol, script::AbstractString, hosts; kwargs.
                 throw(ArgumentError("job id already exists: $(repr(String(raw_id)))"))
             end
             j = if raw_id === nothing
-                Job(; kind=kind, script=script_path, hosts=toks, kwargs=kw)
+                Job(; kind = kind, script = script_path, hosts = toks, kwargs = kw)
             else
-                Job(; id=String(raw_id), kind=kind, script=script_path, hosts=toks, kwargs=kw)
+                Job(; id = String(raw_id), kind = kind, script = script_path, hosts = toks, kwargs = kw)
             end
             push!(q.jobs, j)
             _persist!(q)
@@ -640,11 +652,11 @@ enqueue re-reads `hosts` without restarting `serve`. `step!` does not
 drop `:queued` rows when a name is later removed, and does not stop a
 Kit job that is already `:running`.
 """
-function submit!(q::Queue, script::AbstractString, hosts::AbstractString...; kind::Symbol=:go, kwargs...)
+function submit!(q::Queue, script::AbstractString, hosts::AbstractString...; kind::Symbol = :go, kwargs...)
     return _submit!(q, kind, script, hosts; kwargs...)
 end
 
-function submit!(q::Queue, script::AbstractString, hosts::AbstractVector{<:AbstractString}; kind::Symbol=:go, kwargs...)
+function submit!(q::Queue, script::AbstractString, hosts::AbstractVector{<:AbstractString}; kind::Symbol = :go, kwargs...)
     return _submit!(q, kind, script, hosts; kwargs...)
 end
 
@@ -668,17 +680,17 @@ function cancel!(q::Queue, id::AbstractString)::Bool
             return (out_dir, j.kind, j.id)
         end
     end
-    if action isa Tuple{String,Symbol,String}
+    if action isa Tuple{String, Symbol, String}
         running_dir, running_kind, running_id = action
-        DistSSHKit.terminate_run!(running_dir; kind=running_kind)
-        _finish!(q, running_id, :cancelled, nothing; result_path=running_dir)
+        DistSSHKit.terminate_run!(running_dir; kind = running_kind)
+        _finish!(q, running_id, :cancelled, nothing; result_path = running_dir)
         return true
     end
     return action === :queued
 end
 
 function _set_running_result_path!(q::Queue, id::AbstractString, path::AbstractString)
-    _with_store(q) do
+    return _with_store(q) do
         lock(q.lock) do
             reload_keep_live!(q)
             i = _index_id(q.jobs, id)
@@ -692,8 +704,8 @@ function _set_running_result_path!(q::Queue, id::AbstractString, path::AbstractS
     end
 end
 
-function _finish!(q::Queue, id::AbstractString, state::Symbol, err; result_path=nothing)
-    _with_store(q) do
+function _finish!(q::Queue, id::AbstractString, state::Symbol, err; result_path = nothing)
+    return _with_store(q) do
         lock(q.lock) do
             reload_keep_live!(q)
             i = _index_id(q.jobs, id)
@@ -725,7 +737,7 @@ function _start!(q::Queue, j::Job)
     j.state = :running
     j.started_at = now(UTC)
     q.live_id = j.id
-    ensure_kit_output_dir!(j; store=q.store)
+    ensure_kit_output_dir!(j; store = q.store)
     _persist!(q)
     runner = q.runner
     id = j.id
@@ -739,8 +751,8 @@ function _start!(q::Queue, j::Job)
             out = if runner === run_kit
                 run_kit(
                     snap, on_spawn;
-                    on_phase=ph -> _set_job_phase!(q, id, ph),
-                    still_running=() -> _job_still_running(q, id),
+                    on_phase = ph -> _set_job_phase!(q, id, ph),
+                    still_running = () -> _job_still_running(q, id),
                 )
             else
                 runner(snap)
@@ -750,14 +762,14 @@ function _start!(q::Queue, j::Job)
                 od = get(snap.kwargs, "output_dir", nothing)
                 path = od === nothing ? nothing : String(od)
             end
-            _finish!(q, id, :done, nothing; result_path=path)
+            _finish!(q, id, :done, nothing; result_path = path)
         catch e
             _finish!(
                 q,
                 id,
                 :failed,
                 sprint(showerror, e);
-                result_path=kit_output_dir(snap),
+                result_path = kit_output_dir(snap),
             )
         end
     end
@@ -802,14 +814,14 @@ function adopt_running!(q::Queue)
             dir
         end
         if rec === nothing
-            _finish!(q, id, :failed, _ADOPT_LOST; result_path=path)
+            _finish!(q, id, :failed, _ADOPT_LOST; result_path = path)
         else
             try
                 require_kit_ok(rec)
-                _finish!(q, id, :done, nothing; result_path=path)
+                _finish!(q, id, :done, nothing; result_path = path)
             catch e
                 msg = e isa ErrorException ? e.msg : sprint(showerror, e)
-                _finish!(q, id, :failed, msg; result_path=path)
+                _finish!(q, id, :failed, msg; result_path = path)
             end
         end
     end
@@ -830,8 +842,8 @@ function step!(q::Queue)::Int
     end
 end
 
-function _running_copy(q::Queue)::Union{Nothing,Job}
-    lock(q.lock) do
+function _running_copy(q::Queue)::Union{Nothing, Job}
+    return lock(q.lock) do
         i = _index_state(q.jobs, :running)
         i === nothing && return nothing
         return copy(q.jobs[i])
@@ -839,7 +851,7 @@ function _running_copy(q::Queue)::Union{Nothing,Job}
 end
 
 function _serve_live_job(q::Queue)
-    lock(q.lock) do
+    return lock(q.lock) do
         ids = String[j.id for j in q.jobs]
         i = _index_state(q.jobs, :running)
         i === nothing && return nothing, ids
@@ -851,7 +863,7 @@ end
 
 A second `serve` on the same store prints `Already running` and returns.
 """
-function serve!(q::Queue; interval::Real=0.2)
+function serve!(q::Queue; interval::Real = 0.2)
     store = q.store
     if store isa String
         existing = serve_pid(store)
@@ -870,7 +882,7 @@ function serve!(q::Queue; interval::Real=0.2)
     label = store isa String ? store : "(memory)"
     io = stdout
     print_serve_banner(getpid(), label)
-    print_serve_idle_note(; io=io)
+    print_serve_idle_note(; io = io)
     draw = _serve_can_draw(io)
     flush(io)
     done = Ref(false)
@@ -882,7 +894,7 @@ function serve!(q::Queue; interval::Real=0.2)
             frames = DistSSHKit.SPINNER_FRAMES
             while !done[]
                 j, ids = _serve_live_job(q)
-                print_serve_live_line(frames[i], j, ids; io=io)
+                print_serve_live_line(frames[i], j, ids; io = io)
                 i = i == length(frames) ? 1 : i + 1
                 sleep(0.08)
             end
@@ -926,7 +938,7 @@ function serve!(q::Queue; interval::Real=0.2)
             flush(io)
         end
         if gone
-            print_serve_gone(label; io=io)
+            print_serve_gone(label; io = io)
         elseif store isa String && serve_pid(store) == getpid()
             remove_pid_file(store)
         end
@@ -934,8 +946,8 @@ function serve!(q::Queue; interval::Real=0.2)
     return nothing
 end
 
-function serve(; store::AbstractString=default_store_path(), interval::Real=0.2, runner::Function=run_kit)
-    return serve!(Queue(; store=store, runner=runner); interval=interval)
+function serve(; store::AbstractString = default_store_path(), interval::Real = 0.2, runner::Function = run_kit)
+    return serve!(Queue(; store = store, runner = runner); interval = interval)
 end
 
 _is_interrupt(::InterruptException) = true

@@ -14,7 +14,7 @@ const NO_STAGE_ENV = "DISTSSHQUEUE_NO_STAGE"
 `home` is that box's `homedir()` under the same Julia as `qhost:` (`--remote-julia`
 wrapper included). Default `~` is for docs/tests without SSH.
 """
-function remote_stage_root(id::AbstractString; home::AbstractString="~")::String
+function remote_stage_root(id::AbstractString; home::AbstractString = "~")::String
     h = rstrip(String(home), '/')
     return string(h, "/.distsshqueue/stage/", id)
 end
@@ -24,30 +24,32 @@ end
 `queue_env === nothing`: `--startup-file=no` only (homedir). Else hop `--project=`.
 """
 function hop_print(
-    host::AbstractString,
-    rjulia::AbstractString,
-    expr::AbstractString;
-    queue_env::Union{Nothing,AbstractString}=nothing,
-)::String
+        host::AbstractString,
+        rjulia::AbstractString,
+        expr::AbstractString;
+        queue_env::Union{Nothing, AbstractString} = nothing,
+    )::String
     spec = strip(String(rjulia))
     auto = isempty(spec) || spec == "auto"
     prefix = queue_env === nothing ? String["--startup-file=no"] : hop_julia_prefix(queue_env)
     argv = vcat(prefix, String["-e", String(expr)])
-    mktemp() do path, io
+    return mktemp() do path, io
         redirect_stdout(io) do
             proc = DistSSHKit.run_on_host(
                 host,
                 argv;
-                julia=auto ? nothing : spec,
-                detect=auto,
-                tty=false,
+                julia = auto ? nothing : spec,
+                detect = auto,
+                tty = false,
             )
             code = Int(something(proc.exitcode, 1))
             if code == 127
-                throw(ArgumentError(
-                    "no Julia on $(host) (ssh PATH is often empty; Kit tries juliaup then Homebrew). " *
-                    "Pass --remote-julia PATH or set JULIA_DISTRIBUTED_EXE, like Kit --julia.",
-                ))
+                throw(
+                    ArgumentError(
+                        "no Julia on $(host) (ssh PATH is often empty; Kit tries juliaup then Homebrew). " *
+                            "Pass --remote-julia PATH or set JULIA_DISTRIBUTED_EXE, like Kit --julia.",
+                    )
+                )
             end
             code == 0 || throw(ArgumentError("qhost hop failed on $(host) (exit $(code))"))
         end
@@ -127,10 +129,10 @@ function rewrite_one_path(arg::AbstractString, local_proj::AbstractString, remot
 end
 
 function rewrite_payload_paths(
-    payload::Vector{String},
-    local_proj::AbstractString,
-    remote_root::AbstractString,
-)::Vector{String}
+        payload::Vector{String},
+        local_proj::AbstractString,
+        remote_root::AbstractString,
+    )::Vector{String}
     out = String[String(a) for a in payload]
     i = 1
     while i <= length(out)
@@ -158,31 +160,33 @@ end
 function _ssh_mkdir!(host::AbstractString, remote_dir::AbstractString)
     inner = string("mkdir -p ", sh_single_quote(remote_dir))
     cmd = Cmd(vcat(["ssh"], DistSSHKit.ssh_opts(), [String(host), inner]))
-    run(pipeline(cmd; stderr=stderr))
+    run(pipeline(cmd; stderr = stderr))
     return nothing
 end
 
 """rsync flags for client → queue-host stage (Kit `setup --rsync` plus `.distsshqueue/`)."""
-function stage_rsync_push_opts(transport::AbstractString; progress::Bool=false)::Vector{String}
+function stage_rsync_push_opts(transport::AbstractString; progress::Bool = false)::Vector{String}
     opts = String["-az"]
     progress && push!(opts, "--info=progress2")
-    append!(opts, String[
-        "--delete",
-        "-e",
-        String(transport),
-        "--exclude",
-        ".git/",
-        "--exclude",
-        ".distsshkit/",
-        "--exclude",
-        ".distsshqueue/",
-        "--filter",
-        ":- .gitignore",
-    ])
+    append!(
+        opts, String[
+            "--delete",
+            "-e",
+            String(transport),
+            "--exclude",
+            ".git/",
+            "--exclude",
+            ".distsshkit/",
+            "--exclude",
+            ".distsshqueue/",
+            "--filter",
+            ":- .gitignore",
+        ]
+    )
     return opts
 end
 
-function rsync_progress_on(args::Vector{String}=String[])::Bool
+function rsync_progress_on(args::Vector{String} = String[])::Bool
     _queue_env_on("DISTSSHKIT_QUIET") && return false
     _queue_env_on("DISTSSHKIT_PROGRESS") && return true
     return any(isequal("--progress"), args)
@@ -190,11 +194,11 @@ end
 
 """One stderr line when a `qhost:` rsync starts. `DISTSSHKIT_QUIET` skips it."""
 function print_rsync_start(
-    host::AbstractString,
-    remote_path::AbstractString;
-    pulling::Bool=false,
-    io::IO=stderr,
-)
+        host::AbstractString,
+        remote_path::AbstractString;
+        pulling::Bool = false,
+        io::IO = stderr,
+    )
     _queue_env_on("DISTSSHKIT_QUIET") && return nothing
     arrow = pulling ? "←" : "→"
     println(io, "rsync $(arrow) $(host):$(_q_short(remote_path))")
@@ -202,12 +206,12 @@ function print_rsync_start(
 end
 
 function rsync_to_qhost!(
-    host::AbstractString,
-    local_root::AbstractString,
-    remote_root::AbstractString,
-    extra_files::Vector{String};
-    progress::Bool=false,
-)
+        host::AbstractString,
+        local_root::AbstractString,
+        remote_root::AbstractString,
+        extra_files::Vector{String};
+        progress::Bool = false,
+    )
     src = DistSSHKit.canonical_local_path(local_root)
     isdir(src) || throw(ArgumentError("qhost submit: job project is not a directory: $(repr(src))"))
     _ssh_mkdir!(host, remote_root)
@@ -217,9 +221,9 @@ function rsync_to_qhost!(
     print_rsync_start(host, remote_root)
     run(
         pipeline(
-            Cmd(vcat(rsync, stage_rsync_push_opts(transport; progress=progress), String[src * "/", dest]));
-            stdout=stderr,
-            stderr=stderr,
+            Cmd(vcat(rsync, stage_rsync_push_opts(transport; progress = progress), String[src * "/", dest]));
+            stdout = stderr,
+            stderr = stderr,
         ),
     )
     extra_opts = String["-az"]
@@ -237,8 +241,8 @@ function rsync_to_qhost!(
                         String[p, string(host, ":", remote_root, "/", basename(p))],
                     ),
                 );
-                stdout=stderr,
-                stderr=stderr,
+                stdout = stderr,
+                stderr = stderr,
             ),
         )
     end
@@ -247,24 +251,24 @@ end
 
 """Pull one remote directory into `local_dest`. Additive: dest-only files stay."""
 function rsync_from_qhost!(
-    host::AbstractString,
-    remote_abs::AbstractString,
-    local_dest::AbstractString;
-    progress::Bool=false,
-)
+        host::AbstractString,
+        remote_abs::AbstractString,
+        local_dest::AbstractString;
+        progress::Bool = false,
+    )
     remote = rstrip(replace(String(remote_abs), '\\' => '/'), '/')
     dest = DistSSHKit.canonical_local_path(local_dest)
     mkpath(dest)
     src = string(host, ":", remote, "/")
-    print_rsync_start(host, remote; pulling=true)
+    print_rsync_start(host, remote; pulling = true)
     flags = String["-az"]
     progress && push!(flags, "--info=progress2")
     append!(flags, String["-e", _ssh_transport()])
     run(
         pipeline(
             Cmd(vcat(_rsync_bin(), flags, String[src, dest * "/"]));
-            stdout=stderr,
-            stderr=stderr,
+            stdout = stderr,
+            stderr = stderr,
         ),
     )
     return nothing
@@ -278,24 +282,24 @@ end
 
 """Rsync cwd / `DISTRIBUTED_PROJECT_ROOT` to `~/.distsshqueue/stage/<uuid>` on `host`."""
 function stage_job_tree!(
-    host::AbstractString,
-    rjulia::AbstractString,
-    sub::AbstractString,
-    payload::Vector{String},
-)::Tuple{Vector{String},Dict{String,String}}
+        host::AbstractString,
+        rjulia::AbstractString,
+        sub::AbstractString,
+        payload::Vector{String},
+    )::Tuple{Vector{String}, Dict{String, String}}
     kit, kitargs = kit_verb_and_args(sub, payload)
     parsed = kit_parse_args(kit_kind_from_cli(kit), kitargs)
-    parsed.help && return (String[String(a) for a in payload], Dict{String,String}())
-    parsed.show_version && return (String[String(a) for a in payload], Dict{String,String}())
+    parsed.help && return (String[String(a) for a in payload], Dict{String, String}())
+    parsed.show_version && return (String[String(a) for a in payload], Dict{String, String}())
     local_script = script_arg(parsed.script_path, kit)
     local_proj = job_project()
     key = new_job_id()
-    remote_root = remote_stage_root(key; home=queue_host_homedir(host, rjulia))
+    remote_root = remote_stage_root(key; home = queue_host_homedir(host, rjulia))
     extras = String[]
     if !path_under_project(local_script, local_proj)
         push!(extras, local_script)
     end
-    rsync_to_qhost!(host, local_proj, remote_root, extras; progress=rsync_progress_on(payload))
+    rsync_to_qhost!(host, local_proj, remote_root, extras; progress = rsync_progress_on(payload))
     staged = rewrite_payload_paths(payload, local_proj, remote_root)
     if !isempty(extras)
         want = string(remote_root, "/", basename(local_script))
@@ -304,7 +308,7 @@ function stage_job_tree!(
         raw = String(parsed.script_path)
         staged = String[a == raw ? want : a for a in staged]
     end
-    env = Dict{String,String}(
+    env = Dict{String, String}(
         "DISTRIBUTED_PROJECT_ROOT" => remote_root,
         JOB_ID_ENV => key,
     )

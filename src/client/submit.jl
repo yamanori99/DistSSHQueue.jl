@@ -1,7 +1,7 @@
 """Client `submit go` / `submit ride` / `submit drive` (Kit parsers). After `qhost:` ssh, on the staged tree."""
 
-function drop_nothing(d::Dict{String,Any})
-    out = Dict{String,Any}()
+function drop_nothing(d::Dict{String, Any})
+    out = Dict{String, Any}()
     for (k, v) in d
         v === nothing && continue
         if v isa Symbol
@@ -16,12 +16,12 @@ function drop_nothing(d::Dict{String,Any})
 end
 
 function submit_hosts(parsed; kind::Symbol)::Vector{String}
-    return DistSSHKit.host_tokens(parsed; kind=kind)
+    return DistSSHKit.host_tokens(parsed; kind = kind)
 end
 
-function submit_kit_bag(parsed; kind::Symbol)::Dict{String,Any}
-    raw = DistSSHKit.execute_kwargs_from_parsed(parsed; kind=kind)
-    return drop_nothing(Dict{String,Any}(String(k) => v for (k, v) in raw))
+function submit_kit_bag(parsed; kind::Symbol)::Dict{String, Any}
+    raw = DistSSHKit.execute_kwargs_from_parsed(parsed; kind = kind)
+    return drop_nothing(Dict{String, Any}(String(k) => v for (k, v) in raw))
 end
 
 """Peel `pool:N` from Queue selector positions, not Kit option values.
@@ -50,17 +50,21 @@ function peel_submit_pool(args::Vector{String})
             continue
         end
         if a == "pool"
-            throw(ArgumentError(
-                "`pool` is the inspect verb. For submit slots use `pool:N` " *
-                "(e.g. submit pool:8 drive SCRIPT.jl). Inspect: julia -m DistSSHQueue pool",
-            ))
+            throw(
+                ArgumentError(
+                    "`pool` is the inspect verb. For submit slots use `pool:N` " *
+                        "(e.g. submit pool:8 drive SCRIPT.jl). Inspect: julia -m DistSSHQueue pool",
+                )
+            )
         elseif startswith(a, "pool:")
             n === nothing || throw(ArgumentError("pool:N given twice"))
             raw = strip(chopprefix(a, "pool:"))
             slots = tryparse(Int, raw)
-            (slots === nothing || slots < 1) && throw(ArgumentError(
-                "pool:N needs a positive integer (got $(repr(a)))",
-            ))
+            (slots === nothing || slots < 1) && throw(
+                ArgumentError(
+                    "pool:N needs a positive integer (got $(repr(a)))",
+                )
+            )
             n = slots
         else
             push!(out, a)
@@ -73,7 +77,7 @@ end
 function _kit_flag_takes_value(a::AbstractString)::Bool
     startswith(a, "--") || startswith(a, "-") || return false
     occursin('=', a) && return false
-    a in (
+    return a in (
         "--julia", "--output-dir", "--repeat", "--gb-per-worker", "--probe",
         "--mem-headroom", "--parent-gb", "--workers", "-w", "--hosts",
         "--hosts-file", "--n", "--log-dir", "--package", "--project",
@@ -82,9 +86,11 @@ end
 
 function expand_pool_submit_hosts(slots::Int)::Vector{String}
     allow = config_host_names(load_config())
-    (allow === nothing || isempty(allow)) && throw(ArgumentError(
-        "pool:N needs config hosts; add-host first",
-    ))
+    (allow === nothing || isempty(allow)) && throw(
+        ArgumentError(
+            "pool:N needs config hosts; add-host first",
+        )
+    )
     out = String[]
     for name in sorted_kit_ssh_names(allow)
         n = clamp_pool_slots(slots, allow, name)
@@ -96,14 +102,14 @@ function expand_pool_submit_hosts(slots::Int)::Vector{String}
     return out
 end
 
-function submit_cli(store::AbstractString, kind::Symbol, script::AbstractString, hosts, kw::Dict{String,Any})
-    q = Queue(; store=store, follow_config=true)
+function submit_cli(store::AbstractString, kind::Symbol, script::AbstractString, hosts, kw::Dict{String, Any})
+    q = Queue(; store = store, follow_config = true)
     nt = isempty(kw) ? NamedTuple() : (; (Symbol(k) => v for (k, v) in kw)...)
     forced = strip(get(ENV, JOB_ID_ENV, ""))
     id = if isempty(forced)
-        submit!(q, String(script), String[String(x) for x in hosts]; kind=kind, nt...)
+        submit!(q, String(script), String[String(x) for x in hosts]; kind = kind, nt...)
     else
-        submit!(q, String(script), String[String(x) for x in hosts]; kind=kind, id=forced, nt...)
+        submit!(q, String(script), String[String(x) for x in hosts]; kind = kind, id = forced, nt...)
     end
     println(id)
     if !_kit_env_on("DISTSSHKIT_QUIET")
@@ -129,9 +135,11 @@ script_arg(::Nothing, verb::AbstractString) = throw(ArgumentError("$verb: missin
 function script_arg(path::AbstractString, ::AbstractString)::String
     resolved = resolve_script(path)
     isfile(resolved) && return resolved
-    throw(ArgumentError(
-        DistSSHKit.explain_script_not_found(resolved, job_project(); surface=:cli),
-    ))
+    throw(
+        ArgumentError(
+            DistSSHKit.explain_script_not_found(resolved, job_project(); surface = :cli),
+        )
+    )
 end
 
 """Parse Kit execute argv. One table: add a kind here, in `KIT_EXECUTE_KINDS`, and in `main`."""
@@ -151,13 +159,15 @@ end
 
 function kit_kind_from_cli(name::AbstractString)::Symbol
     k = Symbol(String(name))
-    is_kit_execute_kind(k) || throw(ArgumentError(
-        "submit: unknown kit command $(repr(name)) (want go, ride, or drive)",
-    ))
+    is_kit_execute_kind(k) || throw(
+        ArgumentError(
+            "submit: unknown kit command $(repr(name)) (want go, ride, or drive)",
+        )
+    )
     return k
 end
 
-function submit_kind(kind::Symbol, args::Vector{String}; pool_slots::Union{Nothing,Int}=nothing)::Cint
+function submit_kind(kind::Symbol, args::Vector{String}; pool_slots::Union{Nothing, Int} = nothing)::Cint
     rest, peeled = peel_submit_pool(args)
     slots = if pool_slots !== nothing && peeled !== nothing
         throw(ArgumentError("pool:N given twice"))
@@ -168,13 +178,15 @@ function submit_kind(kind::Symbol, args::Vector{String}; pool_slots::Union{Nothi
     end
     parsed = kit_parse_args(kind, rest)
     if parsed.help
-        DistSSHKit.print_help_section("Queue"; io=stdout)
-        DistSSHKit.print_help_lines(stdout,
+        DistSSHKit.print_help_section("Queue"; io = stdout)
+        DistSSHKit.print_help_lines(
+            stdout,
             "  `submit $(kind)` enqueues. `qhost:HOST` is the SSH name of the queue machine, not a Kit slot.",
         )
         DistSSHKit.print_help_blank(stdout)
-        DistSSHKit.print_help_section("DistSSHKit"; io=stdout)
-        DistSSHKit.print_help_lines(stdout,
+        DistSSHKit.print_help_section("DistSSHKit"; io = stdout)
+        DistSSHKit.print_help_lines(
+            stdout,
             "  Same argv as `julia -m DistSSHKit $(kind) …` (`parent:N` / `child:NAME:N`).",
         )
         DistSSHKit.print_help_blank(stdout)
@@ -183,11 +195,13 @@ function submit_kind(kind::Symbol, args::Vector{String}; pool_slots::Union{Nothi
     end
     parsed.show_version && (DistSSHKit.println_kit_version(); return 0)
     verb = String(kind)
-    hosts = submit_hosts(parsed; kind=kind)
+    hosts = submit_hosts(parsed; kind = kind)
     if slots !== nothing
-        isempty(hosts) || throw(ArgumentError(
-            "pool:N cannot mix with parent / child tokens",
-        ))
+        isempty(hosts) || throw(
+            ArgumentError(
+                "pool:N cannot mix with parent / child tokens",
+            )
+        )
         hosts = expand_pool_submit_hosts(slots)
     end
     return submit_cli(
@@ -195,7 +209,7 @@ function submit_kind(kind::Symbol, args::Vector{String}; pool_slots::Union{Nothi
         kind,
         script_arg(parsed.script_path, verb),
         hosts,
-        submit_kit_bag(parsed; kind=kind),
+        submit_kit_bag(parsed; kind = kind),
     )
 end
 
@@ -204,6 +218,6 @@ function submit_main(args::Vector{String})::Cint
     rest, slots = peel_submit_pool(args)
     isempty(rest) && throw(ArgumentError("submit: need `go`, `ride`, or `drive`"))
     kit, rest2 = String(rest[1]), String[String(a) for a in rest[2:end]]
-    kit in ("-h", "--help") && (show_usage(; command="submit"); return 0)
-    return submit_kind(kit_kind_from_cli(kit), rest2; pool_slots=slots)
+    kit in ("-h", "--help") && (show_usage(; command = "submit"); return 0)
+    return submit_kind(kit_kind_from_cli(kit), rest2; pool_slots = slots)
 end

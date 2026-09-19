@@ -17,9 +17,11 @@ function parse_qhost_token(raw::AbstractString)::String
     startswith(s, "qhost:") || throw(ArgumentError("queue host is `qhost:NAME`, not $(repr(s))"))
     name = strip(chopprefix(s, "qhost:"))
     isempty(name) && throw(ArgumentError("`qhost:` needs an SSH name"))
-    occursin(r"^\d+$", name) && throw(ArgumentError(
-        "`qhost:` names the queue host (SSH), not Kit slots. Use `parent:$(name)`.",
-    ))
+    occursin(r"^\d+$", name) && throw(
+        ArgumentError(
+            "`qhost:` names the queue host (SSH), not Kit slots. Use `parent:$(name)`.",
+        )
+    )
     return String(name)
 end
 
@@ -46,19 +48,19 @@ const HOP_QUEUE_ENV_DEFAULT = "~/.distsshqueue/env"
 """`--queue-env @`: remote default Julia env (no `--project=`)."""
 const HOP_QUEUE_ENV_NONE = "@"
 
-function qhost_default_from_env()::Union{Nothing,String}
+function qhost_default_from_env()::Union{Nothing, String}
     v = strip(get(ENV, QHOST_DEFAULT_ENV, ""))
     isempty(v) && return nothing
     startswith(v, "qhost:") && return parse_qhost_token(v)
     return String(v)
 end
 
-function qhost_display_from_env()::Union{Nothing,String}
+function qhost_display_from_env()::Union{Nothing, String}
     v = strip(get(ENV, QHOST_DISPLAY_ENV, ""))
     return isempty(v) ? nothing : String(v)
 end
 
-function _set_qhost(cur::Union{Nothing,String}, next::AbstractString)::String
+function _set_qhost(cur::Union{Nothing, String}, next::AbstractString)::String
     n = String(next)
     if cur !== nothing && cur != n
         throw(ArgumentError("queue host given twice ($cur and $n)"))
@@ -66,7 +68,7 @@ function _set_qhost(cur::Union{Nothing,String}, next::AbstractString)::String
     return n
 end
 
-function _set_queue_env(cur::Union{Nothing,String}, next::AbstractString)::String
+function _set_queue_env(cur::Union{Nothing, String}, next::AbstractString)::String
     n = String(next)
     if cur !== nothing && cur != n
         throw(ArgumentError("queue env given twice ($cur and $n)"))
@@ -90,19 +92,21 @@ function extract_remote_opts(args::Vector{String})
         if a == "--qhost"
             throw(ArgumentError("use `qhost:NAME`, not `--qhost`"))
         elseif a == "--project" || startswith(a, "--project=")
-            throw(ArgumentError(
-                "queue-host julia --project= is --queue-env DIR. " *
-                "Client julia --project= loads Queue locally; it is not forwarded.",
-            ))
+            throw(
+                ArgumentError(
+                    "queue-host julia --project= is --queue-env DIR. " *
+                        "Client julia --project= loads Queue locally; it is not forwarded.",
+                )
+            )
         elseif startswith(a, "qhost:")
             host = _set_qhost(host, parse_qhost_token(a))
             explicit = true
             i += 1
         elseif a == "--remote-julia" && i < length(args)
-            rjulia = args[i+1]
+            rjulia = args[i + 1]
             i += 2
         elseif a == "--queue-env" && i < length(args)
-            qenv = _set_queue_env(qenv, args[i+1])
+            qenv = _set_queue_env(qenv, args[i + 1])
             i += 2
         else
             break
@@ -119,17 +123,17 @@ function extract_remote_opts(args::Vector{String})
 end
 
 function coalesce_remote(
-    ahost::Union{Nothing,AbstractString},
-    ajulia::Union{Nothing,AbstractString},
-    bhost::Union{Nothing,AbstractString},
-    bjulia::Union{Nothing,AbstractString},
-)
+        ahost::Union{Nothing, AbstractString},
+        ajulia::Union{Nothing, AbstractString},
+        bhost::Union{Nothing, AbstractString},
+        bjulia::Union{Nothing, AbstractString},
+    )
     if ahost !== nothing && bhost !== nothing && String(ahost) != String(bhost)
         throw(ArgumentError("queue host given twice ($(ahost) and $(bhost))"))
     end
     host = ahost !== nothing ? String(ahost) : (bhost === nothing ? nothing : String(bhost))
     spec = ajulia !== nothing ? String(ajulia) :
-           (bjulia !== nothing ? String(bjulia) : default_remote_julia())
+        (bjulia !== nothing ? String(bjulia) : default_remote_julia())
     return host, spec
 end
 
@@ -138,9 +142,9 @@ end
 `@` means no `--project=` (remote default Julia env).
 """
 function coalesce_queue_env(
-    a::Union{Nothing,AbstractString},
-    b::Union{Nothing,AbstractString},
-)::String
+        a::Union{Nothing, AbstractString},
+        b::Union{Nothing, AbstractString},
+    )::String
     if a !== nothing && b !== nothing && String(a) != String(b)
         throw(ArgumentError("queue env given twice ($(a) and $(b))"))
     end
@@ -186,16 +190,18 @@ function local_queue_exempt()::Bool
 end
 
 function require_queue_target!(
-    verb::AbstractString;
-    explicit::Bool,
-)
+        verb::AbstractString;
+        explicit::Bool,
+    )
     verb in CLIENT_REMOTE_VERBS || return nothing
     explicit && return nothing
     local_queue_exempt() && return nothing
-    throw(ArgumentError(
-        "no config / store; `setup` first (or `qhost:HOST` if you meant a client hop). " *
-        "Local trial: DISTSSHQUEUE_LOCAL=1.",
-    ))
+    throw(
+        ArgumentError(
+            "no config / store; `setup` first (or `qhost:HOST` if you meant a client hop). " *
+                "Local trial: DISTSSHQUEUE_LOCAL=1.",
+        )
+    )
 end
 
 """Copy client Kit chrome env onto a `qhost:` hop (`-e` assigns).
@@ -215,25 +221,27 @@ function append_hop_forwarded_env!(assigns::Vector{String})
     return assigns
 end
 
-function reject_qhost_on_local(sub::AbstractString, host::Union{Nothing,AbstractString})
+function reject_qhost_on_local(sub::AbstractString, host::Union{Nothing, AbstractString})
     host === nothing && return nothing
     sub in QHOST_LOCAL_VERBS || return nothing
-    throw(ArgumentError(
-        "`qhost:NAME` is a client token; `$sub` runs on the queue host. " *
-        "Log in there and run it, or omit `qhost:` if this machine is the queue host.",
-    ))
+    throw(
+        ArgumentError(
+            "`qhost:NAME` is a client token; `$sub` runs on the queue host. " *
+                "Log in there and run it, or omit `qhost:` if this machine is the queue host.",
+        )
+    )
 end
 
 function remote_dispatch(
-    host::AbstractString,
-    rjulia::AbstractString,
-    sub::AbstractString,
-    payload::Vector{String};
-    tty::Bool=false,
-    qhost_display::Union{Nothing,AbstractString}=nothing,
-    queue_env::AbstractString=HOP_QUEUE_ENV_DEFAULT,
-    extra_env::Dict{String,String}=Dict{String,String}(),
-)::Cint
+        host::AbstractString,
+        rjulia::AbstractString,
+        sub::AbstractString,
+        payload::Vector{String};
+        tty::Bool = false,
+        qhost_display::Union{Nothing, AbstractString} = nothing,
+        queue_env::AbstractString = HOP_QUEUE_ENV_DEFAULT,
+        extra_env::Dict{String, String} = Dict{String, String}(),
+    )::Cint
     label = qhost_display === nothing ? nothing : strip(String(qhost_display))
     assigns = String[]
     if label !== nothing && !isempty(label)
@@ -262,16 +270,18 @@ function remote_dispatch(
     proc = DistSSHKit.run_on_host(
         host,
         argv;
-        julia=auto ? nothing : spec,
-        detect=auto,
-        tty=tty,
+        julia = auto ? nothing : spec,
+        detect = auto,
+        tty = tty,
     )
     code = Int(something(proc.exitcode, 1))
     if code == 127
-        throw(ArgumentError(
-            "no Julia on $(host) (ssh PATH is often empty; Kit tries juliaup then Homebrew). " *
-            "Pass --remote-julia PATH or set JULIA_DISTRIBUTED_EXE, like Kit --julia.",
-        ))
+        throw(
+            ArgumentError(
+                "no Julia on $(host) (ssh PATH is often empty; Kit tries juliaup then Homebrew). " *
+                    "Pass --remote-julia PATH or set JULIA_DISTRIBUTED_EXE, like Kit --julia.",
+            )
+        )
     end
     return Cint(code)
 end
@@ -285,54 +295,54 @@ chrome. `list-host` only uses it to say
 `queue host` instead of `this machine`; NAME is `gethostname()`.
 """
 function maybe_remote(
-    qhost::Union{Nothing,AbstractString},
-    gjulia::Union{Nothing,AbstractString},
-    sub::AbstractString,
-    rest::Vector{String};
-    tty::Bool=false,
-    label_qhost::Bool=false,
-    queue_env::Union{Nothing,AbstractString}=nothing,
-    explicit::Bool=false,
-)::Union{Nothing,Cint}
+        qhost::Union{Nothing, AbstractString},
+        gjulia::Union{Nothing, AbstractString},
+        sub::AbstractString,
+        rest::Vector{String};
+        tty::Bool = false,
+        label_qhost::Bool = false,
+        queue_env::Union{Nothing, AbstractString} = nothing,
+        explicit::Bool = false,
+    )::Union{Nothing, Cint}
     host, rjulia, qenv, payload, rest_explicit = extract_remote_opts(rest)
     dest, spec = coalesce_remote(qhost, gjulia, host, rjulia)
     (explicit || rest_explicit) || return nothing
     dest === nothing && return nothing
     disp = label_qhost ? dest : nothing
     q = coalesce_queue_env(queue_env, qenv)
-    extra = Dict{String,String}()
+    extra = Dict{String, String}()
     hop = payload
     if should_stage(sub, payload)
         hop, extra = stage_job_tree!(dest, spec, sub, payload)
         return _remote_submit_ticket(
-            dest, spec, sub, hop, extra, payload; tty=tty, qhost_display=disp, queue_env=q,
+            dest, spec, sub, hop, extra, payload; tty = tty, qhost_display = disp, queue_env = q,
         )
     end
     should_submit_ticket(sub, payload) && return _remote_submit_ticket(
-        dest, spec, sub, payload, extra, payload; tty=tty, qhost_display=disp, queue_env=q,
+        dest, spec, sub, payload, extra, payload; tty = tty, qhost_display = disp, queue_env = q,
     )
     return remote_dispatch(
-        dest, spec, sub, hop; tty=tty, qhost_display=disp, queue_env=q, extra_env=extra,
+        dest, spec, sub, hop; tty = tty, qhost_display = disp, queue_env = q, extra_env = extra,
     )
 end
 
 """`qhost:` submit hop: capture stdout, reprint it, write `.distsshqueue/tickets/<id>`."""
 function _remote_submit_ticket(
-    dest::AbstractString,
-    spec::AbstractString,
-    sub::AbstractString,
-    hop::Vector{String},
-    extra::Dict{String,String},
-    payload::Vector{String};
-    tty::Bool,
-    qhost_display::Union{Nothing,AbstractString},
-    queue_env::AbstractString,
-)::Cint
+        dest::AbstractString,
+        spec::AbstractString,
+        sub::AbstractString,
+        hop::Vector{String},
+        extra::Dict{String, String},
+        payload::Vector{String};
+        tty::Bool,
+        qhost_display::Union{Nothing, AbstractString},
+        queue_env::AbstractString,
+    )::Cint
     code, text = mktemp() do path, io
         c = redirect_stdout(io) do
             remote_dispatch(
                 dest, spec, sub, hop;
-                tty=tty, qhost_display=qhost_display, queue_env=queue_env, extra_env=extra,
+                tty = tty, qhost_display = qhost_display, queue_env = queue_env, extra_env = extra,
             )
         end
         flush(io)
@@ -347,7 +357,7 @@ function _remote_submit_ticket(
             parsed.script_path !== nothing && (script = String(parsed.script_path))
         catch
         end
-        write_submit_ticket(job_project(), text; script=script, qhost=dest)
+        write_submit_ticket(job_project(), text; script = script, qhost = dest)
     end
     return Cint(code)
 end

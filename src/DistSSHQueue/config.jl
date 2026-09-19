@@ -4,22 +4,22 @@ Resolution: CLI / ENV > config.toml > built-in defaults.
 `[env]` keys are applied with `get!` so a real ENV value wins.
 """
 
-function default_config_path(; home::AbstractString=homedir())::String
+function default_config_path(; home::AbstractString = homedir())::String
     return joinpath(home, ".distsshqueue", "config.toml")
 end
 
-queue_data_dir(; home::AbstractString=homedir())::String = joinpath(home, ".distsshqueue")
+queue_data_dir(; home::AbstractString = homedir())::String = joinpath(home, ".distsshqueue")
 
-function config_path(; home::AbstractString=homedir())::String
+function config_path(; home::AbstractString = homedir())::String
     env = strip(get(ENV, "DISTSSHQUEUE_CONFIG", ""))
-    return isempty(env) ? default_config_path(; home=home) : env
+    return isempty(env) ? default_config_path(; home = home) : env
 end
 
-function load_config(; path::Union{Nothing,AbstractString}=nothing)::Dict{String,Any}
+function load_config(; path::Union{Nothing, AbstractString} = nothing)::Dict{String, Any}
     p = path === nothing ? config_path() : String(path)
-    isfile(p) || return Dict{String,Any}()
+    isfile(p) || return Dict{String, Any}()
     raw = TOML.parsefile(p)
-    return Dict{String,Any}(String(k) => v for (k, v) in raw)
+    return Dict{String, Any}(String(k) => v for (k, v) in raw)
 end
 
 """Apply `cfg["env"]` into `ENV` without overwriting keys already set."""
@@ -33,7 +33,7 @@ function apply_config_env!(cfg::AbstractDict)
     return nothing
 end
 
-function config_store_path(cfg::AbstractDict)::Union{Nothing,String}
+function config_store_path(cfg::AbstractDict)::Union{Nothing, String}
     st = get(cfg, "store", nothing)
     st isa AbstractString || return nothing
     s = strip(String(st))
@@ -93,7 +93,7 @@ end
 
 function sorted_kit_ssh_names(names::AbstractSet{<:AbstractString})::Vector{String}
     v = String[String(n) for n in names]
-    sort!(v; by=n -> (DistSSHKit.is_parent_host_name(n) ? 0 : 1, n))
+    sort!(v; by = n -> (DistSSHKit.is_parent_host_name(n) ? 0 : 1, n))
     return v
 end
 
@@ -124,7 +124,7 @@ end
 function replace_or_insert_hosts_line(text::String, line::String)::String
     s = String(text)
     ln = String(line)
-    rows = String[String(r) for r in split(s, '\n'; keepempty=true)]
+    rows = String[String(r) for r in split(s, '\n'; keepempty = true)]
     idx = findfirst(_is_host_list_toml_line, rows)
     if idx isa Int
         rows[idx] = ln
@@ -144,7 +144,7 @@ function write_host_names!(path::AbstractString, allow::HostAllow)
     body = replace_or_insert_hosts_line(read(p, String), hosts_toml_line(allow))
     tmp = string(p, ".tmp")
     write(tmp, body)
-    mv(tmp, p; force=true)
+    mv(tmp, p; force = true)
     return allow
 end
 
@@ -165,7 +165,7 @@ Tokens are Kit's (`parent[:N]` / `child:NAME[:N]`). `:N` is an optional max.
 function add_host_names!(path::AbstractString, raws)
     extra = parse_host_caps(raws)
     isempty(extra) && throw(ArgumentError("add-host needs a Kit token (`parent` / `child:NAME`)"))
-    cur = isfile(path) ? config_host_names(load_config(; path=path)) : nothing
+    cur = isfile(path) ? config_host_names(load_config(; path = path)) : nothing
     names = cur === nothing ? extra : merge(HostAllow(), cur, extra)
     return write_host_names!(path, names)
 end
@@ -174,7 +174,7 @@ function remove_host_names!(path::AbstractString, raws)
     extra = parse_host_caps(raws)
     isempty(extra) && throw(ArgumentError("remove-host needs a Kit token (`parent` / `child:NAME`)"))
     isfile(path) || throw(ArgumentError("no config.toml; add-host first"))
-    cur = config_host_names(load_config(; path=path))
+    cur = config_host_names(load_config(; path = path))
     cur === nothing && throw(ArgumentError("no hosts= in config; add-host first"))
     for n in keys(extra)
         haskey(cur, n) || throw(ArgumentError("Kit name $(repr(n)) is not on hosts"))
@@ -187,25 +187,25 @@ function remove_host_names!(path::AbstractString, raws)
     return write_host_names!(path, keep)
 end
 
-function default_config_body(; store::AbstractString=default_store_path())::String
+function default_config_body(; store::AbstractString = default_store_path())::String
     return """
-# DistSSHQueue. Override with DISTSSHQUEUE_CONFIG / DISTSSHQUEUE_STORE.
-store = $(repr(String(store)))
-# hosts = ["parent", "child:host1:4"]   # Kit tokens; optional max :N
+    # DistSSHQueue. Override with DISTSSHQUEUE_CONFIG / DISTSSHQUEUE_STORE.
+    store = $(repr(String(store)))
+    # hosts = ["parent", "child:host1:4"]   # Kit tokens; optional max :N
 
-[env]
-# DISTRIBUTED_SSH_OPTS = "-F /path/to/ssh_config"
-# DISTSSHKIT_YES = "1"
-# Do not set DISTRIBUTED_REMOTE_PROJECT_ROOT here on a shared queue host:
-# every job would deploy to that one worker path. Kit default is
-# ~/basename(parent)/basename(project) from the queue-host clone.
-"""
+    [env]
+    # DISTRIBUTED_SSH_OPTS = "-F /path/to/ssh_config"
+    # DISTSSHKIT_YES = "1"
+    # Do not set DISTRIBUTED_REMOTE_PROJECT_ROOT here on a shared queue host:
+    # every job would deploy to that one worker path. Kit default is
+    # ~/basename(parent)/basename(project) from the queue-host clone.
+    """
 end
 
-function write_config_template(path::AbstractString; store::AbstractString=default_store_path())::Bool
+function write_config_template(path::AbstractString; store::AbstractString = default_store_path())::Bool
     isfile(path) && return false
     mkpath(dirname(path))
-    write(path, default_config_body(; store=store))
+    write(path, default_config_body(; store = store))
     return true
 end
 

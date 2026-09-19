@@ -26,8 +26,8 @@ function _runtest_announce(rel::AbstractString)
     return nothing
 end
 
-@testset "DistSSHQueue" verbose=true begin
-    @testset "unit" verbose=true begin
+@testset "DistSSHQueue" verbose = true begin
+    @testset "unit" verbose = true begin
         _runtest_announce("unit/queue.jl")
         include(joinpath(@__DIR__, "unit", "queue.jl"))
         _runtest_announce("unit/config.jl")
@@ -39,7 +39,7 @@ end
         _runtest_announce("unit/local_queue.jl")
         include(joinpath(@__DIR__, "unit", "local_queue.jl"))
     end
-    @testset "integration" verbose=true begin
+    @testset "integration" verbose = true begin
         _runtest_announce("integration/cli.jl")
         include(joinpath(@__DIR__, "integration", "cli.jl"))
     end
