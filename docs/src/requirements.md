@@ -200,8 +200,8 @@ Each job uses one Kit project tree on the queue host:
 - Submit while logged in to the queue host: the current
   `DISTRIBUTED_PROJECT_ROOT`
 
-`~/org/Repo.jl` below is only an example. Queue does not add another
-job-name directory.
+`~/my-job/` below is only an example directory. Queue does not add
+another job-name directory.
 
 Worker paths need extra care:
 
@@ -249,12 +249,12 @@ unit; skip that file if you only `serve` in a terminal.
     Manifest.toml
   stage/<uuid>/         client tree after each qhost: submit
 
-~/org/Repo.jl/          example: logged in, no qhost: (cwd / DISTRIBUTED_PROJECT_ROOT)
+~/my-job/               the job project on this box (logged-in submit; cwd / DISTRIBUTED_PROJECT_ROOT)
   Project.toml          compute deps
   Manifest.toml
   SCRIPT.jl
   .distsshkit/runs/<kind>/<run>/  run.toml, kit.pid, kit.result
-  .distsshkit/<kind>/<kit leaf>/  Kit artifact
+  .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  Kit artifact (Kit/script picks it)
   .distsshkit/setup/*.log         Kit setup logs
 ```
 
@@ -268,13 +268,20 @@ and Kit dirs do not change.
 
 ### Worker tree
 
-No Queue table. Kit default `~/parent/Repo.jl` from that clone (do not
-pin `DISTRIBUTED_REMOTE_PROJECT_ROOT` in shared queue config). Collect
-lands on the queue host `{project}/.distsshkit/{kind}/` dir above.
+A worker holds no Queue state. Kit (not Queue) rsyncs the job project
+from the queue host and instantiates it there before the run:
+
+- No `~/.distsshqueue`, no `jobs.toml`.
+- Default path is `~/basename(parent)/basename(project)` — with parent
+  `host1` and project `Repo.jl`, that is `~/host1/Repo.jl`. Do not pin a
+  shared `DISTRIBUTED_REMOTE_PROJECT_ROOT` in queue `config.toml`.
+- Artifacts do not stay here: Kit collects results back to the
+  queue-host `{project}/.distsshkit/{kind}/` leaf above.
 
 ```text
-<remote project root>/
-  Project.toml
+~/<parent>/<project>/   e.g. ~/host1/Repo.jl (Kit rsyncs it here)
+  Project.toml          same deps as the queue-host tree
+  Manifest.toml
   SCRIPT.jl
 ```
 

@@ -155,9 +155,10 @@ The stage excludes `.gitignore`, `.git/`, `.distsshkit/`, and
 - Client `qhost:` submit: `stage/<uuid>/`
 - Logged in on the queue host: cwd / `DISTRIBUTED_PROJECT_ROOT`
 
-The example `~/org/Repo.jl` is not reserved and is separate from
-`--queue-env`. Leave `DISTRIBUTED_REMOTE_PROJECT_ROOT` unset in shared
-config; `submit` rejects projects that would collide on a worker.
+The job project below (`~/my-job/`) is just an example directory, not a
+reserved path, and is separate from `--queue-env`. Leave
+`DISTRIBUTED_REMOTE_PROJECT_ROOT` unset in shared config; `submit`
+rejects projects that would collide on a worker.
 
 ```text
 ~/.distsshqueue/
@@ -171,11 +172,11 @@ config; `submit` rejects projects that would collide on a worker.
     Manifest.toml
   stage/<uuid>/         client tree after each qhost: submit
 
-~/org/Repo.jl/          example: logged in, no qhost: (cwd / DISTRIBUTED_PROJECT_ROOT)
+~/my-job/               the job project on this box (logged-in submit; cwd / DISTRIBUTED_PROJECT_ROOT)
   Project.toml          compute deps
   SCRIPT.jl
   .distsshkit/runs/<kind>/<run>/  run.toml, kit.pid, kit.result
-  .distsshkit/<kind>/<kit leaf>/  result_path; not demo output/
+  .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  result_path (Kit/script picks it)
   .distsshkit/setup/*.log         Kit setup logs
 ```
 
@@ -189,13 +190,20 @@ User units (no root). Same command:
 
 #### Workers
 
-No Queue table. Kit default `~/parent/Repo.jl` (not a shared `[env]`
-remote).
-Collect lands in the queue-host `.distsshkit/` dir above.
+A worker holds no Queue state. Kit (not Queue) rsyncs the job project
+from the queue host and instantiates it there before the run:
+
+- No `~/.distsshqueue`, no `jobs.toml`.
+- Default path is `~/basename(parent)/basename(project)` — with parent
+  `host1` and project `Repo.jl`, that is `~/host1/Repo.jl`. Do not pin a
+  shared `DISTRIBUTED_REMOTE_PROJECT_ROOT` in `config.toml`.
+- Artifacts do not stay here: Kit collects results back to the
+  queue-host `.distsshkit/<kind>/` leaf shown above.
 
 ```text
-<remote project root>/
-  Project.toml
+~/<parent>/<project>/   e.g. ~/host1/Repo.jl (Kit rsyncs it here)
+  Project.toml          same deps as the queue-host tree
+  Manifest.toml
   SCRIPT.jl
 ```
 

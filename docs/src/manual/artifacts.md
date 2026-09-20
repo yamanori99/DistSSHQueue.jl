@@ -26,7 +26,7 @@ A run has an artifact leaf and a separate sidecar:
       run.toml               output_dir, logs, collect_dirs, ...
       kit.pid
       kit.result
-    <kind>/<kit leaf>/       primary artifact
+    <kind>/SCRIPT_<UTC>_<id>/  primary artifact (Kit/script picks the leaf)
       ...                    files written by the script / Kit
     setup/*.log              Kit setup logs
 ```
