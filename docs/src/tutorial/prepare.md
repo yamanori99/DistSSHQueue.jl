@@ -54,7 +54,8 @@ on `child:` hosts, unless
 DistSSHKit **0.7.3+** warns on a missing local git commit instead of
 failing `:check`. Leave
 `DISTRIBUTED_REMOTE_PROJECT_ROOT` unset in queue `config.toml` so Kit
-uses `~/parent/Repo.jl` per clone.
+uses the last two folders of the queue-host project under `~/`
+(`qhost:` stage: `~/stage/<uuid>`).
 [kit Prepare](https://yamanori99.github.io/DistSSHKit.jl/stable/tutorial/prepare/).
 To align Julia versions, Queue `setup --juliaup` on the queue host
 (`parent` / `child:NAME`; see [Requirements](@ref)).

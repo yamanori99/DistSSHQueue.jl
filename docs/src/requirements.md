@@ -194,25 +194,11 @@ box**. `qhost:` submit rsyncs the client job tree to
 clone or `.distsshkit/`. Ownership and the fetch source/destination
 contract are in [Artifacts and paths](@ref Manual-artifacts).
 
-Each job uses one Kit project tree on the queue host:
-
-- Client `qhost:` submit: `stage/<uuid>/`
-- Submit while logged in to the queue host: the current
-  `DISTRIBUTED_PROJECT_ROOT`
-
-`~/my-job/` below is only an example directory. Queue does not add
-another job-name directory.
-
-Worker paths need extra care:
-
-- Leave `DISTRIBUTED_REMOTE_PROJECT_ROOT` unset in shared
-  `config.toml`.
-- Kit defaults to `~/basename(parent)/basename(project)`.
-- Projects with the same parent and repository names would collide,
-  even when their queue-host paths differ. Queue refuses the second
-  project instead of renaming or running `setup --delete`.
-- Submitting the same clone again is allowed. Its
-  `SCRIPT_<UTC>_<id>/` run leaves are unique.
+Each `qhost:` job uses one Kit project on the queue host:
+`stage/<uuid>/`. Leave `DISTRIBUTED_REMOTE_PROJECT_ROOT` unset in shared
+`config.toml` so each stage keeps its own worker path (`~/stage/<uuid>`).
+The same clone may be submitted again. Run leaves
+(`SCRIPT_<UTC>_<id>/`) are unique inside one project.
 
 ### Client tree
 
@@ -248,14 +234,12 @@ unit; skip that file if you only `serve` in a terminal.
     Project.toml
     Manifest.toml
   stage/<uuid>/         client tree after each qhost: submit
-
-~/my-job/               the job project on this box (logged-in submit; cwd / DISTRIBUTED_PROJECT_ROOT)
-  Project.toml          compute deps
-  Manifest.toml
-  SCRIPT.jl
-  .distsshkit/runs/<kind>/<run>/  run.toml, kit.pid, kit.result
-  .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  Kit artifact (Kit/script picks it)
-  .distsshkit/setup/*.log         Kit setup logs
+    Project.toml        compute deps
+    Manifest.toml
+    SCRIPT.jl
+    .distsshkit/runs/<kind>/<run>/  run.toml, kit.pid, kit.result
+    .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  Kit artifact (Kit/script picks it)
+    .distsshkit/setup/*.log         Kit setup logs
 ```
 
 `enable` unit (same `julia --project=<queue-env> -m DistSSHQueue serve`):
@@ -272,17 +256,18 @@ A worker holds no Queue state. Kit (not Queue) rsyncs the job project
 from the queue host and instantiates it there before the run:
 
 - No `~/.distsshqueue`, no `jobs.toml`.
-- Default path is `~/basename(parent)/basename(project)` — with parent
-  `host1` and project `Repo.jl`, that is `~/host1/Repo.jl`. Do not pin a
-  shared `DISTRIBUTED_REMOTE_PROJECT_ROOT` in queue `config.toml`.
+- Kit copies the last two folders of the queue-host project under
+  `~/`. After `qhost:` that is `~/stage/<uuid>` (unique per job). Do
+  not pin a shared `DISTRIBUTED_REMOTE_PROJECT_ROOT` in queue
+  `config.toml`.
 - Artifacts do not stay here: Kit collects results back to the queue
   host. The default leaf is `{project}/.distsshkit/{kind}/` above; a
   custom Kit `output_dir` lands wherever it points, and Queue persists
   that as `result_path` (fetch follows it, even outside the project).
 
 ```text
-~/<parent>/<project>/   e.g. ~/host1/Repo.jl (Kit rsyncs it here)
-  Project.toml          same deps as the queue-host tree
+~/stage/<uuid>/         qhost: submit (this uuid only)
+  Project.toml
   Manifest.toml
   SCRIPT.jl
 ```
