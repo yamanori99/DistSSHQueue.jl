@@ -13,8 +13,10 @@ Next patch after `0.5.1`. DistSSHKit **0.8.x**. Not a cut yet.
   `kit.pid` / `terminate_run!`. `fetch` copies that Kit leaf (or
   `run.toml` `output_dir`) onto
   `{project}/.distsshqueue/{kind}/{stem}_{id8}/`. If Kit `setup!` fails
-  before an artifact dir exists, Queue still allocates that dest leaf
-  for `setup_failure.log`. `serve` copies Kit `run.toml` onto the job
+  before an artifact dir exists, Queue still allocates that dest leaf.
+  Setup log paths are recorded on the job (`kwargs.setup_logs`); Queue
+  does not copy a newest-mtime `setup_failure.log`. `serve` copies Kit
+  `run.toml` onto the job
   row (`kwargs.run_toml`) so `result_path` can be recovered if `runs/`
   is gone.
 - [Runic](https://github.com/fredrikekre/Runic.jl) `--check` on PRs
@@ -37,9 +39,9 @@ Next patch after `0.5.1`. DistSSHKit **0.8.x**. Not a cut yet.
   canonical job UUID
   ([#246](https://github.com/yamanori99/DistSSHQueue.jl/issues/246),
   [#248](https://github.com/yamanori99/DistSSHQueue.jl/issues/248)).
-- If Kit `setup!` fails, `serve` copies the newest
-  `{project}/.distsshkit/setup/*.log` onto the job leaf as
-  `setup_failure.log` so `fetch` is not an empty drive tree
+- If Kit `setup!` fails, `serve` records `{project}/.distsshkit/setup/*.log`
+  paths on the job (`setup_logs`). It does not pick a newest mtime file
+  as `setup_failure.log`
   ([#237](https://github.com/yamanori99/DistSSHQueue.jl/issues/237)).
 - `status` / `watch` print submit time (`queued`, local `YYYY-mm-dd HH:MM`
   at that instant, including DST), `elapsed` while running, `wall` when

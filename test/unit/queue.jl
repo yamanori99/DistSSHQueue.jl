@@ -530,7 +530,7 @@ end
     end
 end
 
-@testset "kit setup failure copies setup log onto the leaf" begin
+@testset "kit setup failure records setup log paths" begin
     mktempdir() do d
         write(joinpath(d, "Project.toml"), "[deps]\n")
         script = joinpath(d, "s.jl")
@@ -553,18 +553,17 @@ end
                 j, Returns(nothing); kit_setup! = fake_setup!,
             )
         end
-        copied = joinpath(leaf, "setup_failure.log")
-        @test isfile(copied)
-        @test occursin("instantiate failed", read(copied, String))
-        # A newer `.log` directory must not win over the file.
+        @test !isfile(joinpath(leaf, "setup_failure.log"))
+        logs = j.kwargs["setup_logs"]
+        @test logs isa AbstractVector
+        @test any(p -> occursin("setup_new.log", String(p)), logs)
         mkpath(joinpath(logdir, "setup_dir.log"))
-        rm(copied)
-        DistSSHQueue._copy_kit_setup_log!(String(d), leaf)
-        @test occursin("instantiate failed", read(copied, String))
+        DistSSHQueue._record_kit_setup_logs!(j, String(d))
+        @test all(p -> isfile(String(p)), j.kwargs["setup_logs"])
     end
 end
 
-@testset "kit setup rsync failure copies setup log onto the leaf" begin
+@testset "kit setup rsync failure records setup log paths" begin
     mktempdir() do d
         write(joinpath(d, "Project.toml"), "[deps]\n")
         script = joinpath(d, "s.jl")
@@ -587,13 +586,12 @@ end
                 j, Returns(nothing); kit_setup! = fake_setup!,
             )
         end
-        copied = joinpath(leaf, "setup_failure.log")
-        @test isfile(copied)
-        @test occursin("rsync failed", read(copied, String))
+        @test !isfile(joinpath(leaf, "setup_failure.log"))
+        @test any(p -> occursin("setup_rsync.log", String(p)), j.kwargs["setup_logs"])
     end
 end
 
-@testset "kit setup failure is kept if log copy throws" begin
+@testset "kit setup failure is kept if log record throws" begin
     mktempdir() do d
         write(joinpath(d, "Project.toml"), "[deps]\n")
         script = joinpath(d, "s.jl")

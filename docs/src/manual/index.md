@@ -59,8 +59,9 @@ Each row: `id` (UUID), `kind` (`:go` / `:ride` / `:drive`), `script`, `hosts`,
 `state` (`:queued` / `:running` / `:done` / `:failed` / `:cancelled`),
 `queued_at` / `started_at` / `finished_at`, `error`, and `result_path`
 — normally Kit's artifact directory. If Kit `setup!` fails before that
-path exists, `serve` still allocates a Queue leaf with
-`setup_failure.log` ([fetch](@ref Manual-fetch)). `serve` does not pin
+path exists, `serve` still allocates a Queue leaf
+([fetch](@ref Manual-fetch)) and records Kit setup `*.log` paths on the
+row (`setup_logs`). It does not copy a newest-mtime `setup_failure.log`. `serve` does not pin
 `output_dir` for `go` / `ride` / `drive`; DistSSHKit 0.8 chooses the
 leaf (`init_output_dir!` / `run.toml`). `serve` records Kit `run_dir` and a
 `run_toml` snapshot on the row so `cancel` / `fetch` still see `output_dir`

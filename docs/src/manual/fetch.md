@@ -33,9 +33,9 @@ on stderr when the copy starts (`DISTSSHKIT_QUIET` hides it).
 On the queue host (omit `qhost:`), fetch prints the Kit source path
 and does not copy. That path is under the job project (or still under
 `dirname(store)` for an explicit `--output-dir` there). Failed and cancelled jobs with a leaf are
-fetchable. If Kit `setup!` failed before `execute!`, that leaf may
-contain `setup_failure.log` (copied from `{project}/.distsshkit/setup/`)
-instead of job output. The argument is the ticket path, the full UUID, or the
+fetchable. If Kit `setup!` failed before `execute!`, the row records
+setup `*.log` paths (`setup_logs`) instead of copying `setup_failure.log`.
+The argument is the ticket path, the full UUID, or the
 8-character prefix from `status`.
 
 `fetch` stays on the client. It does not hop `main` (`status` /
