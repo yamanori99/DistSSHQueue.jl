@@ -24,6 +24,13 @@ warns on a missing local git commit instead of failing `:check`
 ([DistSSHKit#370](https://github.com/yamanori99/DistSSHKit.jl/issues/370)). A
 later job's `rsync` onto a nonempty worker path is Kit's no-overwrite
 rule; `instantiate` still runs.
+
+For normal jobs, `serve` does not choose `output_dir`. Kit owns the
+artifact leaf and run bundle. Queue records `run_dir` and a `run.toml`
+snapshot on the row for cancel and fetch. See
+[Artifacts and paths](@ref Manual-artifacts) and
+[Job record](@ref Manual-job-record).
+
 `enable` tells the OS to start `serve` after reboot / login
 (LaunchAgent / systemd). `submit` starts `serve` if none is up.
 

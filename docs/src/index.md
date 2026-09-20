@@ -61,7 +61,12 @@ Also needs **`ssh`**, **`rsync`**, and **`git`** (git deploy only);
 - **Workers** — where the script runs. DistSSHKit tokens: `parent[:N]` on
   the queue host, `child:NAME[:N]` on SSH machines.
 
-Trees (client / queue host / workers): [Where files live](@ref Layout).
+Trees (client / queue host / workers):
+[Where files live](@ref Requirements).
+The script owns the result files, DistSSHKit owns the queue-host
+`.distsshkit/` run bundle, and Queue owns scheduling plus the fetched
+client copy under `.distsshqueue/`.
+[Artifacts and paths](@ref Manual-artifacts) describes that boundary.
 
 ```text
   clients = dev machines (no cap)         one queue host (always on)

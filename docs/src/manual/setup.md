@@ -38,7 +38,7 @@ still applies.
 
 Stops `serve`, removes the OS unit and `~/.distsshqueue`. Does
 not `Pkg.rm`, and never deletes a git clone or Kit `.distsshkit/`
-results. Trees: [Where files live](@ref Layout). Still removes leftover
+results. Trees: [Where files live](@ref Requirements). Still removes leftover
 `~/.distsshkitqueue`, old `org.distsshkitqueue.serve` units, and
 `~/.local/bin/dskq` if present.
 

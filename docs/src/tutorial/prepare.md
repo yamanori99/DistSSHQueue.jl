@@ -5,7 +5,8 @@ Typed path (submit / fetch / teardown): [Walkthrough](@ref Tutorial-Walkthrough)
 This box is always-on **macOS or Linux**. Clients can skip this page if
 someone already set that box up.
 
-Also see [Requirements](@ref), [Where files live](@ref Layout),
+Also see [Requirements](@ref), [Where files live](@ref Requirements),
+[Artifacts and paths](@ref Manual-artifacts),
 [User Guide · setup](@ref Manual-setup),
 [Introduction](@ref DistSSHQueue.jl).
 
