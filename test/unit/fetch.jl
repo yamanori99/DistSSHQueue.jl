@@ -308,6 +308,16 @@ end
         @test endswith(replace(hids[1][3], '\\' => '/'), "/.distsshkit/logs/output.log")
         @test endswith(replace(hids[2][3], '\\' => '/'), "/.distsshkit/logs/b_output.log")
         @test hids[1][3] != hids[2][3]
+        case = DistSSHQueue.fetch_hidden_dests(
+            "/dest", ["f:/run/a/output.log", "f:/run/c/OUTPUT.LOG"],
+        )
+        @test lowercase(basename(case[1][3])) != lowercase(basename(case[2][3]))
+        @test_throws ArgumentError DistSSHQueue.fetch_hidden_dest("/dest", "d:/run/..")
+        @test_throws ArgumentError DistSSHQueue.fetch_hidden_dests("/dest", ["d:/run/.."])
+        j.kwargs["run_toml"]["collect_dirs"] = [cold, joinpath(d, "..")]
+        extras2 = DistSSHQueue.fetch_extra_paths(j)
+        @test cold in extras2
+        @test joinpath(d, "..") ∉ extras2
         st, path, _, dest, got = DistSSHQueue.parse_fetch_source(
             string(:done, '\t', art, '\t', "aaaaaaaa-1111-4000-8000-000000000001", '\t', "go/S_aaaaaaaa", '\t', join(specs, DistSSHQueue.FETCH_EXTRA_SEP)),
         )

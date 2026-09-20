@@ -128,6 +128,8 @@ function fetch_extra_paths(j::Job)::Vector{String}
         for p in xs
             n = posix_dir(p)
             n in seen && continue
+            leaf = basename(n)
+            (leaf == "." || leaf == "..") && continue
             push!(seen, n)
             push!(out, p)
         end
@@ -164,9 +166,16 @@ function fetch_hidden_dest(dest::AbstractString, spec::AbstractString)::Tuple{Ch
     kind = spec[1]
     src = String(spec[3:end])
     isempty(src) && throw(ArgumentError("fetch: bad extra $(repr(spec))"))
-    base = basename(posix_dir(src))
+    base = require_fetch_extra_leaf(basename(posix_dir(src)))
     sub = kind == 'd' ? "collect" : "logs"
     return kind, src, joinpath(String(dest), ".distsshkit", sub, base)
+end
+
+function require_fetch_extra_leaf(name::AbstractString)::String
+    n = String(name)
+    (isempty(n) || n == "." || n == "..") &&
+        throw(ArgumentError("fetch: extra dest leaf $(repr(n))"))
+    return n
 end
 
 """Leaf name under `.distsshkit/logs|collect`. Same basename keeps a parent prefix."""
@@ -174,24 +183,28 @@ function fetch_extra_leaf(src::AbstractString, taken::Set{String})::String
     parts = split(posix_dir(src), '/'; keepempty = false)
     isempty(parts) && throw(ArgumentError("fetch: bad extra $(repr(src))"))
     n = 1
-    name = String(parts[end])
-    while name in taken && n < length(parts)
+    name = require_fetch_extra_leaf(String(parts[end]))
+    function taken_key(s::AbstractString)
+        return lowercase(String(s))
+    end
+    while taken_key(name) in taken && n < length(parts)
         n += 1
         name = join(parts[(end - n + 1):end], "_")
+        require_fetch_extra_leaf(String(parts[end]))
     end
-    if name in taken
+    if taken_key(name) in taken
         i = 2
         stem = String(parts[end])
         while true
             cand = string(stem, "_", i)
-            if !(cand in taken)
+            if !(taken_key(cand) in taken)
                 name = cand
                 break
             end
             i += 1
         end
     end
-    push!(taken, name)
+    push!(taken, taken_key(name))
     return name
 end
 
