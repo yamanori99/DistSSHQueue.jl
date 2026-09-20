@@ -33,8 +33,8 @@ on stderr when the copy starts (`DISTSSHKIT_QUIET` hides it).
 setup logs into dest `.distsshkit/logs/` and `.distsshkit/collect/`.
 
 On the queue host (omit `qhost:`), fetch prints the Kit source path
-and does not copy. That path is under the job project (or still under
-`dirname(store)` for an explicit `--output-dir` there). Failed and cancelled jobs with a leaf are
+and does not copy. That path is the persisted job `result_path` or
+`run.toml` `output_dir` (it may sit outside the job project). Failed and cancelled jobs with a leaf are
 fetchable. If Kit `setup!` failed before `execute!`, the row records
 setup `*.log` paths (`setup_logs`) instead of copying `setup_failure.log`.
 The argument is the ticket path, the full UUID, or the
@@ -59,7 +59,7 @@ No `--output-dir`. Kit worker collect is not repeated.
 
 ## Refused
 
-`:queued`, `:running`, missing `result_path`, and a path outside the
-job project and the queue store directory. Kit `runs/` (sidecars) is
-not a fetch source. `submit --output-dir` under the project is
-fetchable; dest is still `{kind}/{stem}_{id8}` unless `--into`.
+`:queued`, `:running`, and a row with no Kit `output_dir` / `result_path`
+and no recorded extras. Source is the persisted job (`run.toml` snapshot
+or `result_path`), not a client-side path check. Dest is still
+`{kind}/{stem}_{id8}` unless `--into`.

@@ -2,6 +2,7 @@
 
 const FETCH_SOURCE_SEP = '\t'
 const FETCH_EXTRA_SEP = '\x1e'
+const FETCH_NO_PRIMARY = "urn:distsshqueue:no-primary"
 const FETCH_READY = (:done, :failed, :cancelled)
 
 function posix_dir(path::AbstractString)::String
@@ -49,36 +50,6 @@ function fetch_relpath(
         )
     )
     return rel
-end
-
-"""Leaf must sit under the store directory or the job `project` (Kit `relpath`)."""
-function require_fetch_in_known_root(j::Job, result_path::AbstractString, store::AbstractString)
-    roots = String[dirname(store)]
-    proj = get(j.kwargs, "project", nothing)
-    if proj isa AbstractString
-        s = strip(String(proj))
-        !isempty(s) && push!(roots, s)
-    end
-    last = nothing
-    seen = Set{String}()
-    for r in roots
-        r in seen && continue
-        push!(seen, r)
-        try
-            fetch_relpath(result_path, r)
-            return nothing
-        catch e
-            e isa ArgumentError || rethrow()
-            last = e
-        end
-    end
-    throw(
-        something(
-            last, ArgumentError(
-                "result is not under the queue store directory or the job project",
-            )
-        )
-    )
 end
 
 function fetch_dest(local_proj::AbstractString, kind::AbstractString, leaf::AbstractString)::String
@@ -231,6 +202,23 @@ function fetch_dest_from_rel(dest_rel::AbstractString)::String
     return fetch_dest(job_project(), parts[1], parts[2])
 end
 
+function fetch_source_primary(j::Job)::Union{Nothing, String}
+    p = j.result_path
+    if p isa AbstractString && !isempty(strip(p))
+        return String(p)
+    end
+    return output_dir_from_run_toml(kit_run_toml(j))
+end
+
+"""Live primary leaf, or `nothing` when it is gone and extras can still fetch."""
+function fetch_live_primary(j::Job, extras)::Union{Nothing, String}
+    p = fetch_source_primary(j)
+    p === nothing && return nothing
+    ispath(p) && return p
+    isempty(extras) && return p
+    return nothing
+end
+
 """One machine line: `state<TAB>abs-path<TAB>canonical-uuid`. Used by `hop_print`, not `main`."""
 function fetch_source(id::AbstractString; store::AbstractString = store_path())::String
     q = Queue(; store = store)
@@ -238,23 +226,25 @@ function fetch_source(id::AbstractString; store::AbstractString = store_path()):
     j = job(q, id)
     j.state === :queued && throw(ArgumentError("job $(repr(id)) is still queued"))
     j.state === :running && throw(ArgumentError("job $(repr(id)) is still running"))
-    p = j.result_path
-    (p === nothing || isempty(strip(p))) && throw(
-        ArgumentError(
-            "job $(repr(id)) has no result_path",
-        )
-    )
     j.state in FETCH_READY || throw(
         ArgumentError(
             "job $(repr(id)) is $(j.state)",
         )
     )
-    require_fetch_in_known_root(j, p, store)
+    extras = fetch_extra_specs(j)
+    p = fetch_live_primary(j, extras)
+    if p === nothing
+        isempty(extras) && throw(
+            ArgumentError(
+                "job $(repr(id)) has no result_path",
+            )
+        )
+        p = FETCH_NO_PRIMARY
+    end
     line = string(
         j.state, FETCH_SOURCE_SEP, p, FETCH_SOURCE_SEP, j.id,
         FETCH_SOURCE_SEP, default_fetch_dest_rel(j),
     )
-    extras = fetch_extra_specs(j)
     isempty(extras) && return line
     return string(line, FETCH_SOURCE_SEP, join(extras, FETCH_EXTRA_SEP))
 end
@@ -538,7 +528,7 @@ function fetch_cli(
     st, path, parsed_id, dest_rel, extras = parse_fetch_source(hop_print(hop, spec, expr; queue_env = qe))
     st in FETCH_READY || throw(ArgumentError("job $(repr(id)) is $(st)"))
     job_id = something(parsed_id, id)
-    qroot = dirname(dirname(posix_dir(path)))
+    qroot = path == FETCH_NO_PRIMARY ? "." : dirname(dirname(posix_dir(path)))
     out = fetch_dest_target(job_id, path, qroot; into = into, dest_rel = dest_rel)
     if check_fetch_dest(out, job_id; force = force) === :skip
         write_fetch_marker!(out, job_id)
@@ -547,7 +537,9 @@ function fetch_cli(
         return 0
     end
     with_fresh_fetch_dest(out) do
-        rsync_from_qhost!(hop, path, out; progress = progress)
+        if path != FETCH_NO_PRIMARY
+            rsync_from_qhost!(hop, path, out; progress = progress)
+        end
         for (kind, src, hid) in fetch_hidden_dests(out, extras)
             if kind == 'd'
                 rsync_from_qhost!(hop, src, hid; progress = progress)

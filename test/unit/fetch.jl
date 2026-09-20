@@ -99,14 +99,105 @@ end
         stray_id[] = submit!(q3, script, "parent:1"; project = proj)
         @test step!(q3) == 1
         _wait_fetch_state(q3, stray_id[], :done)
-        err = try
-            DistSSHQueue.fetch_source(stray_id[]; store = stray_store)
-            nothing
-        catch e
-            e
-        end
-        @test err isa ArgumentError
-        @test occursin("queue store", sprint(showerror, err))
+        stray_line = DistSSHQueue.fetch_source(stray_id[]; store = stray_store)
+        st_s, path_s, _, _, _ = DistSSHQueue.parse_fetch_source(stray_line)
+        @test st_s === :done
+        @test path_s == "/tmp/go/S_" * first(stray_id[], 8)
+    end
+end
+
+@testset "fetch_source uses run.toml snapshot when result_path is empty" begin
+    mktempdir() do d
+        store = joinpath(d, "jobs.toml")
+        art = joinpath(d, "outside", "out")
+        id = "aaaaaaaa-1111-4000-8000-000000000001"
+        j = DistSSHQueue.Job(;
+            id = id,
+            kind = :go,
+            script = joinpath(d, "S.jl"),
+            hosts = ["parent:1"],
+            state = :done,
+            kwargs = Dict{String, Any}(
+                "project" => String(d),
+                "run_toml" => Dict{String, Any}("output_dir" => art),
+            ),
+        )
+        DistSSHQueue.save_jobs(store, [j])
+        line = DistSSHQueue.fetch_source(id; store = store)
+        _, path, _, dest, _ = DistSSHQueue.parse_fetch_source(line)
+        @test path == art
+        @test dest == "go/S_aaaaaaaa"
+    end
+end
+
+@testset "fetch extras-only source is not a dash path" begin
+    mktempdir() do d
+        store = joinpath(d, "jobs.toml")
+        setup = joinpath(d, ".distsshkit", "setup", "setup.log")
+        mkpath(dirname(setup))
+        write(setup, "fail\n")
+        id = "aaaaaaaa-3333-4000-8000-000000000003"
+        j = DistSSHQueue.Job(;
+            id = id,
+            kind = :drive,
+            script = joinpath(d, "S.jl"),
+            hosts = ["parent:1"],
+            state = :failed,
+            kwargs = Dict{String, Any}(
+                "project" => String(d),
+                "setup_logs" => [setup],
+            ),
+        )
+        DistSSHQueue.save_jobs(store, [j])
+        line = DistSSHQueue.fetch_source(id; store = store)
+        _, path, _, _, extras = DistSSHQueue.parse_fetch_source(line)
+        @test path == DistSSHQueue.FETCH_NO_PRIMARY
+        @test path != "-"
+        @test extras == ["f:" * setup]
+        dash = DistSSHQueue.Job(;
+            id = "bbbbbbbb-4444-4000-8000-000000000004",
+            kind = :go,
+            script = joinpath(d, "T.jl"),
+            hosts = ["parent:1"],
+            state = :done,
+            result_path = "-",
+        )
+        DistSSHQueue.save_jobs(store, [dash])
+        _, dash_path, _, _, _ = DistSSHQueue.parse_fetch_source(
+            DistSSHQueue.fetch_source(dash.id; store = store),
+        )
+        @test dash_path == "-"
+        @test dash_path != DistSSHQueue.FETCH_NO_PRIMARY
+    end
+end
+
+@testset "fetch skips a missing primary when extras remain" begin
+    mktempdir() do d
+        store = joinpath(d, "jobs.toml")
+        art = joinpath(d, "gone", "leaf")
+        mkpath(art)
+        setup = joinpath(d, ".distsshkit", "setup", "setup.log")
+        mkpath(dirname(setup))
+        write(setup, "fail\n")
+        id = "aaaaaaaa-5555-4000-8000-000000000005"
+        j = DistSSHQueue.Job(;
+            id = id,
+            kind = :drive,
+            script = joinpath(d, "S.jl"),
+            hosts = ["parent:1"],
+            state = :failed,
+            result_path = art,
+            kwargs = Dict{String, Any}(
+                "project" => String(d),
+                "setup_logs" => [setup],
+            ),
+        )
+        DistSSHQueue.save_jobs(store, [j])
+        rm(art; recursive = true)
+        line = DistSSHQueue.fetch_source(id; store = store)
+        _, path, _, _, extras = DistSSHQueue.parse_fetch_source(line)
+        @test path == DistSSHQueue.FETCH_NO_PRIMARY
+        @test extras == ["f:" * setup]
     end
 end
 
