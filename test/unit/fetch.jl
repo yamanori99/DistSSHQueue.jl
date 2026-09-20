@@ -243,6 +243,25 @@ end
         write(joinpath(other, "keep.txt"), "x\n")
         @test_throws ArgumentError DistSSHQueue.check_fetch_dest(other, id)
         @test DistSSHQueue.check_fetch_dest(other, id; force = true) === :copy
+        fresh = joinpath(d, "fresh-dest")
+        @test DistSSHQueue.fetch_dest_is_fresh(fresh)
+        mkpath(fresh)
+        @test DistSSHQueue.fetch_dest_is_fresh(fresh)
+        @test_throws ErrorException DistSSHQueue.with_fresh_fetch_dest(fresh) do
+            write(joinpath(fresh, "partial.tsv"), "1\n")
+            error("extra rsync failed")
+        end
+        @test !ispath(fresh)
+        keep = joinpath(d, "keep-dest")
+        mkpath(keep)
+        write(joinpath(keep, "keep.txt"), "x\n")
+        @test !DistSSHQueue.fetch_dest_is_fresh(keep)
+        @test_throws ErrorException DistSSHQueue.with_fresh_fetch_dest(keep) do
+            write(joinpath(keep, "partial.tsv"), "1\n")
+            error("extra rsync failed")
+        end
+        @test isfile(joinpath(keep, "keep.txt"))
+        @test isfile(joinpath(keep, "partial.tsv"))
         rest, into, force, progress = DistSSHQueue.peel_fetch_opts(
             ["--into", dest, "--force", "--progress", id],
         )

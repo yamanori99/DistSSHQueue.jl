@@ -454,6 +454,25 @@ function check_fetch_dest(
     )
 end
 
+function fetch_dest_is_fresh(dest::AbstractString)::Bool
+    ispath(dest) || return true
+    isdir(dest) || return false
+    return isempty(readdir(dest; join = false))
+end
+
+"""Run `f` into dest. If dest was empty and `f` throws before a marker, remove dest so retry works."""
+function with_fresh_fetch_dest(f, dest::AbstractString)
+    fresh = fetch_dest_is_fresh(dest)
+    try
+        return f()
+    catch
+        if fresh && isdir(dest) && read_fetch_marker(dest) === nothing
+            rm(dest; recursive = true)
+        end
+        rethrow()
+    end
+end
+
 function peel_fetch_opts(payload::Vector{String})
     progress = rsync_progress_on(payload)
     force = false
@@ -527,15 +546,18 @@ function fetch_cli(
         println(out)
         return 0
     end
-    rsync_from_qhost!(hop, path, out; progress = progress)
-    for (kind, src, hid) in fetch_hidden_dests(out, extras)
-        if kind == 'd'
-            rsync_from_qhost!(hop, src, hid; progress = progress)
-        else
-            rsync_from_qhost_file!(hop, src, hid; progress = progress)
+    with_fresh_fetch_dest(out) do
+        rsync_from_qhost!(hop, path, out; progress = progress)
+        for (kind, src, hid) in fetch_hidden_dests(out, extras)
+            if kind == 'd'
+                rsync_from_qhost!(hop, src, hid; progress = progress)
+            else
+                rsync_from_qhost_file!(hop, src, hid; progress = progress)
+            end
         end
+        write_fetch_marker!(out, job_id)
+        return nothing
     end
-    write_fetch_marker!(out, job_id)
     println(out)
     return 0
 end
