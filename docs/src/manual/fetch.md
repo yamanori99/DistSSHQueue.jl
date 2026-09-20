@@ -59,7 +59,7 @@ No `--output-dir`. Kit worker collect is not repeated.
 
 ## Refused
 
-`:queued`, `:running`, missing `result_path`, and a path outside the
-job project and the queue store directory. Kit `runs/` (sidecars) is
-not a fetch source. `submit --output-dir` under the project is
-fetchable; dest is still `{kind}/{stem}_{id8}` unless `--into`.
+`:queued`, `:running`, and a row with no Kit `output_dir` / `result_path`
+and no recorded extras. Source is the persisted job (`run.toml` snapshot
+or `result_path`), not a client-side path check. Dest is still
+`{kind}/{stem}_{id8}` unless `--into`.

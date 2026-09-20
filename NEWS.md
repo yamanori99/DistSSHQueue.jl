@@ -46,6 +46,8 @@ Next patch after `0.5.1`. DistSSHKit **0.8.x**. Not a cut yet.
 - `qhost:` fetch also copies Kit `run.toml` `logs` / `collect_dirs` and
   recorded `setup_logs` under dest `.distsshkit/logs/` and
   `.distsshkit/collect/`.
+- `fetch` source is the persisted Kit manifest (`result_path` or
+  `run.toml` `output_dir`), not a project/store path check.
 - `status` / `watch` print submit time (`queued`, local `YYYY-mm-dd HH:MM`
   at that instant, including DST), `elapsed` while running, `wall` when
   finished, and fold extra host tokens (`+N`; `--verbose` keeps the full
