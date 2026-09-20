@@ -161,14 +161,15 @@ the same worker path.
 ~/org/Repo.jl/          example: logged in, no qhost: (cwd / DISTRIBUTED_PROJECT_ROOT)
   Project.toml          compute deps
   SCRIPT.jl
+  .distsshkit/runs/go/
+    SCRIPT_<UTC>_<id>/  run.toml, kit.pid
   .distsshkit/go/
-    SCRIPT_<UTC>_<id>/  result_path
-      kit.pid
+    SCRIPT_<UTC>[_<id>]/  result_path
       kit.result
   .distsshkit/ride/
-    SCRIPT_<UTC>_<id>/  same allocate
+    SCRIPT_<UTC>[_<id>]/  same allocate
   .distsshkit/drive/
-    SCRIPT_<UTC>_<id>/  same allocate; not demo output/
+    SCRIPT_<UTC>[_<id>]/  same allocate; not demo output/
 ```
 
 `enable` (optional; skip if you only `serve` in a terminal):

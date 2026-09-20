@@ -60,11 +60,9 @@ Each row: `id` (UUID), `kind` (`:go` / `:ride` / `:drive`), `script`, `hosts`,
 `queued_at` / `started_at` / `finished_at`, `error`, and `result_path`
 — normally Kit's artifact directory. If Kit `setup!` fails before that
 path exists, `serve` still allocates a Queue leaf with
-`setup_failure.log` ([fetch](@ref Manual-fetch)). If `go` / `ride` omitted
-`--output-dir`, `serve` sets one under
-`{project}/.distsshqueue/{kind}/{stem}_{id8}/` when the row
-becomes `:running`. Detached `drive` does not pin `output_dir` (Kit
-`init_output_dir!` / `run.toml`). `serve` records Kit `run_dir` so `cancel`
+`setup_failure.log` ([fetch](@ref Manual-fetch)). `serve` does not pin
+`output_dir` for `go` / `ride` / `drive`; DistSSHKit 0.8 chooses the
+leaf (`init_output_dir!` / `run.toml`). `serve` records Kit `run_dir` so `cancel`
 and a later `serve` find `kit.pid`. Queue does not keep a second copy of
 Kit's result tree. Kit kwargs (`args`,
 `project`, `output_dir`, …) travel as an opaque bag through DistSSHKit's
@@ -91,8 +89,8 @@ when that file exists, otherwise `:failed`. Drive listed `parent` /
 `child` hosts must join, stay, and collect unless the job passed
 `--best-effort` (Kit 0.8;
 [kit drive](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/drive/)).
-Kit `go` / `ride` results stay under `{project}/.distsshqueue/{kind}/` when
-Queue allocated the leaf. Drive artifacts follow Kit.
+Kit `go` / `ride` / `drive` artifacts stay under Kit's tree. `fetch` copies
+them onto `{project}/.distsshqueue/{kind}/{stem}_{id8}/`.
 
 ## Shared peel
 

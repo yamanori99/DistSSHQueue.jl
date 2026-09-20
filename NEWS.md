@@ -7,9 +7,14 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 Next patch after `0.5.1`. DistSSHKit **0.8.x**. Not a cut yet.
 
-- DistSSHKit **0.8.x**. Detached `drive` is not given a Queue-pinned
-  `output_dir` (`init_output_dir!` chooses the artifact leaf). `serve`
-  records Kit `run_dir` for `kit.pid` / `terminate_run!`.
+- DistSSHKit **0.8.x**. `serve` does not pin `output_dir` for `go` /
+  `ride` / `drive`. Kit owns `{project}/.distsshkit/{kind}/…` (and
+  `init_output_dir!` for drive). `serve` records Kit `run_dir` for
+  `kit.pid` / `terminate_run!`. `fetch` copies that Kit leaf (or
+  `run.toml` `output_dir`) onto
+  `{project}/.distsshqueue/{kind}/{stem}_{id8}/`. If Kit `setup!` fails
+  before an artifact dir exists, Queue still allocates that dest leaf
+  for `setup_failure.log`.
 - [Runic](https://github.com/fredrikekre/Runic.jl) `--check` on PRs
   (soft; not a merge gate) and monthly cron (Issue
   `Runic monthly failed`)

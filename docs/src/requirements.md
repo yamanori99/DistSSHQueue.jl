@@ -238,19 +238,12 @@ unit; skip that file if you only `serve` in a terminal.
     Project.toml
     Manifest.toml
   stage/<uuid>/         client tree after each qhost: submit
-  go/                   Kit leaf `{stem}_{id8}/`
-    SCRIPT_807e3753/
-      kit.pid
-      kit.result
-  ride/
-  drive/
 
 ~/org/Repo.jl/          example: logged in, no qhost: (cwd / DISTRIBUTED_PROJECT_ROOT)
   Project.toml          compute deps
   Manifest.toml
   SCRIPT.jl
-  .distsshqueue/go/     after fetch
-    SCRIPT_807e3753/
+  .distsshkit/go/       Kit artifact
 ```
 
 `enable` unit (same `julia --project=<queue-env> -m DistSSHQueue serve`):
@@ -265,7 +258,7 @@ and Kit dirs do not change.
 
 No Queue table. Kit default `~/parent/Repo.jl` from that clone (do not
 pin `DISTRIBUTED_REMOTE_PROJECT_ROOT` in shared queue config). Collect
-lands on the queue host `{project}/.distsshqueue/{kind}/` dir above.
+lands on the queue host `{project}/.distsshkit/{kind}/` dir above.
 
 ```text
 <remote project root>/

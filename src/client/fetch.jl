@@ -13,8 +13,17 @@ end
 
 function path_has_queue_leaf(path::AbstractString)::Bool
     parts = split(posix_dir(path), '/'; keepempty = false)
-    length(parts) >= 2 || return false
-    return parts[end - 1] in ("go", "ride", "drive")
+    length(parts) >= 3 || return false
+    parts[end - 1] in ("go", "ride", "drive") || return false
+    return parts[end - 2] == ".distsshqueue"
+end
+
+"""Kit `{.distsshkit,go|ride|drive,leaf}` or a Queue setup-fail leaf. Not `runs/`."""
+function path_has_kit_artifact_leaf(path::AbstractString)::Bool
+    parts = split(posix_dir(path), '/'; keepempty = false)
+    length(parts) >= 3 || return false
+    parts[end - 1] in ("go", "ride", "drive") || return false
+    return parts[end - 2] in (".distsshkit", ".distsshqueue")
 end
 
 """`result_path` relative to `root`. Refuses `..` and off-tree paths."""
@@ -83,20 +92,25 @@ function fetch_dest(local_proj::AbstractString, kind::AbstractString, leaf::Abst
     return dest
 end
 
-function require_fetchable_leaf(id::AbstractString, result_path::AbstractString)
-    leaf = basename(posix_dir(result_path))
-    needle = _job_id8(id)
-    occursin(needle, leaf) || throw(
+function require_fetchable_leaf(::AbstractString, result_path::AbstractString)
+    path_has_kit_artifact_leaf(result_path) || path_has_queue_leaf(result_path) || throw(
         ArgumentError(
-            "result leaf does not contain the job id (submit --output-dir is not fetchable)",
-        )
-    )
-    path_has_queue_leaf(result_path) || throw(
-        ArgumentError(
-            "fetch only copies Queue leaves under go/ride/drive",
+            "fetch copies Kit or Queue leaves under go/ride/drive (not runs/)",
         )
     )
     return nothing
+end
+
+function default_fetch_dest_rel(j::Job)::String
+    stem = splitext(basename(j.script))[1]
+    isempty(stem) && (stem = "job")
+    return string(j.kind, '/', stem, '_', _job_id8(j.id))
+end
+
+function fetch_dest_from_rel(dest_rel::AbstractString)::String
+    parts = split(posix_dir(dest_rel), '/'; keepempty = false)
+    length(parts) == 2 || throw(ArgumentError("fetch: bad dest $(repr(dest_rel))"))
+    return fetch_dest(job_project(), parts[1], parts[2])
 end
 
 """One machine line: `state<TAB>abs-path<TAB>canonical-uuid`. Used by `hop_print`, not `main`."""
@@ -117,27 +131,27 @@ function fetch_source(id::AbstractString; store::AbstractString = store_path()):
             "job $(repr(id)) is $(j.state)",
         )
     )
-    require_fetchable_leaf(id, p)
     require_fetch_in_known_root(j, p, store)
-    return string(j.state, FETCH_SOURCE_SEP, p, FETCH_SOURCE_SEP, j.id)
+    return string(
+        j.state, FETCH_SOURCE_SEP, p, FETCH_SOURCE_SEP, j.id,
+        FETCH_SOURCE_SEP, default_fetch_dest_rel(j),
+    )
 end
 
-"""`state`, abs-path, and optional canonical UUID (old hosts omit the third field)."""
+"""`state`, abs-path, optional UUID, optional dest `kind/leaf` (old hosts omit later fields)."""
 function parse_fetch_source(line::AbstractString)
     s = String(line)
-    i = findfirst(==(FETCH_SOURCE_SEP), s)
-    i === nothing && throw(ArgumentError("fetch: bad source line"))
-    j = findlast(==(FETCH_SOURCE_SEP), s)
-    st = Symbol(s[1:prevind(s, i)])
-    if j === nothing || i == j
-        path = s[nextind(s, i):end]
-        isempty(path) && throw(ArgumentError("fetch: bad source line"))
-        return st, path, nothing
-    end
-    path = s[nextind(s, i):prevind(s, j)]
-    id = s[nextind(s, j):end]
-    (isempty(path) || isempty(id)) && throw(ArgumentError("fetch: bad source line"))
-    return st, path, id
+    parts = split(s, FETCH_SOURCE_SEP; keepempty = false)
+    length(parts) < 2 && throw(ArgumentError("fetch: bad source line"))
+    st = Symbol(parts[1])
+    path = String(parts[2])
+    isempty(path) && throw(ArgumentError("fetch: bad source line"))
+    length(parts) == 2 && return st, path, nothing, nothing
+    id = String(parts[3])
+    isempty(id) && throw(ArgumentError("fetch: bad source line"))
+    dest_rel = length(parts) >= 4 ? String(parts[4]) : nothing
+    dest_rel !== nothing && isempty(dest_rel) && throw(ArgumentError("fetch: bad source line"))
+    return st, path, id, dest_rel
 end
 
 """Client-only marker after `qhost:` submit. Not a Kit leaf (`go/` / `drive/`)."""
@@ -231,7 +245,9 @@ function local_fetch_dest(
         result_path::AbstractString,
         store_root::AbstractString;
         canonicalize::Bool = false,
+        dest_rel::Union{Nothing, AbstractString} = nothing,
     )::String
+    dest_rel !== nothing && return fetch_dest_from_rel(dest_rel)
     require_fetchable_leaf(id, result_path)
     fetch_relpath(result_path, store_root; canonicalize = canonicalize)
     kind = basename(dirname(posix_dir(result_path)))
@@ -282,11 +298,12 @@ function fetch_dest_target(
         store_root::AbstractString;
         into::Union{Nothing, AbstractString} = nothing,
         canonicalize::Bool = false,
+        dest_rel::Union{Nothing, AbstractString} = nothing,
     )::String
     into === nothing && return local_fetch_dest(
-        id, result_path, store_root; canonicalize = canonicalize,
+        id, result_path, store_root;
+        canonicalize = canonicalize, dest_rel = dest_rel,
     )
-    require_fetchable_leaf(id, result_path)
     return resolve_into_path(into)
 end
 
@@ -363,7 +380,7 @@ function fetch_cli(
         )
     )
     if hop === nothing
-        st, path, _ = parse_fetch_source(fetch_source(id))
+        st, path, _, _ = parse_fetch_source(fetch_source(id))
         st in FETCH_READY || throw(ArgumentError("job $(repr(id)) is $(st)"))
         println(path)
         return 0
@@ -374,11 +391,11 @@ function fetch_cli(
         )
     )
     expr = "using DistSSHQueue; print(DistSSHQueue.fetch_source($(repr(id))))"
-    st, path, parsed_id = parse_fetch_source(hop_print(hop, spec, expr; queue_env = qe))
+    st, path, parsed_id, dest_rel = parse_fetch_source(hop_print(hop, spec, expr; queue_env = qe))
     st in FETCH_READY || throw(ArgumentError("job $(repr(id)) is $(st)"))
     job_id = something(parsed_id, id)
     qroot = dirname(dirname(posix_dir(path)))
-    out = fetch_dest_target(job_id, path, qroot; into = into)
+    out = fetch_dest_target(job_id, path, qroot; into = into, dest_rel = dest_rel)
     if check_fetch_dest(out, job_id; force = force) === :skip
         write_fetch_marker!(out, job_id)
         !_queue_env_on("DISTSSHKIT_QUIET") && println(stderr, "already fetched (use --force to replace)")

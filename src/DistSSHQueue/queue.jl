@@ -207,13 +207,41 @@ function kit_result_path(result)::Union{Nothing, String}
     return isempty(s) ? nothing : s
 end
 
+function kit_artifact_from_run_dir(rd::Union{Nothing, AbstractString})::Union{Nothing, String}
+    rd === nothing && return nothing
+    srd = strip(String(rd))
+    isempty(srd) && return nothing
+    raw = DistSSHKit.read_kit_run_toml(srd)
+    raw === nothing && return nothing
+    od = get(raw, "output_dir", nothing)
+    od isa AbstractString || return nothing
+    s = strip(od)
+    return isempty(s) ? nothing : s
+end
+
 function kit_result_path(j::Job, result)::Union{Nothing, String}
     p = kit_result_path(result)
     p !== nothing && return p
     od = get(j.kwargs, "output_dir", nothing)
-    od === nothing && return nothing
-    s = strip(String(od))
-    return isempty(s) ? nothing : s
+    if od isa AbstractString
+        s = strip(String(od))
+        !isempty(s) && return s
+    end
+    return kit_artifact_from_run_dir(kit_run_dir(j))
+end
+
+"""Artifact leaf from `kit.result` or `run.toml`. Never the `runs/` sidecar itself."""
+function kit_artifact_from_sidecar(dir::Union{Nothing, AbstractString})::Union{Nothing, String}
+    dir === nothing && return nothing
+    rec = DistSSHKit.kit_result_from_dir(String(dir))
+    if rec !== nothing
+        od = rec.output_dir
+        if od !== nothing
+            s = strip(String(od))
+            !isempty(s) && return s
+        end
+    end
+    return kit_artifact_from_run_dir(dir)
 end
 
 """Throw with the richest detail the result carries (`KitRunResult`: `failed_step`
@@ -276,20 +304,11 @@ function kit_sidecar_dir(j::Job)::Union{Nothing, String}
     return kit_output_dir(j)
 end
 
-"""Set Kit `output_dir` before spawn so `:running` cancel and restart adopt need no submitter path.
+"""Queue dest leaf for `fetch` when Kit never created an artifact dir (setup fail).
 
-Skipped for `:drive` with no submit `output_dir` so `init_output_dir!` can
-choose the artifact leaf (DistSSHKit 0.8). `go` / `ride` still get a
-default leaf `{project}/.distsshqueue/{kind}/{stem}_{id8}/` (same layout as
-`fetch` dest). Kit remote slots use `relpath(output, project)`, so a leaf
-next to `jobs.toml` (outside the job tree) makes `child:` `go` exit 1.
-No-op if the bag already has `output_dir`.
+Does not pin `output_dir` on a normal start. DistSSHKit 0.8 owns
+`.distsshkit/{kind}/…` / `init_output_dir!`.
 """
-function ensure_kit_output_dir!(j::Job; store::Union{Nothing, AbstractString} = nothing)
-    j.kind === :drive && kit_output_dir(j) === nothing && return nothing
-    return _allocate_queue_leaf!(j; store = store)
-end
-
 function _allocate_queue_leaf!(j::Job; store::Union{Nothing, AbstractString} = nothing)
     kit_output_dir(j) !== nothing && return nothing
     isfile(j.script) || return nothing
@@ -335,12 +354,13 @@ function settle_lost_kit_child!(j::Job)
     dir = kit_sidecar_dir(j)
     rec = dir === nothing ? nothing : DistSSHKit.kit_result_from_dir(dir)
     j.finished_at = now(UTC)
+    art = kit_artifact_from_sidecar(dir)
+    art !== nothing && (j.result_path = art)
     if rec === nothing
         j.state = :failed
         j.error = "serve restarted; running job marked failed"
         return j
     end
-    rec.output_dir !== nothing && (j.result_path = String(rec.output_dir))
     try
         require_kit_ok(rec)
         j.state = :done
@@ -710,14 +730,8 @@ function cancel!(q::Queue, id::AbstractString)::Bool
     if action isa Tuple{String, Union{Nothing, String}, Symbol, String}
         running_side, running_out, running_kind, running_id = action
         DistSSHKit.terminate_run!(running_side; kind = running_kind)
-        rec = DistSSHKit.kit_result_from_dir(running_side)
-        path = if rec !== nothing && rec.output_dir !== nothing
-            rec.output_dir
-        elseif running_out !== nothing
-            running_out
-        else
-            running_side
-        end
+        path = kit_artifact_from_sidecar(running_side)
+        path === nothing && (path = running_out)
         _finish!(q, running_id, :cancelled, nothing; result_path = path)
         return true
     end
@@ -786,7 +800,6 @@ function _start!(q::Queue, j::Job)
     j.state = :running
     j.started_at = now(UTC)
     q.live_id = j.id
-    ensure_kit_output_dir!(j; store = q.store)
     _persist!(q)
     runner = q.runner
     id = j.id
@@ -865,10 +878,9 @@ function adopt_running!(q::Queue)
             sleep(0.2)
         end
         rec = dir === nothing ? nothing : DistSSHKit.kit_result_from_dir(dir)
-        path = if rec !== nothing && rec.output_dir !== nothing
-            rec.output_dir
-        else
-            dir
+        path = kit_artifact_from_sidecar(dir)
+        if path === nothing && kit_run_dir(snap) === nothing
+            path = dir
         end
         if rec === nothing
             _finish!(q, id, :failed, _ADOPT_LOST; result_path = path)
