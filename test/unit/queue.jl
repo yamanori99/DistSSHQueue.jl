@@ -608,8 +608,37 @@ end
         DistSSHQueue._allocate_queue_leaf!(j)
         leaf = DistSSHQueue.kit_output_dir(j)
         @test leaf !== nothing
-        rm(leaf; recursive = true)
-        write(String(leaf), "not a directory\n")
+        chmod(logdir, 0o000)
+        fake_setup!(_, mode::Symbol) = mode === :instantiate ? (; ok = false) : (; ok = true)
+        thrown = try
+            withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+                @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
+                    j, Returns(nothing); kit_setup! = fake_setup!,
+                )
+            end
+        finally
+            chmod(logdir, 0o755)
+        end
+        @test occursin("setup! instantiate failed", thrown.value.msg)
+        @test !haskey(j.kwargs, "setup_logs")
+    end
+end
+
+@testset "setup logs recorded when leaf allocation throws" begin
+    mktempdir() do d
+        write(joinpath(d, "Project.toml"), "[deps]\n")
+        script = joinpath(d, "s.jl")
+        write(script, "1\n")
+        logdir = joinpath(d, ".distsshkit", "setup")
+        mkpath(logdir)
+        write(joinpath(logdir, "setup_new.log"), "instantiate failed\n")
+        write(joinpath(d, ".distsshqueue"), "not a directory\n")
+        j = DistSSHQueue.Job(;
+            kind = :drive,
+            script = script,
+            hosts = ["child:w1:1"],
+            kwargs = Dict{String, Any}("project" => String(d)),
+        )
         fake_setup!(_, mode::Symbol) = mode === :instantiate ? (; ok = false) : (; ok = true)
         thrown = withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
@@ -617,6 +646,8 @@ end
             )
         end
         @test occursin("setup! instantiate failed", thrown.value.msg)
+        @test DistSSHQueue.kit_output_dir(j) === nothing
+        @test any(p -> occursin("setup_new.log", String(p)), j.kwargs["setup_logs"])
     end
 end
 
@@ -644,6 +675,32 @@ end
         src = DistSSHQueue.fetch_source(id; store = store)
         @test startswith(src, "failed\t")
         @test occursin(leaf, src)
+    end
+end
+
+@testset "setup failure persists setup_logs from runner snapshot" begin
+    mktempdir() do d
+        store = joinpath(d, "jobs.toml")
+        script = joinpath(d, "s.jl")
+        write(script, "1\n")
+        logp = joinpath(d, ".distsshkit", "setup", "setup_new.log")
+        mkpath(dirname(logp))
+        write(logp, "instantiate failed\n")
+        id = "aaaaaaaa-2222-4000-8000-000000000002"
+        q = Queue(;
+            store = store, runner = function (j)
+                j.kwargs["setup_logs"] = [logp]
+                error("DistSSHKit setup! instantiate failed")
+            end
+        )
+        submit!(q, script, "parent:1"; id = id, kind = :drive, project = d)
+        @test step!(q) == 1
+        _wait_state(q, id, :failed)
+        logs = job(q, id).kwargs["setup_logs"]
+        @test logs isa AbstractVector
+        @test any(p -> occursin("setup_new.log", String(p)), logs)
+        saved = DistSSHQueue.load_jobs(store)
+        @test any(p -> occursin("setup_new.log", String(p)), saved[1].kwargs["setup_logs"])
     end
 end
 

@@ -52,36 +52,6 @@ function fetch_relpath(
     return rel
 end
 
-"""Leaf must sit under the store directory or the job `project` (Kit `relpath`)."""
-function require_fetch_in_known_root(j::Job, result_path::AbstractString, store::AbstractString)
-    roots = String[dirname(store)]
-    proj = get(j.kwargs, "project", nothing)
-    if proj isa AbstractString
-        s = strip(String(proj))
-        !isempty(s) && push!(roots, s)
-    end
-    last = nothing
-    seen = Set{String}()
-    for r in roots
-        r in seen && continue
-        push!(seen, r)
-        try
-            fetch_relpath(result_path, r)
-            return nothing
-        catch e
-            e isa ArgumentError || rethrow()
-            last = e
-        end
-    end
-    throw(
-        something(
-            last, ArgumentError(
-                "result is not under the queue store directory or the job project",
-            )
-        )
-    )
-end
-
 function fetch_dest(local_proj::AbstractString, kind::AbstractString, leaf::AbstractString)::String
     k = String(kind)
     k in ("go", "ride", "drive") || throw(ArgumentError("fetch: bad kind $(repr(k))"))
@@ -129,6 +99,8 @@ function fetch_extra_paths(j::Job)::Vector{String}
         for p in xs
             n = posix_dir(p)
             n in seen && continue
+            leaf = basename(n)
+            (isempty(leaf) || leaf == "." || leaf == "..") && continue
             push!(seen, n)
             push!(out, p)
         end
@@ -165,9 +137,63 @@ function fetch_hidden_dest(dest::AbstractString, spec::AbstractString)::Tuple{Ch
     kind = spec[1]
     src = String(spec[3:end])
     isempty(src) && throw(ArgumentError("fetch: bad extra $(repr(spec))"))
-    base = basename(posix_dir(src))
+    base = require_fetch_extra_leaf(basename(posix_dir(src)))
     sub = kind == 'd' ? "collect" : "logs"
     return kind, src, joinpath(String(dest), ".distsshkit", sub, base)
+end
+
+function require_fetch_extra_leaf(name::AbstractString)::String
+    n = String(name)
+    (isempty(n) || n == "." || n == "..") &&
+        throw(ArgumentError("fetch: extra dest leaf $(repr(n))"))
+    return n
+end
+
+"""Leaf name under `.distsshkit/logs|collect`. Same basename keeps a parent prefix."""
+function fetch_extra_leaf(src::AbstractString, taken::Set{String})::String
+    parts = split(posix_dir(src), '/'; keepempty = false)
+    isempty(parts) && throw(ArgumentError("fetch: bad extra $(repr(src))"))
+    n = 1
+    name = require_fetch_extra_leaf(String(parts[end]))
+    function taken_key(s::AbstractString)
+        return lowercase(String(s))
+    end
+    while taken_key(name) in taken && n < length(parts)
+        n += 1
+        name = join(parts[(end - n + 1):end], "_")
+        require_fetch_extra_leaf(String(parts[end]))
+    end
+    if taken_key(name) in taken
+        i = 2
+        stem = String(parts[end])
+        while true
+            cand = string(stem, "_", i)
+            if !(taken_key(cand) in taken)
+                name = cand
+                break
+            end
+            i += 1
+        end
+    end
+    push!(taken, taken_key(name))
+    return name
+end
+
+function fetch_hidden_dests(
+        dest::AbstractString,
+        specs::AbstractVector{<:AbstractString},
+    )::Vector{Tuple{Char, String, String}}
+    taken_logs = Set{String}()
+    taken_dirs = Set{String}()
+    out = Tuple{Char, String, String}[]
+    for spec in specs
+        kind, src, _ = fetch_hidden_dest(dest, spec)
+        taken = kind == 'd' ? taken_dirs : taken_logs
+        leaf = fetch_extra_leaf(src, taken)
+        sub = kind == 'd' ? "collect" : "logs"
+        push!(out, (kind, src, joinpath(String(dest), ".distsshkit", sub, leaf)))
+    end
+    return out
 end
 
 function fetch_dest_from_rel(dest_rel::AbstractString)::String
@@ -409,6 +435,25 @@ function check_fetch_dest(
     )
 end
 
+function fetch_dest_is_fresh(dest::AbstractString)::Bool
+    ispath(dest) || return true
+    isdir(dest) || return false
+    return isempty(readdir(dest; join = false))
+end
+
+"""Run `f` into dest. If dest was empty and `f` throws before a marker, remove dest so retry works."""
+function with_fresh_fetch_dest(f, dest::AbstractString)
+    fresh = fetch_dest_is_fresh(dest)
+    try
+        return f()
+    catch
+        if fresh && isdir(dest) && read_fetch_marker(dest) === nothing
+            rm(dest; recursive = true)
+        end
+        rethrow()
+    end
+end
+
 function peel_fetch_opts(payload::Vector{String})
     progress = rsync_progress_on(payload)
     force = false
@@ -460,9 +505,9 @@ function fetch_cli(
         )
     )
     if hop === nothing
-        st, path, _, _, _ = parse_fetch_source(fetch_source(id))
+        st, src, _, _, _ = parse_fetch_source(fetch_source(id))
         st in FETCH_READY || throw(ArgumentError("job $(repr(id)) is $(st)"))
-        println(path)
+        println(src)
         return 0
     end
     staging_enabled() || throw(
@@ -482,18 +527,20 @@ function fetch_cli(
         println(out)
         return 0
     end
-    if path != FETCH_NO_PRIMARY
-        rsync_from_qhost!(hop, path, out; progress = progress)
-    end
-    for spec in extras
-        kind, src, hid = fetch_hidden_dest(out, spec)
-        if kind == 'd'
-            rsync_from_qhost!(hop, src, hid; progress = progress)
-        else
-            rsync_from_qhost_file!(hop, src, hid; progress = progress)
+    with_fresh_fetch_dest(out) do
+        if path != FETCH_NO_PRIMARY
+            rsync_from_qhost!(hop, path, out; progress = progress)
         end
+        for (kind, src, hid) in fetch_hidden_dests(out, extras)
+            if kind == 'd'
+                rsync_from_qhost!(hop, src, hid; progress = progress)
+            else
+                rsync_from_qhost_file!(hop, src, hid; progress = progress)
+            end
+        end
+        write_fetch_marker!(out, job_id)
+        return nothing
     end
-    write_fetch_marker!(out, job_id)
     println(out)
     return 0
 end

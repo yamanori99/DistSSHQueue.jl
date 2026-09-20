@@ -263,6 +263,25 @@ end
         write(joinpath(other, "keep.txt"), "x\n")
         @test_throws ArgumentError DistSSHQueue.check_fetch_dest(other, id)
         @test DistSSHQueue.check_fetch_dest(other, id; force = true) === :copy
+        fresh = joinpath(d, "fresh-dest")
+        @test DistSSHQueue.fetch_dest_is_fresh(fresh)
+        mkpath(fresh)
+        @test DistSSHQueue.fetch_dest_is_fresh(fresh)
+        @test_throws ErrorException DistSSHQueue.with_fresh_fetch_dest(fresh) do
+            write(joinpath(fresh, "partial.tsv"), "1\n")
+            error("extra rsync failed")
+        end
+        @test !ispath(fresh)
+        keep = joinpath(d, "keep-dest")
+        mkpath(keep)
+        write(joinpath(keep, "keep.txt"), "x\n")
+        @test !DistSSHQueue.fetch_dest_is_fresh(keep)
+        @test_throws ErrorException DistSSHQueue.with_fresh_fetch_dest(keep) do
+            write(joinpath(keep, "partial.tsv"), "1\n")
+            error("extra rsync failed")
+        end
+        @test isfile(joinpath(keep, "keep.txt"))
+        @test isfile(joinpath(keep, "partial.tsv"))
         rest, into, force, progress = DistSSHQueue.peel_fetch_opts(
             ["--into", dest, "--force", "--progress", id],
         )
@@ -320,7 +339,29 @@ end
         @test "f:" * setup in specs
         _, _, hid = DistSSHQueue.fetch_hidden_dest("/dest", "f:" * logf)
         @test endswith(replace(hid, '\\' => '/'), "/.distsshkit/logs/kit.out")
-        st, path, id, dest, got = DistSSHQueue.parse_fetch_source(
+        a = "/run/a/output.log"
+        b = "/run/b/output.log"
+        hids = DistSSHQueue.fetch_hidden_dests("/dest", ["f:" * a, "f:" * b])
+        @test hids[1][2] == a
+        @test hids[2][2] == b
+        @test endswith(replace(hids[1][3], '\\' => '/'), "/.distsshkit/logs/output.log")
+        @test endswith(replace(hids[2][3], '\\' => '/'), "/.distsshkit/logs/b_output.log")
+        @test hids[1][3] != hids[2][3]
+        case = DistSSHQueue.fetch_hidden_dests(
+            "/dest", ["f:/run/a/output.log", "f:/run/c/OUTPUT.LOG"],
+        )
+        @test lowercase(basename(case[1][3])) != lowercase(basename(case[2][3]))
+        @test_throws ArgumentError DistSSHQueue.fetch_hidden_dest("/dest", "d:/run/..")
+        @test_throws ArgumentError DistSSHQueue.fetch_hidden_dests("/dest", ["d:/run/.."])
+        j.kwargs["run_toml"]["collect_dirs"] = [cold, joinpath(d, "..")]
+        extras2 = DistSSHQueue.fetch_extra_paths(j)
+        @test cold in extras2
+        @test joinpath(d, "..") ∉ extras2
+        j.kwargs["run_toml"]["collect_dirs"] = [cold, "/"]
+        extras3 = DistSSHQueue.fetch_extra_paths(j)
+        @test cold in extras3
+        @test "/" ∉ extras3
+        st, path, _, dest, got = DistSSHQueue.parse_fetch_source(
             string(:done, '\t', art, '\t', "aaaaaaaa-1111-4000-8000-000000000001", '\t', "go/S_aaaaaaaa", '\t', join(specs, DistSSHQueue.FETCH_EXTRA_SEP)),
         )
         @test st === :done
