@@ -524,9 +524,9 @@ function fetch_cli(
         )
     )
     if hop === nothing
-        st, path, _, _, _ = parse_fetch_source(fetch_source(id))
+        st, src, _, _, _ = parse_fetch_source(fetch_source(id))
         st in FETCH_READY || throw(ArgumentError("job $(repr(id)) is $(st)"))
-        println(path)
+        println(src)
         return 0
     end
     staging_enabled() || throw(
