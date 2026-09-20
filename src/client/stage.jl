@@ -274,6 +274,31 @@ function rsync_from_qhost!(
     return nothing
 end
 
+"""Pull one remote file into `local_dest` (file path)."""
+function rsync_from_qhost_file!(
+        host::AbstractString,
+        remote_abs::AbstractString,
+        local_dest::AbstractString;
+        progress::Bool = false,
+    )
+    remote = rstrip(replace(String(remote_abs), '\\' => '/'), '/')
+    dest = DistSSHKit.canonical_local_path(local_dest)
+    mkpath(dirname(dest))
+    src = string(host, ":", remote)
+    print_rsync_start(host, remote; pulling = true)
+    flags = String["-az"]
+    progress && push!(flags, "--info=progress2")
+    append!(flags, String["-e", _ssh_transport()])
+    run(
+        pipeline(
+            Cmd(vcat(_rsync_bin(), flags, String[src, dest]));
+            stdout = stderr,
+            stderr = stderr,
+        ),
+    )
+    return nothing
+end
+
 function path_under_project(path::AbstractString, proj::AbstractString)::Bool
     p = DistSSHKit.canonical_local_path(path)
     r = DistSSHKit.canonical_local_path(proj)
