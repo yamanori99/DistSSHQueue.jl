@@ -195,8 +195,9 @@ clone or `.distsshkit/`. Ownership and the fetch source/destination
 contract are in [Artifacts and paths](@ref Manual-artifacts).
 
 Each `qhost:` job uses one Kit project on the queue host:
-`stage/<uuid>/`. Leave `DISTRIBUTED_REMOTE_PROJECT_ROOT` unset in shared
-`config.toml` so each stage keeps its own worker path (`~/stage/<uuid>`).
+`stage/<uuid>/`. `parent` runs that stage in place. Leave
+`DISTRIBUTED_REMOTE_PROJECT_ROOT` unset in shared `config.toml` so each
+`child:` copy stays `~/stage/<uuid>`.
 The same clone may be submitted again. Run leaves
 (`SCRIPT_<UTC>_<id>/`) are unique inside one project.
 
@@ -252,21 +253,22 @@ and Kit dirs do not change.
 
 ### Worker tree
 
-A worker holds no Queue state. Kit (not Queue) rsyncs the job project
-from the queue host and instantiates it there before the run:
+`parent` is the queue host. It runs `~/.distsshqueue/stage/<uuid>/` in
+place. Queue state stays next to it.
+
+A `child:` host has no Queue state. Kit rsyncs the job project there
+and instantiates it before the run:
 
 - No `~/.distsshqueue`, no `jobs.toml`.
-- Kit copies the last two folders of the queue-host project under
-  `~/`. After `qhost:` that is `~/stage/<uuid>` (unique per job). Do
-  not pin a shared `DISTRIBUTED_REMOTE_PROJECT_ROOT` in queue
-  `config.toml`.
+- After `qhost:` the copy is `~/stage/<uuid>` (unique per job). Do not
+  pin a shared `DISTRIBUTED_REMOTE_PROJECT_ROOT` in queue `config.toml`.
 - Artifacts do not stay here: Kit collects results back to the queue
   host. The default leaf is `{project}/.distsshkit/{kind}/` above; a
   custom Kit `output_dir` lands wherever it points, and Queue persists
   that as `result_path` (fetch follows it, even outside the project).
 
 ```text
-~/stage/<uuid>/         qhost: submit (this uuid only)
+~/stage/<uuid>/         child: copy after qhost: submit (this uuid only)
   Project.toml
   Manifest.toml
   SCRIPT.jl

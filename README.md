@@ -151,8 +151,9 @@ The stage excludes `.gitignore`, `.git/`, `.distsshkit/`, and
 #### Queue host
 
 `~/.distsshqueue` holds Queue state. Each `qhost:` job is a Kit project
-under `stage/<uuid>/`. Leave `DISTRIBUTED_REMOTE_PROJECT_ROOT` unset in
-shared config so each stage keeps its own worker path.
+under `stage/<uuid>/`. `parent` runs from that stage on this box. Leave
+`DISTRIBUTED_REMOTE_PROJECT_ROOT` unset in shared config so each
+`child:` copy stays `~/stage/<uuid>`.
 
 ```text
 ~/.distsshqueue/
@@ -182,20 +183,22 @@ User units (no root). Same command:
 
 #### Workers
 
-A worker holds no Queue state. Kit (not Queue) rsyncs the job project
-from the queue host and instantiates it there before the run:
+`parent` is the queue host. It runs the staged tree in place
+(`~/.distsshqueue/stage/<uuid>/`). Queue state stays next to it.
+
+A `child:` host has no Queue state. Kit rsyncs the job project there
+and instantiates it before the run:
 
 - No `~/.distsshqueue`, no `jobs.toml`.
-- Kit copies the last two folders of the queue-host project under
-  `~/`. After `qhost:` that is `~/stage/<uuid>` (unique per job). Do
-  not pin a shared `DISTRIBUTED_REMOTE_PROJECT_ROOT` in `config.toml`.
+- After `qhost:` the copy is `~/stage/<uuid>` (unique per job). Do not
+  pin a shared `DISTRIBUTED_REMOTE_PROJECT_ROOT` in `config.toml`.
 - Artifacts do not stay here: Kit collects results back to the queue
   host. The default leaf is `.distsshkit/<kind>/` shown above; a custom
   Kit `output_dir` lands wherever it points, and Queue persists that as
   `result_path` (fetch follows it, even outside the project).
 
 ```text
-~/stage/<uuid>/         qhost: submit (this uuid only)
+~/stage/<uuid>/         child: copy after qhost: submit (this uuid only)
   Project.toml
   Manifest.toml
   SCRIPT.jl

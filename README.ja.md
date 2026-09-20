@@ -147,8 +147,9 @@ stage では `.gitignore`、`.git/`、`.distsshkit/`、
 #### キューホスト
 
 `~/.distsshqueue` は Queue の状態を持つ。`qhost:` のジョブツリーは
-`stage/<uuid>/`。共有 config では `DISTRIBUTED_REMOTE_PROJECT_ROOT` を
-設定しない。stage ごとにワーカー先が分かれる。
+`stage/<uuid>/`。`parent` はこの stage をこのマシン上で使う。共有
+config では `DISTRIBUTED_REMOTE_PROJECT_ROOT` を設定しない。`child:`
+へのコピーは `~/stage/<uuid>` のまま分かれる。
 
 ```text
 ~/.distsshqueue/
@@ -178,12 +179,14 @@ stage では `.gitignore`、`.git/`、`.distsshkit/`、
 
 #### ワーカー
 
-ワーカーは Queue の状態を持たない。ジョブツリーは Queue ではなく Kit が
-キューホストから rsync し、実行前にそこで instantiate する。
+`parent` はキューホスト自身である。stage
+(`~/.distsshqueue/stage/<uuid>/`) をその場で使う。Queue の表は隣に残る。
+
+`child:` には Queue の状態は無い。ジョブツリーは Kit がキューホストから
+rsync し、実行前にそこで instantiate する。
 
 - `~/.distsshqueue` も `jobs.toml` も無い。
-- Kit はキューホスト上のプロジェクトパスの末尾2段を `~/` の下に置く。
-  `qhost:` なら `~/stage/<uuid>` でジョブごとに違う。共有
+- `qhost:` ならコピー先は `~/stage/<uuid>` でジョブごとに違う。共有
   `config.toml` に `DISTRIBUTED_REMOTE_PROJECT_ROOT` は書かない。
 - 成果物はここに残らない。Kit がキューホストへ収集する。既定 leaf は
   上の `.distsshkit/<kind>/` だが、custom な Kit `output_dir` はその先へ
@@ -191,7 +194,7 @@ stage では `.gitignore`、`.git/`、`.distsshkit/`、
   プロジェクト外でもそこを辿る)。
 
 ```text
-~/stage/<uuid>/         qhost: submit (この uuid だけ)
+~/stage/<uuid>/         qhost: のあと child: へコピー (この uuid だけ)
   Project.toml
   Manifest.toml
   SCRIPT.jl
