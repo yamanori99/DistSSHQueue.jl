@@ -5,7 +5,11 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
-Next patch after `0.5.1`. DistSSHKit **0.8.x**. Not a cut yet.
+## 0.6.0
+
+Breaking cut after `0.5.1`. DistSSHKit **0.8.x**.
+Kit owns the artifact leaf and `runs/`; Queue does not pin `output_dir`.
+`fetch` copies onto `{project}/.distsshqueue/{kind}/{stem}_{id8}/`.
 
 - DistSSHKit **0.8.x** owns runtime output under
   `{project}/.distsshkit/`: the artifact leaf and
