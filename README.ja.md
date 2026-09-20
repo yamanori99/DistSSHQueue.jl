@@ -83,7 +83,7 @@ julia> import Pkg; Pkg.add("DistSSHQueue")
 
 ### submit
 
-1つのargvに4つの入れ子。`submit` はQueue。その後ろはDistSSHKitの
+1つのargvに4つの入れ子がある。`submit` はQueue。その後ろはDistSSHKitの
 argv (`go` / `ride` / `drive` とその先) で、`-m DistSSHKit` にそのまま
 渡せる (Queueなし)。Kit単体はそのマシンで今すぐ計算する。`submit`
 は同じargvをキューに載せるだけである。
@@ -146,15 +146,10 @@ stage では `.gitignore`、`.git/`、`.distsshkit/`、
 
 #### キューホスト
 
-`~/.distsshqueue` は Queue の状態を持つ。各ジョブは別に一つの Kit 木を使う。
-
-- クライアントからの `qhost:` submit: `stage/<uuid>/`
-- キューホスト上での submit: cwd / `DISTRIBUTED_PROJECT_ROOT`
-
-下の `~/my-job/` は一例のディレクトリで、予約パスではなく、
-`--queue-env` とも別である。共有 config では
-`DISTRIBUTED_REMOTE_PROJECT_ROOT` を設定しない。同じ worker パスに
-衝突するプロジェクトは `submit` が拒否する。
+`~/.distsshqueue` は Queue の状態を持つ。`qhost:` のジョブツリーは
+`stage/<uuid>/`。`parent` はこの stage をこのマシン上で使う。共有
+config では `DISTRIBUTED_REMOTE_PROJECT_ROOT` を設定しない。`child:`
+へのコピーは `~/stage/<uuid>` のまま分かれる。
 
 ```text
 ~/.distsshqueue/
@@ -167,13 +162,11 @@ stage では `.gitignore`、`.git/`、`.distsshkit/`、
     Project.toml
     Manifest.toml
   stage/<uuid>/         qhost: submit のたび (ジョブ id)
-
-~/my-job/               このマシン上のジョブ木 (ログイン submit。cwd / DISTRIBUTED_PROJECT_ROOT)
-  Project.toml          計算の依存
-  SCRIPT.jl
-  .distsshkit/runs/<kind>/<run>/  run.toml, kit.pid, kit.result
-  .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  result_path (Kit/script が決める)
-  .distsshkit/setup/*.log         Kit setup logs
+    Project.toml        計算の依存
+    SCRIPT.jl
+    .distsshkit/runs/<kind>/<run>/  run.toml, kit.pid, kit.result
+    .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  result_path (Kit/script が決める)
+    .distsshkit/setup/*.log         Kit setup logs
 ```
 
 `enable` (任意。この端末の `serve` だけなら不要):
@@ -186,21 +179,23 @@ stage では `.gitignore`、`.git/`、`.distsshkit/`、
 
 #### ワーカー
 
-ワーカーは Queue の状態を持たない。ジョブ木は Queue ではなく Kit が
-キューホストから rsync し、実行前にそこで instantiate する。
+`parent` はキューホスト自身である。stage
+(`~/.distsshqueue/stage/<uuid>/`) をその場で使う。Queue の表は隣に残る。
+
+`child:` には Queue の状態は無い。ジョブツリーは Kit がキューホストから
+rsync し、実行前にそこで instantiate する。
 
 - `~/.distsshqueue` も `jobs.toml` も無い。
-- 既定パスは `~/basename(parent)/basename(project)`。parent が `host1`、
-  project が `Repo.jl` なら `~/host1/Repo.jl`。共有 `config.toml` に
-  `DISTRIBUTED_REMOTE_PROJECT_ROOT` は書かない。
+- `qhost:` ならコピー先は `~/stage/<uuid>` でジョブごとに違う。共有
+  `config.toml` に `DISTRIBUTED_REMOTE_PROJECT_ROOT` は書かない。
 - 成果物はここに残らない。Kit がキューホストへ収集する。既定 leaf は
   上の `.distsshkit/<kind>/` だが、custom な Kit `output_dir` はその先へ
   落ち、Queue はそれを `result_path` として永続化する (fetch は
   プロジェクト外でもそこを辿る)。
 
 ```text
-~/<parent>/<project>/   例: ~/host1/Repo.jl (Kit がここへ rsync)
-  Project.toml          キューホスト木と同じ依存
+~/stage/<uuid>/         qhost: のあと child: へコピー (この uuid だけ)
+  Project.toml
   Manifest.toml
   SCRIPT.jl
 ```
