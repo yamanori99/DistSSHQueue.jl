@@ -275,8 +275,10 @@ from the queue host and instantiates it there before the run:
 - Default path is `~/basename(parent)/basename(project)` — with parent
   `host1` and project `Repo.jl`, that is `~/host1/Repo.jl`. Do not pin a
   shared `DISTRIBUTED_REMOTE_PROJECT_ROOT` in queue `config.toml`.
-- Artifacts do not stay here: Kit collects results back to the
-  queue-host `{project}/.distsshkit/{kind}/` leaf above.
+- Artifacts do not stay here: Kit collects results back to the queue
+  host. The default leaf is `{project}/.distsshkit/{kind}/` above; a
+  custom Kit `output_dir` lands wherever it points, and Queue persists
+  that as `result_path` (fetch follows it, even outside the project).
 
 ```text
 ~/<parent>/<project>/   e.g. ~/host1/Repo.jl (Kit rsyncs it here)

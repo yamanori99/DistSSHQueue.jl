@@ -193,8 +193,10 @@ stage では `.gitignore`、`.git/`、`.distsshkit/`、
 - 既定パスは `~/basename(parent)/basename(project)`。parent が `host1`、
   project が `Repo.jl` なら `~/host1/Repo.jl`。共有 `config.toml` に
   `DISTRIBUTED_REMOTE_PROJECT_ROOT` は書かない。
-- 成果物はここに残らない。Kit が上のキューホスト `.distsshkit/<kind>/`
-  leaf へ収集する。
+- 成果物はここに残らない。Kit がキューホストへ収集する。既定 leaf は
+  上の `.distsshkit/<kind>/` だが、custom な Kit `output_dir` はその先へ
+  落ち、Queue はそれを `result_path` として永続化する (fetch は
+  プロジェクト外でもそこを辿る)。
 
 ```text
 ~/<parent>/<project>/   例: ~/host1/Repo.jl (Kit がここへ rsync)
