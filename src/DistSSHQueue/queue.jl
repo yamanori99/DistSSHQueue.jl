@@ -297,6 +297,7 @@ function execute_kwargs(j::Job)
         v === nothing && continue
         k === :run_dir && continue
         k === :run_toml && continue
+        k === :setup_logs && continue
         DistSSHKit.execute_detached_accepts(k; kind = j.kind) || continue
         push!(acc, k => v)
     end
@@ -532,18 +533,28 @@ function _require_kit_setup_ok!(result, step::AbstractString)
     throw(ErrorException("DistSSHKit setup! $(step) failed"))
 end
 
-"""Copy the newest `{proj}/.distsshkit/setup/*.log` onto the Kit leaf."""
-function _copy_kit_setup_log!(proj::AbstractString, output_dir::Union{Nothing, AbstractString})
-    output_dir === nothing && return nothing
-    dest = String(output_dir)
-    isempty(strip(dest)) && return nothing
+"""Record `{proj}/.distsshkit/setup/*.log` paths on the job. Do not copy by mtime."""
+function _record_kit_setup_logs!(j::Job, proj::AbstractString)
     logdir = joinpath(String(proj), ".distsshkit", "setup")
     isdir(logdir) || return nothing
-    logs = filter(f -> isfile(f) && endswith(lowercase(f), ".log"), readdir(logdir; join = true))
+    logs = String[]
+    for f in readdir(logdir; join = true)
+        isfile(f) || continue
+        endswith(lowercase(f), ".log") || continue
+        push!(logs, DistSSHKit.canonical_local_path(f))
+    end
     isempty(logs) && return nothing
-    newest = logs[argmax(mtime.(logs))]
-    mkpath(dest)
-    cp(newest, joinpath(dest, "setup_failure.log"); force = true)
+    sort!(logs)
+    j.kwargs["setup_logs"] = logs
+    return nothing
+end
+
+"""Copy `setup_logs` from the runner snapshot onto the persisted row."""
+function copy_setup_logs!(j::Job, snap)
+    snap isa Job || return nothing
+    logs = get(snap.kwargs, "setup_logs", nothing)
+    logs isa AbstractVector || return nothing
+    j.kwargs["setup_logs"] = String[String(p) for p in logs]
     return nothing
 end
 
@@ -571,7 +582,10 @@ function _queue_kit_setup!(j::Job, on_phase; kit_setup! = DistSSHKit.setup!)
     catch
         try
             _allocate_queue_leaf!(j)
-            _copy_kit_setup_log!(String(proj), kit_output_dir(j))
+        catch
+        end
+        try
+            _record_kit_setup_logs!(j, String(proj))
         catch
         end
         rethrow()
@@ -794,7 +808,14 @@ function _set_running_kit_meta!(
     end
 end
 
-function _finish!(q::Queue, id::AbstractString, state::Symbol, err; result_path = nothing)
+function _finish!(
+        q::Queue,
+        id::AbstractString,
+        state::Symbol,
+        err;
+        result_path = nothing,
+        snap = nothing,
+    )
     return _with_store(q) do
         lock(q.lock) do
             reload_keep_live!(q)
@@ -816,6 +837,7 @@ function _finish!(q::Queue, id::AbstractString, state::Symbol, err; result_path 
             if result_path !== nothing
                 j.result_path = String(result_path)
             end
+            copy_setup_logs!(j, snap)
             capture_kit_run_toml!(j)
             q.live_id == id && (q.live_id = nothing)
             _persist!(q)
@@ -860,7 +882,7 @@ function _start!(q::Queue, j::Job)
                 od = get(snap.kwargs, "output_dir", nothing)
                 path = od === nothing ? nothing : String(od)
             end
-            _finish!(q, id, :done, nothing; result_path = path)
+            _finish!(q, id, :done, nothing; result_path = path, snap = snap)
         catch e
             _finish!(
                 q,
@@ -868,6 +890,7 @@ function _start!(q::Queue, j::Job)
                 :failed,
                 sprint(showerror, e);
                 result_path = kit_output_dir(snap),
+                snap = snap,
             )
         end
     end
