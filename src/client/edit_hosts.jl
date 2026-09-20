@@ -17,11 +17,21 @@ function _remote_julia_mm(host::AbstractString)::Union{Nothing, Tuple{Int, Int}}
     return (ver.major, ver.minor)
 end
 
+function _print_cli_note(io::IO, head::AbstractString, bodies...; cols::Int = 0)
+    n = cols > 0 ? cols : cli_cols(io)
+    print_wrapped_tail(io, "  ! ", head; cols = n, prefix_color = :yellow)
+    for body in bodies
+        print_wrapped_tail(io, "    ", body; cols = n, prefix_color = :light_black)
+    end
+    return nothing
+end
+
 """Warn when a worker's Julia major.minor differs. Silent if quiet or unreachable."""
-function warn_julia_major_minor(tokens)
+function warn_julia_major_minor(tokens; io::IO = stdout)
     _queue_env_on("DISTSSHKIT_QUIET") && return nothing
     local_mm = (VERSION.major, VERSION.minor)
     seen = Set{String}()
+    first = true
     for raw in tokens
         name = kit_ssh_name(String(raw))
         DistSSHKit.is_parent_host_name(name) && continue
@@ -30,11 +40,12 @@ function warn_julia_major_minor(tokens)
         mm = _remote_julia_mm(name)
         mm === nothing && continue
         mm == local_mm && continue
-        DistSSHKit.print_err(
-            "  Warning: $(name) Julia $(mm[1]).$(mm[2]) vs this process $(local_mm[1]).$(local_mm[2]).\n",
-        )
-        DistSSHKit.print_err(
-            "  Fix: julia -m DistSSHQueue setup --juliaup $(name)\n",
+        first && println(io)
+        first = false
+        _print_cli_note(
+            io,
+            "$(name) Julia $(mm[1]).$(mm[2]) vs this process $(local_mm[1]).$(local_mm[2])",
+            "julia -m DistSSHQueue setup --juliaup $(name)",
         )
     end
     return nothing
@@ -44,7 +55,7 @@ end
 
 Silent if quiet or the argv is parent-only. Not a confirm prompt.
 """
-function warn_child_submit_reach(tokens)
+function warn_child_submit_reach(tokens; io::IO = stdout)
     _queue_env_on("DISTSSHKIT_QUIET") && return nothing
     kids = String[]
     seen = Set{String}()
@@ -57,20 +68,13 @@ function warn_child_submit_reach(tokens)
     end
     isempty(kids) && return nothing
     listed = join(kids, ", ")
-    be = length(kids) == 1 ? "is" : "are"
-    those = length(kids) == 1 ? "that SSH name" : "those SSH names"
-    DistSSHKit.print_err(
-        "  Warning: $(listed) $(be) reachable via DistSSHKit from this queue host.\n",
-    )
-    DistSSHKit.print_err(
-        "  Anyone who can submit as this user (including qhost:) can use $(those).\n",
-    )
-    DistSSHKit.print_err(
-        "  Warning: child hosts need outbound internet for Kit instantiate unless the depot already has the registry and packages.\n",
-    )
-    DistSSHKit.print_err(
-        "  SSH/rsync success is not enough if instantiate still has to fetch.\n",
-    )
+    them = length(kids) == 1 ? "this name" : "these names"
+    println(io)
+    reach = "DistSSHKit can reach $(them) from this queue host. " *
+        "Anyone who can submit as this user (including qhost:) can use them."
+    net = "Child instantiate needs outbound internet unless the depot already " *
+        "has the registry and packages. SSH/rsync is not enough."
+    _print_cli_note(io, listed, reach, net)
     return nothing
 end
 

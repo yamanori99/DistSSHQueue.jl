@@ -292,7 +292,7 @@ end
 re-passing `qhost:` would recurse). `status` / `watch` print that token on the
 Store `qhost` line and prefix `path`. `submit` uses it for `qhost: local`
 chrome. `list-host` only uses it to say
-`queue host` instead of `this machine`; NAME is `gethostname()`.
+`queue host` instead of `this machine` in the SSH column; NAME is `gethostname()`.
 """
 function maybe_remote(
         qhost::Union{Nothing, AbstractString},

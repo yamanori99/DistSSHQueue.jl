@@ -1495,6 +1495,24 @@ end
     @test DistSSHQueue._juliaup_patch_from_status("* 1.13") == "-"
     @test DistSSHQueue._juliaup_patch_from_status("* release  1.11.6+0.x86_64") == "1.11.6"
     @test DistSSHQueue._juliaup_patch_from_status("") == "-"
+    buf = IOBuffer()
+    DistSSHQueue._print_cli_note(
+        buf,
+        "child:host1",
+        "DistSSHKit can reach this name from this queue host. Anyone who can submit as this user (including qhost:) can use them.";
+        cols = 40,
+    )
+    wrapped = split(String(take!(buf)), '\n'; keepempty = false)
+    @test !isempty(wrapped)
+    @test all(l -> textwidth(l) <= 40, wrapped)
+    @test startswith(wrapped[1], "  ! ")
+    @test any(l -> startswith(l, "    "), wrapped)
+    let (nw, tw, mw, jw, sw) = DistSSHQueue._list_host_fit(40, 40, 3, 5, 48)
+        @test nw + tw + mw + jw + sw + 10 <= 48
+        @test nw >= 4
+        @test tw >= 5
+        @test sw >= 8
+    end
     mktempdir() do d
         cfg = joinpath(d, "config.toml")
         fake = joinpath(d, "fakebin")
@@ -1547,12 +1565,10 @@ end
             @test occursin(gethostname(), out)
             @test occursin("this machine", out)
             @test !occursin("queue host", out)
-            @test occursin("hostname", out)
-            @test occursin("    host      host1", out)
+            @test occursin("lab@10.0.0.8:2222", out)
+            @test !occursin("    host      host1", out)
             @test occursin("10.0.0.8", out)
-            @test occursin("user", out)
             @test occursin("lab", out)
-            @test occursin("port", out)
             @test occursin("2222", out)
             @test !occursin("HostName", out)
             @test !occursin("identityfile", lowercase(out))
@@ -1563,6 +1579,16 @@ end
             @test occursin("1.12.7", out)
             @test occursin("1.13.2", out)
             @test !occursin("1.12.7+", out)
+            narrow = IOBuffer()
+            DistSSHQueue.print_list_host(
+                DistSSHQueue.config_host_names(DistSSHQueue.load_config());
+                io = narrow,
+                cols = 40,
+            )
+            for line in split(String(take!(narrow)), '\n'; keepempty = false)
+                startswith(line, "  ") || continue
+                @test textwidth(line) <= 40
+            end
         end
         write(cfg, "hosts = [\"parent\", \"child:host1\"]\n")
         withenv(
@@ -1608,14 +1634,15 @@ end
                 DistSSHQueue.main(["add-host", "parent"])
             end
             @test code_p == 0
-            @test !occursin("Warning:", out_p)
+            @test !occursin("reachable via DistSSHKit", out_p)
+            @test !occursin("  ! ", out_p)
             code, out, _ = capture_stdio() do
                 DistSSHQueue.main(["add-host", "parent", "child:host1"])
             end
             @test code == 0
             @test occursin("child:host1", out)
-            @test occursin("Warning:", out)
-            @test occursin("reachable via DistSSHKit", out)
+            @test occursin("  ! ", out)
+            @test occursin("DistSSHKit can reach", out)
             @test occursin("including qhost:", out)
             @test occursin("outbound internet", out)
             @test occursin("unless the depot", out)
@@ -1628,7 +1655,8 @@ end
                 end
                 @test code_q == 0
                 @test occursin("child:host2", out_q)
-                @test !occursin("Warning:", out_q)
+                @test !occursin("  ! ", out_q)
+                @test !occursin("DistSSHKit can reach", out_q)
             end
             code2, out2, _ = capture_stdio() do
                 DistSSHQueue.main(["remove-host", "parent"])
@@ -2037,7 +2065,10 @@ end
         @test occursin("pi_echo_x_aaaaaaaa-1111-4000-8000-000000000001", listed)
         @test occursin(joinpath("demos", "pi_echo.jl"), listed) || occursin("demos/pi_echo.jl", listed)
         @test !occursin(stage * "/", listed)
-        @test occursin(DistSSHKit.short_path(stage), listed)
+        @test occursin(
+            replace(DistSSHKit.short_path(stage), r"\s+" => ""),
+            replace(listed, r"\s+" => ""),
+        )
     end
 end
 
@@ -2077,6 +2108,22 @@ end
     quiet = sprint(io -> DistSSHQueue.print_jobs_table([done]; io = io, quiet = true))
     @test !occursin("queued", quiet)
     @test !occursin("hosts", quiet)
+    failed = DistSSHQueue.Job(;
+        id = "cccccccc-1111-4000-8000-000000000001",
+        kind = :go,
+        script = "s.jl",
+        hosts = ["parent:1"],
+        state = :failed,
+        error = "setup failed because " * repeat("x", 60),
+        result_path = joinpath("/tmp", "artifact" * repeat("y", 40)),
+    )
+    narrow = IOBuffer()
+    DistSSHQueue.print_jobs_table([failed]; io = narrow, cols = 40)
+    nlines = split(String(take!(narrow)), '\n'; keepempty = false)
+    @test !isempty(nlines)
+    @test all(l -> textwidth(l) <= 40, nlines)
+    @test any(l -> startswith(l, "    "), nlines)
+    @test any(l -> occursin("error", l), nlines)
     if !Sys.iswindows()
         winter = DateTime(2026, 1, 15, 12, 0)
         summer = DateTime(2026, 7, 15, 12, 0)
