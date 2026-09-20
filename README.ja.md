@@ -115,13 +115,19 @@ julia --project=. -m DistSSHKit drive parent:4 SCRIPT.jl
 
 ### ファイルの置き場
 
-`qhost:` はキューホストの SSH 名であり、保存先の接頭辞ではない。表と Kit の
-結果ディレクトリは **そのマシン** に残る。クライアントに
-`~/.distsshqueue` は無い。`qhost:` submit はクライアントのジョブ木を
-`~/.distsshqueue/stage/<uuid>` へ rsync する (Kit と同じ: `.gitignore`、
-`.git/`、`.distsshkit/`、`.distsshqueue/`)。
-クライアントには `.distsshqueue/tickets/<uuid>` が残る (submitのたびに増え、消さない)。Kit はキューホストから
-worker へコピーする。`fetch` は終わった Kit leaf を戻す。
+`qhost:` は SSH 名であり、保存先の接頭辞ではない。
+
+- Queue の表と Kit の結果はキューホストに残る。
+- `qhost:` submit はクライアントの木を
+  `~/.distsshqueue/stage/<uuid>` へ送る。
+- クライアントには `.distsshqueue/tickets/<uuid>` が残る。
+- 成果物はスクリプトが所有する。
+- キューホストの `.distsshkit/` run bundle は Kit が所有する。
+- スケジュールと取得後の `.distsshqueue/` copy は Queue が所有する。
+
+stage では `.gitignore`、`.git/`、`.distsshkit/`、
+`.distsshqueue/` を除外する。詳細:
+[Artifacts and paths](https://yamanori99.github.io/DistSSHQueue.jl/stable/manual/artifacts/)。
 
 #### クライアント
 
@@ -131,19 +137,24 @@ worker へコピーする。`fetch` は終わった Kit leaf を戻す。
   Manifest.toml
   SCRIPT.jl             qhost: submit で rsync
   .distsshqueue/tickets/<uuid>  qhost: submit のたび (残す)
-  .distsshqueue/go/     fetch のあと
-  .distsshqueue/ride/   fetch のあと
-  .distsshqueue/drive/  fetch のあと
+  .distsshqueue/<kind>/<stem>_<id8>/  fetch のあと
+    .distsshqueue-fetch-id
+    ...                              primary artifact copy
+    .distsshkit/logs/...
+    .distsshkit/collect/...
 ```
 
 #### キューホスト
 
-`~/.distsshqueue` と **ジョブごとに一つの Kit 木**。クライアントから
-`qhost:` submit したとき: `stage/<uuid>/`。キューホストにログインして
-`qhost:` なしのとき: このマシンの cwd / `DISTRIBUTED_PROJECT_ROOT`
-(例 `~/org/Repo.jl`。予約パスではない)。`--queue-env` とは別。
-共有 `config.toml` に `DISTRIBUTED_REMOTE_PROJECT_ROOT` は書かない。
-二本目のプロジェクトが同じ worker パスなら `submit` はエラー。
+`~/.distsshqueue` は Queue の状態を持つ。各ジョブは別に一つの Kit 木を使う。
+
+- クライアントからの `qhost:` submit: `stage/<uuid>/`
+- キューホスト上での submit: cwd / `DISTRIBUTED_PROJECT_ROOT`
+
+下の `~/my-job/` は一例のディレクトリで、予約パスではなく、
+`--queue-env` とも別である。共有 config では
+`DISTRIBUTED_REMOTE_PROJECT_ROOT` を設定しない。同じ worker パスに
+衝突するプロジェクトは `submit` が拒否する。
 
 ```text
 ~/.distsshqueue/
@@ -157,18 +168,12 @@ worker へコピーする。`fetch` は終わった Kit leaf を戻す。
     Manifest.toml
   stage/<uuid>/         qhost: submit のたび (ジョブ id)
 
-~/org/Repo.jl/          例: ログイン済み、qhost: なし (cwd / DISTRIBUTED_PROJECT_ROOT)
+~/my-job/               このマシン上のジョブ木 (ログイン submit。cwd / DISTRIBUTED_PROJECT_ROOT)
   Project.toml          計算の依存
   SCRIPT.jl
-  .distsshkit/runs/go/
-    SCRIPT_<UTC>_<id>/  run.toml, kit.pid
-  .distsshkit/go/
-    SCRIPT_<UTC>[_<id>]/  result_path
-      kit.result
-  .distsshkit/ride/
-    SCRIPT_<UTC>[_<id>]/  同じ allocate
-  .distsshkit/drive/
-    SCRIPT_<UTC>[_<id>]/  同じ allocate。demo の output/ ではない
+  .distsshkit/runs/<kind>/<run>/  run.toml, kit.pid, kit.result
+  .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  result_path (Kit/script が決める)
+  .distsshkit/setup/*.log         Kit setup logs
 ```
 
 `enable` (任意。この端末の `serve` だけなら不要):
@@ -181,12 +186,22 @@ worker へコピーする。`fetch` は終わった Kit leaf を戻す。
 
 #### ワーカー
 
-Queue の表は無い。Kit 既定は `~/parent/Repo.jl` (共有 `[env]` の
-remote ではない)。収集先は上のキューホスト `.distsshkit/`。
+ワーカーは Queue の状態を持たない。ジョブ木は Queue ではなく Kit が
+キューホストから rsync し、実行前にそこで instantiate する。
+
+- `~/.distsshqueue` も `jobs.toml` も無い。
+- 既定パスは `~/basename(parent)/basename(project)`。parent が `host1`、
+  project が `Repo.jl` なら `~/host1/Repo.jl`。共有 `config.toml` に
+  `DISTRIBUTED_REMOTE_PROJECT_ROOT` は書かない。
+- 成果物はここに残らない。Kit がキューホストへ収集する。既定 leaf は
+  上の `.distsshkit/<kind>/` だが、custom な Kit `output_dir` はその先へ
+  落ち、Queue はそれを `result_path` として永続化する (fetch は
+  プロジェクト外でもそこを辿る)。
 
 ```text
-<remote project root>/
-  Project.toml
+~/<parent>/<project>/   例: ~/host1/Repo.jl (Kit がここへ rsync)
+  Project.toml          キューホスト木と同じ依存
+  Manifest.toml
   SCRIPT.jl
 ```
 
@@ -214,7 +229,8 @@ Kit `:check` は `child:` で常に走る。`qhost:` の stage は `.git/`
 を送らないが、DistSSHKit **0.7.3+** はそれを fail ではなく警告にする。
 ジョブ id は
 stdout 1 行。stderr に `Queued  N` (`DISTSSHKIT_QUIET` で隠す)。
-`fetch` は終わった Kit leaf をこのジョブ木へ戻す。
+`fetch` は終わった結果をこのジョブ木の
+`.distsshqueue/<kind>/<stem>_<id8>/` へ戻す。
 
 打つ順 (キューホスト → submit / fetch → teardown):
 [Walkthrough](https://yamanori99.github.io/DistSSHQueue.jl/stable/tutorial/walkthrough/)。

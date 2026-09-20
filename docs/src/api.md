@@ -35,6 +35,10 @@ Queue
 Job
 ```
 
+`Job` persists the artifact-related fields used by cancel and fetch.
+Their ownership and fallback order are described in
+[Artifacts and paths](@ref Manual-artifacts).
+
 ## Enqueue and cancel
 
 ```@docs

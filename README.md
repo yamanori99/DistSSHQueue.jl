@@ -74,13 +74,16 @@ For everything else, see the
 
 `qhost:NAME` is the SSH name of the queue host (same idea as Kit
 `child:NAME`, but it names the queue host, not a worker). Not already
-on that box: put `qhost:HOST` on the command line. `DISTSSHQUEUE_HOST` alone does not
-hop. Already logged in on the queue host? Omit `qhost:` (this box's cwd
-is the Kit tree; placement is still `parent` / `child:`). Local trial:
-`DISTSSHQUEUE_LOCAL=1`. `--hosts` / `--julia` stay on Kit `go` / `ride` / `drive`.
+on that box: put `qhost:HOST` on the command line.
+`DISTSSHQUEUE_HOST` alone does not hop. Already logged in on the queue
+host? Omit `qhost:` (this box's cwd is the Kit tree; placement is still
+`parent` / `child:`). Local trial:
+`DISTSSHQUEUE_LOCAL=1`. `--hosts` / `--julia` stay on Kit `go` /
+`ride` / `drive`.
 
-Placement tokens, `go` / `ride` / `drive` flags, and remote setup are DistSSHKit's —
-see the [kit docs](https://yamanori99.github.io/DistSSHKit.jl/stable/).
+Placement tokens, `go` / `ride` / `drive` flags, and remote setup are
+DistSSHKit's — see the
+[kit docs](https://yamanori99.github.io/DistSSHKit.jl/stable/).
 
 ### submit
 
@@ -116,13 +119,19 @@ julia --project=. -m DistSSHKit drive parent:4 SCRIPT.jl
 
 ### Where files live
 
-`qhost:` is the SSH name of the queue host, not a storage prefix. The
-table and Kit result dirs stay **on that box**. The client has no
-`~/.distsshqueue`. `qhost:` submit rsyncs the client job tree to
-`~/.distsshqueue/stage/<uuid>` (same excludes as Kit rsync: `.gitignore`,
-`.git/`, `.distsshkit/`, `.distsshqueue/`); the client keeps
-`.distsshqueue/tickets/<uuid>` (every submit). Kit still copies queue
-host → workers. `fetch` copies one finished Kit leaf back.
+`qhost:` is an SSH name, not a storage prefix.
+
+- The queue table and Kit results stay on the queue host.
+- `qhost:` submit stages the client tree at
+  `~/.distsshqueue/stage/<uuid>`.
+- The client keeps `.distsshqueue/tickets/<uuid>`.
+- The script owns result files.
+- Kit owns the queue-host `.distsshkit/` run bundle.
+- Queue owns scheduling and the fetched `.distsshqueue/` copy.
+
+The stage excludes `.gitignore`, `.git/`, `.distsshkit/`, and
+`.distsshqueue/`. Details:
+[Artifacts and paths](https://yamanori99.github.io/DistSSHQueue.jl/stable/manual/artifacts/).
 
 #### Client
 
@@ -132,19 +141,24 @@ host → workers. `fetch` copies one finished Kit leaf back.
   Manifest.toml
   SCRIPT.jl             rsync'd on qhost: submit
   .distsshqueue/tickets/<uuid>  after each qhost: submit (kept)
-  .distsshqueue/go/     after fetch
-  .distsshqueue/ride/   after fetch
-  .distsshqueue/drive/  after fetch
+  .distsshqueue/<kind>/<stem>_<id8>/  after fetch
+    .distsshqueue-fetch-id
+    ...                              primary artifact copy
+    .distsshkit/logs/...
+    .distsshkit/collect/...
 ```
 
 #### Queue host
 
-`~/.distsshqueue` plus **one Kit tree per job**. Client `qhost:` submit:
-`stage/<uuid>/`. Logged in on the queue host (no `qhost:`): this box's
-cwd / `DISTRIBUTED_PROJECT_ROOT` (example `~/org/Repo.jl`, not a reserved
-path). Not `--queue-env`. Do not set `DISTRIBUTED_REMOTE_PROJECT_ROOT` in
-shared `config.toml`. `submit` errors if a second project would land on
-the same worker path.
+`~/.distsshqueue` holds Queue state. Each job also uses one Kit project:
+
+- Client `qhost:` submit: `stage/<uuid>/`
+- Logged in on the queue host: cwd / `DISTRIBUTED_PROJECT_ROOT`
+
+The job project below (`~/my-job/`) is just an example directory, not a
+reserved path, and is separate from `--queue-env`. Leave
+`DISTRIBUTED_REMOTE_PROJECT_ROOT` unset in shared config; `submit`
+rejects projects that would collide on a worker.
 
 ```text
 ~/.distsshqueue/
@@ -158,18 +172,12 @@ the same worker path.
     Manifest.toml
   stage/<uuid>/         client tree after each qhost: submit
 
-~/org/Repo.jl/          example: logged in, no qhost: (cwd / DISTRIBUTED_PROJECT_ROOT)
+~/my-job/               the job project on this box (logged-in submit; cwd / DISTRIBUTED_PROJECT_ROOT)
   Project.toml          compute deps
   SCRIPT.jl
-  .distsshkit/runs/go/
-    SCRIPT_<UTC>_<id>/  run.toml, kit.pid
-  .distsshkit/go/
-    SCRIPT_<UTC>[_<id>]/  result_path
-      kit.result
-  .distsshkit/ride/
-    SCRIPT_<UTC>[_<id>]/  same allocate
-  .distsshkit/drive/
-    SCRIPT_<UTC>[_<id>]/  same allocate; not demo output/
+  .distsshkit/runs/<kind>/<run>/  run.toml, kit.pid, kit.result
+  .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  result_path (Kit/script picks it)
+  .distsshkit/setup/*.log         Kit setup logs
 ```
 
 `enable` (optional; skip if you only `serve` in a terminal):
@@ -182,13 +190,22 @@ User units (no root). Same command:
 
 #### Workers
 
-No Queue table. Kit default `~/parent/Repo.jl` (not a shared `[env]`
-remote).
-Collect lands in the queue-host `.distsshkit/` dir above.
+A worker holds no Queue state. Kit (not Queue) rsyncs the job project
+from the queue host and instantiates it there before the run:
+
+- No `~/.distsshqueue`, no `jobs.toml`.
+- Default path is `~/basename(parent)/basename(project)` — with parent
+  `host1` and project `Repo.jl`, that is `~/host1/Repo.jl`. Do not pin a
+  shared `DISTRIBUTED_REMOTE_PROJECT_ROOT` in `config.toml`.
+- Artifacts do not stay here: Kit collects results back to the queue
+  host. The default leaf is `.distsshkit/<kind>/` shown above; a custom
+  Kit `output_dir` lands wherever it points, and Queue persists that as
+  `result_path` (fetch follows it, even outside the project).
 
 ```text
-<remote project root>/
-  Project.toml
+~/<parent>/<project>/   e.g. ~/host1/Repo.jl (Kit rsyncs it here)
+  Project.toml          same deps as the queue-host tree
+  Manifest.toml
   SCRIPT.jl
 ```
 
@@ -205,7 +222,7 @@ julia --project=. -m DistSSHQueue qhost:HOST submit go child:host1:4 SCRIPT.jl
 julia --project=. -m DistSSHQueue qhost:HOST status
 julia --project=. -m DistSSHQueue qhost:HOST watch
 julia --project=. -m DistSSHQueue qhost:HOST cancel <id>
-julia --project=. -m DistSSHQueue qhost:HOST fetch <id>  # 8-char prefix or full UUID
+julia --project=. -m DistSSHQueue qhost:HOST fetch <id>
 julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
@@ -215,7 +232,8 @@ on `child:` hosts before each job (you do not hand-run DistSSHKit
 `setup` on the stage tree). Kit `:check` always runs there
 (DistSSHKit **0.7.3+** warns if a `qhost:` stage has no `.git/`). Job ids are a
 bare stdout line; stderr shows `Queued  N` unless `DISTSSHKIT_QUIET` is set.
-`fetch` copies the finished Kit leaf onto this job tree.
+`fetch` copies the finished result to
+`.distsshqueue/<kind>/<stem>_<id8>/` in this job tree.
 
 Typed path (queue host → submit / fetch → teardown):
 [Walkthrough](https://yamanori99.github.io/DistSSHQueue.jl/stable/tutorial/walkthrough/).

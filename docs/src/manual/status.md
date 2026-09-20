@@ -57,13 +57,15 @@ product flag.
 ## cancel
 
 `:queued` is dropped. `:running` uses DistSSHKit `terminate_run!` when
-the Kit output dir is known (allocated at start if submit omitted
-`--output-dir`). Finished rows and unknown ids print
+the live Kit `run_dir` is known (or a recorded artifact sidecar can be
+resolved). Queue does not allocate a normal job's `output_dir` at
+start. Finished rows and unknown ids print
 `cannot be cancelled` (exit 1). A successful cancel prints the id.
 
 An `ERROR` line appears on a card when a job has failed.
 
 ## fetch
 
-After the row is `:done` / `:failed` / `:cancelled` with a Kit leaf,
-[`fetch`](@ref Manual-fetch) copies that leaf onto this job tree.
+After the row is `:done` / `:failed` / `:cancelled`,
+[`fetch`](@ref Manual-fetch) copies the recorded artifact and extras
+onto this job tree. See [Artifacts and paths](@ref Manual-artifacts).

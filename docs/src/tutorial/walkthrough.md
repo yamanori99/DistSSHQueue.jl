@@ -2,7 +2,8 @@
 
 Commands in the order you type them. Flags and trees stay on
 [Prepare](@ref Tutorial-Prepare), [First job](@ref Tutorial-Client),
-and the [User Guide](@ref Manual). Not a dump of root `--help`.
+the [User Guide](@ref Manual), and
+[Artifacts and paths](@ref Manual-artifacts). Not a dump of root `--help`.
 
 Names here: queue host SSH `HOST`, worker SSH `host1`. Swap them.
 
@@ -63,8 +64,7 @@ From the **client**:
 
 ```bash
 julia --project=. -m DistSSHQueue qhost:HOST submit go child:host1:2 distsshkit_demos/without_kit/pi_echo.jl
-julia --project=. -m DistSSHQueue qhost:HOST fetch <id>  # 8-char prefix or full UUID
-julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
+julia --project=. -m DistSSHQueue qhost:HOST fetch <id>
 ```
 
 Or the same `:N` on every config host:
@@ -78,8 +78,7 @@ julia --project=. -m DistSSHQueue qhost:HOST submit pool:2 go distsshkit_demos/w
 ```bash
 julia --project=. -m DistSSHKit demo install with_kit
 julia --project=. -m DistSSHQueue qhost:HOST submit drive parent:1 distsshkit_demos/with_kit/square_file.jl
-julia --project=. -m DistSSHQueue qhost:HOST fetch <id>  # 8-char prefix or full UUID
-julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
+julia --project=. -m DistSSHQueue qhost:HOST fetch <id>
 ```
 
 ## Teardown (queue host)

@@ -4,7 +4,8 @@ Submit from a **client** after the queue host is up
 ([Prepare](@ref Tutorial-Prepare)). Commands in order:
 [Walkthrough](@ref Tutorial-Walkthrough). Also see
 [User Guide · submit](@ref Manual-submit), [status](@ref Manual-status),
-[fetch](@ref Manual-fetch), [Where files live](@ref Layout).
+[fetch](@ref Manual-fetch), [Where files live](@ref Requirements), and
+[Artifacts and paths](@ref Manual-artifacts).
 
 ## Point at the queue host
 
@@ -14,8 +15,7 @@ That `--project=.` stays on the **client**. `qhost:` defaults to
 `--queue-env @`). Create that dir if clients use `qhost:` (see Prepare).
 `qhost:` **rsync**s the client job tree (`cwd` /
 `DISTRIBUTED_PROJECT_ROOT`) to `~/.distsshqueue/stage/<uuid>` on the
-queue host (Kit rsync excludes: `.gitignore`, `.git/`, `.distsshkit/`,
-`.distsshqueue/`). After submit, this job tree has
+queue host. After submit, this job tree has
 `.distsshqueue/tickets/<uuid>` (not the Kit leaf; every submit stays).
 `SCRIPT.jl` must exist on
 the **client** in that tree.
@@ -87,8 +87,8 @@ stdout line. `submit` also prints `Queued  N (no running)` on stderr unless
 `DISTSSHKIT_QUIET` is set. A `qhost:` rsync prints `rsync → HOST:…` when
 it starts (fetch: `rsync ←`). After `qhost:` submit,
 `.distsshqueue/tickets/<uuid>` marks the job on this client. `fetch`
-copies the finished Kit leaf onto this job tree (inverse of the
-`qhost:` rsync). Run it from the same directory as `submit`. Drive CSV
+copies the finished result to `.distsshqueue/<kind>/<stem>_<id8>/`.
+Run it from the same directory as `submit`. Drive CSV
 (Kit `square_file.jl`) is in that
 `.distsshqueue/drive/<stem>_<id8>/` leaf, not `output/`.
 

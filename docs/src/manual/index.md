@@ -18,6 +18,7 @@ Kit `go` / `ride` / `drive` / `size` / `plan` / `pool` flags stay in the
 
 | | |
 | --- | --- |
+| [Artifacts and paths](@ref Manual-artifacts) | Script / Kit / Queue ownership and directory layout |
 | [submit](@ref Manual-submit) | Enqueue DistSSHKit `go` / `ride` / `drive` |
 | [status](@ref Manual-status) | `status` / `watch` / `cancel` |
 | [fetch](@ref Manual-fetch) | Copy a finished Kit leaf onto this job tree |
@@ -55,44 +56,54 @@ is the opposite of `enable`, not of `serve`.
 
 ## [Job record](@id Manual-job-record)
 
-Each row: `id` (UUID), `kind` (`:go` / `:ride` / `:drive`), `script`, `hosts`,
-`state` (`:queued` / `:running` / `:done` / `:failed` / `:cancelled`),
-`queued_at` / `started_at` / `finished_at`, `error`, and `result_path`
-— normally Kit's artifact directory. If Kit `setup!` fails before that
-path exists, `serve` still allocates a Queue leaf
-([fetch](@ref Manual-fetch)) and records Kit setup `*.log` paths on the
-row (`setup_logs`). It does not copy a newest-mtime `setup_failure.log`. `serve` does not pin
-`output_dir` for `go` / `ride` / `drive`; DistSSHKit 0.8 chooses the
-leaf (`init_output_dir!` / `run.toml`). `serve` records Kit `run_dir` and a
-`run_toml` snapshot on the row so `cancel` / `fetch` still see `output_dir`
-if the `runs/` tree is gone. Queue does not keep a second copy of
-Kit's result tree. Kit kwargs (`args`,
+Each row contains:
+
+- Identity: `id`, `kind`, `script`, and `hosts`
+- State: `state`, `queued_at`, `started_at`, `finished_at`, and `error`
+- Output references: `result_path`, `run_dir`, a `run_toml` snapshot,
+  and setup log paths when applicable
+
+Queue does not keep a second queue-host copy of Kit's result tree or
+normally pin `output_dir`. See
+[Artifacts and paths](@ref Manual-artifacts) for the output contract.
+
+Kit kwargs (`args`,
 `project`, `output_dir`, …) travel as an opaque bag through DistSSHKit's
 `execute!` allow-list. `serve` also passes `job_id` (the row UUID)
 so Kit progress lines can carry `job=`. `serve` instantiates the job
 project on the queue host, then Kit `setup!` on `child:` hosts, unless
 `DISTSSHQUEUE_NO_KIT_SETUP=1`.
 
-The table is TOML on the queue host (`~/.distsshqueue/jobs.toml`),
-rewritten under a directory lock (`jobs.toml.lock`). Writers
-(`submit`, `cancel`, `serve`, `fetch` load, …) take that lock before a
-rewrite. The rewrite is not atomic (truncate-in-place); a crash
-mid-write can leave a bad table. `status` / `watch` read without the
-lock (best-effort; they may fail if they hit a mid-write).
-`jobs.toml.pid` names a live `serve` (a dead pid is ignored);
-`jobs.toml.stopped` after `stop` blocks autoserve until an explicit
-`serve`. If writers hang and no Queue process holds the lock, remove a
-stale `jobs.toml.lock`. File names: [Where files live](@ref Layout).
-If `serve` dies: `:queued` rows reload on the next `serve`. A `:running`
-row whose DistSSHKit `kit.pid` is still alive stays `:running` (`serve`
-will not start the next FIFO job). A `:running` row with no live
-`kit.pid` is `:done` or `:failed` from DistSSHKit `ok` in `kit.result`
-when that file exists, otherwise `:failed`. Drive listed `parent` /
-`child` hosts must join, stay, and collect unless the job passed
-`--best-effort` (Kit 0.8;
-[kit drive](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/drive/)).
-Kit `go` / `ride` / `drive` artifacts stay under Kit's tree. `fetch` copies
-them onto `{project}/.distsshqueue/{kind}/{stem}_{id8}/`.
+### Store files
+
+The queue-host table is `~/.distsshqueue/jobs.toml`.
+
+- Writers lock `jobs.toml.lock` before rewriting the table.
+- The rewrite truncates in place and is not atomic.
+- `status` and `watch` read without the lock and may encounter a
+  mid-write table.
+- `jobs.toml.pid` identifies a live `serve`; a dead pid is ignored.
+- `jobs.toml.stopped` blocks autoserve after `stop` until an explicit
+  `serve`.
+
+If writers hang and no Queue process holds the lock, remove a stale
+`jobs.toml.lock`. See [Where files live](@ref Requirements) for all
+paths.
+
+### Recovery after `serve` exits
+
+- `:queued` rows reload on the next `serve`.
+- A `:running` row with a live Kit `kit.pid` remains `:running` and
+  blocks the next FIFO job.
+- Without a live `kit.pid`, `kit.result` determines `:done` or
+  `:failed`; without that result, the row becomes `:failed`.
+
+For drive, listed `parent` / `child` hosts must join, stay, and collect
+unless the job passed `--best-effort`. See
+[kit drive](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/drive/).
+Kit `go` / `ride` / `drive` artifacts stay under Kit's tree. `fetch`
+creates the client copy described in
+[Artifacts and paths](@ref Manual-artifacts).
 
 ## Shared peel
 

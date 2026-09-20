@@ -53,6 +53,7 @@ makedocs(;
         ],
         "User Guide" => [
             "Overview" => "manual/index.md",
+            "Artifacts and paths" => "manual/artifacts.md",
             "submit" => "manual/submit.md",
             "status" => "manual/status.md",
             "fetch" => "manual/fetch.md",

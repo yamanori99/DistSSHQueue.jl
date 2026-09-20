@@ -7,18 +7,31 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 Next patch after `0.5.1`. DistSSHKit **0.8.x**. Not a cut yet.
 
-- DistSSHKit **0.8.x**. `serve` does not pin `output_dir` for `go` /
-  `ride` / `drive`. Kit owns `{project}/.distsshkit/{kind}/…` (and
-  `init_output_dir!` for drive). `serve` records Kit `run_dir` for
-  `kit.pid` / `terminate_run!`. `fetch` copies that Kit leaf (or
-  `run.toml` `output_dir`) onto
-  `{project}/.distsshqueue/{kind}/{stem}_{id8}/`. If Kit `setup!` fails
-  before an artifact dir exists, Queue still allocates that dest leaf.
-  Setup log paths are recorded on the job (`kwargs.setup_logs`); Queue
-  does not copy a newest-mtime `setup_failure.log`. `serve` copies Kit
-  `run.toml` onto the job
-  row (`kwargs.run_toml`) so `result_path` can be recovered if `runs/`
-  is gone.
+- DistSSHKit **0.8.x** owns runtime output under
+  `{project}/.distsshkit/`: the artifact leaf and
+  `runs/{kind}/…/run.toml`. `serve` normally does not pin `output_dir`.
+  It records Kit `run_dir` for termination and snapshots `run.toml` on
+  the job so the artifact path survives removal of the live `runs/`
+  tree.
+- `fetch` resolves its source from persisted `result_path` or
+  `run_toml` `output_dir`, not a project/store containment check, and
+  copies to `{project}/.distsshqueue/{kind}/{stem}_{id8}/`.
+  `fetch --into PATH` uses that directory itself. Same-id re-fetch
+  skips unless `--force`; a nonempty destination without this job's
+  `.distsshqueue-fetch-id` is refused. Copies are additive and a failed
+  first transfer into a fresh destination is cleaned up for retry
+  ([#246](https://github.com/yamanori99/DistSSHQueue.jl/issues/246),
+  [#248](https://github.com/yamanori99/DistSSHQueue.jl/issues/248)).
+- `qhost:` fetch also copies Kit `run.toml` `logs` / `collect_dirs`
+  and recorded `setup_logs` under destination `.distsshkit/logs/` and
+  `.distsshkit/collect/`. Colliding extra basenames are kept under
+  distinct names. If the primary artifact has disappeared, recorded
+  extras remain fetchable.
+- If Kit `setup!` fails before an artifact exists, Queue records all
+  `{project}/.distsshkit/setup/*.log` paths in `kwargs.setup_logs`; it
+  does not copy a newest-mtime `setup_failure.log`. A Queue fetch
+  placeholder may be allocated so the failed row remains fetchable
+  ([#237](https://github.com/yamanori99/DistSSHQueue.jl/issues/237)).
 - [Runic](https://github.com/fredrikekre/Runic.jl) `--check` on PRs
   (soft; not a merge gate) and monthly cron (Issue
   `Runic monthly failed`)
@@ -31,23 +44,6 @@ Next patch after `0.5.1`. DistSSHKit **0.8.x**. Not a cut yet.
   ([#238](https://github.com/yamanori99/DistSSHQueue.jl/issues/238)) is
   gone. Julia major.minor mismatch still fails `:check` unless Kit
   `--ignore-julia-version`.
-- `fetch --into PATH` lands the Kit leaf in that directory (the path
-  *is* the dest; it may be outside the job project). Same-id re-fetch
-  skips unless `--force`. A non-empty dest without this job's
-  `.distsshqueue-fetch-id` is refused. The copy is additive (no
-  `rsync --delete`); dest-only files stay. The marker is the
-  canonical job UUID
-  ([#246](https://github.com/yamanori99/DistSSHQueue.jl/issues/246),
-  [#248](https://github.com/yamanori99/DistSSHQueue.jl/issues/248)).
-- If Kit `setup!` fails, `serve` records `{project}/.distsshkit/setup/*.log`
-  paths on the job (`setup_logs`). It does not pick a newest mtime file
-  as `setup_failure.log`
-  ([#237](https://github.com/yamanori99/DistSSHQueue.jl/issues/237)).
-- `qhost:` fetch also copies Kit `run.toml` `logs` / `collect_dirs` and
-  recorded `setup_logs` under dest `.distsshkit/logs/` and
-  `.distsshkit/collect/`.
-- `fetch` source is the persisted Kit manifest (`result_path` or
-  `run.toml` `output_dir`), not a project/store path check.
 - `status` / `watch` print submit time (`queued`, local `YYYY-mm-dd HH:MM`
   at that instant, including DST), `elapsed` while running, `wall` when
   finished, and fold extra host tokens (`+N`; `--verbose` keeps the full
