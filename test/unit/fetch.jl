@@ -300,6 +300,14 @@ end
         @test "f:" * setup in specs
         _, _, hid = DistSSHQueue.fetch_hidden_dest("/dest", "f:" * logf)
         @test endswith(replace(hid, '\\' => '/'), "/.distsshkit/logs/kit.out")
+        a = "/run/a/output.log"
+        b = "/run/b/output.log"
+        hids = DistSSHQueue.fetch_hidden_dests("/dest", ["f:" * a, "f:" * b])
+        @test hids[1][2] == a
+        @test hids[2][2] == b
+        @test endswith(replace(hids[1][3], '\\' => '/'), "/.distsshkit/logs/output.log")
+        @test endswith(replace(hids[2][3], '\\' => '/'), "/.distsshkit/logs/b_output.log")
+        @test hids[1][3] != hids[2][3]
         st, path, _, dest, got = DistSSHQueue.parse_fetch_source(
             string(:done, '\t', art, '\t', "aaaaaaaa-1111-4000-8000-000000000001", '\t', "go/S_aaaaaaaa", '\t', join(specs, DistSSHQueue.FETCH_EXTRA_SEP)),
         )

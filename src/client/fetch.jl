@@ -169,6 +169,49 @@ function fetch_hidden_dest(dest::AbstractString, spec::AbstractString)::Tuple{Ch
     return kind, src, joinpath(String(dest), ".distsshkit", sub, base)
 end
 
+"""Leaf name under `.distsshkit/logs|collect`. Same basename keeps a parent prefix."""
+function fetch_extra_leaf(src::AbstractString, taken::Set{String})::String
+    parts = split(posix_dir(src), '/'; keepempty = false)
+    isempty(parts) && throw(ArgumentError("fetch: bad extra $(repr(src))"))
+    n = 1
+    name = String(parts[end])
+    while name in taken && n < length(parts)
+        n += 1
+        name = join(parts[(end - n + 1):end], "_")
+    end
+    if name in taken
+        i = 2
+        stem = String(parts[end])
+        while true
+            cand = string(stem, "_", i)
+            if !(cand in taken)
+                name = cand
+                break
+            end
+            i += 1
+        end
+    end
+    push!(taken, name)
+    return name
+end
+
+function fetch_hidden_dests(
+        dest::AbstractString,
+        specs::AbstractVector{<:AbstractString},
+    )::Vector{Tuple{Char, String, String}}
+    taken_logs = Set{String}()
+    taken_dirs = Set{String}()
+    out = Tuple{Char, String, String}[]
+    for spec in specs
+        kind, src, _ = fetch_hidden_dest(dest, spec)
+        taken = kind == 'd' ? taken_dirs : taken_logs
+        leaf = fetch_extra_leaf(src, taken)
+        sub = kind == 'd' ? "collect" : "logs"
+        push!(out, (kind, src, joinpath(String(dest), ".distsshkit", sub, leaf)))
+    end
+    return out
+end
+
 function fetch_dest_from_rel(dest_rel::AbstractString)::String
     parts = split(posix_dir(dest_rel), '/'; keepempty = false)
     length(parts) == 2 || throw(ArgumentError("fetch: bad dest $(repr(dest_rel))"))
@@ -472,8 +515,7 @@ function fetch_cli(
         return 0
     end
     rsync_from_qhost!(hop, path, out; progress = progress)
-    for spec in extras
-        kind, src, hid = fetch_hidden_dest(out, spec)
+    for (kind, src, hid) in fetch_hidden_dests(out, extras)
         if kind == 'd'
             rsync_from_qhost!(hop, src, hid; progress = progress)
         else
