@@ -210,6 +210,15 @@ function fetch_source_primary(j::Job)::Union{Nothing, String}
     return output_dir_from_run_toml(kit_run_toml(j))
 end
 
+"""Live primary leaf, or `nothing` when it is gone and extras can still fetch."""
+function fetch_live_primary(j::Job, extras)::Union{Nothing, String}
+    p = fetch_source_primary(j)
+    p === nothing && return nothing
+    ispath(p) && return p
+    isempty(extras) && return p
+    return nothing
+end
+
 """One machine line: `state<TAB>abs-path<TAB>canonical-uuid`. Used by `hop_print`, not `main`."""
 function fetch_source(id::AbstractString; store::AbstractString = store_path())::String
     q = Queue(; store = store)
@@ -223,7 +232,7 @@ function fetch_source(id::AbstractString; store::AbstractString = store_path()):
         )
     )
     extras = fetch_extra_specs(j)
-    p = fetch_source_primary(j)
+    p = fetch_live_primary(j, extras)
     if p === nothing
         isempty(extras) && throw(
             ArgumentError(

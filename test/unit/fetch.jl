@@ -171,6 +171,36 @@ end
     end
 end
 
+@testset "fetch skips a missing primary when extras remain" begin
+    mktempdir() do d
+        store = joinpath(d, "jobs.toml")
+        art = joinpath(d, "gone", "leaf")
+        mkpath(art)
+        setup = joinpath(d, ".distsshkit", "setup", "setup.log")
+        mkpath(dirname(setup))
+        write(setup, "fail\n")
+        id = "aaaaaaaa-5555-4000-8000-000000000005"
+        j = DistSSHQueue.Job(;
+            id = id,
+            kind = :drive,
+            script = joinpath(d, "S.jl"),
+            hosts = ["parent:1"],
+            state = :failed,
+            result_path = art,
+            kwargs = Dict{String, Any}(
+                "project" => String(d),
+                "setup_logs" => [setup],
+            ),
+        )
+        DistSSHQueue.save_jobs(store, [j])
+        rm(art; recursive = true)
+        line = DistSSHQueue.fetch_source(id; store = store)
+        _, path, _, _, extras = DistSSHQueue.parse_fetch_source(line)
+        @test path == DistSSHQueue.FETCH_NO_PRIMARY
+        @test extras == ["f:" * setup]
+    end
+end
+
 @testset "fetch CLI identity on the queue host" begin
     mktempdir() do d
         proj = joinpath(d, "job")
