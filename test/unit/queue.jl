@@ -283,6 +283,44 @@ end
     end
 end
 
+@testset "serve snapshots run.toml onto the job row" begin
+    mktempdir() do d
+        store = joinpath(d, "jobs.toml")
+        script = joinpath(d, "hold.jl")
+        write(script, "1\n")
+        ev = Base.Event()
+        q = Queue(; store, runner = _ -> wait(ev))
+        id = submit!(q, script, "parent:1"; project = d)
+        @test step!(q) == 1
+        run = joinpath(d, ".distsshkit", "runs", "go", "hold_x")
+        art = joinpath(d, ".distsshkit", "go", "hold_leaf")
+        mkpath(run)
+        mkpath(art)
+        write(
+            joinpath(run, "run.toml"),
+            """
+            schema = 1
+            kind = "go"
+            run_dir = $(repr(run))
+            output_dir = $(repr(art))
+            """,
+        )
+        DistSSHQueue._set_running_kit_meta!(q, id; run_dir = run)
+        snap = DistSSHQueue.kit_run_toml(job(q, id))
+        @test snap isa AbstractDict
+        @test snap["output_dir"] == art
+        rm(joinpath(run, "run.toml"))
+        @test DistSSHQueue.output_dir_from_run_toml(DistSSHQueue.kit_run_toml(job(q, id))) == art
+        loaded = DistSSHQueue.read_jobs(store)
+        i = findfirst(j -> j.id == id, loaded)
+        @test i !== nothing
+        @test DistSSHQueue.output_dir_from_run_toml(DistSSHQueue.kit_run_toml(loaded[i])) == art
+        @test !haskey(DistSSHQueue.execute_kwargs(job(q, id)), :run_toml)
+        notify(ev)
+        _wait_state(q, id, :done)
+    end
+end
+
 @testset "load! keeps running without submit output_dir when kit.pid is live" begin
     mktempdir() do d
         script = joinpath(d, "hold.jl")
