@@ -62,8 +62,9 @@ Each row: `id` (UUID), `kind` (`:go` / `:ride` / `:drive`), `script`, `hosts`,
 path exists, `serve` still allocates a Queue leaf with
 `setup_failure.log` ([fetch](@ref Manual-fetch)). `serve` does not pin
 `output_dir` for `go` / `ride` / `drive`; DistSSHKit 0.8 chooses the
-leaf (`init_output_dir!` / `run.toml`). `serve` records Kit `run_dir` so `cancel`
-and a later `serve` find `kit.pid`. Queue does not keep a second copy of
+leaf (`init_output_dir!` / `run.toml`). `serve` records Kit `run_dir` and a
+`run_toml` snapshot on the row so `cancel` / `fetch` still see `output_dir`
+if the `runs/` tree is gone. Queue does not keep a second copy of
 Kit's result tree. Kit kwargs (`args`,
 `project`, `output_dir`, …) travel as an opaque bag through DistSSHKit's
 `execute!` allow-list. `serve` also passes `job_id` (the row UUID)

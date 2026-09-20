@@ -14,7 +14,9 @@ Next patch after `0.5.1`. DistSSHKit **0.8.x**. Not a cut yet.
   `run.toml` `output_dir`) onto
   `{project}/.distsshqueue/{kind}/{stem}_{id8}/`. If Kit `setup!` fails
   before an artifact dir exists, Queue still allocates that dest leaf
-  for `setup_failure.log`.
+  for `setup_failure.log`. `serve` copies Kit `run.toml` onto the job
+  row (`kwargs.run_toml`) so `result_path` can be recovered if `runs/`
+  is gone.
 - [Runic](https://github.com/fredrikekre/Runic.jl) `--check` on PRs
   (soft; not a merge gate) and monthly cron (Issue
   `Runic monthly failed`)

@@ -207,16 +207,38 @@ function kit_result_path(result)::Union{Nothing, String}
     return isempty(s) ? nothing : s
 end
 
-function kit_artifact_from_run_dir(rd::Union{Nothing, AbstractString})::Union{Nothing, String}
-    rd === nothing && return nothing
-    srd = strip(String(rd))
-    isempty(srd) && return nothing
-    raw = DistSSHKit.read_kit_run_toml(srd)
+function output_dir_from_run_toml(raw)::Union{Nothing, String}
     raw === nothing && return nothing
+    raw isa AbstractDict || return nothing
     od = get(raw, "output_dir", nothing)
     od isa AbstractString || return nothing
     s = strip(od)
     return isempty(s) ? nothing : s
+end
+
+function kit_artifact_from_run_dir(rd::Union{Nothing, AbstractString})::Union{Nothing, String}
+    rd === nothing && return nothing
+    srd = strip(String(rd))
+    isempty(srd) && return nothing
+    return output_dir_from_run_toml(DistSSHKit.read_kit_run_toml(srd))
+end
+
+"""Kit `run.toml` from the job bag snapshot, else the live `run_dir` file."""
+function kit_run_toml(j::Job)
+    snap = get(j.kwargs, "run_toml", nothing)
+    snap isa AbstractDict && return snap
+    rd = kit_run_dir(j)
+    rd === nothing && return nothing
+    return DistSSHKit.read_kit_run_toml(rd)
+end
+
+function capture_kit_run_toml!(j::Job)
+    rd = kit_run_dir(j)
+    rd === nothing && return nothing
+    raw = DistSSHKit.read_kit_run_toml(rd)
+    raw === nothing && return nothing
+    j.kwargs["run_toml"] = Dict{String, Any}(String(k) => v for (k, v) in raw)
+    return nothing
 end
 
 function kit_result_path(j::Job, result)::Union{Nothing, String}
@@ -227,6 +249,8 @@ function kit_result_path(j::Job, result)::Union{Nothing, String}
         s = strip(String(od))
         !isempty(s) && return s
     end
+    p = output_dir_from_run_toml(kit_run_toml(j))
+    p !== nothing && return p
     return kit_artifact_from_run_dir(kit_run_dir(j))
 end
 
@@ -272,6 +296,7 @@ function execute_kwargs(j::Job)
         k === :job_id && continue
         v === nothing && continue
         k === :run_dir && continue
+        k === :run_toml && continue
         DistSSHKit.execute_detached_accepts(k; kind = j.kind) || continue
         push!(acc, k => v)
     end
@@ -356,6 +381,7 @@ function settle_lost_kit_child!(j::Job)
     j.finished_at = now(UTC)
     art = kit_artifact_from_sidecar(dir)
     art !== nothing && (j.result_path = art)
+    capture_kit_run_toml!(j)
     if rec === nothing
         j.state = :failed
         j.error = "serve restarted; running job marked failed"
@@ -761,6 +787,7 @@ function _set_running_kit_meta!(
             if result_path isa AbstractString && !isempty(strip(String(result_path)))
                 j.result_path = String(result_path)
             end
+            capture_kit_run_toml!(j)
             _persist!(q)
             return nothing
         end
@@ -789,6 +816,7 @@ function _finish!(q::Queue, id::AbstractString, state::Symbol, err; result_path 
             if result_path !== nothing
                 j.result_path = String(result_path)
             end
+            capture_kit_run_toml!(j)
             q.live_id == id && (q.live_id = nothing)
             _persist!(q)
             return nothing
