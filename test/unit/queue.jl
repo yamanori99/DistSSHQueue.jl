@@ -660,10 +660,12 @@ end
         mkpath(dirname(logp))
         write(logp, "instantiate failed\n")
         id = "aaaaaaaa-2222-4000-8000-000000000002"
-        q = Queue(; store = store, runner = function (j)
-            j.kwargs["setup_logs"] = [logp]
-            error("DistSSHKit setup! instantiate failed")
-        end)
+        q = Queue(;
+            store = store, runner = function (j)
+                j.kwargs["setup_logs"] = [logp]
+                error("DistSSHKit setup! instantiate failed")
+            end
+        )
         submit!(q, script, "parent:1"; id = id, kind = :drive, project = d)
         @test step!(q) == 1
         _wait_state(q, id, :failed)
