@@ -130,6 +130,47 @@ end
     end
 end
 
+@testset "fetch extras-only source is not a dash path" begin
+    mktempdir() do d
+        store = joinpath(d, "jobs.toml")
+        setup = joinpath(d, ".distsshkit", "setup", "setup.log")
+        mkpath(dirname(setup))
+        write(setup, "fail\n")
+        id = "aaaaaaaa-3333-4000-8000-000000000003"
+        j = DistSSHQueue.Job(;
+            id = id,
+            kind = :drive,
+            script = joinpath(d, "S.jl"),
+            hosts = ["parent:1"],
+            state = :failed,
+            kwargs = Dict{String, Any}(
+                "project" => String(d),
+                "setup_logs" => [setup],
+            ),
+        )
+        DistSSHQueue.save_jobs(store, [j])
+        line = DistSSHQueue.fetch_source(id; store = store)
+        _, path, _, _, extras = DistSSHQueue.parse_fetch_source(line)
+        @test path == DistSSHQueue.FETCH_NO_PRIMARY
+        @test path != "-"
+        @test extras == ["f:" * setup]
+        dash = DistSSHQueue.Job(;
+            id = "bbbbbbbb-4444-4000-8000-000000000004",
+            kind = :go,
+            script = joinpath(d, "T.jl"),
+            hosts = ["parent:1"],
+            state = :done,
+            result_path = "-",
+        )
+        DistSSHQueue.save_jobs(store, [dash])
+        _, dash_path, _, _, _ = DistSSHQueue.parse_fetch_source(
+            DistSSHQueue.fetch_source(dash.id; store = store),
+        )
+        @test dash_path == "-"
+        @test dash_path != DistSSHQueue.FETCH_NO_PRIMARY
+    end
+end
+
 @testset "fetch CLI identity on the queue host" begin
     mktempdir() do d
         proj = joinpath(d, "job")

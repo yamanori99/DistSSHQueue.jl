@@ -2,7 +2,7 @@
 
 const FETCH_SOURCE_SEP = '\t'
 const FETCH_EXTRA_SEP = '\x1e'
-const FETCH_NO_PRIMARY = "-"
+const FETCH_NO_PRIMARY = "urn:distsshqueue:no-primary"
 const FETCH_READY = (:done, :failed, :cancelled)
 
 function posix_dir(path::AbstractString)::String
