@@ -318,6 +318,10 @@ end
         extras2 = DistSSHQueue.fetch_extra_paths(j)
         @test cold in extras2
         @test joinpath(d, "..") ∉ extras2
+        j.kwargs["run_toml"]["collect_dirs"] = [cold, "/"]
+        extras3 = DistSSHQueue.fetch_extra_paths(j)
+        @test cold in extras3
+        @test "/" ∉ extras3
         st, path, _, dest, got = DistSSHQueue.parse_fetch_source(
             string(:done, '\t', art, '\t', "aaaaaaaa-1111-4000-8000-000000000001", '\t', "go/S_aaaaaaaa", '\t', join(specs, DistSSHQueue.FETCH_EXTRA_SEP)),
         )

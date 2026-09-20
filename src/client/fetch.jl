@@ -129,7 +129,7 @@ function fetch_extra_paths(j::Job)::Vector{String}
             n = posix_dir(p)
             n in seen && continue
             leaf = basename(n)
-            (leaf == "." || leaf == "..") && continue
+            (isempty(leaf) || leaf == "." || leaf == "..") && continue
             push!(seen, n)
             push!(out, p)
         end
