@@ -1513,6 +1513,11 @@ end
         @test tw >= 5
         @test sw >= 8
     end
+    overflow = IOBuffer()
+    DistSSHQueue.print_wrapped_tail(overflow, repeat("P", 25), "SSH"; cols = 27)
+    olines = split(String(take!(overflow)), '\n'; keepempty = false)
+    @test all(l -> textwidth(l) <= 27, olines)
+    @test any(l -> occursin("SSH", l), olines)
     mktempdir() do d
         cfg = joinpath(d, "config.toml")
         fake = joinpath(d, "fakebin")
@@ -1870,6 +1875,13 @@ end
                 @test occursin("serve", frame)
                 @test occursin("Ctrl-C stops watch", frame)
                 @test !occursin("Process", frame)
+                live_n = IOBuffer()
+                DistSSHQueue.print_status_table(
+                    p, DistSSHQueue.Job[]; io = live_n, live = true, cols = 24,
+                )
+                for line in split(String(take!(live_n)), '\n'; keepempty = false)
+                    @test textwidth(line) <= 24
+                end
             end
         end
     end

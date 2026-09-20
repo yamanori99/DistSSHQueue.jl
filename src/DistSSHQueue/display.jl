@@ -6,7 +6,7 @@ function _q_short(path::AbstractString)::String
 end
 
 function _q_cell(t::String, w::Int)::String
-    n = length(t)
+    n = textwidth(t)
     n >= w && return t
     return string(t, " "^(w - n))
 end
@@ -106,8 +106,14 @@ function print_wrapped_tail(
     hang_n = left >= n - 8 ? 4 : left
     wrap_w = max(8, n - hang_n)
     chunks = _wrap_words(tail, wrap_w)
-    if left > n
-        write_prefix && (_write_span(io, _clip_cols(prefix, n), prefix_color); println(io))
+    overflow = left > n || left + textwidth(first(chunks)) > n
+    if overflow
+        if write_prefix
+            _write_span(io, left > n ? _clip_cols(prefix, n) : prefix, prefix_color)
+            println(io)
+        else
+            println(io)
+        end
         pad = "    "
         for line in _wrap_words(tail, max(8, n - 4))
             print(io, pad)
@@ -370,9 +376,9 @@ function print_jobs_table(
     states = String[_job_state_disp(j) for j in rows]
     kinds = String[String(j.kind) for j in rows]
     scripts = String[_job_script_disp(j) for j in rows]
-    w_id = max(2, maximum(length, ids; init = 2))
-    w_st = max(5, maximum(length, states; init = 5))
-    w_k = max(4, maximum(length, kinds; init = 4))
+    w_id = max(2, maximum(textwidth, ids; init = 2))
+    w_st = max(5, maximum(textwidth, states; init = 5))
+    w_k = max(4, maximum(textwidth, kinds; init = 4))
     fitted = _fit_leading_widths(Int[w_id, w_st, w_k], Int[2, 5, 4], n)
     w_id, w_st, w_k = fitted[1], fitted[2], fitted[3]
     print_wrapped_row(
@@ -449,7 +455,7 @@ function print_status_table(
     )
     if live && !quiet
         DistSSHKit.print_help_blank(io)
-        DistSSHKit.print_help_lines(io, "Ctrl-C stops watch; serve stays.")
+        print_wrapped_tail(io, "  ", "Ctrl-C stops watch; serve stays."; cols = n)
     end
     return nothing
 end

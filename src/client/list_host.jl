@@ -161,12 +161,12 @@ function print_list_host(
     hopped = !(qhost === nothing || isempty(String(qhost)))
     rows = sorted_kit_ssh_names(names)
     labels = String[_host_name_disp(n) for n in rows]
-    nw = max(4, maximum(length, labels))
-    tw = max(5, maximum(length ∘ _host_token, rows))
+    nw = max(4, maximum(textwidth, labels))
+    tw = max(5, maximum(textwidth ∘ _host_token, rows))
     maxs = String[names[n] === nothing ? "-" : string(names[n]) for n in rows]
-    mw = max(3, maximum(length, maxs))
+    mw = max(3, maximum(textwidth, maxs))
     julias = String[_juliaup_default_disp(n) for n in rows]
-    jw = max(5, maximum(length, julias))
+    jw = max(5, maximum(textwidth, julias))
     sshes = String[_ssh_disp(n; hopped = hopped) for n in rows]
     n = cols > 0 ? max(24, cols) : cli_cols(io)
     nw, tw, mw, jw, _ssh_w = _list_host_fit(nw, tw, mw, jw, n)
