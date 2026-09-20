@@ -338,7 +338,7 @@ function _print_job_detail(
         cols::Int,
         tail_color::Union{Nothing, Symbol} = nothing,
     )
-    prefix = "    " * rpad(String(key), 8) * "  "
+    prefix = "    " * _q_cell(String(key), 8) * "  "
     return print_wrapped_tail(
         io, prefix, val;
         cols = cols, prefix_color = :light_black, tail_color = tail_color,
