@@ -6,9 +6,184 @@ function _q_short(path::AbstractString)::String
 end
 
 function _q_cell(t::String, w::Int)::String
-    n = length(t)
+    n = textwidth(t)
     n >= w && return t
     return string(t, " "^(w - n))
+end
+
+"""TTY columns for CLI tables and notes. Non-TTY (tests, pipes) is 72."""
+function cli_cols(io::IO)::Int
+    io isa Base.TTY || return 72
+    return max(24, displaysize(io)[2])
+end
+
+function _break_run(s::AbstractString, wmax::Int)::Vector{String}
+    out = String[]
+    buf = IOBuffer()
+    used = 0
+    for c in s
+        cw = textwidth(c)
+        if used > 0 && used + cw > wmax
+            push!(out, String(take!(buf)))
+            used = 0
+        end
+        print(buf, c)
+        used += cw
+    end
+    used > 0 && push!(out, String(take!(buf)))
+    return isempty(out) ? String[""] : out
+end
+
+function _wrap_words(s::AbstractString, width::Int)::Vector{String}
+    wmax = max(8, width)
+    raw = String(s)
+    textwidth(raw) <= wmax && return String[raw]
+    words = split(s)
+    isempty(words) && return String[""]
+    lines = String[]
+    cur = ""
+    for w in words
+        piece = String(w)
+        if textwidth(piece) > wmax
+            isempty(cur) || (push!(lines, cur); cur = "")
+            append!(lines, _break_run(piece, wmax))
+            continue
+        end
+        if isempty(cur)
+            cur = piece
+            continue
+        end
+        if textwidth(cur) + 1 + textwidth(piece) <= wmax
+            cur *= " " * piece
+        else
+            push!(lines, cur)
+            cur = piece
+        end
+    end
+    isempty(cur) || push!(lines, cur)
+    return lines
+end
+
+function _clip_cols(s::AbstractString, cols::Int)::String
+    cols <= 0 && return String(s)
+    tw = textwidth(s)
+    tw <= cols && return String(s)
+    cols <= 1 && return "…"
+    buf = IOBuffer()
+    used = 0
+    for c in s
+        w = textwidth(c)
+        used + w > cols - 1 && break
+        print(buf, c)
+        used += w
+    end
+    print(buf, '…')
+    return String(take!(buf))
+end
+
+function _padded_clip(s::AbstractString, w::Int)::String
+    return _q_cell(_clip_cols(String(s), w), w)
+end
+
+function _write_span(io::IO, s::AbstractString, color::Union{Nothing, Symbol})
+    color === nothing && return print(io, s)
+    DistSSHKit.print_colored(io, s, color, false)
+    return nothing
+end
+
+"""Wrap `tail` after `prefix` to `cols`. Continuation hangs under the tail column."""
+function print_wrapped_tail(
+        io::IO,
+        prefix::AbstractString,
+        tail::AbstractString;
+        cols::Int,
+        prefix_color::Union{Nothing, Symbol} = nothing,
+        tail_color::Union{Nothing, Symbol} = nothing,
+        write_prefix::Bool = true,
+    )
+    n = cols
+    left = textwidth(prefix)
+    hang_n = left >= n - 8 ? 4 : left
+    wrap_w = max(8, n - hang_n)
+    chunks = _wrap_words(tail, wrap_w)
+    overflow = left > n || left + textwidth(first(chunks)) > n
+    if overflow
+        if write_prefix
+            _write_span(io, left > n ? _clip_cols(prefix, n) : prefix, prefix_color)
+            println(io)
+        else
+            println(io)
+        end
+        pad = "    "
+        for line in _wrap_words(tail, max(8, n - 4))
+            print(io, pad)
+            _write_span(io, line, tail_color)
+            println(io)
+        end
+        return nothing
+    end
+    write_prefix && _write_span(io, prefix, prefix_color)
+    if hang_n == left
+        _write_span(io, first(chunks), tail_color)
+        println(io)
+        pad = repeat(" ", hang_n)
+        for line in chunks[2:end]
+            print(io, pad)
+            _write_span(io, line, tail_color)
+            println(io)
+        end
+    else
+        println(io)
+        pad = repeat(" ", hang_n)
+        for line in chunks
+            print(io, pad)
+            _write_span(io, line, tail_color)
+            println(io)
+        end
+    end
+    return nothing
+end
+
+"""Fixed-width clipped cells, then a wrapping tail column."""
+function print_wrapped_row(
+        io::IO,
+        cells::AbstractVector{<:AbstractString},
+        widths::AbstractVector{Int},
+        tail::AbstractString;
+        cols::Int,
+        indent::Int = 2,
+        cell_colors::Union{Nothing, AbstractVector} = nothing,
+        tail_color::Union{Nothing, Symbol} = nothing,
+        prefix_color::Union{Nothing, Symbol} = nothing,
+    )
+    length(cells) == length(widths) ||
+        throw(ArgumentError("print_wrapped_row cells/widths length"))
+    buf = IOBuffer()
+    print(buf, repeat(" ", indent))
+    for i in eachindex(cells)
+        i > 1 && print(buf, "  ")
+        print(buf, _padded_clip(cells[i], widths[i]))
+    end
+    isempty(cells) || print(buf, "  ")
+    prefix = String(take!(buf))
+    if cell_colors === nothing
+        return print_wrapped_tail(
+            io, prefix, tail;
+            cols = cols, prefix_color = prefix_color, tail_color = tail_color,
+        )
+    end
+    length(cell_colors) == length(cells) ||
+        throw(ArgumentError("print_wrapped_row cell_colors length"))
+    print(io, repeat(" ", indent))
+    for i in eachindex(cells)
+        i > 1 && print(io, "  ")
+        _write_span(io, _padded_clip(cells[i], widths[i]), cell_colors[i])
+    end
+    isempty(cells) || print(io, "  ")
+    return print_wrapped_tail(
+        io, prefix, tail;
+        cols = cols, write_prefix = false, tail_color = tail_color,
+    )
 end
 
 const _ID_PREFIX_MIN = 8
@@ -128,6 +303,54 @@ function _tail_jobs(rows::Vector{Job}, tail::Union{Nothing, Int})
     return rows[(n - tail + 1):n], n - tail
 end
 
+"""Shrink leading widths so indent + cells + gaps + tail_min fit in `cols`."""
+function _fit_leading_widths(
+        natural::Vector{Int},
+        mins::Vector{Int},
+        cols::Int;
+        indent::Int = 2,
+        tail_min::Int = 8,
+    )::Vector{Int}
+    n = length(natural)
+    n == length(mins) || throw(ArgumentError("_fit_leading_widths"))
+    gap = indent + 2 * n
+    room = cols - gap - tail_min
+    w = copy(natural)
+    sum(w) <= room && return w
+    extra = sum(w) - room
+    extra <= 0 && return w
+    while extra > 0
+        idx = 0
+        best = 0
+        for i in 1:n
+            slack = w[i] - mins[i]
+            if slack > best
+                best = slack
+                idx = i
+            end
+        end
+        idx == 0 && break
+        take = min(extra, best)
+        w[idx] -= take
+        extra -= take
+    end
+    return w
+end
+
+function _print_job_detail(
+        io::IO,
+        key::AbstractString,
+        val::AbstractString;
+        cols::Int,
+        tail_color::Union{Nothing, Symbol} = nothing,
+    )
+    prefix = "    " * _q_cell(String(key), 8) * "  "
+    return print_wrapped_tail(
+        io, prefix, val;
+        cols = cols, prefix_color = :light_black, tail_color = tail_color,
+    )
+end
+
 function print_jobs_table(
         rows::Vector{Job};
         io::IO = stdout,
@@ -135,7 +358,9 @@ function print_jobs_table(
         quiet::Bool = false,
         hidden::Int = 0,
         verbose::Bool = false,
+        cols::Int = 0,
     )
+    n = cols > 0 ? max(24, cols) : cli_cols(io)
     DistSSHKit.print_help_section("Jobs"; io = io)
     if !present
         DistSSHKit.print_colored(io, "  (none)", :light_black, false)
@@ -151,65 +376,42 @@ function print_jobs_table(
     states = String[_job_state_disp(j) for j in rows]
     kinds = String[String(j.kind) for j in rows]
     scripts = String[_job_script_disp(j) for j in rows]
-    w_id = max(2, maximum(length, ids; init = 2))
-    w_st = max(5, maximum(length, states; init = 5))
-    w_k = max(4, maximum(length, kinds; init = 4))
-    w_sc = max(6, maximum(length, scripts; init = 6))
-    headers = String["ID", "STATE", "KIND", "SCRIPT"]
-    widths = Int[w_id, w_st, w_k, w_sc]
-    head = join((_q_cell(headers[i], widths[i]) for i in eachindex(headers)), "  ")
-    DistSSHKit.print_colored(io, "  " * head, :light_black, false)
-    println(io)
+    w_id = max(2, maximum(textwidth, ids; init = 2))
+    w_st = max(5, maximum(textwidth, states; init = 5))
+    w_k = max(4, maximum(textwidth, kinds; init = 4))
+    fitted = _fit_leading_widths(Int[w_id, w_st, w_k], Int[2, 5, 4], n)
+    w_id, w_st, w_k = fitted[1], fitted[2], fitted[3]
+    print_wrapped_row(
+        io, ["ID", "STATE", "KIND"], Int[w_id, w_st, w_k], "SCRIPT";
+        cols = n, prefix_color = :light_black, tail_color = :light_black,
+    )
     for (i, j) in enumerate(rows)
         i > 1 && println(io)
-        print(io, "  ", _q_cell(ids[i], w_id), "  ")
-        DistSSHKit.print_colored(
-            io, _q_cell(states[i], w_st),
-            isempty(_job_phase_disp(j)) ? _q_state_color(j.state) : :cyan,
-            false,
+        st_color = isempty(_job_phase_disp(j)) ? _q_state_color(j.state) : :cyan
+        print_wrapped_row(
+            io, [ids[i], states[i], kinds[i]], Int[w_id, w_st, w_k], scripts[i];
+            cols = n, cell_colors = Union{Nothing, Symbol}[nothing, st_color, nothing],
         )
-        print(io, "  ", _q_cell(kinds[i], w_k), "  ", _q_cell(scripts[i], w_sc))
-        println(io)
         quiet && continue
-        DistSSHKit.print_colored(io, "    queued   ", :light_black, false)
-        println(io, _job_queued_disp(j))
+        _print_job_detail(io, "queued", _job_queued_disp(j); cols = n)
         el = _job_elapsed_disp(j)
-        isempty(el) || begin
-            DistSSHKit.print_colored(io, "    elapsed  ", :light_black, false)
-            println(io, el)
-        end
+        isempty(el) || _print_job_detail(io, "elapsed", el; cols = n)
         wall = _job_wall_disp(j)
-        isempty(wall) || begin
-            DistSSHKit.print_colored(io, "    wall     ", :light_black, false)
-            println(io, wall)
-        end
+        isempty(wall) || _print_job_detail(io, "wall", wall; cols = n)
         hosts = _job_hosts_disp(j; verbose = verbose)
-        isempty(hosts) || begin
-            DistSSHKit.print_colored(io, "    hosts    ", :light_black, false)
-            println(io, hosts)
-        end
+        isempty(hosts) || _print_job_detail(io, "hosts", hosts; cols = n)
         proj = _job_project_disp(j)
-        isempty(proj) || begin
-            DistSSHKit.print_colored(io, "    project  ", :light_black, false)
-            println(io, proj)
-        end
+        isempty(proj) || _print_job_detail(io, "project", proj; cols = n)
         res = _job_result_disp(j; verbose = verbose)
-        isempty(res) || begin
-            DistSSHKit.print_colored(io, "    result   ", :light_black, false)
-            println(io, res)
-        end
+        isempty(res) || _print_job_detail(io, "result", res; cols = n)
         err = _job_error_disp(j)
-        isempty(err) || begin
-            DistSSHKit.print_colored(io, "    error    ", :light_black, false)
-            DistSSHKit.print_colored(io, err, :red, false)
-            println(io)
-        end
+        isempty(err) || _print_job_detail(io, "error", err; cols = n, tail_color = :red)
     end
     if hidden > 0
-        DistSSHKit.print_colored(
-            io, "  ($hidden older jobs hidden; --tail full)", :light_black, false,
+        print_wrapped_tail(
+            io, "  ", "($hidden older jobs hidden; --tail full)";
+            cols = n, prefix_color = :light_black,
         )
-        println(io)
     end
     return nothing
 end
@@ -223,23 +425,37 @@ function print_status_table(
         live::Bool = false,
         hidden::Int = 0,
         verbose::Bool = false,
+        cols::Int = 0,
     )
+    n = cols > 0 ? max(24, cols) : cli_cols(io)
     present = isfile(store)
     if !quiet
         DistSSHKit.print_help_section("Store"; io = io)
-        DistSSHKit.print_help_lines(
-            io,
-            "  path   $(_store_path_disp(store, present, qhost))",
-            "  serve  $(_serve_disp(store))",
-            "  enable $(_enable_disp())",
-            "  qhost  $(_qhost_disp(qhost))",
+        print_wrapped_tail(
+            io, "  path   ", _store_path_disp(store, present, qhost);
+            cols = n, prefix_color = :light_black,
+        )
+        print_wrapped_tail(
+            io, "  serve  ", _serve_disp(store);
+            cols = n, prefix_color = :light_black,
+        )
+        print_wrapped_tail(
+            io, "  enable ", _enable_disp();
+            cols = n, prefix_color = :light_black,
+        )
+        print_wrapped_tail(
+            io, "  qhost  ", _qhost_disp(qhost);
+            cols = n, prefix_color = :light_black,
         )
         DistSSHKit.print_help_blank(io)
     end
-    print_jobs_table(rows; io = io, present = present, quiet = quiet, hidden = hidden, verbose = verbose)
+    print_jobs_table(
+        rows;
+        io = io, present = present, quiet = quiet, hidden = hidden, verbose = verbose, cols = n,
+    )
     if live && !quiet
         DistSSHKit.print_help_blank(io)
-        DistSSHKit.print_help_lines(io, "Ctrl-C stops watch; serve stays.")
+        print_wrapped_tail(io, "  ", "Ctrl-C stops watch; serve stays."; cols = n)
     end
     return nothing
 end
@@ -382,7 +598,7 @@ function print_queue_client_usage(io::IO = stdout)
     DistSSHKit.print_help_section("Hosts"; io = io)
     DistSSHKit.print_help_lines(
         io,
-        help_verb_line("list-host", "Inventory cards (juliaup default)"),
+        help_verb_line("list-host", "Inventory (juliaup default + SSH)"),
         help_verb_line("size", "Kit size on the queue host"),
         help_verb_line("plan", "Kit plan on the queue host"),
         help_verb_line("pool", "Kit pool on the queue host"),
@@ -609,23 +825,6 @@ _serve_can_draw(io::IO)::Bool = io isa Base.TTY && !haskey(ENV, "NO_COLOR")
 
 const _SERVE_CTRLC = "Ctrl-C stops serve. A DistSSHKit job already running is not killed."
 
-function _clip_cols(s::AbstractString, cols::Int)::String
-    cols <= 0 && return String(s)
-    tw = textwidth(s)
-    tw <= cols && return String(s)
-    cols <= 1 && return "…"
-    buf = IOBuffer()
-    used = 0
-    for c in s
-        w = textwidth(c)
-        used + w > cols - 1 && break
-        print(buf, c)
-        used += w
-    end
-    print(buf, '…')
-    return String(take!(buf))
-end
-
 function _serve_live_text(
         frame::Char,
         j::Union{Nothing, Job},
@@ -644,7 +843,7 @@ function print_serve_live_line(
         ids::AbstractVector{<:AbstractString} = String[];
         io::IO = stdout,
     )
-    cols = io isa Base.TTY ? displaysize(io)[2] : 0
+    cols = cli_cols(io)
     s = _serve_live_text(frame, j, ids; cols = cols)
     print(io, '\r', s, "\e[K")
     flush(io)
