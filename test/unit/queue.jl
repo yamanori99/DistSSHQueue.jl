@@ -624,6 +624,33 @@ end
     end
 end
 
+@testset "setup logs recorded when leaf allocation throws" begin
+    mktempdir() do d
+        write(joinpath(d, "Project.toml"), "[deps]\n")
+        script = joinpath(d, "s.jl")
+        write(script, "1\n")
+        logdir = joinpath(d, ".distsshkit", "setup")
+        mkpath(logdir)
+        write(joinpath(logdir, "setup_new.log"), "instantiate failed\n")
+        write(joinpath(d, ".distsshqueue"), "not a directory\n")
+        j = DistSSHQueue.Job(;
+            kind = :drive,
+            script = script,
+            hosts = ["child:w1:1"],
+            kwargs = Dict{String, Any}("project" => String(d)),
+        )
+        fake_setup!(_, mode::Symbol) = mode === :instantiate ? (; ok = false) : (; ok = true)
+        thrown = withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+            @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
+                j, Returns(nothing); kit_setup! = fake_setup!,
+            )
+        end
+        @test occursin("setup! instantiate failed", thrown.value.msg)
+        @test DistSSHQueue.kit_output_dir(j) === nothing
+        @test any(p -> occursin("setup_new.log", String(p)), j.kwargs["setup_logs"])
+    end
+end
+
 @testset "setup failure with explicit output_dir is fetchable" begin
     mktempdir() do d
         store = joinpath(d, "jobs.toml")

@@ -582,6 +582,9 @@ function _queue_kit_setup!(j::Job, on_phase; kit_setup! = DistSSHKit.setup!)
     catch
         try
             _allocate_queue_leaf!(j)
+        catch
+        end
+        try
             _record_kit_setup_logs!(j, String(proj))
         catch
         end
