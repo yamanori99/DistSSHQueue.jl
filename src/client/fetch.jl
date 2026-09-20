@@ -1,6 +1,7 @@
 """Client `fetch <id>`: inverse of stage. Copy one finished Kit leaf onto this job tree."""
 
 const FETCH_SOURCE_SEP = '\t'
+const FETCH_EXTRA_SEP = '\x1e'
 const FETCH_READY = (:done, :failed, :cancelled)
 
 function posix_dir(path::AbstractString)::String
@@ -107,6 +108,67 @@ function default_fetch_dest_rel(j::Job)::String
     return string(j.kind, '/', stem, '_', _job_id8(j.id))
 end
 
+function _string_paths(v)::Vector{String}
+    v isa AbstractVector || return String[]
+    out = String[]
+    for x in v
+        x isa AbstractString || continue
+        s = strip(String(x))
+        isempty(s) && continue
+        push!(out, s)
+    end
+    return out
+end
+
+"""Kit `logs` / `collect_dirs` plus recorded `setup_logs`. Not the primary artifact."""
+function fetch_extra_paths(j::Job)::Vector{String}
+    seen = Set{String}()
+    out = String[]
+    function add!(xs)
+        for p in xs
+            n = posix_dir(p)
+            n in seen && continue
+            push!(seen, n)
+            push!(out, p)
+        end
+        return nothing
+    end
+    raw = kit_run_toml(j)
+    if raw isa AbstractDict
+        add!(_string_paths(get(raw, "logs", nothing)))
+        add!(_string_paths(get(raw, "collect_dirs", nothing)))
+    end
+    add!(_string_paths(get(j.kwargs, "setup_logs", nothing)))
+    primary = j.result_path
+    if primary isa AbstractString && !isempty(strip(primary))
+        pref = posix_dir(primary)
+        filter!(p -> posix_dir(p) != pref, out)
+    end
+    return out
+end
+
+function fetch_extra_specs(j::Job)::Vector{String}
+    specs = String[]
+    for p in fetch_extra_paths(j)
+        if isdir(p)
+            push!(specs, "d:" * p)
+        elseif isfile(p)
+            push!(specs, "f:" * p)
+        end
+    end
+    return specs
+end
+
+function fetch_hidden_dest(dest::AbstractString, spec::AbstractString)::Tuple{Char, String, String}
+    (length(spec) >= 2 && spec[2] == ':') || throw(ArgumentError("fetch: bad extra $(repr(spec))"))
+    kind = spec[1]
+    src = String(spec[3:end])
+    isempty(src) && throw(ArgumentError("fetch: bad extra $(repr(spec))"))
+    base = basename(posix_dir(src))
+    sub = kind == 'd' ? "collect" : "logs"
+    return kind, src, joinpath(String(dest), ".distsshkit", sub, base)
+end
+
 function fetch_dest_from_rel(dest_rel::AbstractString)::String
     parts = split(posix_dir(dest_rel), '/'; keepempty = false)
     length(parts) == 2 || throw(ArgumentError("fetch: bad dest $(repr(dest_rel))"))
@@ -132,13 +194,16 @@ function fetch_source(id::AbstractString; store::AbstractString = store_path()):
         )
     )
     require_fetch_in_known_root(j, p, store)
-    return string(
+    line = string(
         j.state, FETCH_SOURCE_SEP, p, FETCH_SOURCE_SEP, j.id,
         FETCH_SOURCE_SEP, default_fetch_dest_rel(j),
     )
+    extras = fetch_extra_specs(j)
+    isempty(extras) && return line
+    return string(line, FETCH_SOURCE_SEP, join(extras, FETCH_EXTRA_SEP))
 end
 
-"""`state`, abs-path, optional UUID, optional dest `kind/leaf` (old hosts omit later fields)."""
+"""`state`, abs-path, optional UUID, dest `kind/leaf`, optional extra specs (old hosts omit later fields)."""
 function parse_fetch_source(line::AbstractString)
     s = String(line)
     parts = split(s, FETCH_SOURCE_SEP; keepempty = false)
@@ -146,12 +211,16 @@ function parse_fetch_source(line::AbstractString)
     st = Symbol(parts[1])
     path = String(parts[2])
     isempty(path) && throw(ArgumentError("fetch: bad source line"))
-    length(parts) == 2 && return st, path, nothing, nothing
+    length(parts) == 2 && return st, path, nothing, nothing, String[]
     id = String(parts[3])
     isempty(id) && throw(ArgumentError("fetch: bad source line"))
     dest_rel = length(parts) >= 4 ? String(parts[4]) : nothing
     dest_rel !== nothing && isempty(dest_rel) && throw(ArgumentError("fetch: bad source line"))
-    return st, path, id, dest_rel
+    extras = String[]
+    if length(parts) >= 5
+        extras = String[String(x) for x in split(parts[5], FETCH_EXTRA_SEP; keepempty = false)]
+    end
+    return st, path, id, dest_rel, extras
 end
 
 """Client-only marker after `qhost:` submit. Not a Kit leaf (`go/` / `drive/`)."""
@@ -380,7 +449,7 @@ function fetch_cli(
         )
     )
     if hop === nothing
-        st, path, _, _ = parse_fetch_source(fetch_source(id))
+        st, path, _, _, _ = parse_fetch_source(fetch_source(id))
         st in FETCH_READY || throw(ArgumentError("job $(repr(id)) is $(st)"))
         println(path)
         return 0
@@ -391,7 +460,7 @@ function fetch_cli(
         )
     )
     expr = "using DistSSHQueue; print(DistSSHQueue.fetch_source($(repr(id))))"
-    st, path, parsed_id, dest_rel = parse_fetch_source(hop_print(hop, spec, expr; queue_env = qe))
+    st, path, parsed_id, dest_rel, extras = parse_fetch_source(hop_print(hop, spec, expr; queue_env = qe))
     st in FETCH_READY || throw(ArgumentError("job $(repr(id)) is $(st)"))
     job_id = something(parsed_id, id)
     qroot = dirname(dirname(posix_dir(path)))
@@ -403,6 +472,14 @@ function fetch_cli(
         return 0
     end
     rsync_from_qhost!(hop, path, out; progress = progress)
+    for spec in extras
+        kind, src, hid = fetch_hidden_dest(out, spec)
+        if kind == 'd'
+            rsync_from_qhost!(hop, src, hid; progress = progress)
+        else
+            rsync_from_qhost_file!(hop, src, hid; progress = progress)
+        end
+    end
     write_fetch_marker!(out, job_id)
     println(out)
     return 0

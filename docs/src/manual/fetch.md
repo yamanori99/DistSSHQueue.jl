@@ -29,6 +29,8 @@ has files and no matching `.distsshqueue-fetch-id` is refused without
 dest-only files. The marker stores the canonical job UUID (an 8-character
 prefix fetch still matches). `qhost:` fetch prints `rsync ← HOST:…`
 on stderr when the copy starts (`DISTSSHKIT_QUIET` hides it).
+`qhost:` fetch also copies Kit `logs` / `collect_dirs` and recorded
+setup logs into dest `.distsshkit/logs/` and `.distsshkit/collect/`.
 
 On the queue host (omit `qhost:`), fetch prints the Kit source path
 and does not copy. That path is under the job project (or still under

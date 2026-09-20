@@ -74,23 +74,25 @@ end
         notify(hold)
         _wait_fetch_state(q2, running, :done)
         line = DistSSHQueue.fetch_source(running; store = store)
-        st, path, src_id, dest_rel = DistSSHQueue.parse_fetch_source(line)
+        st, path, src_id, dest_rel, extras = DistSSHQueue.parse_fetch_source(line)
         @test st === :done
         @test path == leaf[]
         @test src_id == running
         @test dest_rel == "go/S_" * first(running, 8)
+        @test extras == String[]
         DistSSHQueue.require_fetchable_leaf(running, path)
         custom = joinpath(proj, "out")
         @test_throws ArgumentError DistSSHQueue.require_fetchable_leaf(running, custom)
         pref = first(running, 8)
         @test DistSSHQueue.fetch_source(pref; store = store) == line
-        st2, path2, old_id, dest2 = DistSSHQueue.parse_fetch_source(
+        st2, path2, old_id, dest2, extras2 = DistSSHQueue.parse_fetch_source(
             string(:done, '\t', path),
         )
         @test st2 === :done
         @test path2 == path
         @test old_id === nothing
         @test dest2 === nothing
+        @test extras2 == String[]
         stray_store = joinpath(d, "stray.toml")
         stray_id = Ref{String}()
         q3 = Queue(; store = stray_store, runner = _ -> "/tmp/go/S_" * first(stray_id[], 8))
@@ -257,5 +259,53 @@ end
             @test got == DistSSHKit.canonical_local_path(joinpath(d, "outside"))
             @test !startswith(got, DistSSHKit.canonical_local_path(d) * "/.distsshqueue")
         end
+    end
+end
+
+@testset "fetch extras from run.toml and setup_logs" begin
+    mktempdir() do d
+        art = joinpath(d, ".distsshkit", "go", "S_aaaaaaaa")
+        logf = joinpath(d, ".distsshkit", "runs", "go", "r", "kit.out")
+        cold = joinpath(d, "more")
+        setup = joinpath(d, ".distsshkit", "setup", "setup.log")
+        mkpath(dirname(logf))
+        mkpath(cold)
+        mkpath(dirname(setup))
+        mkpath(art)
+        write(logf, "log\n")
+        write(joinpath(cold, "x.tsv"), "1\n")
+        write(setup, "fail\n")
+        j = DistSSHQueue.Job(;
+            kind = :go,
+            script = "S.jl",
+            hosts = ["parent:1"],
+            result_path = art,
+            kwargs = Dict{String, Any}(
+                "run_toml" => Dict{String, Any}(
+                    "output_dir" => art,
+                    "logs" => [logf],
+                    "collect_dirs" => [cold],
+                ),
+                "setup_logs" => [setup],
+            ),
+        )
+        extras = DistSSHQueue.fetch_extra_paths(j)
+        @test logf in extras
+        @test cold in extras
+        @test setup in extras
+        @test art ∉ extras
+        specs = DistSSHQueue.fetch_extra_specs(j)
+        @test "f:" * logf in specs
+        @test "d:" * cold in specs
+        @test "f:" * setup in specs
+        _, _, hid = DistSSHQueue.fetch_hidden_dest("/dest", "f:" * logf)
+        @test endswith(replace(hid, '\\' => '/'), "/.distsshkit/logs/kit.out")
+        st, path, id, dest, got = DistSSHQueue.parse_fetch_source(
+            string(:done, '\t', art, '\t', "aaaaaaaa-1111-4000-8000-000000000001", '\t', "go/S_aaaaaaaa", '\t', join(specs, DistSSHQueue.FETCH_EXTRA_SEP)),
+        )
+        @test st === :done
+        @test path == art
+        @test dest == "go/S_aaaaaaaa"
+        @test got == specs
     end
 end
