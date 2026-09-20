@@ -72,6 +72,10 @@ length(HOSTS) >= 1 || error("no hosts in $HOSTS_FILE")
 # DistSSHKit demos reject a bare number (`parent:N`). Same flags as Kit E2E.
 const GO_N = ["--n", "64"]
 const DRIVE_N = ["--n", "3"]
+# `drive_until_terminal!` poll budget. `drive` (`--n 3`) stays `:running`
+# past 2 min on macos-15-intel Colima (E2E weekly after 0.6.0).
+const GO_WAIT_TRIES = 600
+const DRIVE_WAIT_TRIES = 1800
 
 const SSH_ENV = Dict(
     "DISTSSHKIT_YES" => "1",
@@ -107,7 +111,7 @@ function stage_kit_demos!(proj::AbstractString)
 end
 
 # Poll until `id` is terminal. Does not start a later queued job once `id` is done.
-function drive_until_terminal!(q, id; tries = 600, sleep_s = 0.2)
+function drive_until_terminal!(q, id; tries = GO_WAIT_TRIES, sleep_s = 0.2)
     terminal = (:done, :failed, :cancelled)
     for _ in 1:tries
         st = job(q, id).state
@@ -451,7 +455,8 @@ end
                         @test job(q, id).kind === kind
                         q = Queue(; store = case_store)
                         load!(q)
-                        st = drive_until_terminal!(q, id)
+                        wait_tries = kind === :drive ? DRIVE_WAIT_TRIES : GO_WAIT_TRIES
+                        st = drive_until_terminal!(q, id; tries = wait_tries)
                         row = job(q, id)
                         st === :done || @warn "job not done" label state = st error = row.error
                         @test st === :done
