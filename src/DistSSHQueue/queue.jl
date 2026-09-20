@@ -549,6 +549,15 @@ function _record_kit_setup_logs!(j::Job, proj::AbstractString)
     return nothing
 end
 
+"""Copy `setup_logs` from the runner snapshot onto the persisted row."""
+function copy_setup_logs!(j::Job, snap)
+    snap isa Job || return nothing
+    logs = get(snap.kwargs, "setup_logs", nothing)
+    logs isa AbstractVector || return nothing
+    j.kwargs["setup_logs"] = String[String(p) for p in logs]
+    return nothing
+end
+
 function _queue_kit_setup!(j::Job, on_phase; kit_setup! = DistSSHKit.setup!)
     _queue_env_on(NO_KIT_SETUP_ENV) && return nothing
     proj = get(j.kwargs, "project", nothing)
@@ -796,7 +805,14 @@ function _set_running_kit_meta!(
     end
 end
 
-function _finish!(q::Queue, id::AbstractString, state::Symbol, err; result_path = nothing)
+function _finish!(
+        q::Queue,
+        id::AbstractString,
+        state::Symbol,
+        err;
+        result_path = nothing,
+        snap = nothing,
+    )
     return _with_store(q) do
         lock(q.lock) do
             reload_keep_live!(q)
@@ -818,6 +834,7 @@ function _finish!(q::Queue, id::AbstractString, state::Symbol, err; result_path 
             if result_path !== nothing
                 j.result_path = String(result_path)
             end
+            copy_setup_logs!(j, snap)
             capture_kit_run_toml!(j)
             q.live_id == id && (q.live_id = nothing)
             _persist!(q)
@@ -862,7 +879,7 @@ function _start!(q::Queue, j::Job)
                 od = get(snap.kwargs, "output_dir", nothing)
                 path = od === nothing ? nothing : String(od)
             end
-            _finish!(q, id, :done, nothing; result_path = path)
+            _finish!(q, id, :done, nothing; result_path = path, snap = snap)
         catch e
             _finish!(
                 q,
@@ -870,6 +887,7 @@ function _start!(q::Queue, j::Job)
                 :failed,
                 sprint(showerror, e);
                 result_path = kit_output_dir(snap),
+                snap = snap,
             )
         end
     end
