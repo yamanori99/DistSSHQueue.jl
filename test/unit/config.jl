@@ -500,6 +500,21 @@ end
             code_jh, _, err_jh = run_setup(["--juliaup"])
             @test code_jh == 1
             @test occursin("add-host", err_jh)
+            code_jt, _, err_jt = run_setup(["--juliaup", "parent"])
+            @test code_jt == 1
+            @test occursin("does not take host tokens", err_jt)
+            code_uf, _, err_uf = run_setup(["--juliaup-update", "--force"])
+            @test code_uf == 1
+            @test occursin("cannot combine", err_uf)
+            code_uh, _, err_uh = run_setup(["--juliaup-update"])
+            @test code_uh == 1
+            @test occursin("add-host", err_uh)
+            code_ut, _, err_ut = run_setup(["--juliaup-update", "child:mini-tak-ts"])
+            @test code_ut == 1
+            @test occursin("does not take host tokens", err_ut)
+            code_both, _, err_both = run_setup(["--juliaup", "--juliaup-update"])
+            @test code_both == 1
+            @test occursin("cannot combine", err_both)
             code4, _, err4 = run_setup(["--service"])
             @test code4 == 1
             @test occursin("enable", err4)

@@ -5,14 +5,18 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
-- CLI tables and notes (`list-host`, `status` / Jobs cards, `add-host`
-  `!` notes) wrap and clip to the TTY width (72 columns when stdout is
-  not a TTY). `serve` live line clips to the same width.
-- `add-host child:` notes sit under `list-host` (`!` plus indented body).
+`setup --juliaup` no longer takes `parent` / `child:NAME`. It aligns
+config `hosts` only (`add-host` first).
+
+- `setup --juliaup-update` runs `juliaup update` on those hosts and
+  leaves each default unchanged.
+- CLI tables and notes (`list-host`, `status` Jobs cards, `add-host`
+  `!` notes) wrap to the TTY width (72 columns when stdout is not a
+  TTY). The `serve` live line uses the same width.
+- `add-host child:` notes sit under `list-host` (`!` plus an indented body).
 - `list-host` is one row per host: NAME / TOKEN / MAX / JULIA / SSH.
-  Child SSH is `user@hostname` (`:port` only when not 22). No extra
-  `host` / `hostname` / `user` / `port` card. NAME / TOKEN clip with `…`
-  and SSH wraps.
+  Child SSH is `user@hostname` (`:port` only when not 22). NAME / TOKEN
+  clip with `…` and SSH wraps.
 
 ## 0.6.0
 

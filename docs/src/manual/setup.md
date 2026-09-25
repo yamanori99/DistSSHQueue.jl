@@ -4,7 +4,8 @@ Write config, or wipe Queue state on this host.
 
 ```bash
 julia -m DistSSHQueue setup [--force]
-julia -m DistSSHQueue setup --juliaup [parent] [child:NAME...]
+julia -m DistSSHQueue setup --juliaup
+julia -m DistSSHQueue setup --juliaup-update
 julia -m DistSSHQueue teardown -y
 ```
 
@@ -22,8 +23,9 @@ no-op unless `--force`. It writes `config.toml` only, not
 
 | Flag | Meaning |
 | --- | --- |
-| `--force` | `setup`: rewrite `config.toml` (not with `--juliaup`) |
-| `--juliaup` | Align juliaup on config hosts or given tokens |
+| `--force` | `setup`: rewrite `config.toml` (not with juliaup) |
+| `--juliaup` | Set config hosts to this major.minor |
+| `--juliaup-update` | Patch config hosts; leave default |
 | `--config PATH` | `setup` / `teardown`: config path (`DISTSSHQUEUE_CONFIG`) |
 | `-y` / `--yes` | `teardown`: confirm (`DISTSSHKIT_YES`; same values as DistSSHKit) |
 | `--write-only` | `teardown`: do not stop `serve` or unload the OS unit |

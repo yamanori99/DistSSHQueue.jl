@@ -25,6 +25,7 @@ function setup_main(args::Vector{String})::Cint
     config = config_path()
     force = false
     juliaup = false
+    juliaup_update = false
     hosts = String[]
     i = 1
     while i <= length(args)
@@ -41,6 +42,9 @@ function setup_main(args::Vector{String})::Cint
         elseif a == "--juliaup"
             juliaup = true
             i += 1
+        elseif a == "--juliaup-update"
+            juliaup_update = true
+            i += 1
         elseif a == "--service"
             throw(ArgumentError("setup --service is gone; run: julia -m DistSSHQueue enable"))
         elseif a == "--write-only"
@@ -52,23 +56,28 @@ function setup_main(args::Vector{String})::Cint
             i += 1
         end
     end
-    if juliaup
-        force && throw(ArgumentError("setup --juliaup cannot combine with --force"))
+    if juliaup || juliaup_update
+        juliaup && juliaup_update && throw(
+            ArgumentError("setup --juliaup cannot combine with --juliaup-update"),
+        )
+        flag = juliaup ? "--juliaup" : "--juliaup-update"
+        force && throw(ArgumentError("setup $flag cannot combine with --force"))
+        isempty(hosts) || throw(
+            ArgumentError("setup $flag does not take host tokens; targets are config hosts"),
+        )
         cfg = load_config(; path = config)
         apply_config_env!(cfg)
-        names = if isempty(hosts)
-            allow = config_host_names(cfg)
-            (allow === nothing || isempty(allow)) && throw(
-                ArgumentError(
-                    "setup --juliaup needs hosts on the command line or add-host first",
-                )
-            )
-            sorted_kit_ssh_names(allow)
-        else
-            String[kit_ssh_name(h) for h in hosts]
-        end
+        allow = config_host_names(cfg)
+        (allow === nothing || isempty(allow)) && throw(
+            ArgumentError("setup $flag needs add-host first"),
+        )
+        names = sorted_kit_ssh_names(allow)
         confirm = !_queue_env_on("DISTSSHKIT_YES")
-        result = DistSSHKit.juliaup_align_remotes(names; confirm = confirm)
+        result = if juliaup
+            DistSSHKit.juliaup_align_remotes(names; confirm = confirm)
+        else
+            DistSSHKit.juliaup_update_remotes(names; confirm = confirm)
+        end
         return result.failed > 0 ? Cint(1) : Cint(0)
     end
     isempty(hosts) || throw(ArgumentError("unknown setup option: $(hosts[1])"))
