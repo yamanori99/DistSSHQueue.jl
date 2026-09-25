@@ -1098,7 +1098,10 @@ end
                 @test occursin("add-host", out_topic2)
                 setup_h = sprint(DistSSHQueue.print_setup_usage)
                 @test occursin("--force", setup_h)
+                @test occursin("--juliaup-update", setup_h)
                 @test occursin("--juliaup", setup_h)
+                @test occursin("not with juliaup", setup_h)
+                @test !occursin("[child:NAME", setup_h)
                 @test occursin("--help / -h", setup_h)
                 @test !occursin("Enqueue DistSSHKit", setup_h)
                 code_st_h, out_st_h, _ = capture_stdio() do

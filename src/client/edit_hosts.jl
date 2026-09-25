@@ -45,7 +45,7 @@ function warn_julia_major_minor(tokens; io::IO = stdout)
         _print_cli_note(
             io,
             "$(name) Julia $(mm[1]).$(mm[2]) vs this process $(local_mm[1]).$(local_mm[2])",
-            "julia -m DistSSHQueue setup --juliaup $(name)",
+            "julia -m DistSSHQueue setup --juliaup",
         )
     end
     return nothing

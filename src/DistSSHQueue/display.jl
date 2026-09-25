@@ -756,14 +756,16 @@ function print_setup_usage(io::IO = stdout)
     DistSSHKit.print_help_lines(
         io,
         "  julia -m DistSSHQueue setup [--force]",
-        "  julia -m DistSSHQueue setup --juliaup [parent] [child:NAME...]",
+        "  julia -m DistSSHQueue setup --juliaup",
+        "  julia -m DistSSHQueue setup --juliaup-update",
     )
     DistSSHKit.print_help_blank(io)
     DistSSHKit.print_help_section("Flags"; io = io)
     DistSSHKit.print_help_lines(
         io,
-        help_verb_line("--force", "Rewrite config.toml (not with --juliaup)"),
-        help_verb_line("--juliaup", "Align Julia on Kit hosts"),
+        help_verb_line("--force", "Rewrite config.toml (not with juliaup)"),
+        help_verb_line("--juliaup", "Set config hosts to this major.minor"),
+        help_verb_line("--juliaup-update", "Patch config hosts; leave default"),
         help_verb_line("--config PATH", "Config file"),
         help_verb_line("--help / -h", "This page"),
     )

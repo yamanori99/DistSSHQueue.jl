@@ -58,7 +58,7 @@ failing `:check`. Leave
 on the queue host.
 [kit Prepare](https://yamanori99.github.io/DistSSHKit.jl/stable/tutorial/prepare/).
 To align Julia versions, Queue `setup --juliaup` on the queue host
-(`parent` / `child:NAME`; see [Requirements](@ref)).
+(config `hosts` only; see [Requirements](@ref)).
 
 ## Dedicated env (optional)
 

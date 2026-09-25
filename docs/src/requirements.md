@@ -158,20 +158,18 @@ julia -m DistSSHKit setup --check child:USER@HOST
 ### Align Julia with juliaup
 
 `julia -m DistSSHQueue setup --juliaup` wraps DistSSHKit
-`juliaup_align_remotes` (same `parent` / `child:NAME` tokens as go /
-ride / drive). Do not combine with `--force`. That changes each
-target's **juliaup default** only — it does not change a Julia
-process that is already running.
+`juliaup_align_remotes` on config `hosts` (`list-host`). It does not
+take host tokens. An empty table fails with `add-host first`. Do not
+combine with `--force`. That changes each target's **juliaup default**
+only — it does not change a Julia process that is already running.
 
 Prefer the **queue host**. Channel = this command's major.minor.
 Typical labs have passwordless SSH from the queue host to workers,
 not from the client:
 
 ```bash
-# On the queue host: parent = this box; remotes = child:NAME
-julia -m DistSSHQueue setup --juliaup parent child:host1
-# or omit tokens after add-host:
-# julia -m DistSSHQueue setup --juliaup
+# On the queue host, after add-host (parent is included only if listed):
+julia -m DistSSHQueue setup --juliaup
 
 # From a client: only hosts you can SSH to from this machine.
 # parent here is this client, not the queue host.
@@ -183,6 +181,17 @@ again. If you use `enable`, run `enable` again so the OS unit picks up
 the new Julia path, then restart serve. Running jobs keep their old
 binary; workers usually pick the new default on the next Kit job.
 Details: [kit Requirements](https://yamanori99.github.io/DistSSHKit.jl/stable/requirements/).
+
+### Update installed channels
+
+`julia -m DistSSHQueue setup --juliaup-update` wraps DistSSHKit
+`juliaup_update_remotes`. Uses config `hosts`, same as `--juliaup`.
+Do not combine with `--force` or `--juliaup`. It runs `juliaup update`
+on each target and leaves the host default unchanged. Success line stays
+`✓ juliaup update`.
+
+A running `serve` keeps its current Julia until you restart it, same as
+after `--juliaup`.
 
 ## [Where files live](@id where-files-live)
 
