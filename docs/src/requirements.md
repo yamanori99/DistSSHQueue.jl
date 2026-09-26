@@ -93,7 +93,16 @@ Queue must be loadable from the job env (`julia --project=.`).
 - Passwordless SSH from the client to the **queue host** (`qhost:NAME`)
 - `rsync` on the client (`qhost:` submit and `fetch`)
 - Queue-host Julia: auto, or `--remote-julia` /
-  `JULIA_DISTRIBUTED_EXE` (same detection as DistSSHKit)
+  `JULIA_DISTRIBUTED_EXE` (same detection as DistSSHKit). The client's
+  Julia major.minor does not have to match.
+- DistSSHQueue on the queue host may differ while this package is 0.x.
+  `qhost:` still runs. A mismatch prints a `!` note on stderr first
+  (`DISTSSHKIT_QUIET` hides it):
+
+```text
+  ! queue host DistSSHQueue 0.7.0 vs this process 0.6.0
+    DistSSHKit 0.8.0
+```
 
 `qhost:` submit copies the client job tree onto the queue host (and
 excludes `.gitignore`, `.git/`, `.distsshkit/`, `.distsshqueue/`), then runs Queue as the **queue-host user**.

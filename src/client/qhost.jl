@@ -286,6 +286,67 @@ function remote_dispatch(
     return Cint(code)
 end
 
+"""`DistSSHQueue X` from a `--version` line, or `nothing`."""
+function queue_version_from_line(line::AbstractString)::Union{Nothing, VersionNumber}
+    m = match(r"DistSSHQueue\s+(\S+)", strip(String(line)))
+    m === nothing && return nothing
+    cap = m.captures[1]
+    cap isa AbstractString || return nothing
+    return tryparse(VersionNumber, String(cap))
+end
+
+"""Note when the queue host's DistSSHQueue differs. `nothing` if same or unreadable.
+
+Does not refuse. `kit` is the remote DistSSHKit version when the line has one.
+"""
+function queue_version_skew_warning(
+        remote_line::AbstractString;
+        local_ver::Union{Nothing, VersionNumber} = pkgversion(DistSSHQueue),
+    )::Union{Nothing, @NamedTuple{head::String, kit::Union{Nothing, String}}}
+    local_ver === nothing && return nothing
+    remote = queue_version_from_line(remote_line)
+    remote === nothing && return nothing
+    remote == local_ver && return nothing
+    kit_m = match(r"\(DistSSHKit\s+([^)]+)\)", remote_line)
+    kit = nothing
+    if kit_m !== nothing
+        cap = kit_m.captures[1]
+        cap isa AbstractString && (kit = String(cap))
+    end
+    head = "queue host DistSSHQueue $remote vs this process $local_ver"
+    return (; head, kit)
+end
+
+"""One SSH `--version` before a hop. Failure stays silent so the verb still runs."""
+function warn_remote_queue_version!(
+        dest::AbstractString,
+        spec::AbstractString,
+        queue_env::AbstractString,
+    )
+    _queue_env_on("DISTSSHKIT_QUIET") && return nothing
+    line = try
+        mktemp() do path, io
+            redirect_stdout(io) do
+                redirect_stderr(devnull) do
+                    remote_dispatch(dest, spec, "--version", String[]; queue_env = queue_env)
+                end
+            end
+            flush(io)
+            read(path, String)
+        end
+    catch
+        return nothing
+    end
+    note = queue_version_skew_warning(line)
+    note === nothing && return nothing
+    if note.kit === nothing
+        _print_cli_note(stderr, note.head)
+    else
+        _print_cli_note(stderr, note.head, "DistSSHKit $(note.kit)")
+    end
+    return nothing
+end
+
 """If a queue host is set, ssh `sub` + `rest` and return the exit code; else `nothing`.
 
 `label_qhost` sets `DISTSSHQUEUE_QHOST` to the client token (not a CLI flag;
@@ -310,6 +371,7 @@ function maybe_remote(
     dest === nothing && return nothing
     disp = label_qhost ? dest : nothing
     q = coalesce_queue_env(queue_env, qenv)
+    warn_remote_queue_version!(dest, spec, q)
     extra = Dict{String, String}()
     hop = payload
     if should_stage(sub, payload)

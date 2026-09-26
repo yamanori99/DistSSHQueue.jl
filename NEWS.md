@@ -5,6 +5,10 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
+- `qhost:` prints a `!` note on stderr when the queue host's
+  DistSSHQueue version differs from this process. The command still
+  runs. `DISTSSHKIT_QUIET` hides it.
+
 `setup --juliaup` no longer takes `parent` / `child:NAME`. It aligns
 config `hosts` only (`add-host` first).
 
