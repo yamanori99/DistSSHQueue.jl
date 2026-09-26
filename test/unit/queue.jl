@@ -2274,6 +2274,27 @@ end
     end
 end
 
+@testset "queue version skew is a warning, not a refusal" begin
+    same = "DistSSHQueue $(pkgversion(DistSSHQueue)) (DistSSHKit 0.8.0)"
+    @test DistSSHQueue.queue_version_skew_warning(same) === nothing
+    @test DistSSHQueue.queue_version_from_line("noise") === nothing
+    msg = DistSSHQueue.queue_version_skew_warning(
+        "DistSSHQueue 0.0.1 (DistSSHKit 0.8.1)";
+        local_ver = v"0.6.0",
+    )
+    if msg === nothing
+        @test false
+    else
+        @test occursin("0.0.1", msg.head)
+        @test occursin("0.6.0", msg.head)
+        @test msg.kit == "0.8.1"
+    end
+    @test DistSSHQueue.queue_version_skew_warning(
+        "DistSSHQueue 0.6.0";
+        local_ver = v"0.6.0",
+    ) === nothing
+end
+
 @testset "enable refuses --project; --queue-env is the Queue env" begin
     code, _, err = capture_stdio() do
         DistSSHQueue.main(["enable", "--write-only", "--project", "/opt/Queue.jl"])
