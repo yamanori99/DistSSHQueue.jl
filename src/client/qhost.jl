@@ -327,7 +327,9 @@ function warn_remote_queue_version!(
     line = try
         mktemp() do path, io
             redirect_stdout(io) do
-                remote_dispatch(dest, spec, "--version", String[]; queue_env = queue_env)
+                redirect_stderr(devnull) do
+                    remote_dispatch(dest, spec, "--version", String[]; queue_env = queue_env)
+                end
             end
             flush(io)
             read(path, String)
@@ -338,9 +340,9 @@ function warn_remote_queue_version!(
     note = queue_version_skew_warning(line)
     note === nothing && return nothing
     if note.kit === nothing
-        _print_cli_note(stdout, note.head)
+        _print_cli_note(stderr, note.head)
     else
-        _print_cli_note(stdout, note.head, "DistSSHKit $(note.kit)")
+        _print_cli_note(stderr, note.head, "DistSSHKit $(note.kit)")
     end
     return nothing
 end

@@ -96,7 +96,7 @@ Queue must be loadable from the job env (`julia --project=.`).
   `JULIA_DISTRIBUTED_EXE` (same detection as DistSSHKit). The client's
   Julia major.minor does not have to match.
 - DistSSHQueue on the queue host may differ while this package is 0.x.
-  `qhost:` still runs. A mismatch prints a `!` note first
+  `qhost:` still runs. A mismatch prints a `!` note on stderr first
   (`DISTSSHKIT_QUIET` hides it):
 
 ```text
