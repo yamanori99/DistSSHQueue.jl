@@ -101,8 +101,8 @@ Exactly three pins, in [`.github/julia-slots.env`](.github/julia-slots.env). Do 
 
 | Slot | Role | Required |
 | --- | --- | --- |
-| **min** | `Project.toml` julia floor. Pkg.test (no coverage), Aqua, JETLS, Documenter | yes |
-| **max** | Newest tagged or prerelease (`versions.json`). Pkg.test, Aqua, **main** / weekly / `cut` E2E, GHCR worker. Codecov `pkgtest` on **main push** only | yes |
+| **min** | `Project.toml` julia floor. Pkg.test (no coverage), Aqua, JETLS | yes |
+| **max** | Newest tagged or prerelease (`versions.json`). Pkg.test, Aqua, Documenter, draw, **main** / weekly / `cut` E2E, GHCR worker. Codecov `pkgtest` on **main push** only | yes |
 | **tip** | Next-minor nightly. Pkg.test, Aqua. `continue-on-error` | no |
 
 JETLS is min plus `JULIA_SLOT_JETLS_MAX` (job name still `JETLS - max`). That pin lags when `max` / `tip` move past what JETLS lists (today 1.12.2–1.13). Raise it only after JETLS supports that runtime. No JETLS **tip**.
@@ -120,7 +120,7 @@ These run as jobs of the `Test` workflow
 `Pkg.test` max, JETLS max, Aqua max, Gitleaks
 (also rejects `< 0.0.1` in `Project.toml`). `Pkg.test` / JETLS /
 Aqua **min** stay on **main**, **CI weekly**, and `cut` (ci-cut when the
-label is added later), not ordinary PRs. Documenter min is
+label is added later), not ordinary PRs. Documenter max is
 [`.github/workflows/Documentation.yml`](.github/workflows/Documentation.yml).
 `Assets` (`draw SVG`) runs if `docs/src/assets/` or that workflow
 changed. Linux E2E (max) uses the same **path filter** as **main** push
@@ -172,7 +172,7 @@ Required to merge (ruleset `main` uses these names). Tip jobs are allow-failure.
 - `JETLS - max - ubuntu-latest`
 - `Aqua - min - ubuntu-latest`
 - `Aqua - max - ubuntu-latest`
-- `Documenter - min - ubuntu-latest`
+- `Documenter - max - ubuntu-latest`
 - `Gitleaks`
 - `ubuntu-latest → ubuntu-24.04`
 - `PR label`
