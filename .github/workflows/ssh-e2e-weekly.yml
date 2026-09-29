@@ -228,14 +228,19 @@ jobs:
             fi
           fi
           echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
+          # shellcheck disable=SC1091
+          source "$src/.github/julia-slots.env"
           if [[ -f "$cache/julia.tgz" ]]; then
             tar -xzf "$cache/julia.tgz" -C "$HOME"
           else
             curl --retry 5 --retry-delay 5 --retry-connrefused --connect-timeout 10 \
-              -fsSL https://install.julialang.org | sh -s -- --yes --default-channel 1.13
-            # Channel must match JULIA_SLOT_MAX (E2E pair) in .github/julia-slots.env
+              -fsSL https://install.julialang.org | sh -s -- --yes --default-channel "$JULIA_SLOT_MAX"
           fi
           export PATH="$HOME/.juliaup/bin:$PATH"
+          # Current patch before the suite starts. A later juliaup version-db
+          # check must not delete the install this job is about to run.
+          juliaup update "$JULIA_SLOT_MAX"
+          juliaup default "$JULIA_SLOT_MAX"
           cd "$dest"
           ./testenv/docker-ssh/scripts/up.sh --e2e
           if [[ -d "$HOME/.julia" ]]; then
@@ -271,17 +276,17 @@ jobs:
           CUT_PUSH: ${{ github.event_name == 'push' }}
         run: |
           title='E2E weekly failed'
-          gh label create ci --force --description "CI tracking" --color "000000" --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+          gh label create alert --force --description "Auto: scheduled check failed (E2E weekly, CI weekly, Runic)" --color "ff4d00" --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
           gh label create cut-hold --force --description "Postpone register until weekly Linux E2E is green" --color "BFD4F2" --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
-          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label ci --search "in:title $title" --json number --jq '.[0].number // empty')"
+          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label alert --search "in:title $title" --json number --jq '.[0].number // empty')"
           if [ "$FAILED" = "true" ]; then
             body="Latest run: $RUN_URL
 
           Not a PR check. Re-run **E2E weekly** after a fix. A red **Linux** job after a \`cut\` merge adds \`cut-hold\` (do not register). Intel / WSL red does not."
-            labels=ci
+            labels=alert
             hold=false
             if [ "$CUT_PUSH" = "true" ] && [ "$LINUX_FAILED" = "true" ]; then
-              labels=ci,cut-hold
+              labels=alert,cut-hold
               hold=true
             fi
             if [ -n "$existing" ]; then
@@ -296,7 +301,7 @@ jobs:
             fi
           else
             for t in 'E2E weekly failed' 'E2E daily failed'; do
-              n="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label ci --search "in:title $t" --json number --jq '.[0].number // empty')"
+              n="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label alert --search "in:title $t" --json number --jq '.[0].number // empty')"
               if [ -n "$n" ]; then
                 gh issue edit "$n" --repo "$GITHUB_REPOSITORY" --remove-label cut-hold || true
                 gh issue close "$n" --repo "$GITHUB_REPOSITORY" --reason completed --comment "Latest run succeeded: $RUN_URL"

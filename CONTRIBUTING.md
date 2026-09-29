@@ -110,7 +110,7 @@ JETLS is min plus `JULIA_SLOT_JETLS_MAX` (job name still `JETLS - max`). That pi
 When a new RC lands, change `JULIA_SLOT_MAX` only (`~x.y.0-0` so
 setup-julia includes prereleases). When that minor GAs, drop the tilde
 and pin `x.y`. If that RC is a new **major.minor**, bump the worker
-Dockerfile / WSL `--default-channel` in the same PR (E2E pair). When
+Dockerfile `--default-channel` in the same PR (E2E pair). WSL weekly reads `JULIA_SLOT_MAX` from that file, then `juliaup update` and `juliaup default` before the suite. When
 bumping compat, raise `JULIA_SLOT_MIN` only.
 
 ### PR CI
@@ -134,7 +134,7 @@ and `cut` (ci-cut), not ordinary PRs.
 workflow ([`.github/workflows/runic.yml`](.github/workflows/runic.yml)).
 It is not a substitute for `Pkg.test`. Soft on PRs (not in the
 required-name list). Monthly cron on `main` opens Issue
-`Runic monthly failed` (`ci`) when `--check` is red.
+`Runic monthly failed` (`alert`) when `--check` is red.
 
 These files **alone** skip the heavy jobs (UI: skipping; Pkg.test /
 JETLS / Aqua do not start). Documenter still runs when `docs/**`, README,
@@ -178,8 +178,8 @@ Required to merge (ruleset `main` uses these names). Tip jobs are allow-failure.
 | When | Workflow | What |
 | --- | --- | --- |
 | Sunday 04:00 JST, Run workflow, or a `cut` squash to `main` | `E2E weekly` | `ubuntu-latest`, `macos-15-intel`, WSL2 → `ubuntu-24.04`. Linux job uploads E2E Codecov. Not a PR check. Failure opens (or comments on) Issue `E2E weekly failed`; a later all-green run closes it. A red **Linux** job after a `cut` merge adds `cut-hold`. Intel / WSL red does not. Compat-only `Project.toml` edits start the workflow but skip the matrix. |
-| Sunday 10:00 JST, or Run workflow | `CI weekly` | Same `Pkg.test` / JETLS / Aqua slots as a PR (no coverage). Not a PR check. Catches max / Aqua / JETLS `@release` drift when nothing merged that week. Failure of min/max jobs opens Issue `CI weekly failed` (`ci`); tip is omitted from that notify. `cache-gc` keeps one Actions cache per restore-key prefix. |
-| 1st 10:00 JST, or Run workflow | `Runic` | `runic --check` on tracked `.jl` (`version: '1'`). Not a required PR check. Catches Runic minor drift when nothing formatted that month. Failure opens Issue `Runic monthly failed` (`ci`). |
+| Sunday 10:00 JST, or Run workflow | `CI weekly` | Same `Pkg.test` / JETLS / Aqua slots as a PR (no coverage). Not a PR check. Catches max / Aqua / JETLS `@release` drift when nothing merged that week. Failure of min/max jobs opens Issue `CI weekly failed` (`alert`); tip is omitted from that notify. `cache-gc` keeps one Actions cache per restore-key prefix. |
+| 1st 10:00 JST, or Run workflow | `Runic` | `runic --check` on tracked `.jl` (`version: '1'`). Not a required PR check. Catches Runic minor drift when nothing formatted that month. Failure opens Issue `Runic monthly failed` (`alert`). |
 
 ## Pull requests
 
@@ -311,7 +311,8 @@ Colors match DistSSHKit: type is "what", area is "where". Do not give each `area
 | Type | red / green / yellow / dark red / purple / mint | `bug` `enhancement` `chore` `breaking` `cut` `dependencies` |
 | Path area | teal `#bfdadc` | `area:client` `area:qhost` `area:queue` `area:project-docs` |
 | Documenter | blue `#0075ca` | `area:docs` (and leftover `docs`) |
-| CI | black `#000000` | `area:ci` (and `ci` on weekly failure issues) |
+| CI | black `#000000` | `area:ci` |
+| Scheduled failure | orange `#ff4d00` | `alert` on bot Issues (`E2E weekly failed`, `CI weekly failed`, `Runic monthly failed`) |
 | Hold | pale blue `#BFD4F2` | `cut-hold` on Issue `E2E weekly failed` after a red weekly Linux job |
 | Test harness | pale blue `#c5def5` | `area:test` |
 | Horizon | orange `#fdba74` / violet `#c4b5fd` / slate `#94a3b8` | `when:current` `when:next` `when:later` |
