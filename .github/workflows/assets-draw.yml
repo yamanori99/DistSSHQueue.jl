@@ -34,7 +34,7 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/julia-slot
         with:
-          slot: min
+          slot: max
       - name: Instantiate pinned Luxor
         run: julia --project=docs/src/assets/logo -e 'using Pkg; Pkg.instantiate()'
       - name: Draw SVG derivatives
