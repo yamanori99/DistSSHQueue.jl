@@ -44,4 +44,4 @@ if [[ -z "${JULIA_APPS_JULIA_CMD:-}" ]]; then
     export JULIA_APPS_JULIA_CMD="$(command -v julia)"
 fi
 
-exec jetls --threads=auto -- check --exit-severity=hint "${jetls_args[@]}" "${files[@]}"
+exec jetls --threads=auto -- check --exit-severity=hint --show-severity=hint "${jetls_args[@]}" "${files[@]}"
