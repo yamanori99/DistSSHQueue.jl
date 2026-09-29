@@ -117,8 +117,10 @@ bumping compat, raise `JULIA_SLOT_MIN` only.
 
 These run as jobs of the `Test` workflow
 ([`.github/workflows/CI.yml`](.github/workflows/CI.yml)). Ubuntu:
-`Pkg.test` min / max, JETLS min / max, Aqua min / max, Gitleaks
-(also rejects `< 0.0.1` in `Project.toml`). Documenter min is
+`Pkg.test` max, JETLS max, Aqua max, Gitleaks
+(also rejects `< 0.0.1` in `Project.toml`). `Pkg.test` / JETLS /
+Aqua **min** stay on **main**, **CI weekly**, and `cut` (ci-cut when the
+label is added later), not ordinary PRs. Documenter min is
 [`.github/workflows/Documentation.yml`](.github/workflows/Documentation.yml).
 `Assets` (`draw SVG`) runs if `docs/src/assets/` or that workflow
 changed. Linux E2E (max) uses the same **path filter** as **main** push
@@ -162,7 +164,7 @@ julia --project=. -e 'using Pkg; Pkg.test(; coverage=true)'
 DISTSSHQUEUE_CODE_COVERAGE=1 ./testenv/docker-ssh/scripts/up.sh --e2e
 ```
 
-Required to merge (ruleset `main` uses these names). Tip jobs are allow-failure. A job skipped by the heavy / E2E gate shows as skipping (not a green empty run). E2E weekly and CI weekly are not required.
+Required to merge (ruleset `main` uses these names). Tip jobs are allow-failure. A job skipped by the heavy / E2E gate shows as skipping (not a green empty run). On an ordinary PR the three **min** checks skip too; they run on **main**, weekly, and `cut`. E2E weekly and CI weekly are not required.
 
 - `Pkg.test - min - ubuntu-latest`
 - `Pkg.test - max - ubuntu-latest`
