@@ -166,9 +166,9 @@ end
 
 # Poll `jobs.toml` (same as test/integration/cli.jl). Waiting on `status`
 # chrome used to sit through 600×0.2s when Store `serve  running` looked
-# like a job STATE. Default 150×0.2s (~30 s) is enough for local E2E;
-# the `client qhost:` testset passes tries=600 for Colima on macos-15-intel
-# (autoserve hop + nested Docker).
+# like a job STATE. Default 150×0.2s (~30 s) is enough for local E2E.
+# macos-15-intel Colima (nested Docker) leaves a `go` row `:running` past
+# that; both CLI testsets pass `tries = GO_WAIT_TRIES`.
 function wait_store_job(store::AbstractString, id::AbstractString, states; tries = 150, sleep_s = 0.2)
     want = Set{Symbol}(states)
     sid = String(id)
@@ -663,7 +663,7 @@ end
                         isdir(outdir) && rm(outdir; recursive = true)
                         id = read_cli(addenv(qcmd(["submit", "go", token, "--output-dir", outdir, script, GO_N...]), env...))
                         @test !isempty(id)
-                        wait_store_job(store, id, (:done,))
+                        wait_store_job(store, id, (:done,); tries = GO_WAIT_TRIES)
                         listed = read_cli(addenv(qcmd(["status"]), env...))
                         @test status_shows_id(listed, id)
                         @test occursin("done", listed)
