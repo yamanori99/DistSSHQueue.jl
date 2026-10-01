@@ -5,13 +5,16 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
+## 0.7.0
+
+Breaking cut after `0.6.0`. `setup --juliaup` no longer takes host tokens.
+
 - `qhost:` prints a `!` note on stderr when the queue host's
   DistSSHQueue version differs from this process. The command still
-  runs. `DISTSSHKIT_QUIET` hides it.
-
-`setup --juliaup` no longer takes `parent` / `child:NAME`. It aligns
-config `hosts` only (`add-host` first).
-
+  runs. `DISTSSHKIT_QUIET` hides it
+  ([#277](https://github.com/yamanori99/DistSSHQueue.jl/issues/277)).
+- `setup --juliaup` no longer takes `parent` / `child:NAME`. It aligns
+  config `hosts` only (`add-host` first).
 - `setup --juliaup-update` runs `juliaup update` on those hosts and
   leaves each default unchanged.
 - CLI tables and notes (`list-host`, `status` Jobs cards, `add-host`
