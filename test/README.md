@@ -41,9 +41,9 @@ Green on one layer does not imply the others. `Pkg.test()` does not run `e2e.jl`
 | unit | in-process queue / config | child julia, SSH |
 | integration | child CLI (`-m DistSSHQueue`) and **parent:1** | real SSH / rsync |
 | e2e | docker-ssh workers, `serve` API, and `-m DistSSHQueue` (`qhost:` over loopback OpenSSH). Prints `[i/N]` at the start of each inner `@testset` (SSH can sit silent for minutes otherwise); update `_E2E_N` when adding a case | local-only CLI wiring |
-| e2e weekly | same `e2e.jl` from Linux, macOS Intel, or WSL2 (not a PR check; Intel / WSL watchers). Register from cut PR Linux E2E | macOS workers |
+| e2e weekly | same `e2e.jl` from Linux, macOS Intel, or WSL2 (not a PR check; Intel / WSL watchers). Register from the version-increase PR's Linux E2E | macOS workers |
 
-`enable` / `disable` / `teardown` in SSH E2E use `--write-only` (no runner systemd / LaunchAgent). Coverage: `Pkg.test` max slot flag `pkgtest` on main push; `DISTSSHQUEUE_CODE_COVERAGE=1` on `up.sh --e2e` flag `e2e` (cut PRs and E2E weekly Linux).
+`enable` / `disable` / `teardown` in SSH E2E use `--write-only` (no runner systemd / LaunchAgent). Coverage: `Pkg.test` max slot flag `pkgtest` on main push; `DISTSSHQUEUE_CODE_COVERAGE=1` on `up.sh --e2e` flag `e2e` (version-increase PRs and E2E weekly Linux).
 
 `watch` is `status --interval` (TTY table, Ctrl-C). A pipe without `-q` is a compact serve/running/queued line; `-q` stays table-only. Finite frames in tests use `DISTSSHQUEUE_WATCH_TICKS` (not `--ticks`). A later monitor package may take the name `watch` ([#35](https://github.com/yamanori99/DistSSHQueue.jl/issues/35)).
 
@@ -65,7 +65,7 @@ SSH Host `distsshqueue-w1` / `distsshqueue-w2` is not Compose/DNS `child-1` / `c
 
 ## Registry tree
 
-[PkgEval](https://github.com/JuliaCI/PkgEval.jl) (via [Nanosoldier](https://github.com/JuliaCI/Nanosoldier.jl)) and `Pkg.add` use a Registry tarball, not this checkout. This package: [DistSSHQueue PkgEval](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/D/DistSSHQueue.html). Latest ecosystem report: [NanosoldierReports](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/report.html). Reproduce that tree: copy without Queue `.git` / `Manifest.toml`, `Pkg.add` from a **bare** `file://` git (installed `pkgdir` has no `.git`), `chmod a-w` on `pkgdir`, then `Pkg.test`. DistSSHKit **0.9.x** comes from General in that env. Child CLI tests use the Pkg.test project, not `pkgdir`. Do this after changing those gates, and before a General cut. CI: `Pkg.test - registry tree` on **main** and **cut** (Julia 1.14-nightly, no `ssh`; not a required check). Not ordinary PRs.
+[PkgEval](https://github.com/JuliaCI/PkgEval.jl) (via [Nanosoldier](https://github.com/JuliaCI/Nanosoldier.jl)) and `Pkg.add` use a Registry tarball, not this checkout. This package: [DistSSHQueue PkgEval](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/D/DistSSHQueue.html). Latest ecosystem report: [NanosoldierReports](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/report.html). Reproduce that tree: copy without Queue `.git` / `Manifest.toml`, `Pkg.add` from a **bare** `file://` git (installed `pkgdir` has no `.git`), `chmod a-w` on `pkgdir`, then `Pkg.test`. DistSSHKit **0.9.x** comes from General in that env. Child CLI tests use the Pkg.test project, not `pkgdir`. Do this after changing those gates, and before a General cut. CI: `Pkg.test - registry tree` on **main** and a `Project.toml` version increase (Julia 1.14-nightly, no `ssh`; not a required check). Not ordinary PRs.
 
 Copy without `Manifest.toml` (and without `.git`). On Linux, `mktemp -d` is enough. On macOS, put the copy under `$HOME`.
 
