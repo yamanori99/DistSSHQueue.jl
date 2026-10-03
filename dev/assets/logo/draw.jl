@@ -1,5 +1,5 @@
 # DistSSHQueue mark (static). Light PNG has paper; SVG is transparent.
-# Pin: docs/src/assets/logo/Project.toml + Manifest.toml (Julia 1.12, same as CI min)
+# Pin: docs/src/assets/logo/Project.toml + Manifest.toml (Julia 1.13)
 #   julia --project=docs/src/assets/logo -e 'using Pkg; Pkg.instantiate()'
 #   julia --project=docs/src/assets/logo docs/src/assets/logo/draw.jl
 #   julia --project=docs/src/assets/logo docs/src/assets/logo/draw.jl --png
