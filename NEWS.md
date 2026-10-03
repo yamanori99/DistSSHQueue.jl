@@ -5,13 +5,22 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
+## 0.8.0
+
+Breaking cut after `0.7.0`. Julia **1.13+** and DistSSHKit **0.9.x** only.
+
 - Julia **1.13+** only. 1.12 is dropped. Julia ended maintenance of 1.12
   when 1.13 shipped; this package follows the maintained stable, not the LTS.
 - DistSSHKit **0.9.x**. 0.8 is dropped. 0.9 requires Julia 1.13 and
-  ships the lockfile directory on rsync.
+  ships the lockfile directory on rsync. A `[sources]` path or lock
+  outside that tree fails before instantiate. An absolute `[sources]`
+  path also fails, even inside that tree. rsync still omits a path
+  `.gitignore` excludes, and setup continues. A clone or git sync fails
+  when that path is not in the commit.
 - With no `~/.distsshqueue/env`, `enable` and a `qhost:` stage use the
   Manifest directory of the active project. A workspace member's Kit
-  `--project` stays that member
+  `--project` stays that member. An existing unit keeps its baked path
+  until `enable` is run again
   ([#243](https://github.com/yamanori99/DistSSHQueue.jl/issues/243)).
 
 ## 0.7.0
