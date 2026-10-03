@@ -35,7 +35,7 @@ runs jobs.
     usual OS path ([Checks](@ref)) or set `--remote-julia` /
     `JULIA_DISTRIBUTED_EXE`. Missing path or a related bug:
     [open an Issue](https://github.com/yamanori99/DistSSHQueue.jl/issues).
-- **DistSSHKit 0.8.x** from General. Do not `Pkg.develop` Kit (or
+- **DistSSHKit 0.9.x** from General. Do not `Pkg.develop` Kit (or
   Queue) in a job project whose Manifest is copied to workers — that path
   is absolute and the workers do not have it. Separate env for package
   work.
@@ -103,7 +103,7 @@ Queue must be loadable from the job env (`julia --project=.`).
 
 ```text
   ! queue host DistSSHQueue 0.7.0 vs this process 0.6.0
-    DistSSHKit 0.8.0
+    DistSSHKit 0.9.0
 ```
 
 `qhost:` submit copies the client job tree onto the queue host (and
