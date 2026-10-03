@@ -9,6 +9,10 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
   when 1.13 shipped; this package follows the maintained stable, not the LTS.
 - DistSSHKit **0.9.x**. 0.8 is dropped. 0.9 requires Julia 1.13 and
   ships the lockfile directory on rsync.
+- With no `~/.distsshqueue/env`, `enable` and a `qhost:` stage use the
+  Manifest directory of the active project. A workspace member's Kit
+  `--project` stays that member
+  ([#243](https://github.com/yamanori99/DistSSHQueue.jl/issues/243)).
 
 ## 0.7.0
 

@@ -305,7 +305,24 @@ function path_under_project(path::AbstractString, proj::AbstractString)::Bool
     return p == r || startswith(p, path_inside_prefix(r))
 end
 
-"""Rsync cwd / `DISTRIBUTED_PROJECT_ROOT` to `~/.distsshqueue/stage/<uuid>` on `host`."""
+"""Rsync root and the staged Kit project for `local_proj`.
+
+`env_dir` is the Manifest directory (`Base.active_manifest`). `remote_proj`
+is that project inside `remote_root` (the same path when there is no parent
+Manifest).
+"""
+function stage_env_and_project(local_proj::AbstractString, remote_root::AbstractString)
+    env = DistSSHKit.resolve_pkg_env(local_proj)
+    rel = DistSSHKit.julia_project_rel(env)
+    remote_proj = rel == "." ? String(remote_root) : string(remote_root, "/", replace(rel, '\\' => '/'))
+    return (env_dir = env.env_dir, remote_proj = remote_proj)
+end
+
+"""Rsync the Manifest directory to `~/.distsshqueue/stage/<uuid>` on `host`.
+
+`DISTRIBUTED_PROJECT_ROOT` is the staged project directory, which is a
+subdirectory when the job project is a workspace member.
+"""
 function stage_job_tree!(
         host::AbstractString,
         rjulia::AbstractString,
@@ -320,12 +337,13 @@ function stage_job_tree!(
     local_proj = job_project()
     key = new_job_id()
     remote_root = remote_stage_root(key; home = queue_host_homedir(host, rjulia))
+    layout = stage_env_and_project(local_proj, remote_root)
     extras = String[]
-    if !path_under_project(local_script, local_proj)
+    if !path_under_project(local_script, layout.env_dir)
         push!(extras, local_script)
     end
-    rsync_to_qhost!(host, local_proj, remote_root, extras; progress = rsync_progress_on(payload))
-    staged = rewrite_payload_paths(payload, local_proj, remote_root)
+    rsync_to_qhost!(host, layout.env_dir, remote_root, extras; progress = rsync_progress_on(payload))
+    staged = rewrite_payload_paths(payload, layout.env_dir, remote_root)
     if !isempty(extras)
         want = string(remote_root, "/", basename(local_script))
         staged = String[a == local_script || a == basename(local_script) ? want : a for a in staged]
@@ -334,7 +352,7 @@ function stage_job_tree!(
         staged = String[a == raw ? want : a for a in staged]
     end
     env = Dict{String, String}(
-        "DISTRIBUTED_PROJECT_ROOT" => remote_root,
+        "DISTRIBUTED_PROJECT_ROOT" => layout.remote_proj,
         JOB_ID_ENV => key,
     )
     return staged, env
