@@ -201,7 +201,9 @@ jobs:
     name: ubuntu-latest → ubuntu-24.04
     needs: detect
     if: needs.detect.outputs.e2e == 'true'
-    runs-on: ubuntu-latest
+    # Probe for #258. ubuntu-latest moves to 26.04 in Nov 2026.
+    # Job name and the worker image stay. Do not merge this pin.
+    runs-on: ubuntu-26.04
     timeout-minutes: 45
     permissions:
       contents: read
