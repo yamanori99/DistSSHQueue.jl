@@ -34,7 +34,7 @@ needs `qhost:HOST` on the command line.
 
 ## Client: go on parent
 
-Job directory. Queue loadable (`julia --project=.`). DistSSHKit **0.8.x**
+Job directory. Queue loadable (`julia --project=.`). DistSSHKit **0.9.x**
 comes with Queue. `demo install` copies into `distsshkit_demos/`.
 Listed `parent` / `child:NAME` need `:N`.
 

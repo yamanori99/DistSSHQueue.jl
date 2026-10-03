@@ -7,6 +7,8 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 - Julia **1.13+** only. 1.12 is dropped. Julia ended maintenance of 1.12
   when 1.13 shipped; this package follows the maintained stable, not the LTS.
+- DistSSHKit **0.9.x**. 0.8 is dropped. 0.9 requires Julia 1.13 and
+  ships the lockfile directory on rsync.
 
 ## 0.7.0
 

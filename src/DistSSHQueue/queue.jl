@@ -332,7 +332,7 @@ end
 
 """Queue dest leaf for `fetch` when Kit never created an artifact dir (setup fail).
 
-Does not pin `output_dir` on a normal start. DistSSHKit 0.8 owns
+Does not pin `output_dir` on a normal start. DistSSHKit owns
 `.distsshkit/{kind}/…` / `init_output_dir!`.
 """
 function _allocate_queue_leaf!(j::Job; store::Union{Nothing, AbstractString} = nothing)

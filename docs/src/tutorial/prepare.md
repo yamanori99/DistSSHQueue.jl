@@ -78,7 +78,7 @@ julia --project=.
 pkg> add DistSSHQueue
 ```
 
-That pulls DistSSHKit **0.8.x** from General. A different dir is
+That pulls DistSSHKit **0.9.x** from General. A different dir is
 `--queue-env DIR` on `enable` and on client `qhost:`.
 
 ## Survive reboot (optional)
