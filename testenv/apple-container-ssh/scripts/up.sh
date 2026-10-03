@@ -110,7 +110,7 @@ container system start
 
 "${DOCKER_ROOT}/scripts/gen-keys.sh"
 
-# Always build so Dockerfile pin changes (e.g. Julia 1.12 → 1.13) take effect.
+# Always build so Dockerfile pin changes (e.g. a Julia channel move) take effect.
 # Layer cache keeps this cheap when the file is unchanged.
 echo "Building ${LOCAL_IMAGE} from docker-ssh/Dockerfile..."
 (cd "${DOCKER_ROOT}" && container build -t "${LOCAL_IMAGE}" .)

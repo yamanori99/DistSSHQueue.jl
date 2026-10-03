@@ -108,9 +108,9 @@ jobs:
       id-token: write # Codecov OIDC (E2E coverage; not on PR E2E)
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/julia-slot
+      - uses: julia-actions/setup-julia@v3
         with:
-          slot: max
+          version: "1.13"
       - uses: julia-actions/cache@v3
         with:
           cache-scratchspaces: false
@@ -153,9 +153,9 @@ jobs:
       actions: write
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/julia-slot
+      - uses: julia-actions/setup-julia@v3
         with:
-          slot: max
+          version: "1.13"
       - uses: julia-actions/cache@v3
         with:
           cache-scratchspaces: false
@@ -198,8 +198,8 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: .ci-cache/wsl-julia
-          key: wsl-julia-max-${{ hashFiles('Project.toml', 'test/Project.toml', '.github/julia-slots.env') }}
-          # No restore-keys: a prefix hit would unpack an older slot's julia.tgz.
+          key: wsl-julia-1.13-${{ hashFiles('Project.toml', 'test/Project.toml') }}
+          # No restore-keys: a prefix hit would unpack an older Julia's julia.tgz.
       # wsl-bash does not inherit Actions env (set -u → unbound GITHUB_TOKEN).
       - name: docker-ssh up + SSH E2E in WSL2
         shell: wsl-bash {0}
@@ -228,19 +228,18 @@ jobs:
             fi
           fi
           echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
-          # shellcheck disable=SC1091
-          source "$src/.github/julia-slots.env"
+          julia_channel=1.13
           if [[ -f "$cache/julia.tgz" ]]; then
             tar -xzf "$cache/julia.tgz" -C "$HOME"
           else
             curl --retry 5 --retry-delay 5 --retry-connrefused --connect-timeout 10 \
-              -fsSL https://install.julialang.org | sh -s -- --yes --default-channel "$JULIA_SLOT_MAX"
+              -fsSL https://install.julialang.org | sh -s -- --yes --default-channel "$julia_channel"
           fi
           export PATH="$HOME/.juliaup/bin:$PATH"
           # Current patch before the suite starts. A later juliaup version-db
           # check must not delete the install this job is about to run.
-          juliaup update "$JULIA_SLOT_MAX"
-          juliaup default "$JULIA_SLOT_MAX"
+          juliaup update "$julia_channel"
+          juliaup default "$julia_channel"
           cd "$dest"
           ./testenv/docker-ssh/scripts/up.sh --e2e
           if [[ -d "$HOME/.julia" ]]; then

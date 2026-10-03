@@ -7,7 +7,7 @@ Internals of this repo.
 
 This is a **separate** package from DistSSHKit: FIFO `serve` in front of one Kit `go` / `ride` / `drive`, not a bigger Kit. Placement tokens, `execute!`, `kit.pid` / `kit.result`, `terminate_run!`, demo argv, and rsync/collect are Kit's. Queue records table state and the path Kit already wrote.
 
-Julia slots match Kit (`min` / `max` / `tip` in `.github/julia-slots.env`). SSH E2E is this repo's `testenv/docker-ssh` (Kit-shaped workers). CI is `Pkg.test` (unit + child CLI / `parent:1`), JETLS, Aqua, Linux SSH E2E on slot **max** (`test/e2e.jl`: `serve` API, queue-host CLI, `qhost:` over loopback OpenSSH) on path-filtered PRs / **main** / `cut` / weekly / dispatch, Gitleaks, light **Runic** `--check` (soft on PRs; monthly on `main`), schedule-only **E2E weekly** (Linux / macOS Intel / WSL), and schedule-only **CI weekly**.
+CI names Julia versions in the job (`1.13`, `1.14-nightly`). DistSSHKit still uses `min` / `max` / `tip` and will switch to versions later. SSH E2E is this repo's `testenv/docker-ssh` (Kit-shaped workers). CI is `Pkg.test` (unit + child CLI / `parent:1`), JETLS, Aqua, Linux SSH E2E on Julia **1.13** (`test/e2e.jl`: `serve` API, queue-host CLI, `qhost:` over loopback OpenSSH) on path-filtered PRs / **main** / `cut` / weekly / dispatch, Gitleaks, light **Runic** `--check` (soft on PRs; monthly on `main`), schedule-only **E2E weekly** (Linux / macOS Intel / WSL), and schedule-only **CI weekly**.
 
 ## Requirements
 
@@ -15,7 +15,7 @@ macOS, Linux, or WSL2 Ubuntu. Not native Windows (the kit shells out to `ssh` / 
 
 | What | Need |
 | --- | --- |
-| Library, `Pkg.test()`, `julia -m DistSSHQueue`, docs | Julia **1.12+** |
+| Library, `Pkg.test()`, `julia -m DistSSHQueue`, docs | Julia **1.13+** |
 | DistSSHKit | **0.8.x** from General (`execute!`, `job_id`, `run_dir` / `kit.pid` / `kit.result`). Not a git sibling. |
 
 Prefer [juliaup](https://github.com/JuliaLang/juliaup). Details: [Requirements](https://yamanori99.github.io/DistSSHQueue.jl/dev/requirements/).
@@ -46,9 +46,9 @@ workers do not have. Keep a separate environment for package work.
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-Run this on slot **min** and **max** (and **tip** if you have nightly). Layout: [test/README.md](test/README.md). When adding a file under `test/runtests.jl` or an inner SSH E2E `@testset`, bump `_RUNTEST_N` / `_E2E_N` so `[i/N]` stays honest.
+Run this on Julia **1.13** (and **1.14-nightly** if you have it). Layout: [test/README.md](test/README.md). When adding a file under `test/runtests.jl` or an inner SSH E2E `@testset`, bump `_RUNTEST_N` / `_E2E_N` so `[i/N]` stays honest.
 
-Checkout `Pkg.test()` is not a Registry tarball. After changing those gates (child CLI project, `ssh` spawn), and before a General cut, run the disposable copy in [test/README.md](test/README.md#registry-tree). CI runs that shape on **main** and **cut** (slot tip; not a required check).
+Checkout `Pkg.test()` is not a Registry tarball. After changing those gates (child CLI project, `ssh` spawn), and before a General cut, run the disposable copy in [test/README.md](test/README.md#registry-tree). CI runs that shape on **main** and **cut** (Julia 1.14-nightly; not a required check).
 
 ```bash
 julia -e 'using Pkg; Pkg.Apps.add("Runic")'   # once
@@ -95,41 +95,47 @@ JETLS is the type gate. Do not commit `.vscode/settings.json` to silence the Lan
 
 [Fatou](https://fatou.dev) is local only. Do not add `fatou.toml` or Fatou to `.vscode/extensions.json`. After a Fatou bump, check it did not rewrite files you did not mean to touch.
 
-### Julia slots
+### Julia versions
 
-Exactly three pins, in [`.github/julia-slots.env`](.github/julia-slots.env). Do not add a fourth version job. Slide the pin; keep job names `min` / `max` / `tip`.
+Workflows pass the version to `julia-actions/setup-julia`. The job name is that version.
 
-| Slot | Role | Required |
+| Version | Role | Required |
 | --- | --- | --- |
-| **min** | `Project.toml` julia floor. Pkg.test (no coverage), Aqua, JETLS | yes |
-| **max** | Newest tagged or prerelease (`versions.json`). Pkg.test, Aqua, Documenter, draw, **main** / weekly / `cut` E2E, GHCR worker. Codecov `pkgtest` on **main push** only | yes |
-| **tip** | Next-minor nightly. Pkg.test, Aqua. `continue-on-error` | no |
+| **1.13** | `Project.toml` julia floor. Pkg.test, Aqua, JETLS, Documenter, draw, E2E, Runic. Codecov `pkgtest` on **main push** only | yes |
+| **1.14-nightly** | Next-minor nightly. Pkg.test, Aqua, registry tree. `continue-on-error` | no |
 
-JETLS is min plus `JULIA_SLOT_JETLS_MAX` (job name still `JETLS - max`). That pin lags when `max` / `tip` move past what JETLS lists (today 1.12.2–1.13). Raise it only after JETLS supports that runtime. No JETLS **tip**.
+**1.13** runs on ordinary PRs (heavy gate). **1.14-nightly** runs on **main**, **CI weekly**, and `cut`, not ordinary PRs.
 
-When a new RC lands, change `JULIA_SLOT_MAX` only (`~x.y.0-0` so
-setup-julia includes prereleases). When that minor GAs, drop the tilde
-and pin `x.y`. If that RC is a new **major.minor**, bump the worker
-Dockerfile `--default-channel` in the same PR (E2E pair). WSL weekly reads `JULIA_SLOT_MAX` from that file, then `juliaup update` and `juliaup default` before the suite. When
-bumping compat, raise `JULIA_SLOT_MIN` only.
+This package feels SSH hosts, Pkg, and lockfiles more than a compute-model
+library does. When Julia announces that it has stopped maintaining the
+previous minor, raise the floor to the new stable. The move from 1.12 to
+1.13 is that case (1.12 became unmaintained when 1.13 shipped). Do not
+track the LTS for its own sake. Other situations (a prerelease as the
+floor, dropping a minor only for a language feature, and similar) are
+decided one by one. Do not move the floor to nightly, or to a minor that
+has only just shipped, as an automatic rule.
+
+When the floor moves, rename the **1.13** jobs to the new version in the same PR as `Project.toml`, the worker Dockerfile `--default-channel`, and the WSL `julia_channel`. Ruleset `main` uses those job names, so update the required checks with the rename.
+
+JETLS stays on a runtime it lists (today 1.12.2–1.13). Raise that job's version only after JETLS supports it. No JETLS on nightly.
+
+When a new RC of the floor's minor lands, point **1.13** jobs at `~1.13.0-0` so setup-julia includes prereleases. When that minor GAs, drop the tilde. A new **major.minor** is a floor move, not a second stable job.
 
 ### PR CI
 
 These run as jobs of the `Test` workflow
 ([`.github/workflows/CI.yml`](.github/workflows/CI.yml)). Ubuntu:
-`Pkg.test` max, JETLS max, Aqua max, Gitleaks
-(also rejects `< 0.0.1` in `Project.toml`). `Pkg.test` / JETLS /
-Aqua **min** stay on **main**, **CI weekly**, and `cut` (ci-cut when the
-label is added later), not ordinary PRs. Documenter max is
+`Pkg.test` 1.13, JETLS 1.13, Aqua 1.13, Gitleaks
+(also rejects `< 0.0.1` in `Project.toml`). Documenter 1.13 is
 [`.github/workflows/Documentation.yml`](.github/workflows/Documentation.yml).
 `Assets` (`draw SVG`) runs if `docs/src/assets/` or that workflow
-changed. Linux E2E (max) uses the same **path filter** as **main** push
+changed. Linux E2E (1.13) uses the same **path filter** as **main** push
 (`src/**`, `test/**`, `testenv/**` minus markdown under those trees,
-`Project.toml`, `test/Project.toml`, `.github/julia-slots.env`,
-`.github/workflows/CI.yml`). It also
+`Project.toml`, `test/Project.toml`, `.github/workflows/CI.yml`). It also
 runs on **`cut`**, **E2E weekly** (`ssh-e2e-weekly.yml`; `CI.yml` has no
-`schedule`), and `workflow_dispatch`. Tip `Pkg.test` / Aqua
-stay on **main**, **CI weekly**, and `cut`. Registry tree stays on **main**
+`schedule`), and `workflow_dispatch`. **1.14-nightly** `Pkg.test` / Aqua
+stay on **main**, **CI weekly**, and `cut` (ci-cut when the label is
+added later), not ordinary PRs. Registry tree stays on **main**
 and `cut` (ci-cut), not ordinary PRs.
 
 [Runic](https://github.com/fredrikekre/Runic.jl) is a separate light
@@ -157,22 +163,19 @@ not the PR. Register from the cut PR's Linux E2E (optional local Mac
 `./testenv/docker-ssh/scripts/up.sh --e2e`). Intel / WSL weekly are
 watchers, not the register gate.
 
-CI uploads Codecov on **main push** only (`Pkg.test` max slot, flag `pkgtest`). PR E2E does not upload; `cut` PRs and **E2E weekly** Linux upload flag `e2e`. Public repo + Codecov OIDC (`id-token: write`). Status checks are informational (`codecov.yml`). Local coverage:
+CI uploads Codecov on **main push** only (`Pkg.test` on 1.13, flag `pkgtest`). PR E2E does not upload; `cut` PRs and **E2E weekly** Linux upload flag `e2e`. Public repo + Codecov OIDC (`id-token: write`). Status checks are informational (`codecov.yml`). Local coverage:
 
 ```bash
 julia --project=. -e 'using Pkg; Pkg.test(; coverage=true)'
 DISTSSHQUEUE_CODE_COVERAGE=1 ./testenv/docker-ssh/scripts/up.sh --e2e
 ```
 
-Required to merge (ruleset `main` uses these names). Tip jobs are allow-failure. A job skipped by the heavy / E2E gate shows as skipping (not a green empty run). On an ordinary PR the three **min** checks skip too; they run on **main**, weekly, and `cut`. E2E weekly and CI weekly are not required.
+Required to merge (ruleset `main` uses these names). **1.14-nightly** jobs are allow-failure. A job skipped by the heavy / E2E gate shows as skipping (not a green empty run). Nightly runs on **main**, weekly, and `cut`, not ordinary PRs. E2E weekly and CI weekly are not required.
 
-- `Pkg.test - min - ubuntu-latest`
-- `Pkg.test - max - ubuntu-latest`
-- `JETLS - min - ubuntu-latest`
-- `JETLS - max - ubuntu-latest`
-- `Aqua - min - ubuntu-latest`
-- `Aqua - max - ubuntu-latest`
-- `Documenter - max - ubuntu-latest`
+- `Pkg.test - 1.13 - ubuntu-latest`
+- `JETLS - 1.13 - ubuntu-latest`
+- `Aqua - 1.13 - ubuntu-latest`
+- `Documenter - 1.13 - ubuntu-latest`
 - `Gitleaks`
 - `ubuntu-latest → ubuntu-24.04`
 - `PR label`
@@ -180,7 +183,7 @@ Required to merge (ruleset `main` uses these names). Tip jobs are allow-failure.
 | When | Workflow | What |
 | --- | --- | --- |
 | Sunday 04:00 JST, Run workflow, or a `cut` squash to `main` | `E2E weekly` | `ubuntu-latest`, `macos-15-intel`, WSL2 → `ubuntu-24.04`. Linux job uploads E2E Codecov. Not a PR check. Failure opens (or comments on) Issue `E2E weekly failed`; a later all-green run closes it. A red **Linux** job after a `cut` merge adds `cut-hold`. Intel / WSL red does not. Compat-only `Project.toml` edits start the workflow but skip the matrix. |
-| Sunday 10:00 JST, or Run workflow | `CI weekly` | Same `Pkg.test` / JETLS / Aqua slots as a PR (no coverage). Not a PR check. Catches max / Aqua / JETLS `@release` drift when nothing merged that week. Failure of min/max jobs opens Issue `CI weekly failed` (`alert`); tip is omitted from that notify. `cache-gc` keeps one Actions cache per restore-key prefix. |
+| Sunday 10:00 JST, or Run workflow | `CI weekly` | Same `Pkg.test` / JETLS / Aqua versions as a PR (no coverage). Not a PR check. Catches 1.13 / Aqua / JETLS `@release` drift when nothing merged that week. Failure of the 1.13 jobs opens Issue `CI weekly failed` (`alert`); 1.14-nightly is omitted from that notify. `cache-gc` keeps one Actions cache per restore-key prefix. |
 | 1st 10:00 JST, or Run workflow | `Runic` | `runic --check` on tracked `.jl` (`version: '1'`). Not a required PR check. Catches Runic minor drift when nothing formatted that month. Failure opens Issue `Runic monthly failed` (`alert`). |
 
 ## Pull requests
@@ -293,7 +296,7 @@ Stdlib names are `ignore` in [`.github/dependabot.yml`](.github/dependabot.yml)
 third-party `[deps]` entry is picked up with no YAML change; a new
 stdlib must be added to that ignore list. Stdlib `[compat]` stays with
 the Julia floor. The Julia updater otherwise appends `< 0.0.1` for the
-pre-1.10 Pkg.test 0.0.0 sandbox; this package is 1.12 and does not need
+pre-1.10 Pkg.test 0.0.0 sandbox; this package is 1.13 and does not need
 that union (comma is or, not and). Scan /
 `./.github/pkg-compat-check.sh` rejects that token.
 

@@ -1,7 +1,7 @@
 """
 DistSSHQueue — FIFO `serve` for DistSSHKit (`go` / `ride` / `drive`).
 
-Package entry: exports, `include`s, `main` (`@main` on Julia 1.12+).
+Package entry: exports, `include`s, `main` (`@main` on Julia 1.13+).
 FIFO: `src/DistSSHQueue/`. Client CLI: `src/client/`. Queue host CLI: `src/qhost/`.
 `serve` runs DistSSHKit `execute!(...; detached=true)`.
 `--project=<queue-env>` loads this package; the Kit project is `job_project()`.
@@ -169,8 +169,6 @@ function main(args::Vector{String} = copy(ARGS))::Cint
     end
 end
 
-if VERSION >= v"1.12"
-    Base.eval(@__MODULE__, :(@main))
-end
+Base.eval(@__MODULE__, :(@main))
 
 end # module DistSSHQueue

@@ -20,7 +20,9 @@ Applies to the **queue host**, each **client**, and each SSH host that
 runs jobs.
 
 - **macOS, Linux, and WSL2 Ubuntu** (not native Windows)
-- **Julia 1.12+**
+- **Julia 1.13+**
+  The floor is the maintained stable. When Julia stops updating the
+  previous minor, Queue moves with it (see Contributing, Julia versions).
   - Library (`Pkg.add` / `using` / `submit!`), CLI
     (`julia -m DistSSHQueue`)
   - Same **major.minor** on the queue host and SSH workers (DistSSHKit
@@ -29,7 +31,7 @@ runs jobs.
     `child:` hosts, including a `qhost:` stage with no `.git/`
     (DistSSHKit **0.7.3+** warns on a missing local git commit).
   - Prefer **[juliaup](https://github.com/JuliaLang/juliaup)** at
-    `$HOME/.juliaup/bin/julia`. If it is not there, put a 1.12+ binary at a
+    `$HOME/.juliaup/bin/julia`. If it is not there, put a 1.13+ binary at a
     usual OS path ([Checks](@ref)) or set `--remote-julia` /
     `JULIA_DISTRIBUTED_EXE`. Missing path or a related bug:
     [open an Issue](https://github.com/yamanori99/DistSSHQueue.jl/issues).
@@ -113,7 +115,7 @@ no copy.
 ## Workers
 
 DistSSHKit hosts. Passwordless SSH **from the queue host**, Julia
-1.12+ with the same major.minor. Details:
+1.13+ with the same major.minor. Details:
 [kit Requirements](https://yamanori99.github.io/DistSSHKit.jl/stable/requirements/).
 
 ## Checks

@@ -5,6 +5,9 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
+- Julia **1.13+** only. 1.12 is dropped. Julia ended maintenance of 1.12
+  when 1.13 shipped; this package follows the maintained stable, not the LTS.
+
 ## 0.7.0
 
 Breaking cut after `0.6.0`. `setup --juliaup` no longer takes host tokens.

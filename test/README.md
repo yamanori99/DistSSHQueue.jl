@@ -65,7 +65,7 @@ SSH Host `distsshqueue-w1` / `distsshqueue-w2` is not Compose/DNS `child-1` / `c
 
 ## Registry tree
 
-[PkgEval](https://github.com/JuliaCI/PkgEval.jl) (via [Nanosoldier](https://github.com/JuliaCI/Nanosoldier.jl)) and `Pkg.add` use a Registry tarball, not this checkout. This package: [DistSSHQueue PkgEval](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/D/DistSSHQueue.html). Latest ecosystem report: [NanosoldierReports](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/report.html). Reproduce that tree: copy without Queue `.git` / `Manifest.toml`, `Pkg.add` from a **bare** `file://` git (installed `pkgdir` has no `.git`), `chmod a-w` on `pkgdir`, then `Pkg.test`. DistSSHKit **0.8.x** comes from General in that env. Child CLI tests use the Pkg.test project, not `pkgdir`. Do this after changing those gates, and before a General cut. CI: `Pkg.test - registry tree` on **main** and **cut** (slot tip, no `ssh`; not a required check). Not ordinary PRs.
+[PkgEval](https://github.com/JuliaCI/PkgEval.jl) (via [Nanosoldier](https://github.com/JuliaCI/Nanosoldier.jl)) and `Pkg.add` use a Registry tarball, not this checkout. This package: [DistSSHQueue PkgEval](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/D/DistSSHQueue.html). Latest ecosystem report: [NanosoldierReports](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/report.html). Reproduce that tree: copy without Queue `.git` / `Manifest.toml`, `Pkg.add` from a **bare** `file://` git (installed `pkgdir` has no `.git`), `chmod a-w` on `pkgdir`, then `Pkg.test`. DistSSHKit **0.8.x** comes from General in that env. Child CLI tests use the Pkg.test project, not `pkgdir`. Do this after changing those gates, and before a General cut. CI: `Pkg.test - registry tree` on **main** and **cut** (Julia 1.14-nightly, no `ssh`; not a required check). Not ordinary PRs.
 
 Copy without `Manifest.toml` (and without `.git`). On Linux, `mktemp -d` is enough. On macOS, put the copy under `$HOME`.
 
@@ -80,7 +80,7 @@ rsync -a \
   ./ "$WORKDIR/"
 ```
 
-This machine (min / max / `+nightly`). Distro `ssh` / `git` stay on `PATH`. On Linux this is enough for the tree; it does not reproduce a missing `ssh`. Do not `git init` inside the copy. Use a bare repo, then `Pkg.add(; url=)`.
+This machine (Julia 1.13, or 1.14-nightly). Distro `ssh` / `git` stay on `PATH`. On Linux this is enough for the tree; it does not reproduce a missing `ssh`. Do not `git init` inside the copy. Use a bare repo, then `Pkg.add(; url=)`.
 
 ```bash
 BARE=$(mktemp -d "$HOME/distsshqueue.git.XXXXXX")
