@@ -2,7 +2,7 @@
 
 Linux SSH workers on a Mac via Apple
 [`container`](https://github.com/apple/container). Same image, keys, and
-`distsshqueue-w1` / `distsshqueue-w2` aliases as [`../docker-ssh`](../docker-ssh),
+`child-1` / `child-2` aliases as [`../docker-ssh`](../docker-ssh),
 so [`test/e2e.jl`](../../test/e2e.jl) is unchanged. Those aliases are Kit
 **child** Hosts, not a queue host. Roles: [test/README.md](../../test/README.md#ssh-e2e-roles).
 
@@ -10,8 +10,8 @@ so [`test/e2e.jl`](../../test/e2e.jl) is unchanged. Those aliases are Kit
 and for Linux / Docker Desktop / WSL.
 
 Do not run `docker-ssh` compose workers at the same time: both write
-`docker-ssh/.generated/ssh_config`. Container names are `distsshqueue-child-1` /
-`distsshqueue-child-2` so DistSSHKit's Apple `child-1` / `child-2` can coexist.
+`docker-ssh/.generated/ssh_config`. Container names are `child-1` /
+`child-2`, same as the SSH Host and the hostname. Do not run beside DistSSHKit's Apple containers.
 
 ## Requirements
 
@@ -31,7 +31,7 @@ From this directory (queue root also works if you keep the path):
 
 First `up.sh` runs `container system start` and, if needed, builds
 `local/distsshqueue-linux-ssh-worker:latest` from [`../docker-ssh/Dockerfile`](../docker-ssh/Dockerfile).
-Every run removes and recreates `distsshqueue-child-1` / `distsshqueue-child-2` (fresh state each time).
+Every run removes and recreates `child-1` / `child-2` (fresh state each time).
 Keys come from `docker-ssh/scripts/gen-keys.sh` (mounted from
 `docker-ssh/mounted-keys`). `up.sh` drops a stale `docker-ssh/.generated/known_hosts`
 (container sshd host keys / IPs change on recreate; `BatchMode` cannot replace them).
@@ -42,23 +42,23 @@ Each worker gets 1 CPU / 3.5GB (`DISTSSHQUEUE_APPLE_WORKER_CPUS` /
 
 SSH aliases after `up.sh`:
 
-- `distsshqueue-w1` → worker IP, port 22, user `dev`
-- `distsshqueue-w2` → the other worker
+- `child-1` → worker IP, port 22, user `dev`
+- `child-2` → the other worker
 
 ```bash
-ssh -F ../docker-ssh/.generated/ssh_config distsshqueue-w1 'echo ok; julia --version'
+ssh -F ../docker-ssh/.generated/ssh_config child-1 'echo ok; julia --version'
 ```
 
 Apple’s default network does not resolve `child-1` / `child-2` between
-containers. `up.sh` appends those names to each child `/etc/hosts` so Kit
-inter-child SSH matches Compose DNS.
+containers. `up.sh` appends those names to each child `/etc/hosts` so peer
+SSH matches Compose DNS.
 
 ## Manual smoke (no E2E)
 
 `./scripts/up.sh` is enough. `container exec` has no `--` (that flag is Docker):
 
 ```bash
-container exec -it -u dev distsshqueue-child-1 bash -l
+container exec -it -u dev child-1 bash -l
 ```
 
 ## Teardown

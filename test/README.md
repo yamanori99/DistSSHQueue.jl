@@ -55,13 +55,13 @@ The product path is three **roles**, not three CI jobs and not two kinds of dock
 | --- | --- | --- |
 | **client** | loopback OpenSSH (`qhost:distsshqueue-qh`) | a docker box |
 | **qhost** | the machine that runs `--e2e` (`serve` + Kit controller) | a worker container |
-| **child** | docker-ssh / Apple boxes (`child:distsshqueue-w1`, …) | the queue host |
+| **child** | docker-ssh / Apple boxes (`child:child-1`, …) | the queue host |
 
 Keep one `up.sh --e2e`. Do not split client↔qhost vs qhost↔child into two suites. Do not name a worker `qhost`. Kit child SSH stays DistSSHKit's E2E; Queue only needs `execute!` through `serve`.
 
 `parent:1` in this suite occupies FIFO on the queue host. It is not a third worker topology.
 
-SSH Host `distsshqueue-w1` / `distsshqueue-w2` is not Compose/DNS `child-1` / `child-2` (so Kit's stack can coexist). Loopback client is `distsshqueue-qh`. Three physical hosts is dedicated-host smoke ([#46](https://github.com/yamanori99/DistSSHQueue.jl/issues/46)), not this file.
+SSH Host, container name, and hostname are `child-1` / `child-2`. Do not run beside DistSSHKit's workers (same names; Docker also shares ports `2222` / `2223`). Loopback client is `distsshqueue-qh`. Three physical hosts is dedicated-host smoke ([#46](https://github.com/yamanori99/DistSSHQueue.jl/issues/46)), not this file.
 
 ## Registry tree
 

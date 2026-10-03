@@ -14,7 +14,7 @@ Optional Mac-only path (same image and `test/e2e.jl`):
 
 ## What the E2E proves
 
-The host during `--e2e` is the **queue host**. docker-ssh containers are DistSSHKit `child:NAME[:N]` workers only. Do not add a container named `qhost`; the client `qhost:` is loopback `qhost:distsshqueue-qh`. SSH Host `distsshqueue-w1` / `distsshqueue-w2` is not Compose `child-1` / `child-2` (so Kit's stack can coexist). Roles: [test/README.md](../../test/README.md#ssh-e2e-roles).
+The host during `--e2e` is the **queue host**. docker-ssh containers are DistSSHKit `child:NAME[:N]` workers only. Do not add a container named `qhost`; the client `qhost:` is loopback `qhost:distsshqueue-qh`. SSH Host, container name, and hostname are `child-1` / `child-2`. Do not run beside DistSSHKit's docker-ssh (same names, and both bind `2222` / `2223`). Roles: [test/README.md](../../test/README.md#ssh-e2e-roles).
 
 [`test/e2e.jl`](../../test/e2e.jl):
 
@@ -27,7 +27,7 @@ The host during `--e2e` is the **queue host**. docker-ssh containers are DistSSH
 5. Cancel the middle queued row; `serve` skips it and runs the next.
 6. `result_path` is Kit’s collected tree; peek it on the queue host, or `fetch` it onto the client job tree.
 7. Queue-host CLI (omit `qhost:`, fake `HOME`): `setup`, `enable --write-only`,
-   `disable --write-only`, foreground `serve`, `submit go child:distsshqueue-w1:1 SCRIPT.jl`, `status`,
+   `disable --write-only`, foreground `serve`, `submit go child:child-1:1 SCRIPT.jl`, `status`,
    `watch` (harness `DISTSSHQUEUE_WATCH_TICKS=1`), `stop`.
 8. Client `qhost:distsshqueue-qh` over a **loopback OpenSSH** (not a fake `ssh` binary):
    `submit` / `status` / `watch` / `fetch` / `cancel` / `stop` / `teardown -y --write-only`.
@@ -52,8 +52,8 @@ Worker image pins Julia to **1.13** (the package floor) so DistSSHKit `setup --c
 
 SSH Host aliases (written to `.generated/ssh_config`):
 
-- `distsshqueue-w1` → `127.0.0.1:2222` user `dev`
-- `distsshqueue-w2` → `127.0.0.1:2223` user `dev`
+- `child-1` → `127.0.0.1:2222` user `dev`
+- `child-2` → `127.0.0.1:2223` user `dev`
 
 On macOS, ports publish on `127.0.0.1` (Docker Desktop / Colima defaults) so
 macOS Local Network Privacy does not block SSH from the queue host.
@@ -84,7 +84,7 @@ julia --project=../.. -m DistSSHQueue setup
 # put SSH opts in ~/.distsshqueue/config.toml [env]
 
 # from a client
-julia --project=../.. -m DistSSHQueue qhost:HOST submit go child:distsshqueue-w1:1 SCRIPT.jl
+julia --project=../.. -m DistSSHQueue qhost:HOST submit go child:child-1:1 SCRIPT.jl
 julia --project=../.. -m DistSSHQueue qhost:HOST status
 ```
 
@@ -92,7 +92,7 @@ Or probe a worker without Queue:
 
 ```bash
 ./scripts/up.sh
-ssh -F .generated/ssh_config distsshqueue-w1 'echo ok; julia --version'
+ssh -F .generated/ssh_config child-1 'echo ok; julia --version'
 ```
 
 Run the suite by hand once workers are up:

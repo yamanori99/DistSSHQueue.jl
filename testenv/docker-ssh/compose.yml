@@ -14,7 +14,10 @@ services:
         JULIA_CHANNEL: ${JULIA_CHANNEL:-1.13}
         JULIA_RELEASE: ${JULIA_RELEASE:-}
     image: local/distsshqueue-linux-ssh-worker:latest
-    container_name: distsshqueue-child-1
+    container_name: child-1
+    hostname: child-1
+    environment:
+      DISTSSHQUEUE_HOSTNAME: child-1
     ports:
       - "2222:22"
     volumes:
@@ -29,7 +32,10 @@ services:
         JULIA_CHANNEL: ${JULIA_CHANNEL:-1.13}
         JULIA_RELEASE: ${JULIA_RELEASE:-}
     image: local/distsshqueue-linux-ssh-worker:latest
-    container_name: distsshqueue-child-2
+    container_name: child-2
+    hostname: child-2
+    environment:
+      DISTSSHQUEUE_HOSTNAME: child-2
     ports:
       - "2223:22"
     volumes:
