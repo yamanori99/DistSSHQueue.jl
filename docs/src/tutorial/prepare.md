@@ -90,6 +90,7 @@ julia --project=. -m DistSSHQueue enable --queue-env ~/.distsshqueue/env
 `--queue-env` is the env that loads Queue in the OS unit, not Julia
 `--project=` / the Kit project. After that, clients only `submit`. You do
 not leave a `serve` terminal open. If there is no dedicated dir,
-`enable` uses the active project.
+`enable` uses the Manifest directory of the active project (the workspace
+root when this checkout is a member).
 
 Next: [Walkthrough](@ref Tutorial-Walkthrough), or [First job](@ref Tutorial-Client).

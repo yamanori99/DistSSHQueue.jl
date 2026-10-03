@@ -48,11 +48,14 @@ function default_queue_env_dir(; home::AbstractString = homedir())::String
 end
 
 """The `--queue-env` `enable` bakes in by default: the dedicated env dir if
-it has been set up, else the currently active project (e.g. a dev checkout).
+it has been set up, else the directory of the Manifest for the active project.
+
+A workspace member uses that workspace root (`Base.active_manifest`), not
+the member directory. The Kit job `--project` stays the member.
 """
 function default_queue_env(; dedicated::AbstractString = default_queue_env_dir())::String
     isfile(joinpath(dedicated, "Project.toml")) && return dedicated
     proj = Base.active_project()
     proj === nothing && throw(ArgumentError("service: no active project; pass --queue-env"))
-    return DistSSHKit.canonical_local_path(dirname(proj))
+    return DistSSHKit.resolve_pkg_env(dirname(proj)).env_dir
 end

@@ -1,4 +1,5 @@
 using Test
+using DistSSHKit
 using DistSSHQueue
 
 @testset "qhost stage path rewrite" begin
@@ -29,13 +30,13 @@ using DistSSHQueue
         @test occursin(r"^[0-9a-fA-F-]{36}$", k)
         @test DistSSHQueue.remote_stage_root(k; home = "/qh") == "/qh/.distsshqueue/stage/" * k
     end
-    @test DistSSHQueue.should_stage("status", ["--interval", "1"]) == false
+    @test !DistSSHQueue.should_stage("status", ["--interval", "1"])
     @test DistSSHQueue.should_submit_ticket("submit", ["go", "S.jl"])
-    @test DistSSHQueue.should_submit_ticket("go", ["S.jl"]) == false
-    @test DistSSHQueue.should_submit_ticket("status", ["--interval", "1"]) == false
+    @test !DistSSHQueue.should_submit_ticket("go", ["S.jl"])
+    @test !DistSSHQueue.should_submit_ticket("status", ["--interval", "1"])
     withenv(DistSSHQueue.NO_STAGE_ENV => "1") do
-        @test DistSSHQueue.staging_enabled() == false
-        @test DistSSHQueue.should_stage("submit", ["go", "S.jl"]) == false
+        @test !DistSSHQueue.staging_enabled()
+        @test !DistSSHQueue.should_stage("submit", ["go", "S.jl"])
         @test DistSSHQueue.should_submit_ticket("submit", ["go", "S.jl"])
     end
     opts = DistSSHQueue.stage_rsync_push_opts("ssh -o BatchMode=yes")
@@ -56,14 +57,51 @@ using DistSSHQueue
         bufq = IOBuffer()
         DistSSHQueue.print_rsync_start("qh", "/x"; io = bufq)
         @test isempty(String(take!(bufq)))
-        @test DistSSHQueue.rsync_progress_on(["--progress"]) == false
+        @test !DistSSHQueue.rsync_progress_on(["--progress"])
     end
     withenv("DISTSSHKIT_QUIET" => nothing, "DISTSSHKIT_PROGRESS" => "1") do
-        @test DistSSHQueue.rsync_progress_on() == true
+        @test DistSSHQueue.rsync_progress_on()
     end
     withenv("DISTSSHKIT_QUIET" => nothing, "DISTSSHKIT_PROGRESS" => nothing) do
-        @test DistSSHQueue.rsync_progress_on() == false
-        @test DistSSHQueue.rsync_progress_on(["go", "--progress", "S.jl"]) == true
+        @test !DistSSHQueue.rsync_progress_on()
+        @test DistSSHQueue.rsync_progress_on(["go", "--progress", "S.jl"])
+    end
+
+    @testset "stage follows the manifest directory" begin
+        mktempdir() do root
+            lab = joinpath(root, "lab")
+            member = joinpath(lab, "experiments", "run1")
+            mkpath(member)
+            write(
+                joinpath(lab, "Project.toml"),
+                """
+                name = "Lab"
+                [workspace]
+                projects = ["experiments/run1"]
+                """,
+            )
+            write(joinpath(lab, "Manifest.toml"), "# lock\n")
+            write(joinpath(member, "Project.toml"), "name = \"Run1\"\n[deps]\n")
+            script = joinpath(member, "S.jl")
+            write(script, "1\n")
+            remote = "~/.distsshqueue/stage/abc"
+            layout = DistSSHQueue.stage_env_and_project(member, remote)
+            @test layout.env_dir == DistSSHKit.canonical_local_path(lab)
+            @test layout.remote_proj == remote * "/experiments/run1"
+            got = DistSSHQueue.rewrite_payload_paths(
+                ["go", "--project", member, script],
+                layout.env_dir,
+                remote,
+            )
+            @test got[3] == remote * "/experiments/run1"
+            @test got[4] == remote * "/experiments/run1/S.jl"
+            solo = joinpath(root, "solo")
+            mkpath(solo)
+            write(joinpath(solo, "Project.toml"), "name = \"Solo\"\n[deps]\n")
+            same = DistSSHQueue.stage_env_and_project(solo, remote)
+            @test same.env_dir == DistSSHKit.canonical_local_path(solo)
+            @test same.remote_proj == remote
+        end
     end
     fetch_h = sprint(io -> DistSSHQueue.print_queue_command_usage(io, "fetch"))
     @test occursin("--progress", fetch_h)
