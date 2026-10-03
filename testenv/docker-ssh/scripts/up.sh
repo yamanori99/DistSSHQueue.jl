@@ -87,7 +87,7 @@ fi
 rm -f "${ROOT}/.generated/known_hosts"
 "${COMPOSE[@]}" -f compose.yml up -d --no-build
 ./scripts/wait-ready.sh
-echo "Workers ready: distsshqueue-w1 (2222), distsshqueue-w2 (2223)"
+echo "Workers ready: child-1 (2222), child-2 (2223)"
 echo "SSH config: ${ROOT}/.generated/ssh_config"
 
 if [[ "$RUN_E2E" -eq 1 ]]; then

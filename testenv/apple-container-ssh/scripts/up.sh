@@ -4,14 +4,15 @@
 #
 # Writes testenv/docker-ssh/.generated/ssh_config so test/e2e.jl works unchanged.
 # Do not run docker-ssh compose workers at the same time (shared ssh_config).
-# Container names are distsshqueue-child-* so DistSSHKit's child-1 / child-2 can coexist.
+# Names match docker-ssh: SSH Host, container name, and hostname are child-1 / child-2.
+# Do not run beside DistSSHKit's Apple containers (same names).
 set -euo pipefail
 
 APPLE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DOCKER_ROOT="$(cd "${APPLE_ROOT}/../docker-ssh" && pwd)"
 QUEUE_ROOT="$(cd "${APPLE_ROOT}/../.." && pwd)"
 LOCAL_IMAGE="local/distsshqueue-linux-ssh-worker:latest"
-NAMES=(distsshqueue-child-1 distsshqueue-child-2)
+NAMES=(child-1 child-2)
 RUN_E2E=0
 
 for arg in "$@"; do
@@ -19,7 +20,7 @@ for arg in "$@"; do
     --e2e) RUN_E2E=1 ;;
     -h|--help)
       echo "usage: $0 [--e2e]"
-      echo "  Same E2E as docker-ssh (distsshqueue-w1 / distsshqueue-w2)."
+      echo "  Same E2E as docker-ssh (child-1 / child-2)."
       echo "  Needs macOS 26+ Apple silicon and the container CLI."
       echo "  DISTSSHQUEUE_CODE_COVERAGE=1  e2e with --code-coverage=user"
       exit 0
@@ -65,7 +66,7 @@ write_ssh_config() {
   mkdir -p "${gen}"
   umask 077
   cat > "${gen}/ssh_config" <<EOF
-Host distsshqueue-w1
+Host child-1
   HostName ${ip1}
   User dev
   Port 22
@@ -79,7 +80,7 @@ Host distsshqueue-w1
   ServerAliveCountMax 10
   TCPKeepAlive yes
 
-Host distsshqueue-w2
+Host child-2
   HostName ${ip2}
   User dev
   Port 22
@@ -98,10 +99,10 @@ EOF
 inject_child_hosts() {
   local ip1="$1" ip2="$2"
   local cfg="${DOCKER_ROOT}/.generated/ssh_config"
-  # Apple default network does not resolve peer names; Kit drive may use child-*.
-  ssh -F "${cfg}" distsshqueue-w1 \
+  # Apple default network does not resolve peer names.
+  ssh -F "${cfg}" child-1 \
     "grep -q ' child-2\$' /etc/hosts || echo '${ip2} child-2' | sudo tee -a /etc/hosts >/dev/null"
-  ssh -F "${cfg}" distsshqueue-w2 \
+  ssh -F "${cfg}" child-2 \
     "grep -q ' child-1\$' /etc/hosts || echo '${ip1} child-1' | sudo tee -a /etc/hosts >/dev/null"
 }
 
@@ -131,6 +132,7 @@ WORKER_MEMORY="${DISTSSHQUEUE_APPLE_WORKER_MEMORY:-3584M}"
 for name in "${NAMES[@]}"; do
   container create -d --name "${name}" --network default \
     -c "${WORKER_CPUS}" -m "${WORKER_MEMORY}" \
+    -e "DISTSSHQUEUE_HOSTNAME=${name}" \
     -u root --mount "${MOUNT}" "${LOCAL_IMAGE}"
   container start "${name}"
 done
@@ -138,8 +140,8 @@ done
 echo "Waiting for worker IPs..."
 IP1="" IP2=""
 for ((i = 1; i <= 30; i++)); do
-  IP1="$(container_ipv4 distsshqueue-child-1 2>/dev/null || true)"
-  IP2="$(container_ipv4 distsshqueue-child-2 2>/dev/null || true)"
+  IP1="$(container_ipv4 child-1 2>/dev/null || true)"
+  IP2="$(container_ipv4 child-2 2>/dev/null || true)"
   if [[ -n "${IP1}" && -n "${IP2}" ]]; then
     break
   fi
@@ -152,16 +154,16 @@ if [[ -z "${IP1}" || -z "${IP2}" ]]; then
 fi
 
 write_ssh_config "${IP1}" "${IP2}"
-echo "Workers: distsshqueue-w1 -> ${IP1}:22  distsshqueue-w2 -> ${IP2}:22"
+echo "Workers: child-1 -> ${IP1}:22  child-2 -> ${IP2}:22"
 echo "SSH config: ${DOCKER_ROOT}/.generated/ssh_config"
 
 "${DOCKER_ROOT}/scripts/wait-ready.sh"
 inject_child_hosts "${IP1}" "${IP2}"
 echo "Inter-child DNS: child-1 / child-2 in each /etc/hosts"
 # First peer SSH needs accept-new (BatchMode cannot prompt).
-ssh -F "${DOCKER_ROOT}/.generated/ssh_config" distsshqueue-w1 \
+ssh -F "${DOCKER_ROOT}/.generated/ssh_config" child-1 \
   "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR -o ConnectTimeout=5 dev@child-2 true"
-ssh -F "${DOCKER_ROOT}/.generated/ssh_config" distsshqueue-w2 \
+ssh -F "${DOCKER_ROOT}/.generated/ssh_config" child-2 \
   "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR -o ConnectTimeout=5 dev@child-1 true"
 
 if [[ "$RUN_E2E" -eq 1 ]]; then
