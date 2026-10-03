@@ -111,16 +111,16 @@ retries). `DISTSSHQUEUE_SKIP_UP=1` skips compose up (image job: build+push only)
 
 | Controller | Worker | Where |
 | --- | --- | --- |
-| Linux (`ubuntu-latest`) | `ubuntu:24.04` ×2 | **CI** — path-filtered PR / main / `cut` / dispatch (`E2E`) and weekly (`E2E weekly / ubuntu-latest → ubuntu-24.04`) |
+| Linux (`ubuntu-latest`) | `ubuntu:24.04` ×2 | **CI** — path-filtered PR / main / version increase / dispatch (`E2E`) and weekly (`E2E weekly / ubuntu-latest → ubuntu-24.04`) |
 | macOS Intel (`macos-15-intel` + Colima) | same image | **E2E weekly** — `E2E weekly / macos-15-intel → ubuntu-24.04` |
 | WSL2 (`windows-latest`) | same image | **E2E weekly** — `E2E weekly / windows-latest (WSL2) → ubuntu-24.04` |
 
 [`.github/workflows/CI.yml`](../../.github/workflows/CI.yml) runs
 `./scripts/up.sh --e2e` on `ubuntu-latest` for **main** and PRs (E2E-relevant
-paths), `cut` PRs, and manual dispatch
+paths), a version increase, and manual dispatch
 (`ubuntu-latest → ubuntu-24.04`). Allowlisted markdown-only PRs skip that job.
 A `main` push that only changes README skips it too. Ordinary PR E2E does
-not upload Codecov. A `cut` PR sets `DISTSSHQUEUE_CODE_COVERAGE=1` and
+not upload Codecov. A version-increase PR sets `DISTSSHQUEUE_CODE_COVERAGE=1` and
 uploads flag `e2e`. `Pkg.test()` still does not start Docker.
 
 [`.github/workflows/ssh-e2e-weekly.yml`](../../.github/workflows/ssh-e2e-weekly.yml)

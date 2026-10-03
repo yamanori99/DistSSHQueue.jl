@@ -48,7 +48,7 @@ julia --project=. -e 'using Pkg; Pkg.test()'
 
 Run this on Julia **1.13** (and **1.14-nightly** if you have it). Layout: [test/README.md](test/README.md). When adding a file under `test/runtests.jl` or an inner SSH E2E `@testset`, bump `_RUNTEST_N` / `_E2E_N` so `[i/N]` stays honest.
 
-Checkout `Pkg.test()` is not a Registry tarball. After changing those gates (child CLI project, `ssh` spawn), and before a General cut, run the disposable copy in [test/README.md](test/README.md#registry-tree). CI runs that shape on **main** and **cut** (Julia 1.14-nightly; not a required check).
+Checkout `Pkg.test()` is not a Registry tarball. After changing those gates (child CLI project, `ssh` spawn), and before a General cut, run the disposable copy in [test/README.md](test/README.md#registry-tree). CI runs that shape on **main** and a version increase (Julia 1.14-nightly; not a required check).
 
 ```bash
 julia -e 'using Pkg; Pkg.Apps.add("Runic")'   # once
@@ -181,7 +181,7 @@ Required to merge (ruleset `main` uses these names). **1.14-nightly** jobs are a
 
 | When | Workflow | What |
 | --- | --- | --- |
-| Sunday 04:00 JST, Run workflow, or a `cut` squash to `main` | `E2E weekly` | `ubuntu-latest`, `macos-15-intel`, WSL2 → `ubuntu-24.04`. Linux job uploads E2E Codecov. Not a PR check. Failure opens (or comments on) Issue `E2E weekly failed`; a later all-green run closes it. A red **Linux** job after a `cut` merge adds `cut-hold`. Intel / WSL red does not. Compat-only `Project.toml` edits start the workflow but skip the matrix. |
+| Sunday 04:00 JST, Run workflow, or a version-increase squash to `main` | `E2E weekly` | `ubuntu-latest`, `macos-15-intel`, WSL2 → `ubuntu-24.04`. Linux job uploads E2E Codecov. Not a PR check. Failure opens (or comments on) Issue `E2E weekly failed`; a later all-green run closes it. A red **Linux** job after a `cut` merge adds `cut-hold`. Intel / WSL red does not. Compat-only `Project.toml` edits start the workflow but skip the matrix. |
 | Sunday 10:00 JST, or Run workflow | `CI weekly` | Same `Pkg.test` / JETLS / Aqua versions as a PR (no coverage). Not a PR check. Catches 1.13 / Aqua / JETLS `@release` drift when nothing merged that week. Failure of the 1.13 jobs opens Issue `CI weekly failed` (`alert`); 1.14-nightly is omitted from that notify. `cache-gc` keeps one Actions cache per restore-key prefix. |
 | 1st 10:00 JST, or Run workflow | `Runic` | `runic --check` on tracked `.jl` (`version: '1'`). Not a required PR check. Catches Runic minor drift when nothing formatted that month. Failure opens Issue `Runic monthly failed` (`alert`). |
 
@@ -205,7 +205,7 @@ what is useful.
 | Label | Meaning |
 | --- | --- |
 | `breaking` | Incompatible behavior. May land **without** a version bump. |
-| `cut` | Optional note that `Project.toml` `version` went up. CI reads the diff (`version-cut.sh`), not this label. |
+| version cut | `Project.toml` `version` went up. CI compares that file with the base (`version-cut.sh`). There is no `cut` label. |
 | `cut-hold` | Postpone register. CI adds this on Issue `E2E weekly failed` when weekly **Linux** is red after a `cut` merge. Intel / WSL red does not. Not a PR `area:*` label. Do not lower `version`. |
 
 On a breaking line bump `x` in `0.x.y`; otherwise bump `y`. Do not ship an empty cut. Do not automate the bump or `@JuliaRegistrator register`.
@@ -263,7 +263,7 @@ Every PR needs one type label (`bug` / `enhancement` / `chore`) when labels exis
 ./.github/gen-labeler.sh --check  # CI drift
 ```
 
-Every tracked path must match some `area:*` glob (`gen-labeler.sh --check`). Globs are positive paths; do not add `!` excludes (labeler ORs them as "not this path" and tags unrelated files). Path labeler syncs only `area:*`. After `setLabels` it restores type / `cut` / other non-area labels so a concurrent Type job is not wiped.
+Every tracked path must match some `area:*` glob (`gen-labeler.sh --check`). Globs are positive paths; do not add `!` excludes (labeler ORs them as "not this path" and tags unrelated files). Path labeler syncs only `area:*`. After `setLabels` it restores type / other non-area labels so a concurrent Type job is not wiped.
 
 | Paths | Label |
 | --- | --- |
@@ -306,13 +306,13 @@ CI infers, in order:
 
 `fix/` plus `Fixes` an enhancement issue gets `enhancement`. `breaking` may sit next to the type label. After a cut, a human registers from Linux E2E (or holds with `cut-hold` if weekly Linux is red); TagBot tags.
 
-Ruleset `main` requires check `PR label` (workflow `Type`). Type labels (`bug` / `enhancement` / `breaking` / `chore`) and each `area:*` must exist (`gh label create` if missing). `when:*` and `julia-next` are Issues only (not a PR type). `cut` is not applied by Type.
+Ruleset `main` requires check `PR label` (workflow `Type`). Type labels (`bug` / `enhancement` / `breaking` / `chore`) and each `area:*` must exist (`gh label create` if missing). `when:*` and `julia-next` are Issues only (not a PR type). There is no `cut` label.
 
 Colors match DistSSHKit: type is "what", area is "where". Do not give each `area:*` its own hue.
 
 | Kind | Color | Labels |
 | --- | --- | --- |
-| Type | red / green / yellow / dark red / purple / mint | `bug` `enhancement` `chore` `breaking` `cut` `dependencies` |
+| Type | red / green / yellow / dark red / purple / mint | `bug` `enhancement` `chore` `breaking` `dependencies` |
 | Path area | teal `#bfdadc` | `area:client` `area:qhost` `area:queue` `area:project-docs` |
 | Documenter | blue `#0075ca` | `area:docs` (and leftover `docs`) |
 | CI | black `#000000` | `area:ci` |
