@@ -15,7 +15,7 @@ function ssh_g_connect(name::AbstractString)::Dict{String, String}
     out = Dict{String, String}()
     h = String(name)
     try
-        dump = read(pipeline(Cmd(["ssh", "-n", DistSSHKit.ssh_opts()..., "-G", h]); stderr = devnull))
+        dump = read(pipeline(Cmd(["ssh", "-n", DistSSHRun.ssh_opts()..., "-G", h]); stderr = devnull))
         for line in eachsplit(String(dump), '\n'; keepempty = false)
             sp = findfirst(isspace, line)
             sp === nothing && continue
@@ -32,12 +32,12 @@ end
 
 """NAME column: queue-host hostname for `parent`, SSH Host for `child:`."""
 function _host_name_disp(name::AbstractString)::String
-    DistSSHKit.is_parent_host_name(name) && return gethostname()
+    DistSSHRun.is_parent_host_name(name) && return gethostname()
     return String(name)
 end
 
 function _ssh_disp(name::AbstractString; hopped::Bool)::String
-    if DistSSHKit.is_parent_host_name(name)
+    if DistSSHRun.is_parent_host_name(name)
         return hopped ? "queue host" : "this machine"
     end
     g = ssh_g_connect(name)
@@ -50,13 +50,13 @@ function _ssh_disp(name::AbstractString; hopped::Bool)::String
 end
 
 function _host_token(name::AbstractString)::String
-    DistSSHKit.is_parent_host_name(name) && return "parent"
+    DistSSHRun.is_parent_host_name(name) && return "parent"
     return "child:$(name)"
 end
 
 function _juliaup_status_sh()::String
     words = join(
-        DistSSHKit._juliaup_candidate_sh_word.(DistSSHKit.remote_juliaup_candidates()),
+        DistSSHRun._juliaup_candidate_sh_word.(DistSSHRun.remote_juliaup_candidates()),
         " ",
     )
     return """
@@ -95,17 +95,17 @@ end
 
 """`juliaup` default patch (`*`), or `-` if missing, SSH/`status` fails, or no Version."""
 function _juliaup_default_disp(name::AbstractString)::String
-    if DistSSHKit.is_parent_host_name(name)
-        ju = DistSSHKit.find_local_juliaup()
+    if DistSSHRun.is_parent_host_name(name)
+        ju = DistSSHRun.find_local_juliaup()
         ju === nothing && return "-"
-        proc, out, _ = DistSSHKit._juliaup_run_captured(ju, ["status"])
+        proc, out, _ = DistSSHRun._juliaup_run_captured(ju, ["status"])
         Int(something(proc.exitcode, 1)) == 0 || return "-"
         return _juliaup_patch_from_status(out)
     end
     try
         out = read(
             pipeline(
-                DistSSHKit._host_sync_remote_shell_cmd(String(name), _juliaup_status_sh());
+                DistSSHRun._host_sync_remote_shell_cmd(String(name), _juliaup_status_sh());
                 stderr = devnull,
             ),
             String,
@@ -149,7 +149,7 @@ function print_list_host(
         qhost::Union{Nothing, AbstractString} = qhost_display_from_env(),
         cols::Int = 0,
     )
-    DistSSHKit.print_help_chrome("DistSSHQueue list-host"; io = io)
+    DistSSHRun.print_help_chrome("DistSSHQueue list-host"; io = io)
     if names === nothing
         println(io, "  (no hosts= in config; add-host first)")
         return nothing

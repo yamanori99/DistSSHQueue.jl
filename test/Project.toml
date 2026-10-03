@@ -1,11 +1,13 @@
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
-DistSSHKit = "ceec0504-c968-4be5-b215-667cae0e8f81"
 DistSSHQueue = "24254401-70d8-4a51-8ea4-cfab19f5bc73"
+DistSSHRun = "b568025c-2759-4ef1-8b14-17d00e2cd000"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
 DistSSHQueue = {path = ".."}
+DistSSHRun = {url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "52edfdb7a1d94ce67962a31560d0f2df0c996b86"}
 
 [compat]
+DistSSHRun = "0.1"
 Test = "1"

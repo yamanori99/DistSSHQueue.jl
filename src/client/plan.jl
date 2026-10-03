@@ -8,19 +8,19 @@ function print_queue_plan_submit(kp)
     parts = String[]
     slots = kp.slots
     if slots !== nothing
-        append!(parts, DistSSHKit.resolved_placement_tokens(slots))
+        append!(parts, DistSSHRun.resolved_placement_tokens(slots))
     end
     print_inspect_submit_template(kind, parts)
     return nothing
 end
 
 function plan_cli(args::Vector{String})::Cint
-    opts = DistSSHKit.parse_plan_args(args)
+    opts = DistSSHRun.parse_plan_args(args)
     if opts.show_help
-        DistSSHKit.show_plan_usage()
-        DistSSHKit.print_help_blank()
-        DistSSHKit.print_help_section("Queue"; io = stdout)
-        DistSSHKit.print_help_lines(
+        DistSSHRun.show_plan_usage()
+        DistSSHRun.print_help_blank()
+        DistSSHRun.print_help_section("Queue"; io = stdout)
+        DistSSHRun.print_help_lines(
             stdout,
             "  Same flags as DistSSHKit plan. Runs on the queue host (cwd / project).",
             "  julia -m DistSSHQueue [qhost:HOST] plan [parent] [child:NAME...] SCRIPT.jl",
@@ -28,14 +28,14 @@ function plan_cli(args::Vector{String})::Cint
         )
         return 0
     end
-    opts.show_version && (DistSSHKit.println_kit_version(); return 0)
-    opts.script_path === nothing && (DistSSHKit.show_plan_usage(); return 0)
+    opts.show_version && (DistSSHRun.println_kit_version(); return 0)
+    opts.script_path === nothing && (DistSSHRun.show_plan_usage(); return 0)
     script = script_arg(opts.script_path, "plan")
     project = job_project()
-    DistSSHKit.print_header("DistSSHQueue plan")
-    DistSSHKit.writeln_field("Project", DistSSHKit.short_path(project))
-    DistSSHKit.kit_println()
-    kp = DistSSHKit.plan(
+    DistSSHRun.print_header("DistSSHQueue plan")
+    DistSSHRun.writeln_field("Project", DistSSHRun.short_path(project))
+    DistSSHRun.kit_println()
+    kp = DistSSHRun.plan(
         script;
         workers = opts.tokens,
         project = project,
@@ -44,7 +44,7 @@ function plan_cli(args::Vector{String})::Cint
         mem_headroom = opts.mem_headroom,
         parent_gb = opts.parent_gb,
     )
-    DistSSHKit.print_plan(kp)
+    DistSSHRun.print_plan(kp)
     kp.ok && print_queue_plan_submit(kp)
     return kp.ok ? 0 : 1
 end

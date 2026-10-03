@@ -12,7 +12,7 @@ Concept: [docs](https://yamanori99.github.io/DistSSHQueue.jl/stable/).
 module DistSSHQueue
 
 using Dates
-using DistSSHKit
+using DistSSHRun
 using Pkg
 using TOML
 
@@ -135,7 +135,7 @@ function main(args::Vector{String} = copy(ARGS))::Cint
             r === nothing || return r
             return submit_main(_rest())
         elseif is_kit_execute_kind(Symbol(sub))
-            DistSSHKit.print_cli_error(
+            DistSSHRun.print_cli_error(
                 "$sub is DistSSHKit. Enqueue with submit: julia -m DistSSHQueue [qhost:HOST] submit $sub …",
             )
             return 1
@@ -158,13 +158,13 @@ function main(args::Vector{String} = copy(ARGS))::Cint
         elseif sub == "setup"
             return setup_main(rest)
         else
-            DistSSHKit.print_cli_error("unknown subcommand: $sub")
+            DistSSHRun.print_cli_error("unknown subcommand: $sub")
             show_usage(io = stderr)
             return 1
         end
     catch e
         e isa ArgumentError || rethrow()
-        DistSSHKit.print_cli_error(e.msg)
+        DistSSHRun.print_cli_error(e.msg)
         return 1
     end
 end

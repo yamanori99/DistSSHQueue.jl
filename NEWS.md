@@ -5,6 +5,12 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
+### Breaking
+
+- DistSSHQueue depends on DistSSHRun, not DistSSHKit. `execute!`, `setup!`,
+  and the run commands come from that package. Add DistSSHKit only when you
+  want the meta-package. Kit does not reexport this queue yet.
+
 ## 0.8.0
 
 Breaking cut after `0.7.0`. Julia **1.13+** and DistSSHKit **0.9.x** only.

@@ -30,7 +30,7 @@
 using Test
 using Dates
 using Sockets
-using DistSSHKit
+using DistSSHRun
 using DistSSHQueue
 
 const QUEUE_ROOT = abspath(joinpath(@__DIR__, ".."))
@@ -88,7 +88,7 @@ const SSH_ENV = Dict(
 )
 
 function kit_root()::String
-    p = pathof(DistSSHKit)
+    p = pathof(DistSSHRun)
     p isa AbstractString || error("DistSSHKit is loaded without a file path")
     return dirname(dirname(String(p)))
 end
@@ -764,7 +764,7 @@ end
                                 client_env...,
                             )
                         )
-                        @test fetched_into == DistSSHKit.canonical_local_path(into_f) ||
+                        @test fetched_into == DistSSHRun.canonical_local_path(into_f) ||
                             occursin("e2e_fetch_into", fetched_into)
                         @test isfile(joinpath(into_f, "old_result.csv"))
                         @test isfile(joinpath(into_f, "kit.result"))

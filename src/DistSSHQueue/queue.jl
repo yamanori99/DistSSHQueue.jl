@@ -61,10 +61,10 @@ Not the Julia `--project=` that loaded DistSSHQueue.
 """
 function job_project(; cwd::AbstractString = pwd())::String
     env = strip(get(ENV, "DISTRIBUTED_PROJECT_ROOT", ""))
-    isempty(env) || return DistSSHKit.canonical_local_path(env)
-    host = DistSSHKit.resolve_pkg_project_dir(cwd)
+    isempty(env) || return DistSSHRun.canonical_local_path(env)
+    host = DistSSHRun.resolve_pkg_project_dir(cwd)
     root = isfile(joinpath(host, "Project.toml")) ? String(host) : String(cwd)
-    return DistSSHKit.canonical_local_path(root)
+    return DistSSHRun.canonical_local_path(root)
 end
 
 """Worker path Kit would use for this queue-host project (`remote=` or Kit default / ENV).
@@ -84,14 +84,14 @@ function kit_worker_root(project::AbstractString, kw::AbstractDict)::String
     layout = if raw !== nothing
         raw
     else
-        DistSSHKit.resolve_remote_project_root(DistSSHKit.canonical_local_path(project))
+        DistSSHRun.resolve_remote_project_root(DistSSHRun.canonical_local_path(project))
     end
-    return DistSSHKit.remote_env_project_root(layout)
+    return DistSSHRun.remote_env_project_root(layout)
 end
 
 """True when `project` is a qhost stage dir (`…/.distsshqueue/stage/<uuid>`)."""
 function is_qhost_stage_project(project::AbstractString)::Bool
-    parts = splitpath(DistSSHKit.canonical_local_path(project))
+    parts = splitpath(DistSSHRun.canonical_local_path(project))
     i = findfirst(isequal(".distsshqueue"), parts)
     return i !== nothing && i < length(parts) && parts[i + 1] == "stage"
 end
@@ -103,13 +103,13 @@ Terminal rows do not occupy workers. Two `qhost:` stage UUID dirs may share a
 pinned `DISTRIBUTED_REMOTE_PROJECT_ROOT` (per-job copies of one client tree).
 """
 function reject_worker_root_collision!(jobs::Vector{Job}, project::AbstractString, kw::AbstractDict)
-    proj = DistSSHKit.canonical_local_path(project)
+    proj = DistSSHRun.canonical_local_path(project)
     root = kit_worker_root(proj, kw)
     for j in jobs
         j.state in (:done, :failed, :cancelled) && continue
         other = get(j.kwargs, "project", nothing)
         other isa AbstractString || continue
-        op = DistSSHKit.canonical_local_path(String(other))
+        op = DistSSHRun.canonical_local_path(String(other))
         op == proj && continue
         is_qhost_stage_project(proj) && is_qhost_stage_project(op) && continue
         kit_worker_root(op, j.kwargs) == root || continue
@@ -124,7 +124,7 @@ function reject_worker_root_collision!(jobs::Vector{Job}, project::AbstractStrin
     return nothing
 end
 
-resolve_script(path::AbstractString) = DistSSHKit.canonical_local_path(path)
+resolve_script(path::AbstractString) = DistSSHRun.canonical_local_path(path)
 
 function as_host_allow(allowed)::Union{Nothing, HostAllow}
     allowed === nothing && return nothing
@@ -150,7 +150,7 @@ function as_host_allow(allowed)::Union{Nothing, HostAllow}
 end
 
 function reject_host_token!(allow::Union{Nothing, HostAllow}, t::AbstractString)
-    parsed = DistSSHKit.parse_placement_token(t)
+    parsed = DistSSHRun.parse_placement_token(t)
     allow === nothing && return parsed
     if !haskey(allow, parsed.name)
         throw(
@@ -220,7 +220,7 @@ function kit_artifact_from_run_dir(rd::Union{Nothing, AbstractString})::Union{No
     rd === nothing && return nothing
     srd = strip(String(rd))
     isempty(srd) && return nothing
-    return output_dir_from_run_toml(DistSSHKit.read_kit_run_toml(srd))
+    return output_dir_from_run_toml(DistSSHRun.read_kit_run_toml(srd))
 end
 
 """Kit `run.toml` from the job bag snapshot, else the live `run_dir` file."""
@@ -229,13 +229,13 @@ function kit_run_toml(j::Job)
     snap isa AbstractDict && return snap
     rd = kit_run_dir(j)
     rd === nothing && return nothing
-    return DistSSHKit.read_kit_run_toml(rd)
+    return DistSSHRun.read_kit_run_toml(rd)
 end
 
 function capture_kit_run_toml!(j::Job)
     rd = kit_run_dir(j)
     rd === nothing && return nothing
-    raw = DistSSHKit.read_kit_run_toml(rd)
+    raw = DistSSHRun.read_kit_run_toml(rd)
     raw === nothing && return nothing
     j.kwargs["run_toml"] = Dict{String, Any}(String(k) => v for (k, v) in raw)
     return nothing
@@ -257,7 +257,7 @@ end
 """Artifact leaf from `kit.result` or `run.toml`. Never the `runs/` sidecar itself."""
 function kit_artifact_from_sidecar(dir::Union{Nothing, AbstractString})::Union{Nothing, String}
     dir === nothing && return nothing
-    rec = DistSSHKit.kit_result_from_dir(String(dir))
+    rec = DistSSHRun.kit_result_from_dir(String(dir))
     if rec !== nothing
         od = rec.output_dir
         if od !== nothing
@@ -298,7 +298,7 @@ function execute_kwargs(j::Job)
         k === :run_dir && continue
         k === :run_toml && continue
         k === :setup_logs && continue
-        DistSSHKit.execute_detached_accepts(k; kind = j.kind) || continue
+        DistSSHRun.execute_detached_accepts(k; kind = j.kind) || continue
         push!(acc, k => v)
     end
     push!(acc, :yes => true)
@@ -360,7 +360,7 @@ end
 function kit_child_alive(j::Job)::Bool
     dir = kit_sidecar_dir(j)
     dir === nothing && return false
-    return DistSSHKit.kit_pid_file_running(dir)
+    return DistSSHRun.kit_pid_file_running(dir)
 end
 
 function kit_run_error_text(result)::String
@@ -378,7 +378,7 @@ kit_run_error_text(::Job, result) = kit_run_error_text(result)
 """Pid gone: prefer `kit.result`, else `:failed` (`serve` lost `KitProcess`)."""
 function settle_lost_kit_child!(j::Job)
     dir = kit_sidecar_dir(j)
-    rec = dir === nothing ? nothing : DistSSHKit.kit_result_from_dir(dir)
+    rec = dir === nothing ? nothing : DistSSHRun.kit_result_from_dir(dir)
     j.finished_at = now(UTC)
     art = kit_artifact_from_sidecar(dir)
     art !== nothing && (j.result_path = art)
@@ -417,14 +417,14 @@ function run_kit(j::Job, on_spawn; on_phase = Returns(nothing), still_running = 
     _queue_kit_setup!(j, on_phase)
     on_phase(nothing)
     still_running() || return something(kit_output_dir(j), "")
-    kp = DistSSHKit.execute!(
+    kp = DistSSHRun.execute!(
         j.kind,
         j.script,
         j.hosts;
         detached = true,
         job_id = j.id,
         execute_kwargs(j)...,
-    )::DistSSHKit.KitProcess
+    )::DistSSHRun.KitProcess
     rd = kp.run_dir
     if rd !== nothing
         j.kwargs["run_dir"] = rd
@@ -460,7 +460,7 @@ end
 function _kit_setup_session(j::Job, proj::AbstractString; workers = j.hosts)
     r = get(j.kwargs, "remote", nothing)
     remote = r isa AbstractString && !isempty(strip(String(r))) ? String(r) : nothing
-    return DistSSHKit.KitSession(;
+    return DistSSHRun.KitSession(;
         project = String(proj),
         workers = workers,
         remote = remote,
@@ -472,7 +472,7 @@ end
 function _kit_setup_child_tokens(hosts::AbstractVector{<:AbstractString})::Vector{String}
     out = String[]
     for raw in hosts
-        DistSSHKit.is_parent_host_name(kit_ssh_name(raw)) && continue
+        DistSSHRun.is_parent_host_name(kit_ssh_name(raw)) && continue
         push!(out, String(raw))
     end
     return out
@@ -514,7 +514,7 @@ function _with_pkg_depots(f)
 end
 
 function _queue_local_instantiate!(proj::AbstractString)
-    root = DistSSHKit.canonical_local_path(proj)
+    root = DistSSHRun.canonical_local_path(proj)
     isfile(joinpath(root, "Project.toml")) || return nothing
     _with_pkg_depots() do
         Pkg.activate(root) do
@@ -541,7 +541,7 @@ function _record_kit_setup_logs!(j::Job, proj::AbstractString)
     for f in readdir(logdir; join = true)
         isfile(f) || continue
         endswith(lowercase(f), ".log") || continue
-        push!(logs, DistSSHKit.canonical_local_path(f))
+        push!(logs, DistSSHRun.canonical_local_path(f))
     end
     isempty(logs) && return nothing
     sort!(logs)
@@ -558,7 +558,7 @@ function copy_setup_logs!(j::Job, snap)
     return nothing
 end
 
-function _queue_kit_setup!(j::Job, on_phase; kit_setup! = DistSSHKit.setup!)
+function _queue_kit_setup!(j::Job, on_phase; kit_setup! = DistSSHRun.setup!)
     _queue_env_on(NO_KIT_SETUP_ENV) && return nothing
     proj = get(j.kwargs, "project", nothing)
     proj isa AbstractString || (proj = job_project())
@@ -769,7 +769,7 @@ function cancel!(q::Queue, id::AbstractString)::Bool
     end
     if action isa Tuple{String, Union{Nothing, String}, Symbol, String}
         running_side, running_out, running_kind, running_id = action
-        DistSSHKit.terminate_run!(running_side; kind = running_kind)
+        DistSSHRun.terminate_run!(running_side; kind = running_kind)
         path = kit_artifact_from_sidecar(running_side)
         path === nothing && (path = running_out)
         _finish!(q, running_id, :cancelled, nothing; result_path = path)
@@ -928,7 +928,7 @@ function adopt_running!(q::Queue)
             kit_child_alive(live) || break
             sleep(0.2)
         end
-        rec = dir === nothing ? nothing : DistSSHKit.kit_result_from_dir(dir)
+        rec = dir === nothing ? nothing : DistSSHRun.kit_result_from_dir(dir)
         path = kit_artifact_from_sidecar(dir)
         if path === nothing && kit_run_dir(snap) === nothing
             path = dir
@@ -1011,7 +1011,7 @@ function serve!(q::Queue; interval::Real = 0.2)
         # only kills the spinner and a second is needed to exit).
         @async disable_sigint() do
             i = 1
-            frames = DistSSHKit.SPINNER_FRAMES
+            frames = DistSSHRun.SPINNER_FRAMES
             while !done[]
                 j, ids = _serve_live_job(q)
                 print_serve_live_line(frames[i], j, ids; io = io)

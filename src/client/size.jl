@@ -21,7 +21,7 @@ function size_hosts_from_allow(
     out = String[]
     parent = false
     for n in sorted_kit_ssh_names(allow)
-        if DistSSHKit.is_parent_host_name(n)
+        if DistSSHRun.is_parent_host_name(n)
             parent = true
         else
             push!(out, n)
@@ -43,12 +43,12 @@ function print_queue_size_submit(include_parent::Bool, hosts::Vector{String}, pl
 end
 
 function size_cli(args::Vector{String})::Cint
-    opts = DistSSHKit.parse_size_args(args)
+    opts = DistSSHRun.parse_size_args(args)
     if opts.show_help
-        DistSSHKit.show_size_usage()
-        DistSSHKit.print_help_blank()
-        DistSSHKit.print_help_section("Queue"; io = stdout)
-        DistSSHKit.print_help_lines(
+        DistSSHRun.show_size_usage()
+        DistSSHRun.print_help_blank()
+        DistSSHRun.print_help_section("Queue"; io = stdout)
+        DistSSHRun.print_help_lines(
             stdout,
             "  Same flags as DistSSHKit size. Runs on the queue host (cwd / project).",
             "  julia -m DistSSHQueue [qhost:HOST] size [parent] [child:NAME...]",
@@ -56,35 +56,35 @@ function size_cli(args::Vector{String})::Cint
         )
         return 0
     end
-    opts.show_version && (DistSSHKit.println_kit_version(); return 0)
+    opts.show_version && (DistSSHRun.println_kit_version(); return 0)
     include_parent, hosts = size_hosts_from_allow(
         opts.include_parent,
         opts.hosts,
         config_host_names(load_config()),
     )
-    all_hosts = include_parent ? [DistSSHKit.PARENT_HOST_NAME; hosts] : copy(hosts)
+    all_hosts = include_parent ? [DistSSHRun.PARENT_HOST_NAME; hosts] : copy(hosts)
     if isempty(all_hosts)
-        DistSSHKit.show_size_usage()
+        DistSSHRun.show_size_usage()
         return 0
     end
     project = job_project()
-    DistSSHKit.print_header("DistSSHQueue size")
-    DistSSHKit.writeln_field("Project", DistSSHKit.short_path(project))
-    DistSSHKit.kit_println()
-    samples = DistSSHKit.resolve_worker_memory_samples(project, all_hosts, hosts, opts)
+    DistSSHRun.print_header("DistSSHQueue size")
+    DistSSHRun.writeln_field("Project", DistSSHRun.short_path(project))
+    DistSSHRun.kit_println()
+    samples = DistSSHRun.resolve_worker_memory_samples(project, all_hosts, hosts, opts)
     samples === nothing && return 1
-    DistSSHKit.kit_println()
-    DistSSHKit.print_size_report(
+    DistSSHRun.kit_println()
+    DistSSHRun.print_size_report(
         all_hosts,
         hosts,
         samples,
         opts;
         show_peak = (opts.probe !== nothing && opts.gb_per_worker === nothing),
     )
-    plan = DistSSHKit.compute_worker_plan(
+    plan = DistSSHRun.compute_worker_plan(
         all_hosts,
         hosts,
-        DistSSHKit.per_worker_gb_dict(samples);
+        DistSSHRun.per_worker_gb_dict(samples);
         mem_headroom = opts.mem_headroom,
         parent_gb = opts.parent_gb,
     )

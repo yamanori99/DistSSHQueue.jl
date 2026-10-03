@@ -9,13 +9,16 @@ projects = ["test", "docs"]
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
-DistSSHKit = "ceec0504-c968-4be5-b215-667cae0e8f81"
+DistSSHRun = "b568025c-2759-4ef1-8b14-17d00e2cd000"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
+[sources]
+DistSSHRun = {url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "52edfdb7a1d94ce67962a31560d0f2df0c996b86"}
+
 [compat]
 Dates = "1.11"
-DistSSHKit = "0.9"
+DistSSHRun = "0.1"
 Pkg = "1.13"
 TOML = "1"
 julia = "1.13"

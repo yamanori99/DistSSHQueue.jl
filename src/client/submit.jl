@@ -16,11 +16,11 @@ function drop_nothing(d::Dict{String, Any})
 end
 
 function submit_hosts(parsed; kind::Symbol)::Vector{String}
-    return DistSSHKit.host_tokens(parsed; kind = kind)
+    return DistSSHRun.host_tokens(parsed; kind = kind)
 end
 
 function submit_kit_bag(parsed; kind::Symbol)::Dict{String, Any}
-    raw = DistSSHKit.execute_kwargs_from_parsed(parsed; kind = kind)
+    raw = DistSSHRun.execute_kwargs_from_parsed(parsed; kind = kind)
     return drop_nothing(Dict{String, Any}(String(k) => v for (k, v) in raw))
 end
 
@@ -95,8 +95,8 @@ function expand_pool_submit_hosts(slots::Int)::Vector{String}
     for name in sorted_kit_ssh_names(allow)
         n = clamp_pool_slots(slots, allow, name)
         n < 1 && continue
-        role = DistSSHKit.is_parent_host_name(name) ? :parent : :child
-        push!(out, DistSSHKit.format_placement_token(role, String(name), n))
+        role = DistSSHRun.is_parent_host_name(name) ? :parent : :child
+        push!(out, DistSSHRun.format_placement_token(role, String(name), n))
     end
     isempty(out) && throw(ArgumentError("pool:N: no hosts left after add-host max"))
     return out
@@ -137,23 +137,23 @@ function script_arg(path::AbstractString, ::AbstractString)::String
     isfile(resolved) && return resolved
     throw(
         ArgumentError(
-            DistSSHKit.explain_script_not_found(resolved, job_project(); surface = :cli),
+            DistSSHRun.explain_script_not_found(resolved, job_project(); surface = :cli),
         )
     )
 end
 
 """Parse Kit execute argv. One table: add a kind here, in `KIT_EXECUTE_KINDS`, and in `main`."""
 function kit_parse_args(kind::Symbol, args::Vector{String})
-    kind === :go && return DistSSHKit.parse_go_args(args)
-    kind === :drive && return DistSSHKit.parse_drive_args(args)
-    kind === :ride && return DistSSHKit.parse_ride_args(args)
+    kind === :go && return DistSSHRun.parse_go_args(args)
+    kind === :drive && return DistSSHRun.parse_drive_args(args)
+    kind === :ride && return DistSSHRun.parse_ride_args(args)
     throw(ArgumentError("submit: unknown kit command $(repr(kind))"))
 end
 
 function kit_show_usage(kind::Symbol)
-    kind === :go && return DistSSHKit.show_go_usage()
-    kind === :drive && return DistSSHKit.show_drive_usage()
-    kind === :ride && return DistSSHKit.show_ride_usage()
+    kind === :go && return DistSSHRun.show_go_usage()
+    kind === :drive && return DistSSHRun.show_drive_usage()
+    kind === :ride && return DistSSHRun.show_ride_usage()
     throw(ArgumentError("submit: unknown kit command $(repr(kind))"))
 end
 
@@ -178,22 +178,22 @@ function submit_kind(kind::Symbol, args::Vector{String}; pool_slots::Union{Nothi
     end
     parsed = kit_parse_args(kind, rest)
     if parsed.help
-        DistSSHKit.print_help_section("Queue"; io = stdout)
-        DistSSHKit.print_help_lines(
+        DistSSHRun.print_help_section("Queue"; io = stdout)
+        DistSSHRun.print_help_lines(
             stdout,
             "  `submit $(kind)` enqueues. `qhost:HOST` is the SSH name of the queue machine, not a Kit slot.",
         )
-        DistSSHKit.print_help_blank(stdout)
-        DistSSHKit.print_help_section("DistSSHKit"; io = stdout)
-        DistSSHKit.print_help_lines(
+        DistSSHRun.print_help_blank(stdout)
+        DistSSHRun.print_help_section("DistSSHKit"; io = stdout)
+        DistSSHRun.print_help_lines(
             stdout,
             "  Same argv as `julia -m DistSSHKit $(kind) …` (`parent:N` / `child:NAME:N`).",
         )
-        DistSSHKit.print_help_blank(stdout)
+        DistSSHRun.print_help_blank(stdout)
         kit_show_usage(kind)
         return 0
     end
-    parsed.show_version && (DistSSHKit.println_kit_version(); return 0)
+    parsed.show_version && (DistSSHRun.println_kit_version(); return 0)
     verb = String(kind)
     hosts = submit_hosts(parsed; kind = kind)
     if slots !== nothing

@@ -74,9 +74,9 @@ function setup_main(args::Vector{String})::Cint
         names = sorted_kit_ssh_names(allow)
         confirm = !_queue_env_on("DISTSSHKIT_YES")
         result = if juliaup
-            DistSSHKit.juliaup_align_remotes(names; confirm = confirm)
+            DistSSHRun.juliaup_align_remotes(names; confirm = confirm)
         else
-            DistSSHKit.juliaup_update_remotes(names; confirm = confirm)
+            DistSSHRun.juliaup_update_remotes(names; confirm = confirm)
         end
         return result.failed > 0 ? Cint(1) : Cint(0)
     end

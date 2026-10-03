@@ -17,7 +17,7 @@ function pool_sizing_assumption_line(;
         mem_headroom::Real,
         parent_gb::Real,
     )::String
-    pw = Float64(something(gb_per_worker, DistSSHKit.WORKER_MEMORY_GB_FALLBACK))
+    pw = Float64(something(gb_per_worker, DistSSHRun.WORKER_MEMORY_GB_FALLBACK))
     return string(
         "Note: estimated workers from ",
         pw,
