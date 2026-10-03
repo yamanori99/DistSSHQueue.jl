@@ -8,7 +8,7 @@ Supported on **macOS, Linux, and WSL2 Ubuntu** (not native Windows).
 
 Even small labs and individuals can keep one always-on machine, add
 SSH hosts, and use them together as a small set of compute nodes.
-Julia **1.13+**, DistSSHKit **0.8.x**. Placement tokens
+Julia **1.13+**, DistSSHKit **0.9.x**. Placement tokens
 (`parent[:N]` / `child:NAME[:N]`) stay DistSSHKit's — see the
 [kit docs](https://yamanori99.github.io/DistSSHKit.jl/stable/).
 
