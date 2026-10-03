@@ -30,13 +30,13 @@ using DistSSHQueue
         @test occursin(r"^[0-9a-fA-F-]{36}$", k)
         @test DistSSHQueue.remote_stage_root(k; home = "/qh") == "/qh/.distsshqueue/stage/" * k
     end
-    @test DistSSHQueue.should_stage("status", ["--interval", "1"]) == false
+    @test !DistSSHQueue.should_stage("status", ["--interval", "1"])
     @test DistSSHQueue.should_submit_ticket("submit", ["go", "S.jl"])
-    @test DistSSHQueue.should_submit_ticket("go", ["S.jl"]) == false
-    @test DistSSHQueue.should_submit_ticket("status", ["--interval", "1"]) == false
+    @test !DistSSHQueue.should_submit_ticket("go", ["S.jl"])
+    @test !DistSSHQueue.should_submit_ticket("status", ["--interval", "1"])
     withenv(DistSSHQueue.NO_STAGE_ENV => "1") do
-        @test DistSSHQueue.staging_enabled() == false
-        @test DistSSHQueue.should_stage("submit", ["go", "S.jl"]) == false
+        @test !DistSSHQueue.staging_enabled()
+        @test !DistSSHQueue.should_stage("submit", ["go", "S.jl"])
         @test DistSSHQueue.should_submit_ticket("submit", ["go", "S.jl"])
     end
     opts = DistSSHQueue.stage_rsync_push_opts("ssh -o BatchMode=yes")
@@ -57,14 +57,14 @@ using DistSSHQueue
         bufq = IOBuffer()
         DistSSHQueue.print_rsync_start("qh", "/x"; io = bufq)
         @test isempty(String(take!(bufq)))
-        @test DistSSHQueue.rsync_progress_on(["--progress"]) == false
+        @test !DistSSHQueue.rsync_progress_on(["--progress"])
     end
     withenv("DISTSSHKIT_QUIET" => nothing, "DISTSSHKIT_PROGRESS" => "1") do
-        @test DistSSHQueue.rsync_progress_on() == true
+        @test DistSSHQueue.rsync_progress_on()
     end
     withenv("DISTSSHKIT_QUIET" => nothing, "DISTSSHKIT_PROGRESS" => nothing) do
-        @test DistSSHQueue.rsync_progress_on() == false
-        @test DistSSHQueue.rsync_progress_on(["go", "--progress", "S.jl"]) == true
+        @test !DistSSHQueue.rsync_progress_on()
+        @test DistSSHQueue.rsync_progress_on(["go", "--progress", "S.jl"])
     end
 
     @testset "stage follows the manifest directory" begin
