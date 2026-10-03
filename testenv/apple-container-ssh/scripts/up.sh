@@ -110,10 +110,16 @@ container system start
 
 "${DOCKER_ROOT}/scripts/gen-keys.sh"
 
-# Always build so Dockerfile pin changes (e.g. a Julia channel move) take effect.
-# Layer cache keeps this cheap when the file is unchanged.
+# shellcheck source=../../docker-ssh/scripts/julia-release.sh
+source "${DOCKER_ROOT}/scripts/julia-release.sh"
+# Always build so a new Julia patch takes effect. The channel name stays
+# 1.13 when 1.13.1 becomes 1.13.2. Layer cache stays when the release is unchanged.
+distsshqueue_export_julia_release
 echo "Building ${LOCAL_IMAGE} from docker-ssh/Dockerfile..."
-(cd "${DOCKER_ROOT}" && container build -t "${LOCAL_IMAGE}" .)
+(cd "${DOCKER_ROOT}" && container build \
+  --build-arg "JULIA_CHANNEL=${JULIA_CHANNEL}" \
+  --build-arg "JULIA_RELEASE=${JULIA_RELEASE}" \
+  -t "${LOCAL_IMAGE}" .)
 
 "${APPLE_ROOT}/scripts/down.sh"
 # Recreated sshd host keys / IPs must not fight BatchMode + a stale known_hosts.

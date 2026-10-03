@@ -35,9 +35,7 @@ The host during `--e2e` is the **queue host**. docker-ssh containers are DistSSH
 9. Does not `systemctl enable --now` or `launchctl bootstrap`. Does not treat
    `parent:N` on a client that sleeps as the product path.
 
-Worker image pins Julia to **1.13** (juliaup `--default-channel`, the package floor)
-so DistSSHKit `setup --check` can run **without** `--ignore-julia-version`. The pin is
-[`Dockerfile`](Dockerfile) `--default-channel`.
+Worker image pins Julia to **1.13** (the package floor) so DistSSHKit `setup --check` can run **without** `--ignore-julia-version`. `up.sh` resolves the newest release of that channel from `versions.json` and passes it as `JULIA_RELEASE`, so the image rebuilds when `1.13.1` becomes `1.13.2`.
 
 ## Layout
 

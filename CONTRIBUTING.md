@@ -7,7 +7,7 @@ Internals of this repo.
 
 This is a **separate** package from DistSSHKit: FIFO `serve` in front of one Kit `go` / `ride` / `drive`, not a bigger Kit. Placement tokens, `execute!`, `kit.pid` / `kit.result`, `terminate_run!`, demo argv, and rsync/collect are Kit's. Queue records table state and the path Kit already wrote.
 
-CI names Julia versions in the job (`1.13`, `1.14-nightly`). DistSSHKit still uses `min` / `max` / `tip` and will switch to versions later. SSH E2E is this repo's `testenv/docker-ssh` (Kit-shaped workers). CI is `Pkg.test` (unit + child CLI / `parent:1`), JETLS, Aqua, Linux SSH E2E on Julia **1.13** (`test/e2e.jl`: `serve` API, queue-host CLI, `qhost:` over loopback OpenSSH) on path-filtered PRs / **main** / `cut` / weekly / dispatch, Gitleaks, light **Runic** `--check` (soft on PRs; monthly on `main`), schedule-only **E2E weekly** (Linux / macOS Intel / WSL), and schedule-only **CI weekly**.
+CI names Julia versions in the job (`1.13`, `1.14-nightly`), same as DistSSHKit. SSH E2E is this repo's `testenv/docker-ssh` (Kit-shaped workers). CI is `Pkg.test` (unit + child CLI / `parent:1`), JETLS, Aqua, Linux SSH E2E on Julia **1.13** (`test/e2e.jl`: `serve` API, queue-host CLI, `qhost:` over loopback OpenSSH) on path-filtered PRs / **main** / a `Project.toml` version increase / weekly / dispatch, Gitleaks, light **Runic** `--check` (soft on PRs; monthly on `main`), schedule-only **E2E weekly** (Linux / macOS Intel / WSL), and schedule-only **CI weekly**.
 
 ## Requirements
 
@@ -104,7 +104,7 @@ Workflows pass the version to `julia-actions/setup-julia`. The job name is that 
 | **1.13** | `Project.toml` julia floor. Pkg.test, Aqua, JETLS, Documenter, draw, E2E, Runic. Codecov `pkgtest` on **main push** only | yes |
 | **1.14-nightly** | Next-minor nightly. Pkg.test, Aqua, registry tree. `continue-on-error` | no |
 
-**1.13** runs on ordinary PRs (heavy gate). **1.14-nightly** runs on **main**, **CI weekly**, and `cut`, not ordinary PRs.
+**1.13** runs on ordinary PRs (heavy gate). **1.14-nightly** runs on **main**, **CI weekly**, and a `Project.toml` version increase ([`.github/version-cut.sh`](.github/version-cut.sh)), not ordinary PRs.
 
 This package feels SSH hosts, Pkg, and lockfiles more than a compute-model
 library does. When Julia announces that it has stopped maintaining the
@@ -132,11 +132,10 @@ These run as jobs of the `Test` workflow
 changed. Linux E2E (1.13) uses the same **path filter** as **main** push
 (`src/**`, `test/**`, `testenv/**` minus markdown under those trees,
 `Project.toml`, `test/Project.toml`, `.github/workflows/CI.yml`). It also
-runs on **`cut`**, **E2E weekly** (`ssh-e2e-weekly.yml`; `CI.yml` has no
+runs on a **version increase**, **E2E weekly** (`ssh-e2e-weekly.yml`; `CI.yml` has no
 `schedule`), and `workflow_dispatch`. **1.14-nightly** `Pkg.test` / Aqua
-stay on **main**, **CI weekly**, and `cut` (ci-cut when the label is
-added later), not ordinary PRs. Registry tree stays on **main**
-and `cut` (ci-cut), not ordinary PRs.
+stay on **main**, **CI weekly**, and a version increase, not ordinary PRs. Registry tree stays on **main**
+and a version increase, not ordinary PRs.
 
 [Runic](https://github.com/fredrikekre/Runic.jl) is a separate light
 workflow ([`.github/workflows/runic.yml`](.github/workflows/runic.yml)).
@@ -157,20 +156,20 @@ Linux E2E is skipped on allowlisted markdown-only PRs (same skipping UI):
 
 A new root markdown file stays heavy until listed in
 [`.github/actions/ci-heavy/action.yml`](.github/actions/ci-heavy/action.yml).
-A `cut` label skips none of this: Pkg.test, JETLS, Aqua, Documenter,
+A `Project.toml` version increase skips none of this: Pkg.test, JETLS, Aqua, Documenter,
 and Linux E2E all run (E2E Codecov too). macOS / WSL stay on `E2E weekly`,
 not the PR. Register from the cut PR's Linux E2E (optional local Mac
 `./testenv/docker-ssh/scripts/up.sh --e2e`). Intel / WSL weekly are
 watchers, not the register gate.
 
-CI uploads Codecov on **main push** only (`Pkg.test` on 1.13, flag `pkgtest`). PR E2E does not upload; `cut` PRs and **E2E weekly** Linux upload flag `e2e`. Public repo + Codecov OIDC (`id-token: write`). Status checks are informational (`codecov.yml`). Local coverage:
+CI uploads Codecov on **main push** only (`Pkg.test` on 1.13, flag `pkgtest`). PR E2E does not upload; a version-increase PR and **E2E weekly** Linux upload flag `e2e`. Public repo + Codecov OIDC (`id-token: write`). Status checks are informational (`codecov.yml`). Local coverage:
 
 ```bash
 julia --project=. -e 'using Pkg; Pkg.test(; coverage=true)'
 DISTSSHQUEUE_CODE_COVERAGE=1 ./testenv/docker-ssh/scripts/up.sh --e2e
 ```
 
-Required to merge (ruleset `main` uses these names). **1.14-nightly** jobs are allow-failure. A job skipped by the heavy / E2E gate shows as skipping (not a green empty run). Nightly runs on **main**, weekly, and `cut`, not ordinary PRs. E2E weekly and CI weekly are not required.
+Required to merge (ruleset `main` uses these names). **1.14-nightly** jobs are allow-failure. A job skipped by the heavy / E2E gate shows as skipping (not a green empty run). Nightly runs on **main**, weekly, and a version increase, not ordinary PRs. E2E weekly and CI weekly are not required.
 
 - `Pkg.test - 1.13 - ubuntu-latest`
 - `JETLS - 1.13 - ubuntu-latest`
@@ -206,7 +205,7 @@ what is useful.
 | Label | Meaning |
 | --- | --- |
 | `breaking` | Incompatible behavior. May land **without** a version bump. |
-| `cut` | `Project.toml` `version` went up. |
+| `cut` | Optional note that `Project.toml` `version` went up. CI reads the diff (`version-cut.sh`), not this label. |
 | `cut-hold` | Postpone register. CI adds this on Issue `E2E weekly failed` when weekly **Linux** is red after a `cut` merge. Intel / WSL red does not. Not a PR `area:*` label. Do not lower `version`. |
 
 On a breaking line bump `x` in `0.x.y`; otherwise bump `y`. Do not ship an empty cut. Do not automate the bump or `@JuliaRegistrator register`.
@@ -230,7 +229,7 @@ Not a calendar. Cut when [NEWS.md](NEWS.md) **Unreleased** has something General
 
 ### After a cut merges
 
-1. Register when the **cut PR Linux E2E** is green (`ubuntu-latest → ubuntu-24.04`, with Codecov). Path-filtered PRs already run that job; `cut` still forces it. Optional: local Mac `./testenv/docker-ssh/scripts/up.sh --e2e` (same suite; not Colima Intel CI). Do not wait for weekly Intel / WSL.
+1. Register when the **version-increase PR Linux E2E** is green (`ubuntu-latest → ubuntu-24.04`, with Codecov). Path-filtered PRs already run that job; a higher `Project.toml` `version` still forces it. Optional: local Mac `./testenv/docker-ssh/scripts/up.sh --e2e` (same suite; not Colima Intel CI). Do not wait for weekly Intel / WSL.
 2. **E2E weekly** still starts on the merge commit (`Project.toml` version went up): Linux, `macos-15-intel`, WSL2. Watchers. Do not wait for Sunday cron. `workflow_dispatch` remains for a re-run.
 3. Weekly **Linux** red after a cut: Issue `E2E weekly failed` gets `cut-hold`. Do not `@JuliaRegistrator register` while `cut-hold` is open. Do not lower `version`. Intel / WSL red comments on that Issue without `cut-hold`.
 4. Weekly Linux green: CI removes `cut-hold` even if Intel / WSL are still red (the Issue stays open until the whole weekly run is green). Register on the merge commit (not the PR body). Paste the NEWS section under `Release notes:`.
@@ -245,7 +244,7 @@ Repo Settings → Actions → Workflow permissions: **Read and write** (`GITHUB_
 
 ## Issues
 
-**Issues** (Bug / Enhancement forms only): `bug` or `enhancement`. The area dropdown is triage; add `area:*` if useful. Horizon (`when:*`) is **when**, not type or path: every open Issue gets exactly one of `when:current` / `when:next` / `when:later`. This repo has no Discussions; usage questions that are not a bug or a committed feature can wait or be an Issue. Security: [SECURITY.md](SECURITY.md).
+**Issues** (Bug / Enhancement forms only): `bug` or `enhancement`. The area dropdown is triage; add `area:*` if useful. Horizon (`when:*`) is **when**, not type or path: every open Issue gets exactly one of `when:current` / `when:next` / `when:later`. `julia-next` is optional and orthogonal: Julia tip / next stable Base or stdlib drift (keep `when:later` until that Julia is the package contract). This repo has no Discussions; usage questions that are not a bug or a committed feature can wait or be an Issue. Security: [SECURITY.md](SECURITY.md).
 
 A Queue failure is not automatically a Queue bug. Decide the repo first:
 
@@ -307,7 +306,7 @@ CI infers, in order:
 
 `fix/` plus `Fixes` an enhancement issue gets `enhancement`. `breaking` may sit next to the type label. After a cut, a human registers from Linux E2E (or holds with `cut-hold` if weekly Linux is red); TagBot tags.
 
-Ruleset `main` requires check `PR label` (workflow `Type`). Type labels (`bug` / `enhancement` / `breaking` / `chore` / `cut`) and each `area:*` must exist (`gh label create` if missing). `when:*` is Issues only (not a PR type).
+Ruleset `main` requires check `PR label` (workflow `Type`). Type labels (`bug` / `enhancement` / `breaking` / `chore`) and each `area:*` must exist (`gh label create` if missing). `when:*` and `julia-next` are Issues only (not a PR type). `cut` is not applied by Type.
 
 Colors match DistSSHKit: type is "what", area is "where". Do not give each `area:*` its own hue.
 
@@ -321,6 +320,7 @@ Colors match DistSSHKit: type is "what", area is "where". Do not give each `area
 | Hold | pale blue `#BFD4F2` | `cut-hold` on Issue `E2E weekly failed` after a red weekly Linux job |
 | Test harness | pale blue `#c5def5` | `area:test` |
 | Horizon | orange `#fdba74` / violet `#c4b5fd` / slate `#94a3b8` | `when:current` `when:next` `when:later` |
+| Julia next | Julia purple `#9558b2` | `julia-next` (Issues: tip / next-stable API; not a PR type) |
 
 | `when:*` | Use |
 | --- | --- |

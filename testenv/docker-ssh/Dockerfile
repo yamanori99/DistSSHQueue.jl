@@ -24,12 +24,28 @@ RUN useradd -m -s /bin/bash "${SSH_USER}" \
     && echo "${SSH_USER} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/${SSH_USER}" \
     && chmod 440 "/etc/sudoers.d/${SSH_USER}"
 
-# Pin major.minor to the package floor (Project.toml `julia`). Patch floats;
+# Pin major.minor to the package floor (Project.toml `julia`).
 # setup --check fails on major.minor mismatch without --ignore-julia-version.
-RUN su - "${SSH_USER}" -c \
-    'curl --retry 5 --retry-delay 5 --retry-connrefused --connect-timeout 10 \
-        -fsSL https://install.julialang.org | sh -s -- --yes --default-channel 1.13' \
-    && ln -sf "/home/${SSH_USER}/.juliaup/bin/julia" /usr/local/bin/julia
+# JULIA_RELEASE is the cache key: the channel stays 1.13 when 1.13.1 becomes
+# 1.13.2, so an unpinned juliaup RUN would stay cached.
+ARG JULIA_CHANNEL=1.13
+ARG JULIA_RELEASE
+RUN set -eu; \
+    if [ -z "${JULIA_RELEASE}" ]; then \
+      echo "JULIA_RELEASE is required (up.sh resolves it from versions.json)" >&2; \
+      exit 1; \
+    fi; \
+    su - "${SSH_USER}" -c "\
+    curl --retry 5 --retry-delay 5 --retry-connrefused --connect-timeout 10 \
+        -fsSL https://install.julialang.org | sh -s -- --yes --default-channel ${JULIA_CHANNEL}"; \
+    ln -sf "/home/${SSH_USER}/.juliaup/bin/julia" /usr/local/bin/julia; \
+    su - "${SSH_USER}" -c '"$HOME/.juliaup/bin/julia" --version' > /tmp/julia-ver; \
+    grep -qx "julia version ${JULIA_RELEASE}" /tmp/julia-ver || { \
+      echo "channel ${JULIA_CHANNEL} is not ${JULIA_RELEASE}:" >&2; \
+      cat /tmp/julia-ver >&2; \
+      exit 1; \
+    }; \
+    rm -f /tmp/julia-ver
 
 RUN mkdir -p /run/sshd /mounted-keys \
     && mkdir -p "/home/${SSH_USER}/.ssh" \

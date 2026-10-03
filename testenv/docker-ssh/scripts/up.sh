@@ -32,6 +32,9 @@ done
 
 cd "${ROOT}"
 
+# shellcheck source=julia-release.sh
+source "${ROOT}/scripts/julia-release.sh"
+
 ./scripts/gen-keys.sh
 
 if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
@@ -66,6 +69,8 @@ if [[ -n "${DISTSSHQUEUE_WORKER_IMAGE:-}" ]]; then
   pull_worker_image "$DISTSSHQUEUE_WORKER_IMAGE"
 else
   # Build a single service so logs are not interleaved (both share the image).
+  # Compose passes JULIA_CHANNEL and the resolved release into Dockerfile ARGs.
+  distsshqueue_export_julia_release
   "${COMPOSE[@]}" -f compose.yml build child-1
   if [[ -n "${DISTSSHQUEUE_PUSH_IMAGE:-}" ]]; then
     DISTSSHQUEUE_LOCAL_IMAGE="$LOCAL_IMAGE" ./scripts/push-image.sh "$DISTSSHQUEUE_PUSH_IMAGE"
