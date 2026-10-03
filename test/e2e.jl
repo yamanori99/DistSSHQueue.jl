@@ -6,7 +6,7 @@
 # (same as CLI `submit go` / `submit drive`). `serve` runs
 # DistSSHKit `execute!(…; detached=true)`.
 #
-# Also: `julia -m DistSSHQueue` on the queue host (omit `qhost:HOST`) and as a
+# Also: `julia -m DistSSHKit` on the queue host (omit `qhost:HOST`) and as a
 # client (`qhost:HOST` over loopback OpenSSH, including `fetch`). Inspect verbs
 # (`size` / `plan` / `pool`) are Queue chrome only (header + submit footer).
 # Kit slots on docker-ssh (`child:child-1:1`).

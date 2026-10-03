@@ -11,7 +11,7 @@ then `--help client` / `--help qhost`. Version is
 job trees stay). `<command> -h` is that verb's Usage and Flags,
 not how to invoke DistSSHQueue. Kit argv is on
 `--help client`. Flags and FAQ:
-`julia --project=. -m DistSSHQueue <command> -h` and the pages below.
+`julia --project=. -m DistSSHKit <command> -h` and the pages below.
 Each command page starts with **Usage**, then **Flags**.
 Kit `go` / `ride` / `drive` / `size` / `plan` / `pool` flags stay in the
 [kit User Guide](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/).

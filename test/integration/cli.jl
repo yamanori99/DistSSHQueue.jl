@@ -1,4 +1,4 @@
-# Child CLI (`julia -m DistSSHQueue`) + parent:1. Not SSH.
+# Child CLI (`julia -m DistSSHKit`) + parent:1. Not SSH.
 # Fake `ssh` only checks `qhost:` argv. Real OpenSSH client path is test/e2e.jl.
 # `--project` is the Pkg.test env (writable), not `pkgdir` (Registry trees are mode 444).
 

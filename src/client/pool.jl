@@ -35,7 +35,7 @@ function pool_cli(args::Vector{String})::Cint
         DistSSHRun.print_help_lines(
             stdout,
             "  Same flags as DistSSHKit pool. Runs on the queue host (cwd / project).",
-            "  julia -m DistSSHQueue [qhost:HOST] pool [parent] [child:NAME...]",
+            "  julia -m DistSSHKit [qhost:HOST] pool [parent] [child:NAME...]",
             "  Omit tokens to pool config hosts. Does not enqueue.",
         )
         return 0

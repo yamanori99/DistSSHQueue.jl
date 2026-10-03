@@ -568,8 +568,8 @@ function print_queue_root_usage(io::IO = stdout)
     DistSSHRun.print_help_section("Usage"; io = io)
     DistSSHRun.print_help_lines(
         io,
-        help_verb_line("Client", "julia --project=. -m DistSSHQueue [qhost:HOST] …"),
-        help_verb_line("Queue host", "julia -m DistSSHQueue …"),
+        help_verb_line("Client", "julia --project=. -m DistSSHKit [qhost:HOST] …"),
+        help_verb_line("Queue host", "julia -m DistSSHKit qhost …"),
     )
     DistSSHRun.print_help_blank(io)
     DistSSHRun.print_help_section("Help"; io = io)
@@ -607,8 +607,8 @@ function print_queue_client_usage(io::IO = stdout)
     DistSSHRun.print_help_section("Examples"; io = io)
     DistSSHRun.print_help_lines(
         io,
-        "  julia --project=. -m DistSSHQueue qhost:HOST status",
-        "  julia --project=. -m DistSSHQueue qhost:HOST submit drive parent:4 SCRIPT.jl",
+        "  julia --project=. -m DistSSHKit qhost:HOST status",
+        "  julia --project=. -m DistSSHKit qhost:HOST submit drive parent:4 SCRIPT.jl",
     )
     DistSSHRun.print_help_blank(io)
     DistSSHRun.print_help_section("See DistSSHKit"; io = io)
@@ -644,9 +644,9 @@ function print_queue_host_usage(io::IO = stdout)
     DistSSHRun.print_help_section("Examples"; io = io)
     DistSSHRun.print_help_lines(
         io,
-        "  julia -m DistSSHQueue setup",
-        "  julia -m DistSSHQueue add-host parent child:NAME",
-        "  julia -m DistSSHQueue serve",
+        "  julia -m DistSSHKit qhost setup",
+        "  julia -m DistSSHKit qhost add-host parent child:NAME",
+        "  julia -m DistSSHKit qhost serve",
     )
     DistSSHRun.print_help_blank(io)
     DistSSHRun.print_help_section("Danger"; io = io)
@@ -755,9 +755,9 @@ function print_setup_usage(io::IO = stdout)
     DistSSHRun.print_help_section("Usage"; io = io)
     DistSSHRun.print_help_lines(
         io,
-        "  julia -m DistSSHQueue setup [--force]",
-        "  julia -m DistSSHQueue setup --juliaup",
-        "  julia -m DistSSHQueue setup --juliaup-update",
+        "  julia -m DistSSHKit qhost setup [--force]",
+        "  julia -m DistSSHKit qhost setup --juliaup",
+        "  julia -m DistSSHKit qhost setup --juliaup-update",
     )
     DistSSHRun.print_help_blank(io)
     DistSSHRun.print_help_section("Flags"; io = io)

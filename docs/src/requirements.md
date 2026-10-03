@@ -24,7 +24,7 @@ runs jobs.
   The floor is the maintained stable. When Julia stops updating the
   previous minor, Queue moves with it (see Contributing, Julia versions).
   - Library (`Pkg.add` / `using` / `submit!`), CLI
-    (`julia -m DistSSHQueue`)
+    (`julia -m DistSSHKit`)
   - Same **major.minor** on the queue host and SSH workers (DistSSHKit
     `setup --check` fails on a mismatch unless `--ignore-julia-version`;
     patch-only differences warn). `serve` always runs that `:check` on
@@ -55,7 +55,7 @@ The always-on **queue host** is **macOS or Linux** (Mac mini, Linux VM;
 machine. WSL2 is Linux for a **client** or a worker; do not use it as
 the always-on queue host.
 
-Install Queue so `julia -m DistSSHQueue` works on this host (default
+Install Queue so `julia -m DistSSHKit` works on this host (default
 env or `--project=`). Dedicated **`~/.distsshqueue/env`** is optional:
 create it for `qhost:` hops (that path is the default `--queue-env`)
 and for `enable`. `setup` does not create it. The table lives at
@@ -168,7 +168,7 @@ julia -m DistSSHKit setup --check child:USER@HOST
 
 ### Align Julia with juliaup
 
-`julia -m DistSSHQueue setup --juliaup` wraps DistSSHKit
+`julia -m DistSSHKit qhost setup --juliaup` wraps DistSSHKit
 `juliaup_align_remotes` on config `hosts` (`list-host`). It does not
 take host tokens. An empty table fails with `add-host first`. Do not
 combine with `--force`. That changes each target's **juliaup default**
@@ -180,7 +180,7 @@ not from the client:
 
 ```bash
 # On the queue host, after add-host (parent is included only if listed):
-julia -m DistSSHQueue setup --juliaup
+julia -m DistSSHKit qhost setup --juliaup
 
 # From a client: only hosts you can SSH to from this machine.
 # parent here is this client, not the queue host.
@@ -195,7 +195,7 @@ Details: [kit Requirements](https://yamanori99.github.io/DistSSHKit.jl/stable/re
 
 ### Update installed channels
 
-`julia -m DistSSHQueue setup --juliaup-update` wraps DistSSHKit
+`julia -m DistSSHKit qhost setup --juliaup-update` wraps DistSSHKit
 `juliaup_update_remotes`. Uses config `hosts`, same as `--juliaup`.
 Do not combine with `--force` or `--juliaup`. It runs `juliaup update`
 on each target and leaves the host default unchanged. Success line stays

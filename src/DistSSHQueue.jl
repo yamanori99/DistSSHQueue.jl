@@ -61,7 +61,7 @@ function show_usage(;
     return print_queue_usage(io; topic = topic)
 end
 
-"""CLI entry. Prefer `julia -m DistSSHQueue` (client `qhost:HOST` / queue-host `setup`)."""
+"""CLI entry. Prefer `julia -m DistSSHKit` (client `qhost:HOST` / queue-host `setup`)."""
 function main(args::Vector{String} = copy(ARGS))::Cint
     apply_config_env!(load_config())
     try
@@ -136,7 +136,7 @@ function main(args::Vector{String} = copy(ARGS))::Cint
             return submit_main(_rest())
         elseif is_kit_execute_kind(Symbol(sub))
             DistSSHRun.print_cli_error(
-                "$sub is DistSSHKit. Enqueue with submit: julia -m DistSSHQueue [qhost:HOST] submit $sub …",
+                "$sub is DistSSHKit. Enqueue with submit: julia -m DistSSHKit [qhost:HOST] submit $sub …",
             )
             return 1
         elseif sub == "fetch"

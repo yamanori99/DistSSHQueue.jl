@@ -64,7 +64,7 @@ For everything else, see the
   -------------------------------         --------------------------
   yours / a colleague's / ...             FIFO     one Kit job at a time
        |                                  table    ~/.distsshqueue
-       |  julia -m DistSSHQueue           add-host / remove-host
+       |  julia -m DistSSHKit           add-host / remove-host
        |    qhost:NAME                    serve    now, this terminal
        |    submit | status | list-host   enable   again after reboot
        |    watch | cancel | fetch | ...
@@ -93,18 +93,18 @@ with `-m DistSSHKit` (no Queue). That Kit command starts compute on
 **this** machine now; `submit` only enqueues the same argv.
 
 ```bash
-julia --project=. -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
+julia --project=. -m DistSSHKit  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
 #──────────── Julia ────────────┘  └─ qhost ──┘  Queue   └─── DistSSHKit argv ────┘
 ```
 
 ```bash
-julia --project=. -m DistSSHQueue [qhost:HOST] submit drive parent:4 SCRIPT.jl
+julia --project=. -m DistSSHKit [qhost:HOST] submit drive parent:4 SCRIPT.jl
 ```
 
 Break a long terminal line after `submit` with `\`:
 
 ```bash
-julia --project=. -m DistSSHQueue [qhost:HOST] submit \
+julia --project=. -m DistSSHKit [qhost:HOST] submit \
     drive parent:4 child:NAME:N SCRIPT.jl
 ```
 
@@ -209,16 +209,16 @@ and instantiates it before the run:
 From a **client** (job directory; Queue must be loadable from that env):
 
 ```bash
-julia --project=. -m DistSSHQueue qhost:HOST list-host
-julia --project=. -m DistSSHQueue qhost:HOST size
-julia --project=. -m DistSSHQueue qhost:HOST plan SCRIPT.jl
-julia --project=. -m DistSSHQueue qhost:HOST pool
-julia --project=. -m DistSSHQueue qhost:HOST submit go child:host1:4 SCRIPT.jl
-julia --project=. -m DistSSHQueue qhost:HOST status
-julia --project=. -m DistSSHQueue qhost:HOST watch
-julia --project=. -m DistSSHQueue qhost:HOST cancel <id>
-julia --project=. -m DistSSHQueue qhost:HOST fetch <id>
-julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
+julia --project=. -m DistSSHKit qhost:HOST list-host
+julia --project=. -m DistSSHKit qhost:HOST size
+julia --project=. -m DistSSHKit qhost:HOST plan SCRIPT.jl
+julia --project=. -m DistSSHKit qhost:HOST pool
+julia --project=. -m DistSSHKit qhost:HOST submit go child:host1:4 SCRIPT.jl
+julia --project=. -m DistSSHKit qhost:HOST status
+julia --project=. -m DistSSHKit qhost:HOST watch
+julia --project=. -m DistSSHKit qhost:HOST cancel <id>
+julia --project=. -m DistSSHKit qhost:HOST fetch <id>
+julia --project=. -m DistSSHKit qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
 `submit` starts `serve` on the queue host if none is running. `serve`
@@ -234,13 +234,13 @@ Typed path (queue host → submit / fetch → teardown):
 [Walkthrough](https://yamanori99.github.io/DistSSHQueue.jl/stable/tutorial/walkthrough/).
 
 On the **queue host** (once). `setup` writes `config.toml`, not `env/`.
-Queue in the default Julia env (`julia -m DistSSHQueue`); from a
+Queue in the default Julia env (`julia -m DistSSHKit`); from a
 checkout add `--project=.`.
 
 ```bash
-julia -m DistSSHQueue setup
-julia -m DistSSHQueue add-host parent child:host1
-julia -m DistSSHQueue serve
+julia -m DistSSHKit qhost setup
+julia -m DistSSHKit qhost add-host parent child:host1
+julia -m DistSSHKit qhost serve
 ```
 
 `qhost:` defaults to `--project=~/.distsshqueue/env` (`--queue-env @`

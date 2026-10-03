@@ -23,7 +23,7 @@ or `Pkg.instantiate` on the stage tree.
 
 How you call it:
 
-- **CLI** — `julia --project=. -m DistSSHQueue qhost:HOST submit go …`
+- **CLI** — `julia --project=. -m DistSSHKit qhost:HOST submit go …`
 - **Julia API** — `submit!` / `cancel!` / `serve!` on a [`Queue`](@ref)
   ([API](@ref API))
 
@@ -73,7 +73,7 @@ client copy under `.distsshqueue/`.
   -------------------------------         --------------------------
   yours / a colleague's / ...             FIFO     one Kit job at a time
        |                                  table    ~/.distsshqueue
-       |  julia -m DistSSHQueue           add-host / remove-host
+       |  julia -m DistSSHKit           add-host / remove-host
        |    qhost:NAME                    serve    now, this terminal
        |    submit | status | list-host   enable   again after reboot
        |    watch | cancel | fetch | ...

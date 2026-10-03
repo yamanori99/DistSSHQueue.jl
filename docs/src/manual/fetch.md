@@ -9,8 +9,8 @@ For the ownership boundary and both directory trees, see
 [Artifacts and paths](@ref Manual-artifacts).
 
 ```bash
-julia --project=. -m DistSSHQueue [qhost:HOST] fetch <id>  # 8-char prefix or full UUID
-julia --project=. -m DistSSHQueue [qhost:HOST] fetch .distsshqueue/tickets/<uuid>
+julia --project=. -m DistSSHKit [qhost:HOST] fetch <id>  # 8-char prefix or full UUID
+julia --project=. -m DistSSHKit [qhost:HOST] fetch .distsshqueue/tickets/<uuid>
 ```
 
 Also: [First job](@ref Tutorial-Client), [Walkthrough](@ref Tutorial-Walkthrough),

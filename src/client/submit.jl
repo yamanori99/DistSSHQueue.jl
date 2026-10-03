@@ -53,7 +53,7 @@ function peel_submit_pool(args::Vector{String})
             throw(
                 ArgumentError(
                     "`pool` is the inspect verb. For submit slots use `pool:N` " *
-                        "(e.g. submit pool:8 drive SCRIPT.jl). Inspect: julia -m DistSSHQueue pool",
+                        "(e.g. submit pool:8 drive SCRIPT.jl). Inspect: julia -m DistSSHKit qhost pool",
                 )
             )
         elseif startswith(a, "pool:")

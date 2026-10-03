@@ -63,7 +63,7 @@ julia> import Pkg; Pkg.add("DistSSHQueue")
   -------------------------------         --------------------------
   yours / a colleague's / ...             FIFO     one Kit job at a time
        |                                  table    ~/.distsshqueue
-       |  julia -m DistSSHQueue           add-host / remove-host
+       |  julia -m DistSSHKit           add-host / remove-host
        |    qhost:NAME                    serve    now, this terminal
        |    submit | status | list-host   enable   again after reboot
        |    watch | cancel | fetch | ...
@@ -89,18 +89,18 @@ argv (`go` / `ride` / `drive` とその先) で、`-m DistSSHKit` にそのま�
 は同じargvをキューに載せるだけである。
 
 ```bash
-julia --project=. -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
+julia --project=. -m DistSSHKit  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
 #──────────── Julia ────────────┘  └─ qhost ──┘  Queue   └─── DistSSHKit argv ────┘
 ```
 
 ```bash
-julia --project=. -m DistSSHQueue [qhost:HOST] submit drive parent:4 SCRIPT.jl
+julia --project=. -m DistSSHKit [qhost:HOST] submit drive parent:4 SCRIPT.jl
 ```
 
 長い行は `submit` のあとで `\` 折り:
 
 ```bash
-julia --project=. -m DistSSHQueue [qhost:HOST] submit \
+julia --project=. -m DistSSHKit [qhost:HOST] submit \
     drive parent:4 child:NAME:N SCRIPT.jl
 ```
 
@@ -205,16 +205,16 @@ rsync し、実行前にそこで instantiate する。
 **クライアント** から (ジョブのディレクトリ。その env から Queue が load できること):
 
 ```bash
-julia --project=. -m DistSSHQueue qhost:HOST list-host
-julia --project=. -m DistSSHQueue qhost:HOST size
-julia --project=. -m DistSSHQueue qhost:HOST plan SCRIPT.jl
-julia --project=. -m DistSSHQueue qhost:HOST pool
-julia --project=. -m DistSSHQueue qhost:HOST submit go child:host1:4 SCRIPT.jl
-julia --project=. -m DistSSHQueue qhost:HOST status
-julia --project=. -m DistSSHQueue qhost:HOST watch
-julia --project=. -m DistSSHQueue qhost:HOST cancel <id>
-julia --project=. -m DistSSHQueue qhost:HOST fetch <id>  # 8文字プレフィックスでもフルUUIDでも可
-julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
+julia --project=. -m DistSSHKit qhost:HOST list-host
+julia --project=. -m DistSSHKit qhost:HOST size
+julia --project=. -m DistSSHKit qhost:HOST plan SCRIPT.jl
+julia --project=. -m DistSSHKit qhost:HOST pool
+julia --project=. -m DistSSHKit qhost:HOST submit go child:host1:4 SCRIPT.jl
+julia --project=. -m DistSSHKit qhost:HOST status
+julia --project=. -m DistSSHKit qhost:HOST watch
+julia --project=. -m DistSSHKit qhost:HOST cancel <id>
+julia --project=. -m DistSSHKit qhost:HOST fetch <id>  # 8文字プレフィックスでもフルUUIDでも可
+julia --project=. -m DistSSHKit qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
 `submit` は、`serve` が無ければキューホスト上で起動する。`serve` が
@@ -231,12 +231,12 @@ stdout 1 行。stderr に `Queued  N` (`DISTSSHKIT_QUIET` で隠す)。
 [Walkthrough](https://yamanori99.github.io/DistSSHQueue.jl/stable/tutorial/walkthrough/)。
 
 **キューホスト** で一度だけ。`setup` は `config.toml` を書く (`env/` は作らない)。
-既定の Julia 環境で `julia -m DistSSHQueue`。チェックアウトなら `--project=.`。
+既定の Julia 環境で `julia -m DistSSHKit`。チェックアウトなら `--project=.`。
 
 ```bash
-julia -m DistSSHQueue setup
-julia -m DistSSHQueue add-host parent child:host1
-julia -m DistSSHQueue serve
+julia -m DistSSHKit qhost setup
+julia -m DistSSHKit qhost add-host parent child:host1
+julia -m DistSSHKit qhost serve
 ```
 
 `qhost:` の既定は `--project=~/.distsshqueue/env` (リモート既定環境は

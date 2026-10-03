@@ -15,7 +15,7 @@ macOS, Linux, or WSL2 Ubuntu. Not native Windows (the kit shells out to `ssh` / 
 
 | What | Need |
 | --- | --- |
-| Library, `Pkg.test()`, `julia -m DistSSHQueue`, docs | Julia **1.13+** |
+| Library, `Pkg.test()`, `julia -m DistSSHKit`, docs | Julia **1.13+** |
 | DistSSHKit | **0.9.x** from General (`execute!`, `job_id`, `run_dir` / `kit.pid` / `kit.result`). Not a git sibling. |
 
 Prefer [juliaup](https://github.com/JuliaLang/juliaup). Details: [Requirements](https://yamanori99.github.io/DistSSHQueue.jl/dev/requirements/).

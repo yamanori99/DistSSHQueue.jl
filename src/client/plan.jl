@@ -23,7 +23,7 @@ function plan_cli(args::Vector{String})::Cint
         DistSSHRun.print_help_lines(
             stdout,
             "  Same flags as DistSSHKit plan. Runs on the queue host (cwd / project).",
-            "  julia -m DistSSHQueue [qhost:HOST] plan [parent] [child:NAME...] SCRIPT.jl",
+            "  julia -m DistSSHKit [qhost:HOST] plan [parent] [child:NAME...] SCRIPT.jl",
             "  Does not enqueue.",
         )
         return 0

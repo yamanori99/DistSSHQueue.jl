@@ -46,7 +46,7 @@ function setup_main(args::Vector{String})::Cint
             juliaup_update = true
             i += 1
         elseif a == "--service"
-            throw(ArgumentError("setup --service is gone; run: julia -m DistSSHQueue enable"))
+            throw(ArgumentError("setup --service is gone; run: julia -m DistSSHKit qhost enable"))
         elseif a == "--write-only"
             throw(ArgumentError("setup --write-only is gone; setup only writes config.toml"))
         elseif startswith(a, "-")
