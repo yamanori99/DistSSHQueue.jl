@@ -35,15 +35,15 @@ The host during `--e2e` is the **queue host**. docker-ssh containers are DistSSH
 9. Does not `systemctl enable --now` or `launchctl bootstrap`. Does not treat
    `parent:N` on a client that sleeps as the product path.
 
-Worker image pins Julia to CI slot **max** (juliaup `--default-channel`, today **1.13**)
-so DistSSHKit `setup --check` can run **without** `--ignore-julia-version`. Pins live in
-[`.github/julia-slots.env`](../../.github/julia-slots.env).
+Worker image pins Julia to **1.13** (juliaup `--default-channel`, the package floor)
+so DistSSHKit `setup --check` can run **without** `--ignore-julia-version`. The pin is
+[`Dockerfile`](Dockerfile) `--default-channel`.
 
 ## Layout
 
 | Path | Role |
 | --- | --- |
-| [`Dockerfile`](Dockerfile) / [`start.sh`](start.sh) | Worker image (sshd, rsync, git, Julia via juliaup; slot **max**, today **1.13**) |
+| [`Dockerfile`](Dockerfile) / [`start.sh`](start.sh) | Worker image (sshd, rsync, git, Julia via juliaup; channel **1.13**) |
 | [`compose.yml`](compose.yml) | Two children (`child-1` / `child-2`) |
 | [`scripts/gen-keys.sh`](scripts/gen-keys.sh) | Controller + inter-worker keys, SSH config |
 | [`scripts/up.sh`](scripts/up.sh) | Keys → down → up → wait (`--e2e` also runs the suite) |

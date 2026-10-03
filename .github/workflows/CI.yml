@@ -9,7 +9,7 @@ on:
 
 # Cancel redundant runs on the same branch/PR.
 # `cut` after open is `.github/workflows/ci-cut.yml` (labeled is not on this
-# workflow). ci-cut runs min / tip / Aqua tip / registry tree when `cut` is added.
+# workflow). ci-cut runs 1.13 / 1.14-nightly / registry tree when `cut` is added.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
@@ -21,12 +21,12 @@ permissions:
 jobs:
   # Full `Pkg.test()` stays Linux-only. Slow SSH E2E controllers are `E2E weekly`.
   # One detect job; markdown-only / allowlisted PRs skip heavy jobs (UI: skipping).
-  # Required check names are slot literals (min/max), not Julia versions.
-  # Codecov (flag pkgtest): main push, max slot only — not on pull_request.
+  # Required check names are Julia versions (`1.13`), not slot labels.
+  # Codecov (flag pkgtest): main push, 1.13 only — not on pull_request.
   # cache-scratchspaces: false — registry_updates.toml in scratchspaces can
   # poison Pkg.Registry.update on 1.13 if restored corrupt.
   # Aqua / JETLS share this workflow so the Test badge is the PR gate.
-  # Linux E2E (max): path filter on PR / main push; always on `cut` and
+  # Linux E2E (1.13): path filter on PR / main push; always on `cut` and
   # dispatch. JETLS uses `.github/actions/jetls-check` (no nested
   # cache; julia-actions/cache#236).
   detect:
@@ -60,7 +60,6 @@ jobs:
               - "!testenv/**/*.md"
               - "Project.toml"
               - "test/Project.toml"
-              - ".github/julia-slots.env"
               - ".github/workflows/CI.yml"
       - id: gate
         env:
@@ -80,24 +79,8 @@ jobs:
             echo "coverage=false" >> "$GITHUB_OUTPUT"
           fi
 
-  test-min:
-    name: Pkg.test - min - ubuntu-latest
-    needs: detect
-    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'cut')
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/julia-slot
-        with:
-          slot: min
-      - uses: julia-actions/cache@v3
-        with:
-          cache-scratchspaces: false
-      - uses: ./.github/actions/pkg-test
-
-  test-max:
-    name: Pkg.test - max - ubuntu-latest
+  test-1-13:
+    name: Pkg.test - 1.13 - ubuntu-latest
     needs: detect
     if: github.event_name != 'pull_request' || needs.detect.outputs.heavy == 'true'
     runs-on: ubuntu-latest
@@ -108,9 +91,9 @@ jobs:
       actions: write
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/julia-slot
+      - uses: julia-actions/setup-julia@v3
         with:
-          slot: max
+          version: "1.13"
       - uses: julia-actions/cache@v3
         with:
           cache-scratchspaces: false
@@ -119,8 +102,8 @@ jobs:
           coverage: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           upload: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
 
-  test-tip:
-    name: Pkg.test - tip - ubuntu-latest
+  test-1-14-nightly:
+    name: Pkg.test - 1.14-nightly - ubuntu-latest
     needs: detect
     if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'cut')
     runs-on: ubuntu-latest
@@ -128,15 +111,15 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/julia-slot
+      - uses: julia-actions/setup-julia@v3
         with:
-          slot: tip
+          version: "1.14-nightly"
       - uses: julia-actions/cache@v3
         with:
           cache-scratchspaces: false
       - uses: ./.github/actions/pkg-test
 
-  # Not a Julia slot. Not required to merge. Catches checkout-only Pkg.test assumptions.
+  # Not required to merge. Catches checkout-only Pkg.test assumptions. Runs on 1.14-nightly.
   test-registry-tree:
     name: Pkg.test - registry tree - ubuntu-latest
     needs: detect
@@ -148,50 +131,33 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: ./.github/actions/julia-slot
+      - uses: julia-actions/setup-julia@v3
         with:
-          slot: tip
+          version: "1.14-nightly"
       - uses: julia-actions/cache@v3
         with:
           cache-scratchspaces: false
       - uses: ./.github/actions/registry-tree-test
 
-  aqua-min:
-    name: Aqua - min - ubuntu-latest
-    needs: detect
-    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'cut')
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/julia-slot
-        with:
-          slot: min
-      - uses: julia-actions/cache@v3
-        with:
-          cache-scratchspaces: false
-      - name: Aqua.test_all (latest Aqua)
-        run: ./.github/aqua-check.sh
-
-  aqua-max:
-    name: Aqua - max - ubuntu-latest
+  aqua-1-13:
+    name: Aqua - 1.13 - ubuntu-latest
     needs: detect
     if: github.event_name != 'pull_request' || needs.detect.outputs.heavy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/julia-slot
+      - uses: julia-actions/setup-julia@v3
         with:
-          slot: max
+          version: "1.13"
       - uses: julia-actions/cache@v3
         with:
           cache-scratchspaces: false
       - name: Aqua.test_all (latest Aqua)
         run: ./.github/aqua-check.sh
 
-  aqua-tip:
-    name: Aqua - tip - ubuntu-latest
+  aqua-1-14-nightly:
+    name: Aqua - 1.14-nightly - ubuntu-latest
     needs: detect
     if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'cut')
     runs-on: ubuntu-latest
@@ -199,9 +165,9 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/julia-slot
+      - uses: julia-actions/setup-julia@v3
         with:
-          slot: tip
+          version: "1.14-nightly"
       - uses: julia-actions/cache@v3
         with:
           cache-scratchspaces: false
@@ -209,29 +175,9 @@ jobs:
         run: ./.github/aqua-check.sh
 
   # Literal names: skipped matrix jobs leave ${{ matrix.* }} unexpanded.
-  # Ceiling is JULIA_SLOT_JETLS_MAX, not slot max/tip.
-  jetls-min:
-    name: JETLS - min - ubuntu-latest
-    needs: detect
-    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'cut')
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v7
-      - id: files
-        run: echo "list=$(./.github/jetls-check.sh --print-files)" >> "$GITHUB_OUTPUT"
-      - uses: ./.github/actions/julia-slot
-        with:
-          slot: min
-      - uses: julia-actions/cache@v3
-        with:
-          cache-scratchspaces: false
-      - uses: ./.github/actions/jetls-check
-        with:
-          files: ${{ steps.files.outputs.list }}
-
-  jetls-max:
-    name: JETLS - max - ubuntu-latest
+  # JETLS stays on a runtime it lists (today 1.13). No nightly JETLS.
+  jetls-1-13:
+    name: JETLS - 1.13 - ubuntu-latest
     needs: detect
     if: github.event_name != 'pull_request' || needs.detect.outputs.heavy == 'true'
     runs-on: ubuntu-latest
@@ -240,9 +186,9 @@ jobs:
       - uses: actions/checkout@v7
       - id: files
         run: echo "list=$(./.github/jetls-check.sh --print-files)" >> "$GITHUB_OUTPUT"
-      - uses: ./.github/actions/julia-slot
+      - uses: julia-actions/setup-julia@v3
         with:
-          slot: jetls-max
+          version: "1.13"
       - uses: julia-actions/cache@v3
         with:
           cache-scratchspaces: false
@@ -262,11 +208,10 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/julia-slot
-        id: julia
+      - uses: julia-actions/setup-julia@v3
         with:
-          slot: max
-      - name: Julia ${{ steps.julia.outputs.version }}
+          version: "1.13"
+      - name: Julia version
         run: julia --version
 
       - uses: julia-actions/cache@v3

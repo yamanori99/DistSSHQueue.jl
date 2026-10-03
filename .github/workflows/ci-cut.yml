@@ -1,6 +1,6 @@
 # `cut` added after open. Keep `labeled` off Test so area/type labels
 # cannot skip or cancel Pkg.test. Test evaluates `cut` only at start, so
-# this workflow runs the cut-only slots (min / tip / Aqua tip / registry tree).
+# this workflow runs the cut-only versions (1.13 / 1.14-nightly / registry tree).
 # Type applies `cut` with GITHUB_TOKEN, which does not start `labeled`.
 # That path uses workflow_dispatch. Concurrency keeps the label name so
 # `chore` cannot cancel a `cut` run; dispatch uses the name `cut`.
@@ -25,45 +25,45 @@ permissions:
   actions: write # julia-actions/cache delete-old-caches
 
 jobs:
-  test-min:
+  test-1-13:
     # Unique skip name so a non-cut label does not overwrite Test's check.
     if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'cut'
-    name: ${{ (github.event_name == 'workflow_dispatch' || github.event.label.name == 'cut') && 'Pkg.test - min - ubuntu-latest' || 'cut label skip (test min)' }}
+    name: ${{ (github.event_name == 'workflow_dispatch' || github.event.label.name == 'cut') && 'Pkg.test - 1.13 - ubuntu-latest' || 'cut label skip (test 1.13)' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/pull/{0}/merge', inputs.pr) || github.sha }}
-      - uses: ./.github/actions/julia-slot
+      - uses: julia-actions/setup-julia@v3
         with:
-          slot: min
+          version: "1.13"
       - uses: julia-actions/cache@v3
         with:
           cache-scratchspaces: false
       - uses: ./.github/actions/pkg-test
 
-  aqua-min:
+  aqua-1-13:
     if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'cut'
-    name: ${{ (github.event_name == 'workflow_dispatch' || github.event.label.name == 'cut') && 'Aqua - min - ubuntu-latest' || 'cut label skip (aqua min)' }}
+    name: ${{ (github.event_name == 'workflow_dispatch' || github.event.label.name == 'cut') && 'Aqua - 1.13 - ubuntu-latest' || 'cut label skip (aqua 1.13)' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/pull/{0}/merge', inputs.pr) || github.sha }}
-      - uses: ./.github/actions/julia-slot
+      - uses: julia-actions/setup-julia@v3
         with:
-          slot: min
+          version: "1.13"
       - uses: julia-actions/cache@v3
         with:
           cache-scratchspaces: false
       - name: Aqua.test_all (latest Aqua)
         run: ./.github/aqua-check.sh
 
-  jetls-min:
+  jetls-1-13:
     if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'cut'
-    name: ${{ (github.event_name == 'workflow_dispatch' || github.event.label.name == 'cut') && 'JETLS - min - ubuntu-latest' || 'cut label skip (jetls min)' }}
+    name: ${{ (github.event_name == 'workflow_dispatch' || github.event.label.name == 'cut') && 'JETLS - 1.13 - ubuntu-latest' || 'cut label skip (jetls 1.13)' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -72,9 +72,9 @@ jobs:
           ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/pull/{0}/merge', inputs.pr) || github.sha }}
       - id: files
         run: echo "list=$(./.github/jetls-check.sh --print-files)" >> "$GITHUB_OUTPUT"
-      - uses: ./.github/actions/julia-slot
+      - uses: julia-actions/setup-julia@v3
         with:
-          slot: min
+          version: "1.13"
       - uses: julia-actions/cache@v3
         with:
           cache-scratchspaces: false
@@ -82,10 +82,10 @@ jobs:
         with:
           files: ${{ steps.files.outputs.list }}
 
-  test-tip:
+  test-1-14-nightly:
     # Unique skip name so a non-cut label does not overwrite Test's check.
     if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'cut'
-    name: ${{ (github.event_name == 'workflow_dispatch' || github.event.label.name == 'cut') && 'Pkg.test - tip - ubuntu-latest' || 'cut label skip (tip)' }}
+    name: ${{ (github.event_name == 'workflow_dispatch' || github.event.label.name == 'cut') && 'Pkg.test - 1.14-nightly - ubuntu-latest' || 'cut label skip (1.14-nightly)' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     continue-on-error: true
@@ -93,17 +93,17 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/pull/{0}/merge', inputs.pr) || github.sha }}
-      - uses: ./.github/actions/julia-slot
+      - uses: julia-actions/setup-julia@v3
         with:
-          slot: tip
+          version: "1.14-nightly"
       - uses: julia-actions/cache@v3
         with:
           cache-scratchspaces: false
       - uses: ./.github/actions/pkg-test
 
-  aqua-tip:
+  aqua-1-14-nightly:
     if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'cut'
-    name: ${{ (github.event_name == 'workflow_dispatch' || github.event.label.name == 'cut') && 'Aqua - tip - ubuntu-latest' || 'cut label skip (aqua)' }}
+    name: ${{ (github.event_name == 'workflow_dispatch' || github.event.label.name == 'cut') && 'Aqua - 1.14-nightly - ubuntu-latest' || 'cut label skip (aqua 1.14-nightly)' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     continue-on-error: true
@@ -111,9 +111,9 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/pull/{0}/merge', inputs.pr) || github.sha }}
-      - uses: ./.github/actions/julia-slot
+      - uses: julia-actions/setup-julia@v3
         with:
-          slot: tip
+          version: "1.14-nightly"
       - uses: julia-actions/cache@v3
         with:
           cache-scratchspaces: false
@@ -131,9 +131,9 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/pull/{0}/merge', inputs.pr) || github.sha }}
           persist-credentials: false
-      - uses: ./.github/actions/julia-slot
+      - uses: julia-actions/setup-julia@v3
         with:
-          slot: tip
+          version: "1.14-nightly"
       - uses: julia-actions/cache@v3
         with:
           cache-scratchspaces: false
