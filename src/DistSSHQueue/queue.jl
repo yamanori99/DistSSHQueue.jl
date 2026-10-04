@@ -468,7 +468,7 @@ function _kit_setup_session(j::Job, proj::AbstractString; workers = j.hosts)
     )
 end
 
-"""`child:NAME[:N]` tokens only. Kit `setup!` refuses `parent` except `--juliaup`."""
+"""`child:NAME[:N]` tokens only. Kit `setup!` refuses `parent` except `up`."""
 function _kit_setup_child_tokens(hosts::AbstractVector{<:AbstractString})::Vector{String}
     out = String[]
     for raw in hosts

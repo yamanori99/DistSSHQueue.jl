@@ -7,7 +7,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
 DistSSHQueue = {path = ".."}
-DistSSHRun = {url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "8095691dae4e3fcb3808ad86cd12b58ae3592039"}
+DistSSHRun = {url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "ecfc3b96ec0f3d8381aa6499a0a16c8070638497"}
 DistSSHUp = {url = "https://github.com/yamanori99/DistSSHUp.jl", rev = "d84c8a9e30b8cda4caa62b3c04fc890d4cc22a7a"}
 
 [compat]

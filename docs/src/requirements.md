@@ -168,7 +168,7 @@ julia -m DistSSHKit setup --check child:USER@HOST
 
 ### Align Julia with juliaup
 
-`julia -m DistSSHKit qhost setup --juliaup` wraps DistSSHKit
+`julia -m DistSSHKit qhost up` wraps DistSSHKit
 `juliaup_align_remotes` on config `hosts` (`list-host`). It does not
 take host tokens. An empty table fails with `add-host first`. Do not
 combine with `--force`. That changes each target's **juliaup default**
@@ -180,11 +180,11 @@ not from the client:
 
 ```bash
 # On the queue host, after add-host (parent is included only if listed):
-julia -m DistSSHKit qhost setup --juliaup
+julia -m DistSSHKit qhost up
 
 # From a client: only hosts you can SSH to from this machine.
 # parent here is this client, not the queue host.
-julia --project=. -m DistSSHKit setup --juliaup child:QHOST
+julia --project=. -m DistSSHKit up child:QHOST
 ```
 
 After changing the default on the queue host: stop `serve` and start it
@@ -195,14 +195,14 @@ Details: [kit Requirements](https://yamanori99.github.io/DistSSHKit.jl/stable/re
 
 ### Update installed channels
 
-`julia -m DistSSHKit qhost setup --juliaup-update` wraps DistSSHKit
-`juliaup_update_remotes`. Uses config `hosts`, same as `--juliaup`.
-Do not combine with `--force` or `--juliaup`. It runs `juliaup update`
+`julia -m DistSSHKit qhost up update` wraps DistSSHKit
+`juliaup_update_remotes`. Uses config `hosts`, same as `qhost up`.
+It does not take `--force`. It runs `juliaup update`
 on each target and leaves the host default unchanged. Success line stays
 `✓ juliaup update`.
 
 A running `serve` keeps its current Julia until you restart it, same as
-after `--juliaup`.
+after `qhost up`.
 
 ## [Where files live](@id where-files-live)
 

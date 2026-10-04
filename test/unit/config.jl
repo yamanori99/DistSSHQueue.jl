@@ -494,27 +494,30 @@ end
             @test code3 == 0
             @test occursin("Wrote", out3)
             @test occursin("[env]", read(cfg, String))
-            code_jf, _, err_jf = run_setup(["--juliaup", "--force"])
+            run_up(extra) = capture_stdio() do
+                DistSSHQueue.main(vcat(["up", "--config", cfg], extra))
+            end
+            code_jf, _, err_jf = run_up(["--force"])
             @test code_jf == 1
-            @test occursin("cannot combine", err_jf)
-            code_jh, _, err_jh = run_setup(["--juliaup"])
+            @test occursin("does not take --force", err_jf)
+            code_jh, _, err_jh = run_up(String[])
             @test code_jh == 1
             @test occursin("add-host", err_jh)
-            code_jt, _, err_jt = run_setup(["--juliaup", "parent"])
+            code_jt, _, err_jt = run_up(["parent"])
             @test code_jt == 1
             @test occursin("does not take host tokens", err_jt)
-            code_uf, _, err_uf = run_setup(["--juliaup-update", "--force"])
+            code_uf, _, err_uf = run_up(["update", "--force"])
             @test code_uf == 1
-            @test occursin("cannot combine", err_uf)
-            code_uh, _, err_uh = run_setup(["--juliaup-update"])
+            @test occursin("does not take --force", err_uf)
+            code_uh, _, err_uh = run_up(["update"])
             @test code_uh == 1
             @test occursin("add-host", err_uh)
-            code_ut, _, err_ut = run_setup(["--juliaup-update", "child:mini-tak-ts"])
+            code_ut, _, err_ut = run_up(["update", "child:mini-tak-ts"])
             @test code_ut == 1
             @test occursin("does not take host tokens", err_ut)
-            code_both, _, err_both = run_setup(["--juliaup", "--juliaup-update"])
-            @test code_both == 1
-            @test occursin("cannot combine", err_both)
+            code_old, _, err_old = run_setup(["--juliaup"])
+            @test code_old == 1
+            @test occursin("qhost up", err_old)
             code4, _, err4 = run_setup(["--service"])
             @test code4 == 1
             @test occursin("enable", err4)

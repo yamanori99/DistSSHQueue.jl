@@ -166,7 +166,7 @@ function hop_julia_prefix(queue_env::AbstractString)::Vector{String}
     return prefix
 end
 
-const QHOST_LOCAL_VERBS = ("setup", "serve", "enable", "disable", "service", "add-host", "remove-host")
+const QHOST_LOCAL_VERBS = ("setup", "up", "serve", "enable", "disable", "service", "add-host", "remove-host")
 
 const CLIENT_REMOTE_VERBS = (
     "status", "list-host", "size", "plan", "pool", "watch", "submit",

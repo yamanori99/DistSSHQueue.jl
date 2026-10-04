@@ -511,7 +511,7 @@ end
 function queue_explain_error(msg::AbstractString)::String
     s = String(msg)
     startswith(s, "this job includes parent:N;") && return s
-    if occursin("is only for --juliaup (kit parent machine)", s)
+    if occursin("is only for up (kit parent machine)", s)
         return "this job includes parent:N; per-job setup! only rsyncs child: (the queue host is already here). " * s
     end
     return s
@@ -628,6 +628,7 @@ function print_queue_host_usage(io::IO = stdout)
     DistSSHRun.print_help_lines(
         io,
         help_verb_line("setup", "Write config.toml if missing"),
+        help_verb_line("up", "Align config hosts with juliaup"),
         help_verb_line("add-host", "Add Kit tokens"),
         help_verb_line("remove-host", "Drop Kit tokens"),
     )
@@ -645,6 +646,7 @@ function print_queue_host_usage(io::IO = stdout)
     DistSSHRun.print_help_lines(
         io,
         "  julia -m DistSSHKit qhost setup",
+        "  julia -m DistSSHKit qhost up",
         "  julia -m DistSSHKit qhost add-host parent child:NAME",
         "  julia -m DistSSHKit qhost serve",
     )
@@ -663,7 +665,7 @@ end
 const QUEUE_COMMAND_HELP = (
     "status", "watch", "list-host", "cancel", "fetch", "submit",
     "add-host", "remove-host", "serve", "stop", "enable", "disable",
-    "setup", "teardown",
+    "setup", "up", "teardown",
 )
 
 """True when `rest[1]` is `-h` / `--help` and `sub` has a Queue command page."""
@@ -677,6 +679,7 @@ end
 function print_queue_command_usage(io::IO, verb::AbstractString)
     v = String(verb)
     v == "setup" && return print_setup_usage(io)
+    v == "up" && return print_up_usage(io)
     v == "teardown" && return print_teardown_usage(io)
     usage, flags = queue_command_help(v)
     DistSSHRun.print_help_chrome("DistSSHQueue $v"; io = io)
@@ -756,16 +759,32 @@ function print_setup_usage(io::IO = stdout)
     DistSSHRun.print_help_lines(
         io,
         "  julia -m DistSSHKit qhost setup [--force]",
-        "  julia -m DistSSHKit qhost setup --juliaup",
-        "  julia -m DistSSHKit qhost setup --juliaup-update",
     )
     DistSSHRun.print_help_blank(io)
     DistSSHRun.print_help_section("Flags"; io = io)
     DistSSHRun.print_help_lines(
         io,
-        help_verb_line("--force", "Rewrite config.toml (not with juliaup)"),
-        help_verb_line("--juliaup", "Set config hosts to this major.minor"),
-        help_verb_line("--juliaup-update", "Patch config hosts; leave default"),
+        help_verb_line("--force", "Rewrite config.toml"),
+        help_verb_line("--config PATH", "Config file"),
+        help_verb_line("--help / -h", "This page"),
+    )
+    return nothing
+end
+
+function print_up_usage(io::IO = stdout)
+    DistSSHRun.print_help_chrome("DistSSHQueue up"; io = io)
+    DistSSHRun.print_help_section("Usage"; io = io)
+    DistSSHRun.print_help_lines(
+        io,
+        "  julia -m DistSSHKit qhost up",
+        "  julia -m DistSSHKit qhost up update",
+    )
+    DistSSHRun.print_help_blank(io)
+    DistSSHRun.print_help_section("Flags"; io = io)
+    DistSSHRun.print_help_lines(
+        io,
+        help_verb_line("up", "Set config hosts to this major.minor"),
+        help_verb_line("up update", "Patch config hosts; leave default"),
         help_verb_line("--config PATH", "Config file"),
         help_verb_line("--help / -h", "This page"),
     )

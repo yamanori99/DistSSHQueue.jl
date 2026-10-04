@@ -50,6 +50,7 @@ include("client/edit_hosts.jl")
 include("client/cancel.jl")
 include("qhost/service.jl")
 include("qhost/setup.jl")
+include("qhost/up.jl")
 include("qhost/teardown.jl")
 include("qhost/serve.jl")
 
@@ -158,6 +159,8 @@ function main(args::Vector{String} = copy(ARGS))::Cint
             return service_main(rest)
         elseif sub == "setup"
             return setup_main(rest)
+        elseif sub == "up"
+            return up_main(rest)
         else
             DistSSHRun.print_cli_error("unknown subcommand: $sub")
             show_usage(io = stderr)

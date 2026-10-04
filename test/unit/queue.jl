@@ -1080,6 +1080,7 @@ end
                 @test occursin("enable", queue_h)
                 @test occursin("disable", queue_h)
                 @test occursin("julia -m DistSSHKit qhost setup", queue_h)
+                @test occursin("julia -m DistSSHKit qhost up", queue_h)
                 @test !occursin("julia --project=. -m DistSSHKit qhost setup", queue_h)
                 @test occursin("Danger", queue_h)
                 @test occursin(DistSSHQueue.help_verb_line("teardown", "Stop serve and remove `~/.distsshqueue`"), queue_h)
@@ -1098,9 +1099,10 @@ end
                 @test occursin("add-host", out_topic2)
                 setup_h = sprint(DistSSHQueue.print_setup_usage)
                 @test occursin("--force", setup_h)
-                @test occursin("--juliaup-update", setup_h)
-                @test occursin("--juliaup", setup_h)
-                @test occursin("not with juliaup", setup_h)
+                @test !occursin("--juliaup", setup_h)
+                up_h = sprint(DistSSHQueue.print_up_usage)
+                @test occursin("qhost up update", up_h)
+                @test occursin("qhost up", up_h)
                 @test !occursin("[child:NAME", setup_h)
                 @test occursin("--help / -h", setup_h)
                 @test !occursin("Enqueue DistSSHKit", setup_h)
@@ -1394,15 +1396,15 @@ end
 end
 
 @testset "status error shows the full Kit line with a Queue prefix" begin
-    kit = """setup: "parent" is only for --juliaup (kit parent machine). extra words"""
+    kit = """setup: "parent" is only for up (kit parent machine). extra words"""
     j = DistSSHQueue.Job(; kind = :go, script = "x.jl", hosts = ["parent:1"], state = :failed, error = kit)
     shown = DistSSHQueue._job_error_disp(j)
     @test occursin("parent:N", shown)
-    @test occursin("only for --juliaup", shown)
+    @test occursin("only for up", shown)
     @test occursin("extra words", shown)
     @test !endswith(shown, "…")
-    @test DistSSHQueue.queue_explain_error("unrelated only for --juliaup noise") ==
-        "unrelated only for --juliaup noise"
+    @test DistSSHQueue.queue_explain_error("unrelated only for up noise") ==
+        "unrelated only for up noise"
     prefixed = DistSSHQueue.queue_explain_error("this job includes parent:N; keep")
     @test prefixed == "this job includes parent:N; keep"
 end
