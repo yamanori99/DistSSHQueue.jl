@@ -55,25 +55,7 @@ function _host_token(name::AbstractString)::String
 end
 
 function _juliaup_default_disp(name::AbstractString)::String
-    if DistSSHRun.is_parent_host_name(name)
-        ju = DistSSHRun.find_local_juliaup()
-        ju === nothing && return "-"
-        proc, out, _ = DistSSHUp._juliaup_run_captured(ju, ["status"])
-        Int(something(proc.exitcode, 1)) == 0 || return "-"
-        return DistSSHUp._juliaup_patch_from_status(out)
-    end
-    try
-        out = read(
-            pipeline(
-                DistSSHRun._host_sync_remote_shell_cmd(String(name), DistSSHUp._juliaup_status_sh());
-                stderr = devnull,
-            ),
-            String,
-        )
-        return DistSSHUp._juliaup_patch_from_status(out)
-    catch
-        return "-"
-    end
+    return DistSSHUp.juliaup_default_patch(name)
 end
 
 """Fit NAME / TOKEN so the row stays within `cols`. SSH gets the remainder (min 8)."""
