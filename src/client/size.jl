@@ -21,7 +21,7 @@ function size_hosts_from_allow(
     out = String[]
     parent = false
     for n in sorted_kit_ssh_names(allow)
-        if DistSSHRun.is_parent_host_name(n)
+        if DistSSHBase.is_parent_host_name(n)
             parent = true
         else
             push!(out, n)
@@ -46,12 +46,12 @@ function size_cli(args::Vector{String})::Cint
     opts = DistSSHRun.parse_size_args(args)
     if opts.show_help
         DistSSHRun.show_size_usage()
-        DistSSHRun.print_help_blank()
-        DistSSHRun.print_help_section("Queue"; io = stdout)
-        DistSSHRun.print_help_lines(
+        DistSSHBase.print_help_blank()
+        DistSSHBase.print_help_section("Queue"; io = stdout)
+        DistSSHBase.print_help_lines(
             stdout,
             "  Same flags as DistSSHKit size. Runs on the queue host (cwd / project).",
-            "  $(DistSSHRun.cli_m()) [qhost:HOST] size [parent] [child:NAME...]",
+            "  $(DistSSHBase.cli_m()) [qhost:HOST] size [parent] [child:NAME...]",
             "  Omit tokens to size config hosts. Does not enqueue.",
         )
         return 0
@@ -62,14 +62,14 @@ function size_cli(args::Vector{String})::Cint
         opts.hosts,
         config_host_names(load_config()),
     )
-    all_hosts = include_parent ? [DistSSHRun.PARENT_HOST_NAME; hosts] : copy(hosts)
+    all_hosts = include_parent ? [DistSSHBase.PARENT_HOST_NAME; hosts] : copy(hosts)
     if isempty(all_hosts)
         DistSSHRun.show_size_usage()
         return 0
     end
     project = job_project()
-    DistSSHRun.print_header(DistSSHRun.cli_heading("size"))
-    DistSSHRun.writeln_field("Project", DistSSHRun.short_path(project))
+    DistSSHRun.print_header(DistSSHBase.cli_heading("size"))
+    DistSSHRun.writeln_field("Project", DistSSHBase.short_path(project))
     DistSSHRun.kit_println()
     samples = DistSSHRun.resolve_worker_memory_samples(project, all_hosts, hosts, opts)
     samples === nothing && return 1

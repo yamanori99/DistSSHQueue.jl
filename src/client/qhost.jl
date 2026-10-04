@@ -267,7 +267,7 @@ function remote_dispatch(
     argv = append!(hop_julia_prefix(queue_env), core)
     spec = strip(String(rjulia))
     auto = isempty(spec) || spec == "auto"
-    proc = DistSSHRun.run_on_host(
+    proc = DistSSHBase.run_on_host(
         host,
         argv;
         julia = auto ? nothing : spec,

@@ -38,11 +38,11 @@ function setup_main(args::Vector{String})::Cint
             force = true
             i += 1
         elseif a == "--juliaup"
-            throw(ArgumentError("$(DistSSHRun.cli_qhost())setup --juliaup is now: $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())up"))
+            throw(ArgumentError("$(DistSSHBase.cli_qhost())setup --juliaup is now: $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())up"))
         elseif a == "--juliaup-update"
-            throw(ArgumentError("$(DistSSHRun.cli_qhost())setup --juliaup-update is now: $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())up update"))
+            throw(ArgumentError("$(DistSSHBase.cli_qhost())setup --juliaup-update is now: $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())up update"))
         elseif a == "--service"
-            throw(ArgumentError("setup --service is gone; run: $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())enable"))
+            throw(ArgumentError("setup --service is gone; run: $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())enable"))
         elseif a == "--write-only"
             throw(ArgumentError("setup --write-only is gone; setup only writes config.toml"))
         elseif startswith(a, "-")

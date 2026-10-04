@@ -1,8 +1,8 @@
 """CLI chrome. Reuses DistSSHKit help helpers; job ids stay a bare line on stdout."""
 
-_q_short(path::String)::String = DistSSHRun.short_path(path)
+_q_short(path::String)::String = DistSSHBase.short_path(path)
 function _q_short(path::AbstractString)::String
-    return DistSSHRun.short_path(string(path)::String)
+    return DistSSHBase.short_path(string(path)::String)
 end
 
 function _q_cell(t::String, w::Int)::String
@@ -87,7 +87,7 @@ end
 
 function _write_span(io::IO, s::AbstractString, color::Union{Nothing, Symbol})
     color === nothing && return print(io, s)
-    DistSSHRun.print_colored(io, s, color, false)
+    DistSSHBase.print_colored(io, s, color, false)
     return nothing
 end
 
@@ -190,8 +190,8 @@ const _ID_PREFIX_MIN = 8
 
 """Path relative to `root`, or `nothing` if it is not inside."""
 function _rel_under(path::AbstractString, root::AbstractString)::Union{Nothing, String}
-    p = DistSSHRun.canonical_local_path(String(path))
-    r = DistSSHRun.canonical_local_path(String(root))
+    p = DistSSHBase.canonical_local_path(String(path))
+    r = DistSSHBase.canonical_local_path(String(root))
     p == r && return "."
     pref = path_inside_prefix(r)
     startswith(p, pref) || return nothing
@@ -201,8 +201,8 @@ end
 function _job_project_disp(j::Job)::String
     p = get(j.kwargs, "project", nothing)
     p isa AbstractString || return ""
-    can = DistSSHRun.canonical_local_path(String(p))
-    can == DistSSHRun.canonical_local_path(pwd()) && return "."
+    can = DistSSHBase.canonical_local_path(String(p))
+    can == DistSSHBase.canonical_local_path(pwd()) && return "."
     return _q_short(String(p))
 end
 
@@ -240,8 +240,8 @@ function _job_result_disp(j::Job; verbose::Bool = false)::String
     r isa AbstractString || return ""
     verbose || return basename(rstrip(String(r), '/'))
     home = homedir()
-    p = DistSSHRun.canonical_local_path(String(r))
-    h = DistSSHRun.canonical_local_path(home)
+    p = DistSSHBase.canonical_local_path(String(r))
+    h = DistSSHBase.canonical_local_path(home)
     startswith(p, h) && return string("~", chopprefix(p, h))
     return _q_short(r)
 end
@@ -361,14 +361,14 @@ function print_jobs_table(
         cols::Int = 0,
     )
     n = cols > 0 ? max(24, cols) : cli_cols(io)
-    DistSSHRun.print_help_section("Jobs"; io = io)
+    DistSSHBase.print_help_section("Jobs"; io = io)
     if !present
-        DistSSHRun.print_colored(io, "  (none)", :light_black, false)
+        DistSSHBase.print_colored(io, "  (none)", :light_black, false)
         println(io)
         return nothing
     end
     if isempty(rows)
-        DistSSHRun.print_colored(io, "  (empty)", :light_black, false)
+        DistSSHBase.print_colored(io, "  (empty)", :light_black, false)
         println(io)
         return nothing
     end
@@ -430,7 +430,7 @@ function print_status_table(
     n = cols > 0 ? max(24, cols) : cli_cols(io)
     present = isfile(store)
     if !quiet
-        DistSSHRun.print_help_section("Store"; io = io)
+        DistSSHBase.print_help_section("Store"; io = io)
         print_wrapped_tail(
             io, "  path   ", _store_path_disp(store, present, qhost);
             cols = n, prefix_color = :light_black,
@@ -447,14 +447,14 @@ function print_status_table(
             io, "  qhost  ", _qhost_disp(qhost);
             cols = n, prefix_color = :light_black,
         )
-        DistSSHRun.print_help_blank(io)
+        DistSSHBase.print_help_blank(io)
     end
     print_jobs_table(
         rows;
         io = io, present = present, quiet = quiet, hidden = hidden, verbose = verbose, cols = n,
     )
     if live && !quiet
-        DistSSHRun.print_help_blank(io)
+        DistSSHBase.print_help_blank(io)
         print_wrapped_tail(io, "  ", "Ctrl-C stops watch; serve stays."; cols = n)
     end
     return nothing
@@ -555,38 +555,38 @@ function print_queue_usage(
 end
 
 function print_queue_root_usage(io::IO = stdout)
-    DistSSHRun.print_help_chrome(string(DistSSHRun.cli_entry()); io = io)
+    DistSSHBase.print_help_chrome(string(DistSSHBase.cli_entry()); io = io)
     println_queue_version(io)
-    DistSSHRun.print_help_blank(io)
-    DistSSHRun.print_help_section("Client / qhost"; io = io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_blank(io)
+    DistSSHBase.print_help_section("Client / qhost"; io = io)
+    DistSSHBase.print_help_lines(
         io,
         help_verb_line("Client", "job `--project=.`; `qhost:HOST` is SSH to the queue"),
         help_verb_line("Queue host", "`serve`; `--queue-env` (`~/.distsshqueue/env`)"),
     )
-    DistSSHRun.print_help_blank(io)
-    DistSSHRun.print_help_section("Usage"; io = io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_blank(io)
+    DistSSHBase.print_help_section("Usage"; io = io)
+    DistSSHBase.print_help_lines(
         io,
-        help_verb_line("Client", "$(DistSSHRun.cli_m_project()) [qhost:HOST] …"),
-        help_verb_line("Queue host", "$(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())…"),
+        help_verb_line("Client", "$(DistSSHBase.cli_m_project()) [qhost:HOST] …"),
+        help_verb_line("Queue host", "$(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())…"),
     )
-    DistSSHRun.print_help_blank(io)
-    DistSSHRun.print_help_section("Help"; io = io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_blank(io)
+    DistSSHBase.print_help_section("Help"; io = io)
+    DistSSHBase.print_help_lines(
         io,
         "  --help client",
         "  --help qhost",
     )
-    DistSSHRun.print_help_blank(io)
+    DistSSHBase.print_help_blank(io)
     println(io, "Run `<command> --help` (or `-h`) for flags.")
     return nothing
 end
 
 function print_queue_client_usage(io::IO = stdout)
-    DistSSHRun.print_help_chrome(DistSSHRun.cli_heading("--help client"); io = io)
-    DistSSHRun.print_help_section("Jobs"; io = io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_chrome(DistSSHBase.cli_heading("--help client"); io = io)
+    DistSSHBase.print_help_section("Jobs"; io = io)
+    DistSSHBase.print_help_lines(
         io,
         help_verb_line("submit", "Enqueue DistSSHKit"),
         help_verb_line("status", "Snapshot of the store"),
@@ -594,70 +594,70 @@ function print_queue_client_usage(io::IO = stdout)
         help_verb_line("cancel", "Drop queued or stop running"),
         help_verb_line("fetch", "Copy a finished Kit leaf"),
     )
-    DistSSHRun.print_help_blank(io)
-    DistSSHRun.print_help_section("Hosts"; io = io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_blank(io)
+    DistSSHBase.print_help_section("Hosts"; io = io)
+    DistSSHBase.print_help_lines(
         io,
         help_verb_line("list-host", "Inventory (juliaup default + SSH)"),
         help_verb_line("size", "Kit size on the queue host"),
         help_verb_line("plan", "Kit plan on the queue host"),
         help_verb_line("pool", "Kit pool on the queue host"),
     )
-    DistSSHRun.print_help_blank(io)
-    DistSSHRun.print_help_section("Examples"; io = io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_blank(io)
+    DistSSHBase.print_help_section("Examples"; io = io)
+    DistSSHBase.print_help_lines(
         io,
-        "  $(DistSSHRun.cli_m_project()) qhost:HOST status",
-        "  $(DistSSHRun.cli_m_project()) qhost:HOST submit drive parent:4 SCRIPT.jl",
+        "  $(DistSSHBase.cli_m_project()) qhost:HOST status",
+        "  $(DistSSHBase.cli_m_project()) qhost:HOST submit drive parent:4 SCRIPT.jl",
     )
-    DistSSHRun.print_help_blank(io)
-    DistSSHRun.print_help_section("See DistSSHKit"; io = io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_blank(io)
+    DistSSHBase.print_help_section("See DistSSHKit"; io = io)
+    DistSSHBase.print_help_lines(
         io,
         "  Same argv as DistSSHKit (`go` / `ride` / `drive parent:4 child:NAME:N …`).",
-        "  `$(DistSSHRun.cli_m_project()) --help`",
+        "  `$(DistSSHBase.cli_m_project()) --help`",
     )
-    DistSSHRun.print_help_blank(io)
+    DistSSHBase.print_help_blank(io)
     println(io, "Run `<command> --help` (or `-h`) for flags.")
     return nothing
 end
 
 function print_queue_host_usage(io::IO = stdout)
-    DistSSHRun.print_help_chrome(DistSSHRun.cli_heading("--help qhost"); io = io)
-    DistSSHRun.print_help_section("Setup"; io = io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_chrome(DistSSHBase.cli_heading("--help qhost"); io = io)
+    DistSSHBase.print_help_section("Setup"; io = io)
+    DistSSHBase.print_help_lines(
         io,
         help_verb_line("setup", "Write config.toml if missing"),
         help_verb_line("up", "Align config hosts with juliaup"),
         help_verb_line("add-host", "Add Kit tokens"),
         help_verb_line("remove-host", "Drop Kit tokens"),
     )
-    DistSSHRun.print_help_blank(io)
-    DistSSHRun.print_help_section("Serve"; io = io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_blank(io)
+    DistSSHBase.print_help_section("Serve"; io = io)
+    DistSSHBase.print_help_lines(
         io,
         help_verb_line("serve", "Run serve in this terminal"),
         help_verb_line("stop", "Stop serve, keep files"),
         help_verb_line("enable", "Start serve after reboot"),
         help_verb_line("disable", "Remove that OS registration"),
     )
-    DistSSHRun.print_help_blank(io)
-    DistSSHRun.print_help_section("Examples"; io = io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_blank(io)
+    DistSSHBase.print_help_section("Examples"; io = io)
+    DistSSHBase.print_help_lines(
         io,
-        "  $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())setup",
-        "  $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())up",
-        "  $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())add-host parent child:NAME",
-        "  $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())serve",
+        "  $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())setup",
+        "  $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())up",
+        "  $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())add-host parent child:NAME",
+        "  $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())serve",
     )
-    DistSSHRun.print_help_blank(io)
-    DistSSHRun.print_help_section("Danger"; io = io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_blank(io)
+    DistSSHBase.print_help_section("Danger"; io = io)
+    DistSSHBase.print_help_lines(
         io,
         help_verb_line("teardown", "Stop serve and remove `~/.distsshqueue`"),
         help_verb_line("", "Needs `-y`. Job trees stay."),
     )
-    DistSSHRun.print_help_blank(io)
+    DistSSHBase.print_help_blank(io)
     println(io, "Run `<command> --help` (or `-h`) for flags.")
     return nothing
 end
@@ -682,17 +682,17 @@ function print_queue_command_usage(io::IO, verb::AbstractString)
     v == "up" && return print_up_usage(io)
     v == "teardown" && return print_teardown_usage(io)
     usage, flags = queue_command_help(v)
-    DistSSHRun.print_help_chrome(
+    DistSSHBase.print_help_chrome(
         v in ("add-host", "remove-host", "serve", "stop", "enable", "disable") ?
-            DistSSHRun.cli_qhost_heading(v) : DistSSHRun.cli_heading(v);
+            DistSSHBase.cli_qhost_heading(v) : DistSSHBase.cli_heading(v);
         io = io,
     )
-    DistSSHRun.print_help_section("Usage"; io = io)
-    DistSSHRun.print_help_lines(io, usage...)
+    DistSSHBase.print_help_section("Usage"; io = io)
+    DistSSHBase.print_help_lines(io, usage...)
     isempty(flags) && return nothing
-    DistSSHRun.print_help_blank(io)
-    DistSSHRun.print_help_section("Flags"; io = io)
-    DistSSHRun.print_help_lines(io, [help_verb_line(f, g) for (f, g) in flags]...)
+    DistSSHBase.print_help_blank(io)
+    DistSSHBase.print_help_section("Flags"; io = io)
+    DistSSHBase.print_help_lines(io, [help_verb_line(f, g) for (f, g) in flags]...)
     return nothing
 end
 
@@ -758,15 +758,15 @@ function queue_command_help(verb::AbstractString)
 end
 
 function print_setup_usage(io::IO = stdout)
-    DistSSHRun.print_help_chrome(DistSSHRun.cli_qhost_heading("setup"); io = io)
-    DistSSHRun.print_help_section("Usage"; io = io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_chrome(DistSSHBase.cli_qhost_heading("setup"); io = io)
+    DistSSHBase.print_help_section("Usage"; io = io)
+    DistSSHBase.print_help_lines(
         io,
-        "  $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())setup [--force]",
+        "  $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())setup [--force]",
     )
-    DistSSHRun.print_help_blank(io)
-    DistSSHRun.print_help_section("Flags"; io = io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_blank(io)
+    DistSSHBase.print_help_section("Flags"; io = io)
+    DistSSHBase.print_help_lines(
         io,
         help_verb_line("--force", "Rewrite config.toml"),
         help_verb_line("--config PATH", "Config file"),
@@ -776,16 +776,16 @@ function print_setup_usage(io::IO = stdout)
 end
 
 function print_up_usage(io::IO = stdout)
-    DistSSHRun.print_help_chrome(DistSSHRun.cli_qhost_heading("up"); io = io)
-    DistSSHRun.print_help_section("Usage"; io = io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_chrome(DistSSHBase.cli_qhost_heading("up"); io = io)
+    DistSSHBase.print_help_section("Usage"; io = io)
+    DistSSHBase.print_help_lines(
         io,
-        "  $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())up",
-        "  $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())up update",
+        "  $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())up",
+        "  $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())up update",
     )
-    DistSSHRun.print_help_blank(io)
-    DistSSHRun.print_help_section("Flags"; io = io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_blank(io)
+    DistSSHBase.print_help_section("Flags"; io = io)
+    DistSSHBase.print_help_lines(
         io,
         help_verb_line("up", "Set config hosts to this major.minor"),
         help_verb_line("up update", "Patch config hosts; leave default"),
@@ -796,15 +796,15 @@ function print_up_usage(io::IO = stdout)
 end
 
 function print_teardown_usage(io::IO = stdout)
-    DistSSHRun.print_help_chrome(DistSSHRun.cli_qhost_heading("teardown"); io = io)
-    DistSSHRun.print_help_section("Usage"; io = io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_chrome(DistSSHBase.cli_qhost_heading("teardown"); io = io)
+    DistSSHBase.print_help_section("Usage"; io = io)
+    DistSSHBase.print_help_lines(
         io,
         "  teardown",
     )
-    DistSSHRun.print_help_blank(io)
-    DistSSHRun.print_help_section("Flags"; io = io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_blank(io)
+    DistSSHBase.print_help_section("Flags"; io = io)
+    DistSSHBase.print_help_lines(
         io,
         help_verb_line("-y / --yes", "Required to delete (or DISTSSHKIT_YES)"),
         help_verb_line("--write-only", "Do not stop serve or unload the OS unit"),
@@ -817,13 +817,13 @@ function print_teardown_usage(io::IO = stdout)
 end
 
 function print_wrote(path::AbstractString; io::IO = stdout)
-    DistSSHRun.print_colored(io, "Wrote  ", :green, false)
+    DistSSHBase.print_colored(io, "Wrote  ", :green, false)
     println(io, _q_short(path))
     return nothing
 end
 
 function print_removed(path::AbstractString; io::IO = stdout)
-    DistSSHRun.print_colored(io, "Removed  ", :green, false)
+    DistSSHBase.print_colored(io, "Removed  ", :green, false)
     println(io, _q_short(path))
     return nothing
 end
@@ -833,16 +833,16 @@ function print_present(
         io::IO = stdout,
         note::AbstractString = "  (unchanged; --force to rewrite)",
     )
-    DistSSHRun.print_colored(io, "Present  ", :light_black, false)
+    DistSSHBase.print_colored(io, "Present  ", :light_black, false)
     print(io, _q_short(path))
-    DistSSHRun.print_colored(io, note, :light_black, false)
+    DistSSHBase.print_colored(io, note, :light_black, false)
     println(io)
     return nothing
 end
 
 function print_serve_banner(pid::Integer, store::AbstractString; io::IO = stdout)
-    DistSSHRun.print_help_chrome(DistSSHRun.cli_qhost_heading("serve"); io = io)
-    DistSSHRun.print_help_lines(io, "  pid $pid  store $(_q_short(store))")
+    DistSSHBase.print_help_chrome(DistSSHBase.cli_qhost_heading("serve"); io = io)
+    DistSSHBase.print_help_lines(io, "  pid $pid  store $(_q_short(store))")
     return nothing
 end
 
@@ -876,14 +876,14 @@ function print_serve_live_line(
 end
 
 function print_serve_idle_note(; io::IO = stdout)
-    DistSSHRun.print_help_lines(io, _SERVE_CTRLC)
+    DistSSHBase.print_help_lines(io, _SERVE_CTRLC)
     return nothing
 end
 
 function print_serve_gone(store::AbstractString; io::IO = stdout)
-    DistSSHRun.print_colored(io, "Stopping serve", :yellow, false)
+    DistSSHBase.print_colored(io, "Stopping serve", :yellow, false)
     println(io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_lines(
         io,
         "  store  $(_q_short(store)) (pidfile gone; removed or taken over)",
         "  A DistSSHKit job already running is not killed.",
@@ -892,10 +892,10 @@ function print_serve_gone(store::AbstractString; io::IO = stdout)
 end
 
 function print_serve_already(pid::Integer, store::AbstractString; io::IO = stdout)
-    DistSSHRun.print_help_chrome(DistSSHRun.cli_qhost_heading("serve"); io = io)
-    DistSSHRun.print_colored(io, "Already running", :cyan, false)
+    DistSSHBase.print_help_chrome(DistSSHBase.cli_qhost_heading("serve"); io = io)
+    DistSSHBase.print_colored(io, "Already running", :cyan, false)
     println(io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_lines(
         io,
         "  pid    $pid",
         "  store  $(_q_short(store))",
@@ -905,9 +905,9 @@ function print_serve_already(pid::Integer, store::AbstractString; io::IO = stdou
 end
 
 function print_serve_started(log::AbstractString; io::IO = stderr)
-    DistSSHRun.print_colored(io, "Started serve", :cyan, false)
+    DistSSHBase.print_colored(io, "Started serve", :cyan, false)
     println(io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_lines(
         io,
         "  host  $(gethostname())",
         "  log   $(_q_short(log))",
@@ -916,9 +916,9 @@ function print_serve_started(log::AbstractString; io::IO = stderr)
 end
 
 function print_serve_stopped(store::AbstractString, was_running::Bool; io::IO = stdout)
-    DistSSHRun.print_colored(io, "Stopped serve", :yellow, false)
+    DistSSHBase.print_colored(io, "Stopped serve", :yellow, false)
     println(io)
-    DistSSHRun.print_help_lines(
+    DistSSHBase.print_help_lines(
         io,
         "  store  $(_q_short(store))",
         was_running ? "  serve was running; sent SIGTERM" : "  no serve was running",

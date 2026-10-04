@@ -16,23 +16,23 @@ function up_main(args::Vector{String})::Cint
             update = true
             i += 1
         elseif a == "update"
-            throw(ArgumentError("`update` comes first: $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())up update"))
+            throw(ArgumentError("`update` comes first: $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())up update"))
         elseif a in ("--juliaup", "--juliaup-update")
             gone = a == "--juliaup-update" ? "up update" : "up"
-            throw(ArgumentError("$(DistSSHRun.cli_qhost())setup $a is now: $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())$gone"))
+            throw(ArgumentError("$(DistSSHBase.cli_qhost())setup $a is now: $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())$gone"))
         elseif a == "--force"
-            throw(ArgumentError("$(DistSSHRun.cli_qhost())up does not take --force"))
+            throw(ArgumentError("$(DistSSHBase.cli_qhost())up does not take --force"))
         elseif startswith(a, "-")
             throw(ArgumentError("unknown up option: $(a)"))
         else
-            throw(ArgumentError("$(DistSSHRun.cli_qhost())up does not take host tokens; targets are config hosts"))
+            throw(ArgumentError("$(DistSSHBase.cli_qhost())up does not take host tokens; targets are config hosts"))
         end
     end
     cfg = load_config(; path = config)
     apply_config_env!(cfg)
     allow = config_host_names(cfg)
     (allow === nothing || isempty(allow)) && throw(
-        ArgumentError("$(DistSSHRun.cli_qhost())up needs add-host first"),
+        ArgumentError("$(DistSSHBase.cli_qhost())up needs add-host first"),
     )
     names = sorted_kit_ssh_names(allow)
     confirm = !_queue_env_on("DISTSSHKIT_YES")

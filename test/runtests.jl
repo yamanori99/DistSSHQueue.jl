@@ -10,6 +10,7 @@
 # banner is counted. Update `_RUNTEST_N` when adding a file below.
 
 using Test
+import DistSSHBase
 using DistSSHQueue
 
 include(joinpath(@__DIR__, "support.jl"))

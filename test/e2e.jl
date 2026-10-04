@@ -764,7 +764,7 @@ end
                                 client_env...,
                             )
                         )
-                        @test fetched_into == DistSSHRun.canonical_local_path(into_f) ||
+                        @test fetched_into == DistSSHBase.canonical_local_path(into_f) ||
                             occursin("e2e_fetch_into", fetched_into)
                         @test isfile(joinpath(into_f, "old_result.csv"))
                         @test isfile(joinpath(into_f, "kit.result"))

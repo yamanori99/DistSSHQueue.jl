@@ -86,7 +86,7 @@ using DistSSHQueue
             write(script, "1\n")
             remote = "~/.distsshqueue/stage/abc"
             layout = DistSSHQueue.stage_env_and_project(member, remote)
-            @test layout.env_dir == DistSSHRun.canonical_local_path(lab)
+            @test layout.env_dir == DistSSHBase.canonical_local_path(lab)
             @test layout.remote_proj == remote * "/experiments/run1"
             got = DistSSHQueue.rewrite_payload_paths(
                 ["go", "--project", member, script],
@@ -99,7 +99,7 @@ using DistSSHQueue
             mkpath(solo)
             write(joinpath(solo, "Project.toml"), "name = \"Solo\"\n[deps]\n")
             same = DistSSHQueue.stage_env_and_project(solo, remote)
-            @test same.env_dir == DistSSHRun.canonical_local_path(solo)
+            @test same.env_dir == DistSSHBase.canonical_local_path(solo)
             @test same.remote_proj == remote
         end
     end

@@ -27,13 +27,13 @@ process that is itself running Julia).
 """
 function default_julia_bin()::String
     try
-        return DistSSHRun.canonical_local_path(DistSSHRun.resolve_controller_julia())
+        return DistSSHBase.canonical_local_path(DistSSHBase.resolve_controller_julia())
     catch e
         e isa ArgumentError || rethrow()
         exe = Base.julia_cmd().exec[1]
-        isfile(exe) && return DistSSHRun.canonical_local_path(exe)
+        isfile(exe) && return DistSSHBase.canonical_local_path(exe)
         w = Sys.which("julia")
-        w !== nothing && isfile(w) && return DistSSHRun.canonical_local_path(w)
+        w !== nothing && isfile(w) && return DistSSHBase.canonical_local_path(w)
         return joinpath(Sys.BINDIR, Sys.iswindows() ? "julia.exe" : "julia")
     end
 end
@@ -57,5 +57,5 @@ function default_queue_env(; dedicated::AbstractString = default_queue_env_dir()
     isfile(joinpath(dedicated, "Project.toml")) && return dedicated
     proj = Base.active_project()
     proj === nothing && throw(ArgumentError("service: no active project; pass --queue-env"))
-    return DistSSHRun.resolve_pkg_env(dirname(proj)).env_dir
+    return DistSSHBase.resolve_pkg_env(dirname(proj)).env_dir
 end

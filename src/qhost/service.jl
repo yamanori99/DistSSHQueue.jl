@@ -84,8 +84,8 @@ function write_serve_unit(path::AbstractString, body::AbstractString)
 end
 
 function service_install(; julia::AbstractString = default_julia_bin(), project::AbstractString = default_queue_env(), apply::Bool = true)
-    jl = DistSSHRun.canonical_local_path(julia)
-    proj = DistSSHRun.canonical_local_path(project)
+    jl = DistSSHBase.canonical_local_path(julia)
+    proj = DistSSHBase.canonical_local_path(project)
     isfile(jl) || throw(ArgumentError("service: julia not found at $(repr(jl))"))
     isfile(joinpath(proj, "Project.toml")) || throw(ArgumentError("service: no Project.toml in $(repr(proj))"))
     if Sys.isapple()
@@ -110,7 +110,7 @@ function service_uninstall(;
         io::IO = stdout,
         announce::Bool = true,
     )
-    live = DistSSHRun.canonical_local_path(home) == DistSSHRun.canonical_local_path(homedir())
+    live = DistSSHBase.canonical_local_path(home) == DistSSHBase.canonical_local_path(homedir())
     if Sys.isapple()
         path = launch_agent_path(; home = home)
         legacy = legacy_launch_agent_path(; home = home)

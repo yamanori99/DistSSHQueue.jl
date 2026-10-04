@@ -227,7 +227,7 @@ end
 @testset "default_queue_env prefers the dedicated env dir" begin
     mktempdir() do d
         dedicated = joinpath(d, "env")
-        fallback = DistSSHRun.resolve_pkg_env(dirname(Base.active_project())).env_dir
+        fallback = DistSSHBase.resolve_pkg_env(dirname(Base.active_project())).env_dir
         @test DistSSHQueue.default_queue_env(; dedicated = dedicated) == fallback
         mkpath(dedicated)
         write(joinpath(dedicated, "Project.toml"), "name = \"x\"\n")
