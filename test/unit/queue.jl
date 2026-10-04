@@ -1097,6 +1097,8 @@ end
                 end
                 @test code_topic2 == 0
                 @test occursin("add-host", out_topic2)
+                @test occursin("julia -m DistSSHQueue up", out_topic2)
+                @test !occursin("qhost up", out_topic2)
                 setup_h = sprint(DistSSHQueue.print_setup_usage)
                 @test occursin("--force", setup_h)
                 @test !occursin("--juliaup", setup_h)
@@ -1700,7 +1702,7 @@ end
         DistSSHQueue.main(["size", "-h"])
     end
     @test code == 0
-    @test occursin("DistSSHKit size", out)
+    @test occursin("DistSSHQueue size", out)
     @test occursin("Queue", out)
     @test occursin("qhost:HOST", out)
     @test occursin("Does not enqueue", out)
@@ -1711,7 +1713,7 @@ end
         DistSSHQueue.main(["plan", "-h"])
     end
     @test code == 0
-    @test occursin("DistSSHKit plan", out)
+    @test occursin("DistSSHQueue plan", out)
     @test occursin("Queue", out)
     @test occursin("Does not enqueue", out)
     mktempdir() do d
@@ -1754,7 +1756,7 @@ end
                 DistSSHQueue.main(["pool", "-h"])
             end
             @test code == 0
-            @test occursin("DistSSHKit pool", out)
+            @test occursin("DistSSHQueue pool", out)
             @test occursin("Queue", out)
             @test occursin("Does not enqueue", out)
             @test !isfile(p)

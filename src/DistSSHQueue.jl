@@ -65,6 +65,12 @@ end
 
 """CLI entry. Prefer `julia -m DistSSHKit` (client `qhost:HOST` / queue-host `setup`)."""
 function main(args::Vector{String} = copy(ARGS))::Cint
+    return DistSSHRun.with_cli_entry(:DistSSHQueue) do
+        _main(args)
+    end
+end
+
+function _main(args::Vector{String})::Cint
     apply_config_env!(load_config())
     try
         qhost, gjulia, gqenv, after, explicit = extract_remote_opts(args)
@@ -138,7 +144,7 @@ function main(args::Vector{String} = copy(ARGS))::Cint
             return submit_main(_rest())
         elseif is_kit_execute_kind(Symbol(sub))
             DistSSHRun.print_cli_error(
-                "$sub is DistSSHKit. Enqueue with submit: julia -m DistSSHKit [qhost:HOST] submit $sub …",
+                "$sub is DistSSHKit. Enqueue with submit: $(DistSSHRun.cli_m()) [qhost:HOST] submit $sub …",
             )
             return 1
         elseif sub == "fetch"

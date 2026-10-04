@@ -15,8 +15,8 @@ Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [sources]
-DistSSHRun = {url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "ecfc3b96ec0f3d8381aa6499a0a16c8070638497"}
-DistSSHUp = {url = "https://github.com/yamanori99/DistSSHUp.jl", rev = "d84c8a9e30b8cda4caa62b3c04fc890d4cc22a7a"}
+DistSSHRun = {url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "e56052c3bdafa38bfd194f1285e989814ef538f9"}
+DistSSHUp = {url = "https://github.com/yamanori99/DistSSHUp.jl", rev = "fec90255a74b223b498b9a74bb52ea5eebd347f2"}
 
 [compat]
 Dates = "1.11"

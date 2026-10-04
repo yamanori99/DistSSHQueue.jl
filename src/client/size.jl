@@ -51,7 +51,7 @@ function size_cli(args::Vector{String})::Cint
         DistSSHRun.print_help_lines(
             stdout,
             "  Same flags as DistSSHKit size. Runs on the queue host (cwd / project).",
-            "  julia -m DistSSHKit [qhost:HOST] size [parent] [child:NAME...]",
+            "  $(DistSSHRun.cli_m()) [qhost:HOST] size [parent] [child:NAME...]",
             "  Omit tokens to size config hosts. Does not enqueue.",
         )
         return 0
@@ -68,7 +68,7 @@ function size_cli(args::Vector{String})::Cint
         return 0
     end
     project = job_project()
-    DistSSHRun.print_header("DistSSHQueue size")
+    DistSSHRun.print_header(DistSSHRun.cli_heading("size"))
     DistSSHRun.writeln_field("Project", DistSSHRun.short_path(project))
     DistSSHRun.kit_println()
     samples = DistSSHRun.resolve_worker_memory_samples(project, all_hosts, hosts, opts)

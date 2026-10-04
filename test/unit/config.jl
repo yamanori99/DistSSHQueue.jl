@@ -517,7 +517,8 @@ end
             @test occursin("does not take host tokens", err_ut)
             code_old, _, err_old = run_setup(["--juliaup"])
             @test code_old == 1
-            @test occursin("qhost up", err_old)
+            @test occursin("julia -m DistSSHQueue up", err_old)
+            @test !occursin("qhost", err_old)
             code4, _, err4 = run_setup(["--service"])
             @test code4 == 1
             @test occursin("enable", err4)

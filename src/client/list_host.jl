@@ -109,7 +109,7 @@ function print_list_host(
         qhost::Union{Nothing, AbstractString} = qhost_display_from_env(),
         cols::Int = 0,
     )
-    DistSSHRun.print_help_chrome("DistSSHQueue list-host"; io = io)
+    DistSSHRun.print_help_chrome(DistSSHRun.cli_heading("list-host"); io = io)
     if names === nothing
         println(io, "  (no hosts= in config; add-host first)")
         return nothing

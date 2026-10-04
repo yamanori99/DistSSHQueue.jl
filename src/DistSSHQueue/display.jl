@@ -555,7 +555,7 @@ function print_queue_usage(
 end
 
 function print_queue_root_usage(io::IO = stdout)
-    DistSSHRun.print_help_chrome("DistSSHQueue"; io = io)
+    DistSSHRun.print_help_chrome(string(DistSSHRun.cli_entry()); io = io)
     println_queue_version(io)
     DistSSHRun.print_help_blank(io)
     DistSSHRun.print_help_section("Client / qhost"; io = io)
@@ -568,8 +568,8 @@ function print_queue_root_usage(io::IO = stdout)
     DistSSHRun.print_help_section("Usage"; io = io)
     DistSSHRun.print_help_lines(
         io,
-        help_verb_line("Client", "julia --project=. -m DistSSHKit [qhost:HOST] …"),
-        help_verb_line("Queue host", "julia -m DistSSHKit qhost …"),
+        help_verb_line("Client", "$(DistSSHRun.cli_m_project()) [qhost:HOST] …"),
+        help_verb_line("Queue host", "$(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())…"),
     )
     DistSSHRun.print_help_blank(io)
     DistSSHRun.print_help_section("Help"; io = io)
@@ -584,7 +584,7 @@ function print_queue_root_usage(io::IO = stdout)
 end
 
 function print_queue_client_usage(io::IO = stdout)
-    DistSSHRun.print_help_chrome("DistSSHQueue --help client"; io = io)
+    DistSSHRun.print_help_chrome(DistSSHRun.cli_heading("--help client"); io = io)
     DistSSHRun.print_help_section("Jobs"; io = io)
     DistSSHRun.print_help_lines(
         io,
@@ -607,15 +607,15 @@ function print_queue_client_usage(io::IO = stdout)
     DistSSHRun.print_help_section("Examples"; io = io)
     DistSSHRun.print_help_lines(
         io,
-        "  julia --project=. -m DistSSHKit qhost:HOST status",
-        "  julia --project=. -m DistSSHKit qhost:HOST submit drive parent:4 SCRIPT.jl",
+        "  $(DistSSHRun.cli_m_project()) qhost:HOST status",
+        "  $(DistSSHRun.cli_m_project()) qhost:HOST submit drive parent:4 SCRIPT.jl",
     )
     DistSSHRun.print_help_blank(io)
     DistSSHRun.print_help_section("See DistSSHKit"; io = io)
     DistSSHRun.print_help_lines(
         io,
         "  Same argv as DistSSHKit (`go` / `ride` / `drive parent:4 child:NAME:N …`).",
-        "  `julia --project=. -m DistSSHKit --help`",
+        "  `$(DistSSHRun.cli_m_project()) --help`",
     )
     DistSSHRun.print_help_blank(io)
     println(io, "Run `<command> --help` (or `-h`) for flags.")
@@ -623,7 +623,7 @@ function print_queue_client_usage(io::IO = stdout)
 end
 
 function print_queue_host_usage(io::IO = stdout)
-    DistSSHRun.print_help_chrome("DistSSHQueue --help qhost"; io = io)
+    DistSSHRun.print_help_chrome(DistSSHRun.cli_heading("--help qhost"); io = io)
     DistSSHRun.print_help_section("Setup"; io = io)
     DistSSHRun.print_help_lines(
         io,
@@ -645,10 +645,10 @@ function print_queue_host_usage(io::IO = stdout)
     DistSSHRun.print_help_section("Examples"; io = io)
     DistSSHRun.print_help_lines(
         io,
-        "  julia -m DistSSHKit qhost setup",
-        "  julia -m DistSSHKit qhost up",
-        "  julia -m DistSSHKit qhost add-host parent child:NAME",
-        "  julia -m DistSSHKit qhost serve",
+        "  $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())setup",
+        "  $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())up",
+        "  $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())add-host parent child:NAME",
+        "  $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())serve",
     )
     DistSSHRun.print_help_blank(io)
     DistSSHRun.print_help_section("Danger"; io = io)
@@ -682,7 +682,11 @@ function print_queue_command_usage(io::IO, verb::AbstractString)
     v == "up" && return print_up_usage(io)
     v == "teardown" && return print_teardown_usage(io)
     usage, flags = queue_command_help(v)
-    DistSSHRun.print_help_chrome("DistSSHQueue $v"; io = io)
+    DistSSHRun.print_help_chrome(
+        v in ("add-host", "remove-host", "serve", "stop", "enable", "disable") ?
+            DistSSHRun.cli_qhost_heading(v) : DistSSHRun.cli_heading(v);
+        io = io,
+    )
     DistSSHRun.print_help_section("Usage"; io = io)
     DistSSHRun.print_help_lines(io, usage...)
     isempty(flags) && return nothing
@@ -754,11 +758,11 @@ function queue_command_help(verb::AbstractString)
 end
 
 function print_setup_usage(io::IO = stdout)
-    DistSSHRun.print_help_chrome("DistSSHQueue setup"; io = io)
+    DistSSHRun.print_help_chrome(DistSSHRun.cli_qhost_heading("setup"); io = io)
     DistSSHRun.print_help_section("Usage"; io = io)
     DistSSHRun.print_help_lines(
         io,
-        "  julia -m DistSSHKit qhost setup [--force]",
+        "  $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())setup [--force]",
     )
     DistSSHRun.print_help_blank(io)
     DistSSHRun.print_help_section("Flags"; io = io)
@@ -772,12 +776,12 @@ function print_setup_usage(io::IO = stdout)
 end
 
 function print_up_usage(io::IO = stdout)
-    DistSSHRun.print_help_chrome("DistSSHQueue up"; io = io)
+    DistSSHRun.print_help_chrome(DistSSHRun.cli_qhost_heading("up"); io = io)
     DistSSHRun.print_help_section("Usage"; io = io)
     DistSSHRun.print_help_lines(
         io,
-        "  julia -m DistSSHKit qhost up",
-        "  julia -m DistSSHKit qhost up update",
+        "  $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())up",
+        "  $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())up update",
     )
     DistSSHRun.print_help_blank(io)
     DistSSHRun.print_help_section("Flags"; io = io)
@@ -792,7 +796,7 @@ function print_up_usage(io::IO = stdout)
 end
 
 function print_teardown_usage(io::IO = stdout)
-    DistSSHRun.print_help_chrome("DistSSHQueue teardown"; io = io)
+    DistSSHRun.print_help_chrome(DistSSHRun.cli_qhost_heading("teardown"); io = io)
     DistSSHRun.print_help_section("Usage"; io = io)
     DistSSHRun.print_help_lines(
         io,
@@ -837,7 +841,7 @@ function print_present(
 end
 
 function print_serve_banner(pid::Integer, store::AbstractString; io::IO = stdout)
-    DistSSHRun.print_help_chrome("DistSSHQueue serve"; io = io)
+    DistSSHRun.print_help_chrome(DistSSHRun.cli_qhost_heading("serve"); io = io)
     DistSSHRun.print_help_lines(io, "  pid $pid  store $(_q_short(store))")
     return nothing
 end
@@ -888,7 +892,7 @@ function print_serve_gone(store::AbstractString; io::IO = stdout)
 end
 
 function print_serve_already(pid::Integer, store::AbstractString; io::IO = stdout)
-    DistSSHRun.print_help_chrome("DistSSHQueue serve"; io = io)
+    DistSSHRun.print_help_chrome(DistSSHRun.cli_qhost_heading("serve"); io = io)
     DistSSHRun.print_colored(io, "Already running", :cyan, false)
     println(io)
     DistSSHRun.print_help_lines(

@@ -53,7 +53,7 @@ function peel_submit_pool(args::Vector{String})
             throw(
                 ArgumentError(
                     "`pool` is the inspect verb. For submit slots use `pool:N` " *
-                        "(e.g. submit pool:8 drive SCRIPT.jl). Inspect: julia -m DistSSHKit qhost pool",
+                        "(e.g. submit pool:8 drive SCRIPT.jl). Inspect: $(DistSSHRun.cli_m()) $(DistSSHRun.cli_qhost())pool",
                 )
             )
         elseif startswith(a, "pool:")
@@ -187,7 +187,7 @@ function submit_kind(kind::Symbol, args::Vector{String}; pool_slots::Union{Nothi
         DistSSHRun.print_help_section("DistSSHKit"; io = stdout)
         DistSSHRun.print_help_lines(
             stdout,
-            "  Same argv as `julia -m DistSSHKit $(kind) …` (`parent:N` / `child:NAME:N`).",
+            "  Same argv as `$(DistSSHRun.cli_m()) $(kind) …` (`parent:N` / `child:NAME:N`).",
         )
         DistSSHRun.print_help_blank(stdout)
         kit_show_usage(kind)

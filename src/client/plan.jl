@@ -23,7 +23,7 @@ function plan_cli(args::Vector{String})::Cint
         DistSSHRun.print_help_lines(
             stdout,
             "  Same flags as DistSSHKit plan. Runs on the queue host (cwd / project).",
-            "  julia -m DistSSHKit [qhost:HOST] plan [parent] [child:NAME...] SCRIPT.jl",
+            "  $(DistSSHRun.cli_m()) [qhost:HOST] plan [parent] [child:NAME...] SCRIPT.jl",
             "  Does not enqueue.",
         )
         return 0
@@ -32,7 +32,7 @@ function plan_cli(args::Vector{String})::Cint
     opts.script_path === nothing && (DistSSHRun.show_plan_usage(); return 0)
     script = script_arg(opts.script_path, "plan")
     project = job_project()
-    DistSSHRun.print_header("DistSSHQueue plan")
+    DistSSHRun.print_header(DistSSHRun.cli_heading("plan"))
     DistSSHRun.writeln_field("Project", DistSSHRun.short_path(project))
     DistSSHRun.kit_println()
     kp = DistSSHRun.plan(
