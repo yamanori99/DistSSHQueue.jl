@@ -10,15 +10,18 @@ projects = ["test", "docs"]
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 DistSSHRun = "b568025c-2759-4ef1-8b14-17d00e2cd000"
+DistSSHUp = "76a6745a-cbcc-444e-a19a-dcac12a79e7c"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [sources]
-DistSSHRun = {url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "9a5e62aaf5218c3f79c9888030f528b3ff238857"}
+DistSSHRun = {url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "8095691dae4e3fcb3808ad86cd12b58ae3592039"}
+DistSSHUp = {url = "https://github.com/yamanori99/DistSSHUp.jl", rev = "d84c8a9e30b8cda4caa62b3c04fc890d4cc22a7a"}
 
 [compat]
 Dates = "1.11"
 DistSSHRun = "0.1"
+DistSSHUp = "0.1"
 Pkg = "1.13"
 TOML = "1"
 julia = "1.13"

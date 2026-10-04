@@ -13,6 +13,7 @@ module DistSSHQueue
 
 using Dates
 using DistSSHRun
+using DistSSHUp
 using Pkg
 using TOML
 

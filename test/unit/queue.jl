@@ -2,6 +2,7 @@ using Test
 using Dates
 using DistSSHRun
 using DistSSHQueue
+using DistSSHUp
 
 function _wait_state(q, id, st; tries = 200)
     for _ in 1:tries
@@ -1490,11 +1491,11 @@ end
 end
 
 @testset "CLI list-host lists names and ssh -G fields" begin
-    @test DistSSHQueue._juliaup_patch_from_status("     *  1.13     1.13.2+0.aarch64.apple.darwin14") ==
+    @test DistSSHUp._juliaup_patch_from_status("     *  1.13     1.13.2+0.aarch64.apple.darwin14") ==
         "1.13.2"
-    @test DistSSHQueue._juliaup_patch_from_status("* 1.13") == "-"
-    @test DistSSHQueue._juliaup_patch_from_status("* release  1.11.6+0.x86_64") == "1.11.6"
-    @test DistSSHQueue._juliaup_patch_from_status("") == "-"
+    @test DistSSHUp._juliaup_patch_from_status("* 1.13") == "-"
+    @test DistSSHUp._juliaup_patch_from_status("* release  1.11.6+0.x86_64") == "1.11.6"
+    @test DistSSHUp._juliaup_patch_from_status("") == "-"
     buf = IOBuffer()
     DistSSHQueue._print_cli_note(
         buf,

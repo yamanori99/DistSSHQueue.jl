@@ -54,63 +54,23 @@ function _host_token(name::AbstractString)::String
     return "child:$(name)"
 end
 
-function _juliaup_status_sh()::String
-    words = join(
-        DistSSHRun._juliaup_candidate_sh_word.(DistSSHRun.remote_juliaup_candidates()),
-        " ",
-    )
-    return """
-    JU=\"\"
-    for c in $words; do
-      if [ -x \"\$c\" ]; then
-        JU=\"\$c\"
-        break
-      fi
-    done
-    [ -z \"\$JU\" ] && exit 0
-    \"\$JU\" status 2>/dev/null
-    """
-end
-
-"""Installed patch of the `juliaup status` `*` channel, or `-`.
-
-`juliaup status` looks like `*  1.13     1.13.2+0.aarch64…`. Channel-only
-`* 1.13` (no Version) is `-`. Named channels (`release`) still use the
-Version column.
-"""
-function _juliaup_patch_from_status(status_out::AbstractString)::String
-    for line in eachsplit(String(status_out), '\n'; keepempty = false)
-        s = strip(line)
-        isempty(s) && continue
-        startswith(s, "Default") && continue
-        startswith(s, "-") && continue
-        m = match(r"^\*\s+\S+\s+(\S+)", s)
-        m === nothing && continue
-        cap = m.captures[1]
-        cap isa AbstractString || continue
-        return String(first(split(String(cap), '+'; limit = 2)))
-    end
-    return "-"
-end
-
-"""`juliaup` default patch (`*`), or `-` if missing, SSH/`status` fails, or no Version."""
 function _juliaup_default_disp(name::AbstractString)::String
     if DistSSHRun.is_parent_host_name(name)
         ju = DistSSHRun.find_local_juliaup()
         ju === nothing && return "-"
-        proc, out, _ = DistSSHRun._juliaup_run_captured(ju, ["status"])
+        proc, out, _ = DistSSHUp._juliaup_run_captured(ju, ["status"])
         Int(something(proc.exitcode, 1)) == 0 || return "-"
-        return _juliaup_patch_from_status(out)
+        return DistSSHUp._juliaup_patch_from_status(out)
     end
     try
         out = read(
             pipeline(
-                DistSSHRun._host_sync_remote_shell_cmd(String(name), _juliaup_status_sh());
+                DistSSHRun._host_sync_remote_shell_cmd(String(name), DistSSHUp._juliaup_status_sh());
                 stderr = devnull,
             ),
             String,
         )
-        return _juliaup_patch_from_status(out)
+        return DistSSHUp._juliaup_patch_from_status(out)
     catch
         return "-"
     end
