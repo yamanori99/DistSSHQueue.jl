@@ -17,7 +17,7 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [sources]
 DistSSHBase = {url = "https://github.com/yamanori99/DistSSHBase.jl", rev = "cc4d354c02bcb0ec1d28fec59479ad8dd0e5d93b"}
-DistSSHRun = {url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "6e7fb4e0d0d65e181d6f211f9dd97f069433cb5f"}
+DistSSHRun = {url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "7ac37764abe3de93c05bab325ae923c6a93f8b73"}
 DistSSHUp = {url = "https://github.com/yamanori99/DistSSHUp.jl", rev = "6c5da969f126fd1e698a611af6e9302c6b23e25a"}
 
 [compat]
