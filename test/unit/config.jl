@@ -502,10 +502,10 @@ end
             @test occursin("does not take --force", err_jf)
             code_jh, _, err_jh = run_up(String[])
             @test code_jh == 1
-            @test occursin("add-host", err_jh)
+            @test occursin("needs add, default, update, or status", err_jh)
             code_jt, _, err_jt = run_up(["parent"])
             @test code_jt == 1
-            @test occursin("does not take host tokens", err_jt)
+            @test occursin("needs add, default, update, or status", err_jt)
             code_uf, _, err_uf = run_up(["update", "--force"])
             @test code_uf == 1
             @test occursin("does not take --force", err_uf)

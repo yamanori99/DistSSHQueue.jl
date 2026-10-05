@@ -30,6 +30,7 @@
 using Test
 using Dates
 using Sockets
+using DistSSHBase
 using DistSSHRun
 using DistSSHQueue
 
