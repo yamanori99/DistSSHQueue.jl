@@ -38,7 +38,7 @@ function setup_main(args::Vector{String})::Cint
             force = true
             i += 1
         elseif a == "--juliaup"
-            throw(ArgumentError("$(DistSSHBase.cli_qhost())setup --juliaup is now: $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())up"))
+            throw(ArgumentError("$(DistSSHBase.cli_qhost())setup --juliaup is now: $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())up add CHANNEL"))
         elseif a == "--juliaup-update"
             throw(ArgumentError("$(DistSSHBase.cli_qhost())setup --juliaup-update is now: $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())up update"))
         elseif a == "--service"

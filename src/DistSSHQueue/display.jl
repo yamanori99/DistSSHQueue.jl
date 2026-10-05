@@ -780,15 +780,19 @@ function print_up_usage(io::IO = stdout)
     DistSSHBase.print_help_section("Usage"; io = io)
     DistSSHBase.print_help_lines(
         io,
-        "  $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())up",
+        "  $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())up add 1.13",
+        "  $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())up default 1.13",
         "  $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())up update",
+        "  $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())up status",
     )
     DistSSHBase.print_help_blank(io)
     DistSSHBase.print_help_section("Flags"; io = io)
     DistSSHBase.print_help_lines(
         io,
-        help_verb_line("up", "Set config hosts to this major.minor"),
-        help_verb_line("up update", "Patch config hosts; leave default"),
+        help_verb_line("up add CHANNEL", "Install a channel on config hosts"),
+        help_verb_line("up default CHANNEL", "Switch config hosts to that channel"),
+        help_verb_line("up update", "Patch installed channels; leave default"),
+        help_verb_line("up status", "Show installed channels"),
         help_verb_line("--config PATH", "Config file"),
         help_verb_line("--help / -h", "This page"),
     )
