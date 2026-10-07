@@ -1179,7 +1179,7 @@ end
                 @test occursin("serve", out_st)
                 @test occursin("  enable ", out_st)
                 @test occursin("qhost", out_st)
-                @test occursin("local ($(gethostname()))", out_st)
+                @test shows_flat(out_st, "local ($(gethostname()))")
                 @test occursin("  path   none", out_st)
                 @test occursin("(none)", out_st)
                 @test !occursin("(empty)", out_st)
@@ -1188,12 +1188,12 @@ end
                 @test occursin("(none)", empty)
                 @test !occursin("(empty)", empty)
                 via_out = sprint(io -> DistSSHQueue.show_status(p; io = io, qhost = "qbox"))
-                @test occursin("qbox ($(gethostname()))", via_out)
+                @test shows_flat(via_out, "qbox ($(gethostname()))")
                 @test DistSSHQueue._qhost_disp(gethostname()) == gethostname()
                 env_out = withenv(DistSSHQueue.QHOST_DISPLAY_ENV => "from-env") do
                     sprint(io -> DistSSHQueue.show_status(p; io = io))
                 end
-                @test occursin("from-env ($(gethostname()))", env_out)
+                @test shows_flat(env_out, "from-env ($(gethostname()))")
                 code_via, _, err_via = capture_stdio() do
                     DistSSHQueue.main(["status", "--via", "qbox"])
                 end
@@ -1512,6 +1512,27 @@ end
         @test tw >= 5
         @test sw >= 8
     end
+    let (nw, tw, mw, jw, sw) = DistSSHQueue._list_host_fit(80, 11, 3, 6, 72)
+        @test tw == 11
+        @test nw < 80
+        @test nw >= 4
+        @test nw + tw + mw + jw + sw + 10 <= 72
+    end
+    hn = "sat12-bq153-f5a29c4d-2cfd-48dd-a60c-d49a6140ecf7-3AD76F09ECCB.local"
+    let (nw, tw, mw, jw, _) = DistSSHQueue._list_host_fit(
+            textwidth(hn), textwidth("child:host1"), 3, 6, 72,
+        )
+        buf = IOBuffer()
+        DistSSHQueue.print_wrapped_row(
+            buf, [hn, "child:host1", "-", "1.13.2"], Int[nw, tw, mw, jw],
+            "lab@10.0.0.8:2222"; cols = 72,
+        )
+        row = String(take!(buf))
+        @test occursin("child:host1", row)
+        @test !occursin(hn, row)
+        @test occursin(first(hn, 12), row)
+    end
+    @test shows_flat("local\n         (host.local)", "local (host.local)")
     overflow = IOBuffer()
     DistSSHQueue.print_wrapped_tail(overflow, repeat("P", 25), "SSH"; cols = 27)
     olines = split(String(take!(overflow)), '\n'; keepempty = false)
@@ -1566,7 +1587,7 @@ end
             @test occursin("child:host1", out)
             @test occursin("TOKEN", out)
             @test !occursin("HOST TOKEN", out)
-            @test occursin(gethostname(), out)
+            @test shows_hostname_prefix(out)
             @test occursin("this machine", out)
             @test !occursin("queue host", out)
             @test occursin("lab@10.0.0.8:2222", out)
@@ -1606,7 +1627,7 @@ end
             @test code == 0
             @test occursin("queue host", out)
             @test !occursin("this machine", out)
-            @test occursin(gethostname(), out)
+            @test shows_hostname_prefix(out)
             @test occursin("parent", out)
         end
         write(cfg, "store = \"x\"\n")
@@ -1994,7 +2015,7 @@ end
         @test occursin("path", z)
         hop = sprint(io -> DistSSHQueue.show_status(p; io = io, qhost = "qbox"))
         @test occursin("qbox:", hop)
-        @test occursin("qbox ($(gethostname()))", hop)
+        @test shows_flat(hop, "qbox ($(gethostname()))")
         hopnone = sprint(io -> DistSSHQueue.show_status(joinpath(d, "gone.toml"); io = io, qhost = "qbox"))
         @test occursin("  path   none", hopnone)
         @test !occursin("qbox:none", hopnone)

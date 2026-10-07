@@ -24,6 +24,19 @@ function status_shows_id(text::AbstractString, id::AbstractString)::Bool
     return occursin(first(String(id), 8), text)
 end
 
+# Status wraps a long hostname at 72 columns. Compare the text with whitespace removed.
+function shows_flat(text::AbstractString, needle::AbstractString)::Bool
+    flat(s) = replace(String(s), r"\s+" => "")
+    return occursin(flat(needle), flat(text))
+end
+
+# list-host clips NAME. The first 12 characters stay visible at the 72-column width.
+function shows_hostname_prefix(text::AbstractString)::Bool
+    hn = gethostname()
+    n = min(12, length(hn))
+    return n == 0 || occursin(first(hn, n), text)
+end
+
 # Tag autoserve `serve` for this Pkg.test process. nohup outlives submit
 # (product); atexit / parent-death SIGTERM must still find them.
 function install_serve_reaper!()
