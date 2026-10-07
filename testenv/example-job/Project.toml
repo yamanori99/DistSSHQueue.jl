@@ -2,14 +2,17 @@ name = "ExampleJob"
 uuid = "b1a9f0d2-3c4e-4f5a-9b6c-7d8e9f0a1b2c"
 version = "0.0.1"
 
-# Host project `setup!` rsyncs to workers. Job scripts are copied from DistSSHKit
-# `demos/` at E2E start (not kept in git). with_kit drivers `using DistSSHKit`.
+# Host project `setup!` rsyncs to workers. Job scripts are copied from DistSSHRun
+# `demos/` at E2E start (not kept in git). with_kit drivers `using DistSSHRun`.
 [deps]
-DistSSHKit = "ceec0504-c968-4be5-b215-667cae0e8f81"
+DistSSHRun = "b568025c-2759-4ef1-8b14-17d00e2cd000"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
+[sources]
+DistSSHRun = {url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "0dd18f1aeeb7b4cfab678cc1967d6c3f10a1fc0b"}
+
 [compat]
-DistSSHKit = "0.9"
+DistSSHRun = "0.1"
 Distributed = "1.11"
 Random = "1.11"

@@ -12,9 +12,11 @@ Concept: [docs](https://yamanori99.github.io/DistSSHQueue.jl/stable/).
 module DistSSHQueue
 
 using Dates
-using DistSSHKit
 using Pkg
+using SHA
 using TOML
+
+import DistSSHRun
 
 export Queue
 export Job
@@ -28,6 +30,22 @@ export serve!
 export serve
 export job_project
 export default_store_path
+
+include("DistSSHQueue/base/paths.jl")
+include("DistSSHQueue/base/explain.jl")
+include("DistSSHQueue/base/argv.jl")
+include("DistSSHQueue/base/hosts.jl")
+include("DistSSHQueue/base/host_tokens.jl")
+include("DistSSHQueue/base/cli_entry.jl")
+include("DistSSHQueue/base/help.jl")
+include("DistSSHQueue/base/ssh.jl")
+include("DistSSHQueue/base/julia_where.jl")
+include("DistSSHQueue/base/namespace.jl")
+include("DistSSHQueue/up/version.jl")
+include("DistSSHQueue/up/status.jl")
+include("DistSSHQueue/up/remote.jl")
+include("DistSSHQueue/up/local.jl")
+include("DistSSHQueue/up/hosts.jl")
 
 include("DistSSHQueue/job.jl")
 include("DistSSHQueue/store.jl")
@@ -49,6 +67,7 @@ include("client/edit_hosts.jl")
 include("client/cancel.jl")
 include("qhost/service.jl")
 include("qhost/setup.jl")
+include("qhost/up.jl")
 include("qhost/teardown.jl")
 include("qhost/serve.jl")
 
@@ -61,8 +80,16 @@ function show_usage(;
     return print_queue_usage(io; topic = topic)
 end
 
-"""CLI entry. Prefer `julia -m DistSSHQueue` (client `qhost:HOST` / queue-host `setup`)."""
+"""CLI entry. Prefer `julia -m DistSSHKit` (client `qhost:HOST` / queue-host `setup`)."""
 function main(args::Vector{String} = copy(ARGS))::Cint
+    return with_cli_entry(:DistSSHQueue) do
+        DistSSHRun.with_cli_entry(:DistSSHQueue) do
+            _main(args)
+        end
+    end
+end
+
+function _main(args::Vector{String})::Cint
     apply_config_env!(load_config())
     try
         qhost, gjulia, gqenv, after, explicit = extract_remote_opts(args)
@@ -135,8 +162,8 @@ function main(args::Vector{String} = copy(ARGS))::Cint
             r === nothing || return r
             return submit_main(_rest())
         elseif is_kit_execute_kind(Symbol(sub))
-            DistSSHKit.print_cli_error(
-                "$sub is DistSSHKit. Enqueue with submit: julia -m DistSSHQueue [qhost:HOST] submit $sub …",
+            DistSSHRun.print_cli_error(
+                "$sub is DistSSHRun. Enqueue with submit: $(cli_m()) [qhost:HOST] submit $sub …",
             )
             return 1
         elseif sub == "fetch"
@@ -157,14 +184,16 @@ function main(args::Vector{String} = copy(ARGS))::Cint
             return service_main(rest)
         elseif sub == "setup"
             return setup_main(rest)
+        elseif sub == "up"
+            return up_main(rest)
         else
-            DistSSHKit.print_cli_error("unknown subcommand: $sub")
+            DistSSHRun.print_cli_error("unknown subcommand: $sub")
             show_usage(io = stderr)
             return 1
         end
     catch e
         e isa ArgumentError || rethrow()
-        DistSSHKit.print_cli_error(e.msg)
+        DistSSHRun.print_cli_error(e.msg)
         return 1
     end
 end

@@ -5,9 +5,9 @@ const INSPECT_SUBMIT_HEADER = "Suggested submit (template):"
 function print_inspect_submit_template(kind::AbstractString, parts::Vector{String})
     println(INSPECT_SUBMIT_HEADER)
     if isempty(parts)
-        println("  julia --project=. -m DistSSHQueue submit $kind SCRIPT.jl")
+        println("  $(cli_m_project()) submit $kind SCRIPT.jl")
     else
-        println("  julia --project=. -m DistSSHQueue submit $kind ", join(parts, " "), " SCRIPT.jl")
+        println("  $(cli_m_project()) submit $kind ", join(parts, " "), " SCRIPT.jl")
     end
     return nothing
 end
@@ -17,7 +17,7 @@ function pool_sizing_assumption_line(;
         mem_headroom::Real,
         parent_gb::Real,
     )::String
-    pw = Float64(something(gb_per_worker, DistSSHKit.WORKER_MEMORY_GB_FALLBACK))
+    pw = Float64(something(gb_per_worker, DistSSHRun.WORKER_MEMORY_GB_FALLBACK))
     return string(
         "Note: estimated workers from ",
         pw,

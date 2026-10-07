@@ -5,6 +5,18 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
+### Breaking
+
+- The user command is `julia -m DistSSHQueue`. Client hops stay
+  `qhost:HOST`. Queue-host verbs do not take a `qhost` word
+  (`setup`, `up`, `serve`, `add-host`, `remove-host`, `enable`,
+  `disable`). `setup --juliaup` and `setup --juliaup-update` fail and
+  name `up add` or `up update`.
+- DistSSHQueue depends on DistSSHRun, not DistSSHKit. `execute!` and the
+  run commands come from that package. Host talking and the juliaup verbs
+  live in this package's `base/` and `up/`. DistSSHKit does not reexport
+  this queue yet.
+
 ## 0.8.0
 
 Breaking cut after `0.7.0`. Julia **1.13+** and DistSSHKit **0.9.x** only.

@@ -35,7 +35,7 @@ function hop_print(
     argv = vcat(prefix, String["-e", String(expr)])
     return mktemp() do path, io
         redirect_stdout(io) do
-            proc = DistSSHKit.run_on_host(
+            proc = run_on_host(
                 host,
                 argv;
                 julia = auto ? nothing : spec,
@@ -154,12 +154,12 @@ function _rsync_bin()::Vector{String}
 end
 
 function _ssh_transport()::String
-    return "ssh " * join(DistSSHKit.ssh_opts(), " ")
+    return "ssh " * join(ssh_opts(), " ")
 end
 
 function _ssh_mkdir!(host::AbstractString, remote_dir::AbstractString)
     inner = string("mkdir -p ", sh_single_quote(remote_dir))
-    cmd = Cmd(vcat(["ssh"], DistSSHKit.ssh_opts(), [String(host), inner]))
+    cmd = Cmd(vcat(["ssh"], ssh_opts(), [String(host), inner]))
     run(pipeline(cmd; stderr = stderr))
     return nothing
 end
@@ -212,7 +212,7 @@ function rsync_to_qhost!(
         extra_files::Vector{String};
         progress::Bool = false,
     )
-    src = DistSSHKit.canonical_local_path(local_root)
+    src = canonical_local_path(local_root)
     isdir(src) || throw(ArgumentError("qhost submit: job project is not a directory: $(repr(src))"))
     _ssh_mkdir!(host, remote_root)
     dest = string(host, ":", remote_root, "/")
@@ -230,7 +230,7 @@ function rsync_to_qhost!(
     progress && push!(extra_opts, "--info=progress2")
     append!(extra_opts, String["-e", transport])
     for f in extra_files
-        p = DistSSHKit.canonical_local_path(f)
+        p = canonical_local_path(f)
         isfile(p) || throw(ArgumentError("qhost submit: extra file missing: $(repr(p))"))
         run(
             pipeline(
@@ -257,7 +257,7 @@ function rsync_from_qhost!(
         progress::Bool = false,
     )
     remote = rstrip(replace(String(remote_abs), '\\' => '/'), '/')
-    dest = DistSSHKit.canonical_local_path(local_dest)
+    dest = canonical_local_path(local_dest)
     mkpath(dest)
     src = string(host, ":", remote, "/")
     print_rsync_start(host, remote; pulling = true)
@@ -282,7 +282,7 @@ function rsync_from_qhost_file!(
         progress::Bool = false,
     )
     remote = rstrip(replace(String(remote_abs), '\\' => '/'), '/')
-    dest = DistSSHKit.canonical_local_path(local_dest)
+    dest = canonical_local_path(local_dest)
     mkpath(dirname(dest))
     src = string(host, ":", remote)
     print_rsync_start(host, remote; pulling = true)
@@ -300,8 +300,8 @@ function rsync_from_qhost_file!(
 end
 
 function path_under_project(path::AbstractString, proj::AbstractString)::Bool
-    p = DistSSHKit.canonical_local_path(path)
-    r = DistSSHKit.canonical_local_path(proj)
+    p = canonical_local_path(path)
+    r = canonical_local_path(proj)
     return p == r || startswith(p, path_inside_prefix(r))
 end
 
@@ -312,8 +312,8 @@ is that project inside `remote_root` (the same path when there is no parent
 Manifest).
 """
 function stage_env_and_project(local_proj::AbstractString, remote_root::AbstractString)
-    env = DistSSHKit.resolve_pkg_env(local_proj)
-    rel = DistSSHKit.julia_project_rel(env)
+    env = resolve_pkg_env(local_proj)
+    rel = julia_project_rel(env)
     remote_proj = rel == "." ? String(remote_root) : string(remote_root, "/", replace(rel, '\\' => '/'))
     return (env_dir = env.env_dir, remote_proj = remote_proj)
 end

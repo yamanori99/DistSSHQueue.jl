@@ -49,7 +49,7 @@ julia -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
 The tail is DistSSHKit. Same compute, now, on this machine:
 
 ```bash
-julia --project=. -m DistSSHKit drive parent:4 SCRIPT.jl
+julia --project=. -m DistSSHRun drive parent:4 SCRIPT.jl
 ```
 
 Longer argv, still one command (`\` at the end of the line):

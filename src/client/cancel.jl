@@ -22,6 +22,6 @@ function cancel_cli(args::Vector{String})::Cint
         println(id)
         return 0
     end
-    DistSSHKit.print_cli_error("job $(repr(id)) cannot be cancelled")
+    DistSSHRun.print_cli_error("job $(repr(id)) cannot be cancelled")
     return 1
 end

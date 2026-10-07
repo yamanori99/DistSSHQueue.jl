@@ -34,8 +34,8 @@ function fetch_relpath(
         root::AbstractString;
         canonicalize::Bool = false,
     )::String
-    raw_p = canonicalize ? DistSSHKit.canonical_local_path(result_path) : String(result_path)
-    raw_r = canonicalize ? DistSSHKit.canonical_local_path(root) : String(root)
+    raw_p = canonicalize ? canonical_local_path(result_path) : String(result_path)
+    raw_r = canonicalize ? canonical_local_path(root) : String(root)
     p = posix_dir(raw_p)
     r = posix_dir(raw_r)
     (p == r || startswith(p, path_inside_prefix(r))) || throw(
@@ -55,7 +55,7 @@ end
 function fetch_dest(local_proj::AbstractString, kind::AbstractString, leaf::AbstractString)::String
     k = String(kind)
     k in ("go", "ride", "drive") || throw(ArgumentError("fetch: bad kind $(repr(k))"))
-    dest = DistSSHKit.canonical_local_path(joinpath(local_proj, ".distsshqueue", k, String(leaf)))
+    dest = canonical_local_path(joinpath(local_proj, ".distsshqueue", k, String(leaf)))
     path_under_project(dest, local_proj) || throw(
         ArgumentError(
             "fetch dest escapes the job project",
@@ -338,8 +338,8 @@ function write_submit_ticket(
         rel = try
             replace(
                 relpath(
-                    DistSSHKit.canonical_local_path(sp),
-                    DistSSHKit.canonical_local_path(root),
+                    canonical_local_path(sp),
+                    canonical_local_path(root),
                 ),
                 '\\' => '/',
             )
@@ -403,7 +403,7 @@ end
 function resolve_into_path(into::AbstractString)::String
     raw = String(into)
     p = isabspath(raw) ? raw : joinpath(job_project(), raw)
-    return DistSSHKit.canonical_local_path(p)
+    return canonical_local_path(p)
 end
 
 """Dest leaf: default Queue leaf, or `--into PATH` itself (may be outside the project)."""

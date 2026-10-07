@@ -40,8 +40,8 @@ function teardown_targets(;
     seen = Set{String}()
     uniq = String[]
     for p in out
-        DistSSHKit.canonical_local_path(p) in seen && continue
-        push!(seen, DistSSHKit.canonical_local_path(p))
+        canonical_local_path(p) in seen && continue
+        push!(seen, canonical_local_path(p))
         push!(uniq, p)
     end
     return uniq
@@ -58,15 +58,15 @@ function teardown(;
     targets = teardown_targets(; home = home, bindir = bindir, config = config)
     existing = String[p for p in targets if ispath(p)]
     if !yes
-        DistSSHKit.print_help_section("Would remove"; io = io)
+        print_help_section("Would remove"; io = io)
         if isempty(existing)
-            DistSSHKit.print_help_lines(io, "  (nothing)")
+            print_help_lines(io, "  (nothing)")
         else
             for p in existing
-                DistSSHKit.print_help_lines(io, "  $(_q_short(p))")
+                print_help_lines(io, "  $(_q_short(p))")
             end
         end
-        DistSSHKit.print_help_lines(io, "  Pass -y / --yes to delete.")
+        print_help_lines(io, "  Pass -y / --yes to delete.")
         return 0
     end
     st = teardown_store(; home = home, config = config)

@@ -19,7 +19,7 @@ DistSSHQueue は、何人かで同じマシンを使い、ジョブを順番に�
 対応は **macOS、Linux、WSL2 Ubuntu** (ネイティブ Windows は対象外)。
 
 小さな研究室や個人でも、常時起動のマシンを 1 台置き、SSH接続したマシンとまとめて小さな計算ノードとして使うことが出来る。
-Julia **1.13+**、DistSSHKit **0.9.x**。
+Julia **1.13+**、DistSSHRun **0.1**。
 
 ## インストール
 
@@ -84,7 +84,7 @@ julia> import Pkg; Pkg.add("DistSSHQueue")
 ### submit
 
 1つのargvに4つの入れ子がある。`submit` はQueue。その後ろはDistSSHKitの
-argv (`go` / `ride` / `drive` とその先) で、`-m DistSSHKit` にそのまま
+argv (`go` / `ride` / `drive` とその先) で、`-m DistSSHRun` にそのまま
 渡せる (Queueなし)。Kit単体はそのマシンで今すぐ計算する。`submit`
 は同じargvをキューに載せるだけである。
 
@@ -107,7 +107,7 @@ julia --project=. -m DistSSHQueue [qhost:HOST] submit \
 同じ DistSSHKit argv、キューなし:
 
 ```bash
-julia --project=. -m DistSSHKit drive parent:4 SCRIPT.jl
+julia --project=. -m DistSSHRun drive parent:4 SCRIPT.jl
 ```
 
 `pool:N` は Queue (`submit` の隣) であり、Kit のトークンではない。詳細:

@@ -1,5 +1,5 @@
 using Test
-using DistSSHKit
+using DistSSHRun
 using DistSSHQueue
 
 function _wait_fetch_state(q, id, want::Symbol; tries::Int = 200)
@@ -15,7 +15,7 @@ end
         proj = joinpath(d, "job")
         mkpath(proj)
         dest = DistSSHQueue.fetch_dest(proj, "go", "demo_807e3753")
-        @test dest == DistSSHKit.canonical_local_path(
+        @test dest == DistSSHQueue.canonical_local_path(
             joinpath(proj, ".distsshqueue", "go", "demo_807e3753"),
         )
         @test DistSSHQueue.path_has_queue_leaf(dest)
@@ -221,7 +221,7 @@ end
         idbox[] = id
         @test step!(q) == 1
         _wait_fetch_state(q, id, :done)
-        want = DistSSHKit.canonical_local_path(joinpath(d, ".distsshkit", "go", "S_" * first(id, 8)))
+        want = DistSSHQueue.canonical_local_path(joinpath(d, ".distsshkit", "go", "S_" * first(id, 8)))
         withenv(
             "DISTSSHQUEUE_STORE" => store,
             "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
@@ -362,12 +362,12 @@ end
         @test progress
         withenv("DISTRIBUTED_PROJECT_ROOT" => d) do
             rel = DistSSHQueue.resolve_into_path("data/payoff")
-            @test rel == DistSSHKit.canonical_local_path(joinpath(d, "data", "payoff"))
+            @test rel == DistSSHQueue.canonical_local_path(joinpath(d, "data", "payoff"))
             abs = DistSSHQueue.resolve_into_path(joinpath(d, "outside"))
-            @test abs == DistSSHKit.canonical_local_path(joinpath(d, "outside"))
+            @test abs == DistSSHQueue.canonical_local_path(joinpath(d, "outside"))
             got = DistSSHQueue.fetch_dest_target(id, src, "/qh/.distsshqueue"; into = joinpath(d, "outside"))
-            @test got == DistSSHKit.canonical_local_path(joinpath(d, "outside"))
-            @test !startswith(got, DistSSHKit.canonical_local_path(d) * "/.distsshqueue")
+            @test got == DistSSHQueue.canonical_local_path(joinpath(d, "outside"))
+            @test !startswith(got, DistSSHQueue.canonical_local_path(d) * "/.distsshqueue")
         end
     end
 end

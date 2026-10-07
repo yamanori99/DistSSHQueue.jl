@@ -1,15 +1,15 @@
 """CLI `add-host` / `remove-host`: write Kit placement tokens into config `hosts`."""
 
 function _remote_julia_mm(host::AbstractString)::Union{Nothing, Tuple{Int, Int}}
-    DistSSHKit.is_parent_host_name(host) && return (VERSION.major, VERSION.minor)
+    is_parent_host_name(host) && return (VERSION.major, VERSION.minor)
     path = try
-        DistSSHKit.resolve_remote_julia(String(host), "auto")
+        resolve_remote_julia(String(host), "auto")
     catch
         nothing
     end
     path === nothing && return nothing
     ver = try
-        DistSSHKit.get_remote_julia_version(String(host), path)
+        get_remote_julia_version(String(host), path)
     catch
         nothing
     end
@@ -34,7 +34,7 @@ function warn_julia_major_minor(tokens; io::IO = stdout)
     first = true
     for raw in tokens
         name = kit_ssh_name(String(raw))
-        DistSSHKit.is_parent_host_name(name) && continue
+        is_parent_host_name(name) && continue
         name in seen && continue
         push!(seen, name)
         mm = _remote_julia_mm(name)
@@ -45,7 +45,7 @@ function warn_julia_major_minor(tokens; io::IO = stdout)
         _print_cli_note(
             io,
             "$(name) Julia $(mm[1]).$(mm[2]) vs this process $(local_mm[1]).$(local_mm[2])",
-            "julia -m DistSSHQueue setup --juliaup",
+            "$(cli_m()) $(cli_qhost())up",
         )
     end
     return nothing
@@ -61,7 +61,7 @@ function warn_child_submit_reach(tokens; io::IO = stdout)
     seen = Set{String}()
     for raw in tokens
         name = kit_ssh_name(String(raw))
-        DistSSHKit.is_parent_host_name(name) && continue
+        is_parent_host_name(name) && continue
         name in seen && continue
         push!(seen, name)
         push!(kids, "child:$(name)")

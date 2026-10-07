@@ -35,7 +35,7 @@ runs jobs.
     usual OS path ([Checks](@ref)) or set `--remote-julia` /
     `JULIA_DISTRIBUTED_EXE`. Missing path or a related bug:
     [open an Issue](https://github.com/yamanori99/DistSSHQueue.jl/issues).
-- **DistSSHKit 0.9.x** from General. Do not `Pkg.develop` Kit (or
+- **DistSSHRun 0.1** from the pinned git revision. Do not `Pkg.develop` Run (or
   Queue) in a job project whose Manifest is copied to workers — that path
   is absolute and the workers do not have it. Separate env for package
   work.
@@ -162,17 +162,18 @@ From the **queue host**, DistSSHKit [Checks](https://yamanori99.github.io/DistSS
 DistSSHKit; dedicated `~/.distsshqueue/env` is optional):
 
 ```bash
-julia -m DistSSHKit setup --check child:USER@HOST
-# or: julia --project=$HOME/.distsshqueue/env -m DistSSHKit setup --check child:USER@HOST
+julia -m DistSSHRun setup --check child:USER@HOST
+# or: julia --project=$HOME/.distsshqueue/env -m DistSSHRun setup --check child:USER@HOST
 ```
 
 ### Align Julia with juliaup
 
-`julia -m DistSSHQueue setup --juliaup` wraps DistSSHKit
-`juliaup_align_remotes` on config `hosts` (`list-host`). It does not
-take host tokens. An empty table fails with `add-host first`. Do not
-combine with `--force`. That changes each target's **juliaup default**
-only — it does not change a Julia process that is already running.
+`julia -m DistSSHQueue up add CHANNEL` installs that channel on config
+`hosts` (`list-host`) and can switch the default with `up default`.
+`up` does not take host tokens. An empty table fails with `add-host first`.
+Do not combine with `--force`. `up default` changes each target's
+**juliaup default** only — it does not change a Julia process that is
+already running.
 
 Prefer the **queue host**. Channel = this command's major.minor.
 Typical labs have passwordless SSH from the queue host to workers,
@@ -180,11 +181,11 @@ not from the client:
 
 ```bash
 # On the queue host, after add-host (parent is included only if listed):
-julia -m DistSSHQueue setup --juliaup
+julia -m DistSSHQueue up
 
 # From a client: only hosts you can SSH to from this machine.
 # parent here is this client, not the queue host.
-julia --project=. -m DistSSHKit setup --juliaup child:QHOST
+julia --project=. -m DistSSHQueue up child:QHOST
 ```
 
 After changing the default on the queue host: stop `serve` and start it
@@ -195,14 +196,12 @@ Details: [kit Requirements](https://yamanori99.github.io/DistSSHKit.jl/stable/re
 
 ### Update installed channels
 
-`julia -m DistSSHQueue setup --juliaup-update` wraps DistSSHKit
-`juliaup_update_remotes`. Uses config `hosts`, same as `--juliaup`.
-Do not combine with `--force` or `--juliaup`. It runs `juliaup update`
-on each target and leaves the host default unchanged. Success line stays
-`✓ juliaup update`.
+`julia -m DistSSHQueue up update` runs `juliaup update` on config `hosts`,
+same as `up add`. It does not take `--force`. It leaves the host default
+unchanged. Success line stays `✓ juliaup update`.
 
 A running `serve` keeps its current Julia until you restart it, same as
-after `--juliaup`.
+after `up default`.
 
 ## [Where files live](@id where-files-live)
 

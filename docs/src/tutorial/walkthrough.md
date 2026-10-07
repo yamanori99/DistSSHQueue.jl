@@ -25,7 +25,7 @@ julia -m DistSSHQueue serve
 `add-host` does not deploy. `serve` instantiates the job project on
 this host, then Kit `setup!` (rsync / instantiate / `check`) on
 `child:` hosts. A `qhost:` stage has no `.git/`; DistSSHKit **0.7.3+**
-warns on that instead of failing `:check`. Optional: `setup --juliaup`
+warns on that instead of failing `:check`. Optional: `up`
 when major.minor differs.
 
 From a client: create the env, then `pkg> add DistSSHQueue` in it
@@ -34,12 +34,12 @@ needs `qhost:HOST` on the command line.
 
 ## Client: go on parent
 
-Job directory. Queue loadable (`julia --project=.`). DistSSHKit **0.9.x**
+Job directory. Queue loadable (`julia --project=.`). DistSSHRun **0.1**
 comes with Queue. `demo install` copies into `distsshkit_demos/`.
 Listed `parent` / `child:NAME` need `:N`.
 
 ```bash
-julia --project=. -m DistSSHKit demo install without_kit
+julia --project=. -m DistSSHQueue demo install without_kit
 julia --project=. -m DistSSHQueue qhost:HOST submit go parent:1 distsshkit_demos/without_kit/pi_echo.jl
 ```
 
@@ -76,7 +76,7 @@ julia --project=. -m DistSSHQueue qhost:HOST submit pool:2 go distsshkit_demos/w
 ## Drive
 
 ```bash
-julia --project=. -m DistSSHKit demo install with_kit
+julia --project=. -m DistSSHQueue demo install with_kit
 julia --project=. -m DistSSHQueue qhost:HOST submit drive parent:1 distsshkit_demos/with_kit/square_file.jl
 julia --project=. -m DistSSHQueue qhost:HOST fetch <id>
 ```

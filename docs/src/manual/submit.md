@@ -46,7 +46,7 @@ julia --project=. -m DistSSHQueue [qhost:HOST] submit \
 The DistSSHKit argv runs as-is without Queue:
 
 ```bash
-julia --project=. -m DistSSHKit drive parent:4 SCRIPT.jl
+julia --project=. -m DistSSHRun drive parent:4 SCRIPT.jl
 ```
 
 That starts compute on **this** machine, now. `submit` only enqueues the
@@ -70,7 +70,7 @@ experimental.
 
 Also: [First job](@ref Tutorial-Client), [Walkthrough](@ref Tutorial-Walkthrough),
 [hosts](@ref Manual-hosts),
-`julia -m DistSSHQueue --help`. Kit flags:
+`julia -m DistSSHRun --help`. Run flags:
 [go](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/go/),
 [ride](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/ride/),
 [drive](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/drive/).
