@@ -52,7 +52,7 @@ end
 function parse_host_cap(raw::AbstractString)::Pair{String, Union{Nothing, Int}}
     s = strip(String(raw))
     isempty(s) && throw(ArgumentError("Kit SSH name is empty"))
-    p = DistSSHBase.parse_placement_token(s)
+    p = parse_placement_token(s)
     maxn = p.n === nothing ? nothing : _positive_n(p.n, s)
     return p.name => maxn
 end
@@ -63,8 +63,8 @@ function kit_ssh_name(raw::AbstractString)::String
 end
 
 function host_allow_item(name::AbstractString, cap::Union{Nothing, Int})::String
-    role = DistSSHBase.is_parent_host_name(name) ? :parent : :child
-    return DistSSHBase.format_placement_token(role, String(name), cap)
+    role = is_parent_host_name(name) ? :parent : :child
+    return format_placement_token(role, String(name), cap)
 end
 
 """Kit placement tokens in `hosts`, with optional max `:N`.
@@ -93,7 +93,7 @@ end
 
 function sorted_kit_ssh_names(names::AbstractSet{<:AbstractString})::Vector{String}
     v = String[String(n) for n in names]
-    sort!(v; by = n -> (DistSSHBase.is_parent_host_name(n) ? 0 : 1, n))
+    sort!(v; by = n -> (is_parent_host_name(n) ? 0 : 1, n))
     return v
 end
 

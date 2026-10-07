@@ -3,12 +3,12 @@
 DistSSHQueue runs jobs one after another on machines that several
 people share. You can submit a job, check its status, fetch a finished
 leaf, and cancel.
-[DistSSHKit](https://yamanori99.github.io/DistSSHKit.jl/stable/) does the run.
+[DistSSHRun](https://yamanori99.github.io/DistSSHRun.jl/stable/) does the run.
 Supported on **macOS, Linux, and WSL2 Ubuntu** (not native Windows).
 
 Even small labs and individuals can keep one always-on machine, add
 SSH hosts, and use them together as a small set of compute nodes.
-Julia **1.13+**, DistSSHKit **0.9.x**. Placement tokens
+Julia **1.13+**, DistSSHRun **0.1**. Placement tokens
 (`parent[:N]` / `child:NAME[:N]`) stay DistSSHKit's — see the
 [kit docs](https://yamanori99.github.io/DistSSHKit.jl/stable/).
 
@@ -23,7 +23,7 @@ or `Pkg.instantiate` on the stage tree.
 
 How you call it:
 
-- **CLI** — `julia --project=. -m DistSSHKit qhost:HOST submit go …`
+- **CLI** — `julia --project=. -m DistSSHQueue qhost:HOST submit go …`
 - **Julia API** — `submit!` / `cancel!` / `serve!` on a [`Queue`](@ref)
   ([API](@ref API))
 
@@ -73,7 +73,7 @@ client copy under `.distsshqueue/`.
   -------------------------------         --------------------------
   yours / a colleague's / ...             FIFO     one Kit job at a time
        |                                  table    ~/.distsshqueue
-       |  julia -m DistSSHKit           add-host / remove-host
+       |  julia -m DistSSHQueue           add-host / remove-host
        |    qhost:NAME                    serve    now, this terminal
        |    submit | status | list-host   enable   again after reboot
        |    watch | cancel | fetch | ...

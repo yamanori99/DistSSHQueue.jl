@@ -16,12 +16,12 @@
 DistSSHQueue runs jobs one after another on machines that several
 people share. You can submit a job, check its status, fetch a finished
 leaf, and cancel.
-[DistSSHKit](https://github.com/yamanori99/DistSSHKit.jl) does the run.
+[DistSSHRun](https://github.com/yamanori99/DistSSHRun.jl) does the run.
 Supported on **macOS, Linux, and WSL2 Ubuntu** (not native Windows).
 
 Even small labs and individuals can keep one always-on machine, add
 SSH hosts, and use them together as a small set of compute nodes.
-Julia **1.13+**, DistSSHKit **0.9.x**.
+Julia **1.13+**, DistSSHRun **0.1**.
 
 ## Install
 
@@ -64,7 +64,7 @@ For everything else, see the
   -------------------------------         --------------------------
   yours / a colleague's / ...             FIFO     one Kit job at a time
        |                                  table    ~/.distsshqueue
-       |  julia -m DistSSHKit           add-host / remove-host
+       |  julia -m DistSSHQueue           add-host / remove-host
        |    qhost:NAME                    serve    now, this terminal
        |    submit | status | list-host   enable   again after reboot
        |    watch | cancel | fetch | ...
@@ -89,29 +89,29 @@ DistSSHKit's — see the
 
 One argv, four nested pieces. `submit` is Queue. After it, the line is
 DistSSHKit argv (`go` / `ride` / `drive` and the rest) and runs as-is
-with `-m DistSSHKit` (no Queue). That Kit command starts compute on
+with `-m DistSSHRun` (no Queue). That Kit command starts compute on
 **this** machine now; `submit` only enqueues the same argv.
 
 ```bash
-julia --project=. -m DistSSHKit  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
+julia --project=. -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
 #──────────── Julia ────────────┘  └─ qhost ──┘  Queue   └─── DistSSHKit argv ────┘
 ```
 
 ```bash
-julia --project=. -m DistSSHKit [qhost:HOST] submit drive parent:4 SCRIPT.jl
+julia --project=. -m DistSSHQueue [qhost:HOST] submit drive parent:4 SCRIPT.jl
 ```
 
 Break a long terminal line after `submit` with `\`:
 
 ```bash
-julia --project=. -m DistSSHKit [qhost:HOST] submit \
+julia --project=. -m DistSSHQueue [qhost:HOST] submit \
     drive parent:4 child:NAME:N SCRIPT.jl
 ```
 
 Same DistSSHKit argv, no queue:
 
 ```bash
-julia --project=. -m DistSSHKit drive parent:4 SCRIPT.jl
+julia --project=. -m DistSSHRun drive parent:4 SCRIPT.jl
 ```
 
 `pool:N` is Queue (next to `submit`), not a Kit token. Full notes:
@@ -209,16 +209,16 @@ and instantiates it before the run:
 From a **client** (job directory; Queue must be loadable from that env):
 
 ```bash
-julia --project=. -m DistSSHKit qhost:HOST list-host
-julia --project=. -m DistSSHKit qhost:HOST size
-julia --project=. -m DistSSHKit qhost:HOST plan SCRIPT.jl
-julia --project=. -m DistSSHKit qhost:HOST pool
-julia --project=. -m DistSSHKit qhost:HOST submit go child:host1:4 SCRIPT.jl
-julia --project=. -m DistSSHKit qhost:HOST status
-julia --project=. -m DistSSHKit qhost:HOST watch
-julia --project=. -m DistSSHKit qhost:HOST cancel <id>
-julia --project=. -m DistSSHKit qhost:HOST fetch <id>
-julia --project=. -m DistSSHKit qhost:HOST fetch .distsshqueue/tickets/<uuid>
+julia --project=. -m DistSSHQueue qhost:HOST list-host
+julia --project=. -m DistSSHQueue qhost:HOST size
+julia --project=. -m DistSSHQueue qhost:HOST plan SCRIPT.jl
+julia --project=. -m DistSSHQueue qhost:HOST pool
+julia --project=. -m DistSSHQueue qhost:HOST submit go child:host1:4 SCRIPT.jl
+julia --project=. -m DistSSHQueue qhost:HOST status
+julia --project=. -m DistSSHQueue qhost:HOST watch
+julia --project=. -m DistSSHQueue qhost:HOST cancel <id>
+julia --project=. -m DistSSHQueue qhost:HOST fetch <id>
+julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
 `submit` starts `serve` on the queue host if none is running. `serve`
@@ -234,13 +234,13 @@ Typed path (queue host → submit / fetch → teardown):
 [Walkthrough](https://yamanori99.github.io/DistSSHQueue.jl/stable/tutorial/walkthrough/).
 
 On the **queue host** (once). `setup` writes `config.toml`, not `env/`.
-Queue in the default Julia env (`julia -m DistSSHKit`); from a
+Queue in the default Julia env (`julia -m DistSSHQueue`); from a
 checkout add `--project=.`.
 
 ```bash
-julia -m DistSSHKit qhost setup
-julia -m DistSSHKit qhost add-host parent child:host1
-julia -m DistSSHKit qhost serve
+julia -m DistSSHQueue setup
+julia -m DistSSHQueue add-host parent child:host1
+julia -m DistSSHQueue serve
 ```
 
 `qhost:` defaults to `--project=~/.distsshqueue/env` (`--queue-env @`

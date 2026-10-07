@@ -2,7 +2,7 @@
 #
 # `redirect_stdout` does not accept `IOBuffer`. Kit uses `mktemp`
 # (`test/unit/DistSSHKit/main_dispatch.jl`). Redirecting also makes
-# `DistSSHBase.use_colors()` false (`stdout isa TTY`), so ANSI does not leak
+# `DistSSHQueue.use_colors()` false (`stdout isa TTY`), so ANSI does not leak
 # into `Pkg.test()` output.
 function capture_stdio(f)
     return mktemp() do out_path, out_io

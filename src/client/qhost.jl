@@ -267,7 +267,7 @@ function remote_dispatch(
     argv = append!(hop_julia_prefix(queue_env), core)
     spec = strip(String(rjulia))
     auto = isempty(spec) || spec == "auto"
-    proc = DistSSHBase.run_on_host(
+    proc = run_on_host(
         host,
         argv;
         julia = auto ? nothing : spec,
@@ -297,24 +297,27 @@ end
 
 """Note when the queue host's DistSSHQueue differs. `nothing` if same or unreadable.
 
-Does not refuse. `kit` is the remote DistSSHKit version when the line has one.
+Does not refuse. `kit` is the remote DistSSHRun version when the line has one.
+Older hosts may still print DistSSHKit.
 """
 function queue_version_skew_warning(
         remote_line::AbstractString;
         local_ver::Union{Nothing, VersionNumber} = pkgversion(DistSSHQueue),
-    )::Union{Nothing, @NamedTuple{head::String, kit::Union{Nothing, String}}}
+    )::Union{Nothing, @NamedTuple{head::String, kit::Union{Nothing, String}, kit_name::String}}
     local_ver === nothing && return nothing
     remote = queue_version_from_line(remote_line)
     remote === nothing && return nothing
     remote == local_ver && return nothing
-    kit_m = match(r"\(DistSSHKit\s+([^)]+)\)", remote_line)
+    kit_m = match(r"\((DistSSHRun|DistSSHKit)\s+([^)]+)\)", remote_line)
     kit = nothing
+    kit_name = "DistSSHRun"
     if kit_m !== nothing
-        cap = kit_m.captures[1]
+        name, cap = kit_m.captures
+        name isa AbstractString && (kit_name = String(name))
         cap isa AbstractString && (kit = String(cap))
     end
     head = "queue host DistSSHQueue $remote vs this process $local_ver"
-    return (; head, kit)
+    return (; head, kit, kit_name)
 end
 
 """One SSH `--version` before a hop. Failure stays silent so the verb still runs."""
@@ -342,7 +345,7 @@ function warn_remote_queue_version!(
     if note.kit === nothing
         _print_cli_note(stderr, note.head)
     else
-        _print_cli_note(stderr, note.head, "DistSSHKit $(note.kit)")
+        _print_cli_note(stderr, note.head, "$(note.kit_name) $(note.kit)")
     end
     return nothing
 end

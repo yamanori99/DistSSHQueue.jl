@@ -23,10 +23,10 @@ not the same as `julia --project=`.
 Default Julia env (`pkg> add DistSSHQueue` there):
 
 ```bash
-julia -m DistSSHKit qhost setup
-julia -m DistSSHKit qhost add-host parent child:host1
-julia -m DistSSHKit list-host
-julia -m DistSSHKit qhost serve
+julia -m DistSSHQueue setup
+julia -m DistSSHQueue add-host parent child:host1
+julia -m DistSSHQueue list-host
+julia -m DistSSHQueue serve
 ```
 
 From a checkout of this package, the same verbs with `--project=.`.
@@ -57,7 +57,7 @@ failing `:check`. Leave
 `qhost:` `child:` copy stays `~/stage/<uuid>`. `parent` uses the stage
 on the queue host.
 [kit Prepare](https://yamanori99.github.io/DistSSHKit.jl/stable/tutorial/prepare/).
-To align Julia versions, Queue `qhost up` on the queue host
+To align Julia versions, Queue `up` on the queue host
 (config `hosts` only; see [Requirements](@ref)).
 
 ## Dedicated env (optional)
@@ -78,13 +78,13 @@ julia --project=.
 pkg> add DistSSHQueue
 ```
 
-That pulls DistSSHKit **0.9.x** from General. A different dir is
+That pulls DistSSHRun **0.1**. A different dir is
 `--queue-env DIR` on `enable` and on client `qhost:`.
 
 ## Survive reboot (optional)
 
 ```bash
-julia --project=. -m DistSSHKit qhost enable --queue-env ~/.distsshqueue/env
+julia --project=. -m DistSSHQueue qhost enable --queue-env ~/.distsshqueue/env
 ```
 
 `--queue-env` is the env that loads Queue in the OS unit, not Julia

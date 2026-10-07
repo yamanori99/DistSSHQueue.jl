@@ -10,7 +10,7 @@ Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [sources]
-DistSSHRun = {url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "0a2ebf01ee0aeb646c2e73948c48fb02905d61c6"}
+DistSSHRun = {url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "0dd18f1aeeb7b4cfab678cc1967d6c3f10a1fc0b"}
 
 [compat]
 DistSSHRun = "0.1"

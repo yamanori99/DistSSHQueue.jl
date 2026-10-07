@@ -61,10 +61,10 @@ Not the Julia `--project=` that loaded DistSSHQueue.
 """
 function job_project(; cwd::AbstractString = pwd())::String
     env = strip(get(ENV, "DISTRIBUTED_PROJECT_ROOT", ""))
-    isempty(env) || return DistSSHBase.canonical_local_path(env)
-    host = DistSSHBase.resolve_pkg_project_dir(cwd)
+    isempty(env) || return canonical_local_path(env)
+    host = resolve_pkg_project_dir(cwd)
     root = isfile(joinpath(host, "Project.toml")) ? String(host) : String(cwd)
-    return DistSSHBase.canonical_local_path(root)
+    return canonical_local_path(root)
 end
 
 """Worker path Kit would use for this queue-host project (`remote=` or Kit default / ENV).
@@ -84,14 +84,14 @@ function kit_worker_root(project::AbstractString, kw::AbstractDict)::String
     layout = if raw !== nothing
         raw
     else
-        DistSSHBase.resolve_remote_project_root(DistSSHBase.canonical_local_path(project))
+        resolve_remote_project_root(canonical_local_path(project))
     end
-    return DistSSHBase.remote_env_project_root(layout)
+    return remote_env_project_root(layout)
 end
 
 """True when `project` is a qhost stage dir (`…/.distsshqueue/stage/<uuid>`)."""
 function is_qhost_stage_project(project::AbstractString)::Bool
-    parts = splitpath(DistSSHBase.canonical_local_path(project))
+    parts = splitpath(canonical_local_path(project))
     i = findfirst(isequal(".distsshqueue"), parts)
     return i !== nothing && i < length(parts) && parts[i + 1] == "stage"
 end
@@ -103,13 +103,13 @@ Terminal rows do not occupy workers. Two `qhost:` stage UUID dirs may share a
 pinned `DISTRIBUTED_REMOTE_PROJECT_ROOT` (per-job copies of one client tree).
 """
 function reject_worker_root_collision!(jobs::Vector{Job}, project::AbstractString, kw::AbstractDict)
-    proj = DistSSHBase.canonical_local_path(project)
+    proj = canonical_local_path(project)
     root = kit_worker_root(proj, kw)
     for j in jobs
         j.state in (:done, :failed, :cancelled) && continue
         other = get(j.kwargs, "project", nothing)
         other isa AbstractString || continue
-        op = DistSSHBase.canonical_local_path(String(other))
+        op = canonical_local_path(String(other))
         op == proj && continue
         is_qhost_stage_project(proj) && is_qhost_stage_project(op) && continue
         kit_worker_root(op, j.kwargs) == root || continue
@@ -124,7 +124,7 @@ function reject_worker_root_collision!(jobs::Vector{Job}, project::AbstractStrin
     return nothing
 end
 
-resolve_script(path::AbstractString) = DistSSHBase.canonical_local_path(path)
+resolve_script(path::AbstractString) = canonical_local_path(path)
 
 function as_host_allow(allowed)::Union{Nothing, HostAllow}
     allowed === nothing && return nothing
@@ -150,7 +150,7 @@ function as_host_allow(allowed)::Union{Nothing, HostAllow}
 end
 
 function reject_host_token!(allow::Union{Nothing, HostAllow}, t::AbstractString)
-    parsed = DistSSHBase.parse_placement_token(t)
+    parsed = parse_placement_token(t)
     allow === nothing && return parsed
     if !haskey(allow, parsed.name)
         throw(
@@ -472,7 +472,7 @@ end
 function _kit_setup_child_tokens(hosts::AbstractVector{<:AbstractString})::Vector{String}
     out = String[]
     for raw in hosts
-        DistSSHBase.is_parent_host_name(kit_ssh_name(raw)) && continue
+        is_parent_host_name(kit_ssh_name(raw)) && continue
         push!(out, String(raw))
     end
     return out
@@ -514,7 +514,7 @@ function _with_pkg_depots(f)
 end
 
 function _queue_local_instantiate!(proj::AbstractString)
-    root = DistSSHBase.canonical_local_path(proj)
+    root = canonical_local_path(proj)
     isfile(joinpath(root, "Project.toml")) || return nothing
     _with_pkg_depots() do
         Pkg.activate(root) do
@@ -541,7 +541,7 @@ function _record_kit_setup_logs!(j::Job, proj::AbstractString)
     for f in readdir(logdir; join = true)
         isfile(f) || continue
         endswith(lowercase(f), ".log") || continue
-        push!(logs, DistSSHBase.canonical_local_path(f))
+        push!(logs, canonical_local_path(f))
     end
     isempty(logs) && return nothing
     sort!(logs)

@@ -16,7 +16,7 @@ function drop_nothing(d::Dict{String, Any})
 end
 
 function submit_hosts(parsed; kind::Symbol)::Vector{String}
-    return DistSSHBase.host_tokens(parsed; kind = kind)
+    return host_tokens(parsed; kind = kind)
 end
 
 function submit_kit_bag(parsed; kind::Symbol)::Dict{String, Any}
@@ -53,7 +53,7 @@ function peel_submit_pool(args::Vector{String})
             throw(
                 ArgumentError(
                     "`pool` is the inspect verb. For submit slots use `pool:N` " *
-                        "(e.g. submit pool:8 drive SCRIPT.jl). Inspect: $(DistSSHBase.cli_m()) $(DistSSHBase.cli_qhost())pool",
+                        "(e.g. submit pool:8 drive SCRIPT.jl). Inspect: $(cli_m()) $(cli_qhost())pool",
                 )
             )
         elseif startswith(a, "pool:")
@@ -95,8 +95,8 @@ function expand_pool_submit_hosts(slots::Int)::Vector{String}
     for name in sorted_kit_ssh_names(allow)
         n = clamp_pool_slots(slots, allow, name)
         n < 1 && continue
-        role = DistSSHBase.is_parent_host_name(name) ? :parent : :child
-        push!(out, DistSSHBase.format_placement_token(role, String(name), n))
+        role = is_parent_host_name(name) ? :parent : :child
+        push!(out, format_placement_token(role, String(name), n))
     end
     isempty(out) && throw(ArgumentError("pool:N: no hosts left after add-host max"))
     return out
@@ -178,18 +178,18 @@ function submit_kind(kind::Symbol, args::Vector{String}; pool_slots::Union{Nothi
     end
     parsed = kit_parse_args(kind, rest)
     if parsed.help
-        DistSSHBase.print_help_section("Queue"; io = stdout)
-        DistSSHBase.print_help_lines(
+        print_help_section("Queue"; io = stdout)
+        print_help_lines(
             stdout,
             "  `submit $(kind)` enqueues. `qhost:HOST` is the SSH name of the queue machine, not a Kit slot.",
         )
-        DistSSHBase.print_help_blank(stdout)
-        DistSSHBase.print_help_section("DistSSHKit"; io = stdout)
-        DistSSHBase.print_help_lines(
+        print_help_blank(stdout)
+        print_help_section("DistSSHKit"; io = stdout)
+        print_help_lines(
             stdout,
-            "  Same argv as `$(DistSSHBase.cli_m()) $(kind) …` (`parent:N` / `child:NAME:N`).",
+            "  Same argv as `$(cli_m()) $(kind) …` (`parent:N` / `child:NAME:N`).",
         )
-        DistSSHBase.print_help_blank(stdout)
+        print_help_blank(stdout)
         kit_show_usage(kind)
         return 0
     end

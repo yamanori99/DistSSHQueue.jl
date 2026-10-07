@@ -3,10 +3,10 @@
 Write config, or wipe Queue state on this host.
 
 ```bash
-julia -m DistSSHKit qhost setup [--force]
-julia -m DistSSHKit qhost up
-julia -m DistSSHKit qhost up update
-julia -m DistSSHKit teardown -y
+julia -m DistSSHQueue setup [--force]
+julia -m DistSSHQueue up
+julia -m DistSSHQueue up update
+julia -m DistSSHQueue teardown -y
 ```
 
 Also: [Prepare](@ref Tutorial-Prepare), [Walkthrough](@ref Tutorial-Walkthrough), [serve](@ref Manual-serve),

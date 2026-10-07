@@ -15,7 +15,7 @@ function ssh_g_connect(name::AbstractString)::Dict{String, String}
     out = Dict{String, String}()
     h = String(name)
     try
-        dump = read(pipeline(Cmd(["ssh", "-n", DistSSHBase.ssh_opts()..., "-G", h]); stderr = devnull))
+        dump = read(pipeline(Cmd(["ssh", "-n", ssh_opts()..., "-G", h]); stderr = devnull))
         for line in eachsplit(String(dump), '\n'; keepempty = false)
             sp = findfirst(isspace, line)
             sp === nothing && continue
@@ -32,12 +32,12 @@ end
 
 """NAME column: queue-host hostname for `parent`, SSH Host for `child:`."""
 function _host_name_disp(name::AbstractString)::String
-    DistSSHBase.is_parent_host_name(name) && return gethostname()
+    is_parent_host_name(name) && return gethostname()
     return String(name)
 end
 
 function _ssh_disp(name::AbstractString; hopped::Bool)::String
-    if DistSSHBase.is_parent_host_name(name)
+    if is_parent_host_name(name)
         return hopped ? "queue host" : "this machine"
     end
     g = ssh_g_connect(name)
@@ -50,12 +50,12 @@ function _ssh_disp(name::AbstractString; hopped::Bool)::String
 end
 
 function _host_token(name::AbstractString)::String
-    DistSSHBase.is_parent_host_name(name) && return "parent"
+    is_parent_host_name(name) && return "parent"
     return "child:$(name)"
 end
 
 function _juliaup_default_disp(name::AbstractString)::String
-    return DistSSHUp.juliaup_default_patch(name)
+    return juliaup_default_patch(name)
 end
 
 """Fit NAME / TOKEN so the row stays within `cols`. SSH gets the remainder (min 8)."""
@@ -91,7 +91,7 @@ function print_list_host(
         qhost::Union{Nothing, AbstractString} = qhost_display_from_env(),
         cols::Int = 0,
     )
-    DistSSHBase.print_help_chrome(DistSSHBase.cli_heading("list-host"); io = io)
+    print_help_chrome(cli_heading("list-host"); io = io)
     if names === nothing
         println(io, "  (no hosts= in config; add-host first)")
         return nothing

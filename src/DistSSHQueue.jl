@@ -12,11 +12,11 @@ Concept: [docs](https://yamanori99.github.io/DistSSHQueue.jl/stable/).
 module DistSSHQueue
 
 using Dates
-import DistSSHBase
-using DistSSHRun
-using DistSSHUp
 using Pkg
+using SHA
 using TOML
+
+import DistSSHRun
 
 export Queue
 export Job
@@ -30,6 +30,22 @@ export serve!
 export serve
 export job_project
 export default_store_path
+
+include("DistSSHQueue/base/paths.jl")
+include("DistSSHQueue/base/explain.jl")
+include("DistSSHQueue/base/argv.jl")
+include("DistSSHQueue/base/hosts.jl")
+include("DistSSHQueue/base/host_tokens.jl")
+include("DistSSHQueue/base/cli_entry.jl")
+include("DistSSHQueue/base/help.jl")
+include("DistSSHQueue/base/ssh.jl")
+include("DistSSHQueue/base/julia_where.jl")
+include("DistSSHQueue/base/namespace.jl")
+include("DistSSHQueue/up/version.jl")
+include("DistSSHQueue/up/status.jl")
+include("DistSSHQueue/up/remote.jl")
+include("DistSSHQueue/up/local.jl")
+include("DistSSHQueue/up/hosts.jl")
 
 include("DistSSHQueue/job.jl")
 include("DistSSHQueue/store.jl")
@@ -66,8 +82,10 @@ end
 
 """CLI entry. Prefer `julia -m DistSSHKit` (client `qhost:HOST` / queue-host `setup`)."""
 function main(args::Vector{String} = copy(ARGS))::Cint
-    return DistSSHBase.with_cli_entry(:DistSSHQueue) do
-        _main(args)
+    return with_cli_entry(:DistSSHQueue) do
+        DistSSHRun.with_cli_entry(:DistSSHQueue) do
+            _main(args)
+        end
     end
 end
 
@@ -145,7 +163,7 @@ function _main(args::Vector{String})::Cint
             return submit_main(_rest())
         elseif is_kit_execute_kind(Symbol(sub))
             DistSSHRun.print_cli_error(
-                "$sub is DistSSHKit. Enqueue with submit: $(DistSSHBase.cli_m()) [qhost:HOST] submit $sub …",
+                "$sub is DistSSHRun. Enqueue with submit: $(cli_m()) [qhost:HOST] submit $sub …",
             )
             return 1
         elseif sub == "fetch"

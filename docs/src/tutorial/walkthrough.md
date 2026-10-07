@@ -16,16 +16,16 @@ until a client uses `qhost:` (`qhost:` defaults to
 `--project=~/.distsshqueue/env`).
 
 ```bash
-julia -m DistSSHKit qhost setup
-julia -m DistSSHKit qhost add-host parent child:host1
-julia -m DistSSHKit size
-julia -m DistSSHKit qhost serve
+julia -m DistSSHQueue setup
+julia -m DistSSHQueue add-host parent child:host1
+julia -m DistSSHQueue size
+julia -m DistSSHQueue serve
 ```
 
 `add-host` does not deploy. `serve` instantiates the job project on
 this host, then Kit `setup!` (rsync / instantiate / `check`) on
 `child:` hosts. A `qhost:` stage has no `.git/`; DistSSHKit **0.7.3+**
-warns on that instead of failing `:check`. Optional: `qhost up`
+warns on that instead of failing `:check`. Optional: `up`
 when major.minor differs.
 
 From a client: create the env, then `pkg> add DistSSHQueue` in it
@@ -34,13 +34,13 @@ needs `qhost:HOST` on the command line.
 
 ## Client: go on parent
 
-Job directory. Queue loadable (`julia --project=.`). DistSSHKit **0.9.x**
+Job directory. Queue loadable (`julia --project=.`). DistSSHRun **0.1**
 comes with Queue. `demo install` copies into `distsshkit_demos/`.
 Listed `parent` / `child:NAME` need `:N`.
 
 ```bash
-julia --project=. -m DistSSHKit demo install without_kit
-julia --project=. -m DistSSHKit qhost:HOST submit go parent:1 distsshkit_demos/without_kit/pi_echo.jl
+julia --project=. -m DistSSHQueue demo install without_kit
+julia --project=. -m DistSSHQueue qhost:HOST submit go parent:1 distsshkit_demos/without_kit/pi_echo.jl
 ```
 
 `qhost:` rsyncs this tree to `~/.distsshqueue/stage/<uuid>` on `HOST`
@@ -48,9 +48,9 @@ julia --project=. -m DistSSHKit qhost:HOST submit go parent:1 distsshkit_demos/w
 `.distsshqueue/tickets/<uuid>` only; the Kit leaf is not here yet.
 
 ```bash
-julia --project=. -m DistSSHKit qhost:HOST status
-julia --project=. -m DistSSHKit qhost:HOST fetch <id>  # 8-char prefix or full UUID
-julia --project=. -m DistSSHKit qhost:HOST fetch .distsshqueue/tickets/<uuid>
+julia --project=. -m DistSSHQueue qhost:HOST status
+julia --project=. -m DistSSHQueue qhost:HOST fetch <id>  # 8-char prefix or full UUID
+julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
 `fetch` copies the Kit leaf onto
@@ -63,26 +63,26 @@ same directory as `submit`.
 From the **client**:
 
 ```bash
-julia --project=. -m DistSSHKit qhost:HOST submit go child:host1:2 distsshkit_demos/without_kit/pi_echo.jl
-julia --project=. -m DistSSHKit qhost:HOST fetch <id>
+julia --project=. -m DistSSHQueue qhost:HOST submit go child:host1:2 distsshkit_demos/without_kit/pi_echo.jl
+julia --project=. -m DistSSHQueue qhost:HOST fetch <id>
 ```
 
 Or the same `:N` on every config host:
 
 ```bash
-julia --project=. -m DistSSHKit qhost:HOST submit pool:2 go distsshkit_demos/without_kit/pi_echo.jl
+julia --project=. -m DistSSHQueue qhost:HOST submit pool:2 go distsshkit_demos/without_kit/pi_echo.jl
 ```
 
 ## Drive
 
 ```bash
-julia --project=. -m DistSSHKit demo install with_kit
-julia --project=. -m DistSSHKit qhost:HOST submit drive parent:1 distsshkit_demos/with_kit/square_file.jl
-julia --project=. -m DistSSHKit qhost:HOST fetch <id>
+julia --project=. -m DistSSHQueue demo install with_kit
+julia --project=. -m DistSSHQueue qhost:HOST submit drive parent:1 distsshkit_demos/with_kit/square_file.jl
+julia --project=. -m DistSSHQueue qhost:HOST fetch <id>
 ```
 
 ## Teardown (queue host)
 
 ```bash
-julia -m DistSSHKit teardown -y
+julia -m DistSSHQueue teardown -y
 ```

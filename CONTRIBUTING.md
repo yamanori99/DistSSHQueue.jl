@@ -15,8 +15,8 @@ macOS, Linux, or WSL2 Ubuntu. Not native Windows (the kit shells out to `ssh` / 
 
 | What | Need |
 | --- | --- |
-| Library, `Pkg.test()`, `julia -m DistSSHKit`, docs | Julia **1.13+** |
-| DistSSHKit | **0.9.x** from General (`execute!`, `job_id`, `run_dir` / `kit.pid` / `kit.result`). Not a git sibling. |
+| Library, `Pkg.test()`, `julia -m DistSSHQueue`, docs | Julia **1.13+** |
+| DistSSHRun | **0.1** (`execute!`, `job_id`, `run_dir` / `kit.pid` / `kit.result`). This branch pins a git revision. |
 
 Prefer [juliaup](https://github.com/JuliaLang/juliaup). Details: [Requirements](https://yamanori99.github.io/DistSSHQueue.jl/dev/requirements/).
 
@@ -28,7 +28,7 @@ cd DistSSHQueue.jl
 julia --project=. -e 'using Pkg; Pkg.instantiate()'
 ```
 
-That pulls DistSSHKit from General. Do not add a `[sources]` path to a Kit checkout unless you are landing an unreleased kit hook.
+That pulls DistSSHRun from the git revision in `Project.toml`. Do not point that revision at a local checkout unless you are landing an unreleased Run hook.
 
 From another app (a **separate** env, not a job whose Manifest is copied to workers):
 
@@ -212,7 +212,7 @@ On a breaking line bump `x` in `0.x.y`; otherwise bump `y`. Do not ship an empty
 
 ### DistSSHKit cuts
 
-Queue pins DistSSHKit **0.9.x** from General. Ordinary Queue work does not `Pkg.develop` Kit and does not, by itself, trigger a DistSSHKit General patch. Docs, opt-in flags, and CI on the kit wait.
+Queue pins DistSSHRun **0.1**. Ordinary Queue work does not `Pkg.develop` Run and does not, by itself, trigger a DistSSHRun General patch. Docs, opt-in flags, and CI on Run wait.
 
 If Queue cannot implement something without a kit hook, open a DistSSHKit Enhancement, land the small PR, then cut DistSSHKit so Queue can pin General. `Pkg.develop` a Kit checkout only until that cut is on General. Kit freeze and cut rules: [DistSSHKit CONTRIBUTING.md](https://github.com/yamanori99/DistSSHKit.jl/blob/main/CONTRIBUTING.md#when-to-cut).
 

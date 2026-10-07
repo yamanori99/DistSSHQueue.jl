@@ -6,7 +6,7 @@ No tokens: pool every name on config `hosts`. From a client: `qhost:HOST pool â€
 
 function clamp_pool_slots(slots::Int, allow::Union{Nothing, HostAllow}, host::AbstractString)::Int
     allow === nothing && return slots
-    name = DistSSHBase.is_parent_host_name(host) ? DistSSHBase.PARENT_HOST_NAME : String(host)
+    name = is_parent_host_name(host) ? PARENT_HOST_NAME : String(host)
     cap = get(allow, name, nothing)
     cap === nothing && return slots
     return min(slots, cap)
@@ -18,9 +18,9 @@ function print_queue_pool_submit(pool, allow::Union{Nothing, HostAllow} = nothin
         row.ok || continue
         slots = clamp_pool_slots(row.slots, allow, row.host)
         slots > 0 || continue
-        role = DistSSHBase.is_parent_host_name(row.host) ? :parent : :child
-        name = role === :parent ? DistSSHBase.PARENT_HOST_NAME : String(row.host)
-        push!(parts, DistSSHBase.format_placement_token(role, name, slots))
+        role = is_parent_host_name(row.host) ? :parent : :child
+        name = role === :parent ? PARENT_HOST_NAME : String(row.host)
+        push!(parts, format_placement_token(role, name, slots))
     end
     print_inspect_submit_template("drive", parts)
     return nothing
@@ -30,12 +30,12 @@ function pool_cli(args::Vector{String})::Cint
     opts = DistSSHRun.parse_pool_args(args)
     if opts.show_help
         DistSSHRun.show_pool_usage()
-        DistSSHBase.print_help_blank()
-        DistSSHBase.print_help_section("Queue"; io = stdout)
-        DistSSHBase.print_help_lines(
+        print_help_blank()
+        print_help_section("Queue"; io = stdout)
+        print_help_lines(
             stdout,
             "  Same flags as DistSSHKit pool. Runs on the queue host (cwd / project).",
-            "  $(DistSSHBase.cli_m()) [qhost:HOST] pool [parent] [child:NAME...]",
+            "  $(cli_m()) [qhost:HOST] pool [parent] [child:NAME...]",
             "  Omit tokens to pool config hosts. Does not enqueue.",
         )
         return 0
@@ -48,12 +48,12 @@ function pool_cli(args::Vector{String})::Cint
         allow,
     )
     tokens = String[]
-    include_parent && push!(tokens, DistSSHBase.format_placement_token(:parent, DistSSHBase.PARENT_HOST_NAME))
+    include_parent && push!(tokens, format_placement_token(:parent, PARENT_HOST_NAME))
     for h in hosts
-        if startswith(h, "child:") || DistSSHBase.is_parent_host_name(h)
+        if startswith(h, "child:") || is_parent_host_name(h)
             push!(tokens, h)
         else
-            push!(tokens, DistSSHBase.format_placement_token(:child, h))
+            push!(tokens, format_placement_token(:child, h))
         end
     end
     if isempty(tokens)
@@ -61,8 +61,8 @@ function pool_cli(args::Vector{String})::Cint
         return 0
     end
     project = job_project()
-    DistSSHRun.print_header(DistSSHBase.cli_heading("pool"))
-    DistSSHRun.writeln_field("Project", DistSSHBase.short_path(project))
+    DistSSHRun.print_header(cli_heading("pool"))
+    DistSSHRun.writeln_field("Project", short_path(project))
     DistSSHRun.kit_println()
     session = DistSSHRun.KitSession(;
         project = project,

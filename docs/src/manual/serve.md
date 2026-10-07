@@ -3,10 +3,10 @@
 Run or register `serve` on the queue host.
 
 ```bash
-julia -m DistSSHKit qhost serve [--interval S]
-julia -m DistSSHKit stop
-julia -m DistSSHKit qhost enable [--queue-env DIR]
-julia -m DistSSHKit qhost disable
+julia -m DistSSHQueue serve [--interval S]
+julia -m DistSSHQueue stop
+julia -m DistSSHQueue enable [--queue-env DIR]
+julia -m DistSSHQueue disable
 ```
 
 Also: [Prepare](@ref Tutorial-Prepare), [submit](@ref Manual-submit),

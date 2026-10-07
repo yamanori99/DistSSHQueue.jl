@@ -19,7 +19,7 @@ DistSSHQueue は、何人かで同じマシンを使い、ジョブを順番に�
 対応は **macOS、Linux、WSL2 Ubuntu** (ネイティブ Windows は対象外)。
 
 小さな研究室や個人でも、常時起動のマシンを 1 台置き、SSH接続したマシンとまとめて小さな計算ノードとして使うことが出来る。
-Julia **1.13+**、DistSSHKit **0.9.x**。
+Julia **1.13+**、DistSSHRun **0.1**。
 
 ## インストール
 
@@ -63,7 +63,7 @@ julia> import Pkg; Pkg.add("DistSSHQueue")
   -------------------------------         --------------------------
   yours / a colleague's / ...             FIFO     one Kit job at a time
        |                                  table    ~/.distsshqueue
-       |  julia -m DistSSHKit           add-host / remove-host
+       |  julia -m DistSSHQueue           add-host / remove-host
        |    qhost:NAME                    serve    now, this terminal
        |    submit | status | list-host   enable   again after reboot
        |    watch | cancel | fetch | ...
@@ -84,30 +84,30 @@ julia> import Pkg; Pkg.add("DistSSHQueue")
 ### submit
 
 1つのargvに4つの入れ子がある。`submit` はQueue。その後ろはDistSSHKitの
-argv (`go` / `ride` / `drive` とその先) で、`-m DistSSHKit` にそのまま
+argv (`go` / `ride` / `drive` とその先) で、`-m DistSSHRun` にそのまま
 渡せる (Queueなし)。Kit単体はそのマシンで今すぐ計算する。`submit`
 は同じargvをキューに載せるだけである。
 
 ```bash
-julia --project=. -m DistSSHKit  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
+julia --project=. -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
 #──────────── Julia ────────────┘  └─ qhost ──┘  Queue   └─── DistSSHKit argv ────┘
 ```
 
 ```bash
-julia --project=. -m DistSSHKit [qhost:HOST] submit drive parent:4 SCRIPT.jl
+julia --project=. -m DistSSHQueue [qhost:HOST] submit drive parent:4 SCRIPT.jl
 ```
 
 長い行は `submit` のあとで `\` 折り:
 
 ```bash
-julia --project=. -m DistSSHKit [qhost:HOST] submit \
+julia --project=. -m DistSSHQueue [qhost:HOST] submit \
     drive parent:4 child:NAME:N SCRIPT.jl
 ```
 
 同じ DistSSHKit argv、キューなし:
 
 ```bash
-julia --project=. -m DistSSHKit drive parent:4 SCRIPT.jl
+julia --project=. -m DistSSHRun drive parent:4 SCRIPT.jl
 ```
 
 `pool:N` は Queue (`submit` の隣) であり、Kit のトークンではない。詳細:
@@ -205,16 +205,16 @@ rsync し、実行前にそこで instantiate する。
 **クライアント** から (ジョブのディレクトリ。その env から Queue が load できること):
 
 ```bash
-julia --project=. -m DistSSHKit qhost:HOST list-host
-julia --project=. -m DistSSHKit qhost:HOST size
-julia --project=. -m DistSSHKit qhost:HOST plan SCRIPT.jl
-julia --project=. -m DistSSHKit qhost:HOST pool
-julia --project=. -m DistSSHKit qhost:HOST submit go child:host1:4 SCRIPT.jl
-julia --project=. -m DistSSHKit qhost:HOST status
-julia --project=. -m DistSSHKit qhost:HOST watch
-julia --project=. -m DistSSHKit qhost:HOST cancel <id>
-julia --project=. -m DistSSHKit qhost:HOST fetch <id>  # 8文字プレフィックスでもフルUUIDでも可
-julia --project=. -m DistSSHKit qhost:HOST fetch .distsshqueue/tickets/<uuid>
+julia --project=. -m DistSSHQueue qhost:HOST list-host
+julia --project=. -m DistSSHQueue qhost:HOST size
+julia --project=. -m DistSSHQueue qhost:HOST plan SCRIPT.jl
+julia --project=. -m DistSSHQueue qhost:HOST pool
+julia --project=. -m DistSSHQueue qhost:HOST submit go child:host1:4 SCRIPT.jl
+julia --project=. -m DistSSHQueue qhost:HOST status
+julia --project=. -m DistSSHQueue qhost:HOST watch
+julia --project=. -m DistSSHQueue qhost:HOST cancel <id>
+julia --project=. -m DistSSHQueue qhost:HOST fetch <id>  # 8文字プレフィックスでもフルUUIDでも可
+julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
 `submit` は、`serve` が無ければキューホスト上で起動する。`serve` が
@@ -231,12 +231,12 @@ stdout 1 行。stderr に `Queued  N` (`DISTSSHKIT_QUIET` で隠す)。
 [Walkthrough](https://yamanori99.github.io/DistSSHQueue.jl/stable/tutorial/walkthrough/)。
 
 **キューホスト** で一度だけ。`setup` は `config.toml` を書く (`env/` は作らない)。
-既定の Julia 環境で `julia -m DistSSHKit`。チェックアウトなら `--project=.`。
+既定の Julia 環境で `julia -m DistSSHQueue`。チェックアウトなら `--project=.`。
 
 ```bash
-julia -m DistSSHKit qhost setup
-julia -m DistSSHKit qhost add-host parent child:host1
-julia -m DistSSHKit qhost serve
+julia -m DistSSHQueue setup
+julia -m DistSSHQueue add-host parent child:host1
+julia -m DistSSHQueue serve
 ```
 
 `qhost:` の既定は `--project=~/.distsshqueue/env` (リモート既定環境は

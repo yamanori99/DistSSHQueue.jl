@@ -2,7 +2,6 @@ using Test
 using Dates
 using DistSSHRun
 using DistSSHQueue
-using DistSSHUp
 
 function _wait_state(q, id, st; tries = 200)
     for _ in 1:tries
@@ -55,8 +54,8 @@ end
         shared = "/tmp/distsshqueue-shared-remote"
         withenv("DISTRIBUTED_REMOTE_PROJECT_ROOT" => shared) do
             id = submit!(q, joinpath(a, "x.jl"), "parent:1"; project = a)
-            @test DistSSHBase.canonical_local_path(String(job(q, id).kwargs["project"])) ==
-                DistSSHBase.canonical_local_path(a)
+            @test DistSSHQueue.canonical_local_path(String(job(q, id).kwargs["project"])) ==
+                DistSSHQueue.canonical_local_path(a)
             @test_throws ArgumentError submit!(q, joinpath(b, "x.jl"), "parent:1"; project = b)
             id2 = submit!(q, joinpath(a, "x.jl"), "parent:1"; project = a)
             @test job(q, id2).state === :queued
@@ -67,12 +66,12 @@ end
         submit!(q2, joinpath(b, "x.jl"), "parent:1"; project = b, remote = "/r/two")
         @test DistSSHQueue.kit_worker_root(a, Dict{String, Any}("remote" => "~/jobs/x")) == "~/jobs/x"
         @test DistSSHQueue.kit_worker_root(a, Dict{String, Any}("remote" => "~/jobs/x")) !=
-            DistSSHBase.canonical_local_path("~/jobs/x")
+            DistSSHQueue.canonical_local_path("~/jobs/x")
         @test DistSSHQueue.kit_worker_root(a, Dict{String, Any}("remote" => "/r/one")) ==
-            DistSSHBase.remote_env_project_root("/r/one")
+            DistSSHQueue.remote_env_project_root("/r/one")
         q3 = Queue(; runner = _ -> nothing)
         submit!(q3, joinpath(a, "x.jl"), "parent:1"; project = a, remote = "~/jobs/x")
-        submit!(q3, joinpath(b, "x.jl"), "parent:1"; project = b, remote = DistSSHBase.canonical_local_path("~/jobs/x"))
+        submit!(q3, joinpath(b, "x.jl"), "parent:1"; project = b, remote = DistSSHQueue.canonical_local_path("~/jobs/x"))
     end
 end
 
@@ -791,8 +790,8 @@ end
         got = withenv("DISTRIBUTED_OUTPUT_DIR" => nothing) do
             @eval mod init_output_dir!(String[])
         end
-        @test DistSSHBase.canonical_local_path(got) ==
-            DistSSHBase.canonical_local_path(joinpath(sdir, "output"))
+        @test DistSSHQueue.canonical_local_path(got) ==
+            DistSSHQueue.canonical_local_path(joinpath(sdir, "output"))
     end
 end
 
@@ -1023,13 +1022,13 @@ end
             "DISTRIBUTED_PROJECT_ROOT" => nothing,
         ) do
             cd(jobdir) do
-                proj = DistSSHBase.canonical_local_path(pwd())
+                proj = DistSSHQueue.canonical_local_path(pwd())
                 help = sprint(DistSSHQueue.print_queue_usage)
                 client_h = sprint(io -> DistSSHQueue.print_queue_usage(io; topic = "client"))
                 queue_h = sprint(io -> DistSSHQueue.print_queue_usage(io; topic = "qhost"))
                 qv = string(pkgversion(DistSSHQueue))
                 kv = string(DistSSHRun.dist_ssh_kit_version())
-                @test occursin("DistSSHQueue $(qv) (DistSSHKit $(kv))", help)
+                @test occursin("DistSSHQueue $(qv) (DistSSHRun $(kv))", help)
                 @test !occursin("DistSSHQueue $(qv)", client_h)
                 @test occursin("Usage", help)
                 @test occursin("  --help client", help)
@@ -1165,7 +1164,7 @@ end
                     @test code_v == 0
                     lines = split(strip(out_v), '\n')
                     @test length(lines) == 1
-                    @test lines[1] == "DistSSHQueue $(qv) (DistSSHKit $(kv))"
+                    @test lines[1] == "DistSSHQueue $(qv) (DistSSHRun $(kv))"
                 end
                 code_qv, out_qv, _ = capture_stdio() do
                     DistSSHQueue.main(["qhost:no-such-host", "--version"])
@@ -1240,7 +1239,7 @@ end
                 @test length(rows) == 1
                 @test strip(out_go) == rows[1].id
                 @test rows[1].kind === :go
-                @test rows[1].script == DistSSHBase.canonical_local_path(joinpath(pwd(), "job.jl"))
+                @test rows[1].script == DistSSHQueue.canonical_local_path(joinpath(pwd(), "job.jl"))
                 @test rows[1].hosts == ["child:host1:4"]
                 @test rows[1].state === :queued
                 @test rows[1].kwargs["project"] == proj
@@ -1263,7 +1262,7 @@ end
                 rows = DistSSHQueue.read_jobs(p)
                 @test length(rows) == 2
                 @test rows[2].kind === :drive
-                @test rows[2].script == DistSSHBase.canonical_local_path(joinpath(pwd(), "drv.jl"))
+                @test rows[2].script == DistSSHQueue.canonical_local_path(joinpath(pwd(), "drv.jl"))
                 @test rows[2].hosts == ["parent:2"]
                 @test rows[2].kwargs["project"] == proj
                 code_ride, _, _ = capture_stdio() do
@@ -1278,7 +1277,7 @@ end
                 end
                 @test code_w == 0
                 rows = DistSSHQueue.read_jobs(p)
-                want = DistSSHBase.host_tokens(
+                want = DistSSHQueue.host_tokens(
                     DistSSHRun.parse_drive_args(["--workers", "4", "child:host1:1", "drv.jl"]);
                     kind = :drive,
                 )
@@ -1790,7 +1789,7 @@ end
     pool = DistSSHRun.ResourcePool(
         true,
         [
-            DistSSHRun.HostInventory(DistSSHBase.PARENT_HOST_NAME, true, 8, 64.0, 8, ""),
+            DistSSHRun.HostInventory(DistSSHQueue.PARENT_HOST_NAME, true, 8, 64.0, 8, ""),
             DistSSHRun.HostInventory("host1", true, 8, 64.0, 8, ""),
         ],
         16,
@@ -2078,7 +2077,7 @@ end
         @test occursin(joinpath("demos", "pi_echo.jl"), listed) || occursin("demos/pi_echo.jl", listed)
         @test !occursin(stage * "/", listed)
         @test occursin(
-            replace(DistSSHBase.short_path(stage), r"\s+" => ""),
+            replace(DistSSHQueue.short_path(stage), r"\s+" => ""),
             replace(listed, r"\s+" => ""),
         )
     end
@@ -2234,8 +2233,8 @@ end
             @test isfile(want)
             @test !isfile(other)
             body = read(want, String)
-            jl = DistSSHBase.canonical_local_path(julia)
-            proj = DistSSHBase.canonical_local_path(envdir)
+            jl = DistSSHQueue.canonical_local_path(julia)
+            proj = DistSSHQueue.canonical_local_path(envdir)
             @test occursin(jl, body)
             @test occursin("--project=$proj", body)
             @test occursin("DistSSHQueue", body)
