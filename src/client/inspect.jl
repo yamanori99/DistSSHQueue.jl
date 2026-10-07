@@ -5,9 +5,9 @@ const INSPECT_SUBMIT_HEADER = "Suggested submit (template):"
 function print_inspect_submit_template(kind::AbstractString, parts::Vector{String})
     println(INSPECT_SUBMIT_HEADER)
     if isempty(parts)
-        println("  julia --project=. -m DistSSHKit submit $kind SCRIPT.jl")
+        println("  $(cli_m_project()) submit $kind SCRIPT.jl")
     else
-        println("  julia --project=. -m DistSSHKit submit $kind ", join(parts, " "), " SCRIPT.jl")
+        println("  $(cli_m_project()) submit $kind ", join(parts, " "), " SCRIPT.jl")
     end
     return nothing
 end

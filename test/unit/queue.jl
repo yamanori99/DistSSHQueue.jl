@@ -1729,6 +1729,8 @@ end
                 @test code_p == 0
                 @test occursin("suggest:", out_p)
                 @test occursin("Suggested submit (template):", out_p)
+                @test occursin("julia --project=. -m DistSSHQueue submit", out_p)
+                @test !occursin("-m DistSSHKit submit", out_p)
                 @test occursin("submit go", out_p) || occursin("submit ride", out_p) ||
                     occursin("submit drive", out_p)
                 @test !isfile(p)
@@ -1760,10 +1762,23 @@ end
 
 @testset "inspect CLI chrome" begin
     _, out, _ = capture_stdio() do
-        DistSSHQueue.print_inspect_submit_template("drive", String["parent:2", "child:host1:4"])
+        DistSSHQueue.with_cli_entry(:DistSSHQueue) do
+            DistSSHQueue.print_inspect_submit_template("drive", String["parent:2", "child:host1:4"])
+        end
     end
     @test occursin("Suggested submit (template):", out)
-    @test occursin("submit drive parent:2 child:host1:4 SCRIPT.jl", out)
+    @test occursin(
+        "julia --project=. -m DistSSHQueue submit drive parent:2 child:host1:4 SCRIPT.jl",
+        out,
+    )
+    @test !occursin("-m DistSSHKit submit", out)
+    _, empty_out, _ = capture_stdio() do
+        DistSSHQueue.with_cli_entry(:DistSSHQueue) do
+            DistSSHQueue.print_inspect_submit_template("go", String[])
+        end
+    end
+    @test occursin("julia --project=. -m DistSSHQueue submit go SCRIPT.jl", empty_out)
+    @test !occursin("-m DistSSHKit submit", empty_out)
 
     line = DistSSHQueue.pool_sizing_assumption_line(;
         gb_per_worker = nothing,
@@ -1798,9 +1813,13 @@ end
     )
     allow = DistSSHQueue.HostAllow("parent" => 2, "host1" => 4)
     _, out, _ = capture_stdio() do
-        DistSSHQueue.print_queue_pool_submit(pool, allow)
+        DistSSHQueue.with_cli_entry(:DistSSHQueue) do
+            DistSSHQueue.print_queue_pool_submit(pool, allow)
+        end
     end
     @test occursin("Suggested submit (template):", out)
+    @test occursin("julia --project=. -m DistSSHQueue submit drive", out)
+    @test !occursin("-m DistSSHKit submit", out)
     @test occursin("parent:2", out)
     @test occursin("child:host1:4", out)
     @test !occursin("parent:8", out)
