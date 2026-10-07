@@ -1,7 +1,7 @@
 name = "DistSSHQueue"
 uuid = "24254401-70d8-4a51-8ea4-cfab19f5bc73"
 license = "MIT"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Yamamoto, Takanori <takanori.yamamoto.99@gmail.com>", "Ampuku, Honoka <ampk.hono@gmail.com>"]
 
 [workspace]
@@ -14,12 +14,9 @@ Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
-[sources]
-DistSSHRun = {url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "0dd18f1aeeb7b4cfab678cc1967d6c3f10a1fc0b"}
-
 [compat]
 Dates = "1.11"
-DistSSHRun = "0.1"
+DistSSHRun = "0.1.2"
 Pkg = "1.13"
 SHA = "1"
 TOML = "1"
