@@ -14,7 +14,7 @@ Breaking cut after `0.8.0`.
   (`setup`, `up`, `serve`, `add-host`, `remove-host`, `enable`,
   `disable`). `setup --juliaup` and `setup --juliaup-update` fail and
   name `up add` or `up update` (#310).
-- DistSSHQueue depends on DistSSHRun, not DistSSHKit. `execute!` and the
+- DistSSHQueue depends on DistSSHRun 0.1.2, not DistSSHKit. `execute!` and the
   run commands come from that package. Host talking and the juliaup verbs
   live in this package's `base/` and `up/`. DistSSHKit does not reexport
   this queue yet (#310).
