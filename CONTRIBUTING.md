@@ -126,7 +126,10 @@ When a new RC of the floor's minor lands, point **1.13** jobs at `~1.13.0-0` so 
 These run as jobs of the `Test` workflow
 ([`.github/workflows/CI.yml`](.github/workflows/CI.yml)). Ubuntu:
 `Pkg.test` 1.13, JETLS 1.13, Aqua 1.13, Gitleaks
-(also rejects `< 0.0.1` in `Project.toml`). Documenter 1.13 is
+(also rejects `< 0.0.1` in `Project.toml`). macOS (`macos-latest`):
+`Pkg.test` 1.13, same heavy gate, no coverage upload. That job runs
+`enable --write-only` on LaunchAgent. It is not a required check.
+Documenter 1.13 is
 [`.github/workflows/Documentation.yml`](.github/workflows/Documentation.yml).
 `Assets` (`draw SVG`) runs if `docs/src/assets/` or that workflow
 changed. Linux E2E (1.13) uses the same **path filter** as **main** push
@@ -157,12 +160,13 @@ Linux E2E is skipped on allowlisted markdown-only PRs (same skipping UI):
 A new root markdown file stays heavy until listed in
 [`.github/actions/ci-heavy/action.yml`](.github/actions/ci-heavy/action.yml).
 A `Project.toml` version increase skips none of this: Pkg.test, JETLS, Aqua, Documenter,
-and Linux E2E all run (E2E Codecov too). macOS / WSL stay on `E2E weekly`,
-not the PR. Register from the cut PR's Linux E2E (optional local Mac
+and Linux E2E all run (E2E Codecov too). macOS and WSL SSH E2E stay on
+`E2E weekly`, not the PR. `Pkg.test` 1.13 also runs on `macos-latest`.
+Register from the cut PR's Linux E2E (optional local Mac
 `./testenv/docker-ssh/scripts/up.sh --e2e`). Intel / WSL weekly are
 watchers, not the register gate.
 
-CI uploads Codecov on **main push** only (`Pkg.test` on 1.13, flag `pkgtest`). PR E2E does not upload; a version-increase PR and **E2E weekly** Linux upload flag `e2e`. Public repo + Codecov OIDC (`id-token: write`). Status checks are informational (`codecov.yml`). Local coverage:
+CI uploads Codecov on **main push** only (Ubuntu `Pkg.test` 1.13, flag `pkgtest`). The `macos-latest` job does not upload. PR E2E does not upload; a version-increase PR and **E2E weekly** Linux upload flag `e2e`. Public repo + Codecov OIDC (`id-token: write`). Status checks are informational (`codecov.yml`). Local coverage:
 
 ```bash
 julia --project=. -e 'using Pkg; Pkg.test(; coverage=true)'
@@ -182,7 +186,7 @@ Required to merge (ruleset `main` uses these names). **1.14-nightly** jobs are a
 | When | Workflow | What |
 | --- | --- | --- |
 | Sunday 04:00 JST, Run workflow, or a version-increase squash to `main` | `E2E weekly` | `ubuntu-latest`, `macos-15-intel`, WSL2 → `ubuntu-24.04`. Linux job uploads E2E Codecov. Not a PR check. Failure opens (or comments on) Issue `E2E weekly failed`; a later all-green run closes it. A red **Linux** job after a `cut` merge adds `cut-hold`. Intel / WSL red does not. Compat-only `Project.toml` edits start the workflow but skip the matrix. |
-| Sunday 10:00 JST, or Run workflow | `CI weekly` | Same `Pkg.test` / JETLS / Aqua versions as a PR (no coverage). Not a PR check. Catches 1.13 / Aqua / JETLS `@release` drift when nothing merged that week. Failure of the 1.13 jobs opens Issue `CI weekly failed` (`alert`); 1.14-nightly is omitted from that notify. `cache-gc` keeps one Actions cache per restore-key prefix. |
+| Sunday 10:00 JST, or Run workflow | `CI weekly` | Same `Pkg.test` / JETLS / Aqua versions as a PR, including `macos-latest` (no coverage). Not a PR check. Catches 1.13 / Aqua / JETLS `@release` drift when nothing merged that week. Failure of the 1.13 jobs opens Issue `CI weekly failed` (`alert`); 1.14-nightly is omitted from that notify. `cache-gc` keeps one Actions cache per restore-key prefix. |
 | 1st 10:00 JST, or Run workflow | `Runic` | `runic --check` on tracked `.jl` (`version: '1'`). Not a required PR check. Catches Runic minor drift when nothing formatted that month. Failure opens Issue `Runic monthly failed` (`alert`). |
 
 ## Pull requests

@@ -18,10 +18,14 @@ permissions:
   contents: read
 
 jobs:
-  # Full `Pkg.test()` stays Linux-only. Slow SSH E2E controllers are `E2E weekly`.
+  # `Pkg.test` 1.13 runs on ubuntu-latest and macos-latest. The macOS job
+  # exercises `enable --write-only` on LaunchAgent (Linux CI takes systemd).
+  # It does not upload coverage. Slow SSH E2E controllers are `E2E weekly`
+  # (macos-15-intel Colima, not this job).
   # One detect job; markdown-only / allowlisted PRs skip heavy jobs (UI: skipping).
   # Required check names are Julia versions (`1.13`), not slot labels.
-  # Codecov (flag pkgtest): main push, 1.13 only — not on pull_request.
+  # Codecov (flag pkgtest): main push, Ubuntu 1.13 only — not macos-latest,
+  # and not on pull_request.
   # cache-scratchspaces: false — registry_updates.toml in scratchspaces can
   # poison Pkg.Registry.update on 1.13 if restored corrupt.
   # Aqua / JETLS share this workflow so the Test badge is the PR gate.
@@ -101,6 +105,25 @@ jobs:
         with:
           coverage: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           upload: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+
+  test-1-13-macos:
+    name: Pkg.test - 1.13 - macos-latest
+    needs: detect
+    if: github.event_name != 'pull_request' || needs.detect.outputs.heavy == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: "1.13"
+      - uses: julia-actions/cache@v3
+        with:
+          cache-scratchspaces: false
+          delete-old-caches: false
+      - uses: ./.github/actions/pkg-test
 
   test-1-14-nightly:
     name: Pkg.test - 1.14-nightly - ubuntu-latest

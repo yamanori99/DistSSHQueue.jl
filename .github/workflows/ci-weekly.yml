@@ -32,6 +32,21 @@ jobs:
           delete-old-caches: false
       - uses: ./.github/actions/pkg-test
 
+  test-1-13-macos:
+    name: Pkg.test - 1.13 - macos-latest
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: "1.13"
+      - uses: julia-actions/cache@v3
+        with:
+          cache-scratchspaces: false
+          delete-old-caches: false
+      - uses: ./.github/actions/pkg-test
+
   test-1-14-nightly:
     name: Pkg.test - 1.14-nightly - ubuntu-latest
     runs-on: ubuntu-latest
@@ -103,6 +118,7 @@ jobs:
   cache-gc:
     needs:
       - test-1-13
+      - test-1-13-macos
       - jetls-1-13
       - aqua-1-13
     if: always()
@@ -122,6 +138,7 @@ jobs:
   notify:
     needs:
       - test-1-13
+      - test-1-13-macos
       - jetls-1-13
       - aqua-1-13
       - cache-gc

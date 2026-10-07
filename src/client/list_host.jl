@@ -58,7 +58,11 @@ function _juliaup_default_disp(name::AbstractString)::String
     return juliaup_default_patch(name)
 end
 
-"""Fit NAME / TOKEN so the row stays within `cols`. SSH gets the remainder (min 8)."""
+"""
+Fit NAME / TOKEN so the row stays within `cols`.
+
+TOKEN keeps its width. A long hostname clips in NAME. SSH gets the remainder (min 8).
+"""
 function _list_host_fit(nw::Int, tw::Int, mw::Int, jw::Int, cols::Int)
     gap = 10
     min_n, min_t, min_s = 4, 5, 8
@@ -67,21 +71,12 @@ function _list_host_fit(nw::Int, tw::Int, mw::Int, jw::Int, cols::Int)
     if room < min_n + min_t + min_s
         return pack(min_n, min_t)
     end
-    if nw + tw + min_s <= room
+    budget = room - min_s
+    if nw + tw <= budget
         return pack(nw, tw)
     end
-    budget = room - min_s
-    tot = nw + tw
-    n2 = max(min_n, round(Int, budget * nw / tot))
-    t2 = budget - n2
-    if t2 < min_t
-        t2 = min_t
-        n2 = max(min_n, budget - t2)
-    end
-    if n2 + t2 > budget
-        n2 = max(min_n, budget - min_t)
-        t2 = min_t
-    end
+    t2 = min(max(tw, min_t), budget - min_n)
+    n2 = max(min_n, min(nw, budget - t2))
     return pack(n2, t2)
 end
 
