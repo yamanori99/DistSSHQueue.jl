@@ -3,7 +3,9 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
-## Unreleased
+## 0.9.0
+
+Breaking cut after `0.8.0`.
 
 ### Breaking
 
@@ -11,11 +13,11 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
   `qhost:HOST`. Queue-host verbs do not take a `qhost` word
   (`setup`, `up`, `serve`, `add-host`, `remove-host`, `enable`,
   `disable`). `setup --juliaup` and `setup --juliaup-update` fail and
-  name `up add` or `up update`.
+  name `up add` or `up update` (#310).
 - DistSSHQueue depends on DistSSHRun, not DistSSHKit. `execute!` and the
   run commands come from that package. Host talking and the juliaup verbs
   live in this package's `base/` and `up/`. DistSSHKit does not reexport
-  this queue yet.
+  this queue yet (#310).
 
 ## 0.8.0
 
