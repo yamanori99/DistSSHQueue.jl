@@ -35,10 +35,9 @@ runs jobs.
     usual OS path ([Checks](@ref)) or set `--remote-julia` /
     `JULIA_DISTRIBUTED_EXE`. Missing path or a related bug:
     [open an Issue](https://github.com/yamanori99/DistSSHQueue.jl/issues).
-- **DistSSHRun 0.1** from the pinned git revision. Do not `Pkg.develop` Run (or
-  Queue) in a job project whose Manifest is copied to workers — that path
-  is absolute and the workers do not have it. Separate env for package
-  work.
+- Do not `Pkg.develop` a dependency in a job project whose Manifest is
+  copied to workers — that path is absolute and the workers do not have
+  it. Separate env for package work.
 
 WSL2 is Linux, with DistSSHKit's extra rules:
 

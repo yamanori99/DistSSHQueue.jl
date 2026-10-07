@@ -16,7 +16,6 @@ macOS, Linux, or WSL2 Ubuntu. Not native Windows (the kit shells out to `ssh` / 
 | What | Need |
 | --- | --- |
 | Library, `Pkg.test()`, `julia -m DistSSHQueue`, docs | Julia **1.13+** |
-| DistSSHRun | **0.1** (`execute!`, `job_id`, `run_dir` / `kit.pid` / `kit.result`). This branch pins a git revision. |
 
 Prefer [juliaup](https://github.com/JuliaLang/juliaup). Details: [Requirements](https://yamanori99.github.io/DistSSHQueue.jl/dev/requirements/).
 
@@ -27,8 +26,6 @@ git clone https://github.com/yamanori99/DistSSHQueue.jl.git
 cd DistSSHQueue.jl
 julia --project=. -e 'using Pkg; Pkg.instantiate()'
 ```
-
-That pulls DistSSHRun from the git revision in `Project.toml`. Do not point that revision at a local checkout unless you are landing an unreleased Run hook.
 
 From another app (a **separate** env, not a job whose Manifest is copied to workers):
 
