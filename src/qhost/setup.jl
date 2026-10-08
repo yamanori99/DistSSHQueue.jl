@@ -1,5 +1,4 @@
-"""Write `config.toml` if missing. Re-run is a no-op unless `--force`. OS unit: `enable`."""
-
+# Write `config.toml` if missing. Re-run is a no-op unless `--force`. OS unit: `enable`.
 function default_bindir(; home::AbstractString = homedir())::String
     return joinpath(home, ".local", "bin")
 end

@@ -1,14 +1,12 @@
-"""Read-only `list-host`: Kit names from config `hosts`, plus `ssh -G` connect.
-
-Prints host tokens (`parent` / `child:NAME`) for `submit`. Not Kit `--hosts`.
-One row per host: NAME / TOKEN / MAX / JULIA / SSH.
-SSH is `this machine` / `queue host` for `parent`, else `user@hostname:port`
-(`:port` omitted when 22). No private keys or IdentityFile.
-JULIA is that host's `juliaup default` patch (`juliaup status` `*` row
-Version column, e.g. `1.12.7`), or `-` if missing, SSH/`status` fails,
-or there is no Version on the `*` row.
-"""
-
+# Read-only `list-host`: Kit names from config `hosts`, plus `ssh -G` connect.
+#
+# Prints host tokens (`parent` / `child:NAME`) for `submit`. Not Kit `--hosts`.
+# One row per host: NAME / TOKEN / MAX / JULIA / SSH.
+# SSH is `this machine` / `queue host` for `parent`, else `user@hostname:port`
+# (`:port` omitted when 22). No private keys or IdentityFile.
+# JULIA is that host's `juliaup default` patch (`juliaup status` `*` row
+# Version column, e.g. `1.12.7`), or `-` if missing, SSH/`status` fails,
+# or there is no Version on the `*` row.
 const _SSH_G_KEYS = ("host", "hostname", "user", "port")
 
 function ssh_g_connect(name::AbstractString)::Dict{String, String}

@@ -1,9 +1,7 @@
-"""CLI `pool`: DistSSHKit `pool!` on the queue host (cwd / project).
-
-Cores / RAM / slot hint. No RSS (`size` does that). Does not enqueue.
-No tokens: pool every name on config `hosts`. From a client: `qhost:HOST pool …`.
-"""
-
+# CLI `pool`: DistSSHKit `pool!` on the queue host (cwd / project).
+#
+# Cores / RAM / slot hint. No RSS (`size` does that). Does not enqueue.
+# No tokens: pool every name on config `hosts`. From a client: `qhost:HOST pool …`.
 function clamp_pool_slots(slots::Int, allow::Union{Nothing, HostAllow}, host::AbstractString)::Int
     allow === nothing && return slots
     name = is_parent_host_name(host) ? PARENT_HOST_NAME : String(host)

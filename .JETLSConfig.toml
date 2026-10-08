@@ -1,0 +1,13 @@
+# kwargs is an opaque bag for DistSSHKit execute!.
+# runner is the strategy callback (run_kit, or a test double).
+[[diagnostic.patterns]]
+pattern = "kwargs::Dict\\{String, Any\\}"
+match_by = "message"
+match_type = "regex"
+severity = "off"
+
+[[diagnostic.patterns]]
+pattern = "runner::Function"
+match_by = "message"
+match_type = "regex"
+severity = "off"

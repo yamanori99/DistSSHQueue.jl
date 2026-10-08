@@ -1,5 +1,4 @@
-"""juliaup verbs on config hosts. `default` changes the host default."""
-
+# juliaup verbs on config hosts. `default` changes the host default.
 function up_main(args::Vector{String})::Cint
     config = config_path()
     verb = ""
