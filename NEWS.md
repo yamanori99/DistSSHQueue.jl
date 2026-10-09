@@ -3,6 +3,11 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
+## 0.9.1
+
+CLI help only. Queue-host help lists size, plan, and pool.
+`service -h` says the verb is gone and exits 0.
+
 ## 0.9.0
 
 Breaking cut after `0.8.0`.
