@@ -1034,19 +1034,19 @@ end
                 @test occursin("  --help client", help)
                 @test occursin("  --help qhost", help)
                 @test occursin("Client / qhost", help)
-                @test occursin("job `--project=.`", help)
-                @test occursin("`qhost:HOST` is SSH to the queue", help)
+                @test occursin("job --project=.", help)
+                @test occursin("qhost:HOST is SSH to the queue", help)
                 @test !occursin("Examples", help)
                 @test occursin("qhost:HOST", help)
                 @test !occursin("Danger", help)
                 @test !occursin("teardown -y", help)
                 @test !occursin("status [-q]", help)
                 @test !occursin("setup [--force]", help)
-                @test occursin("`--queue-env`", help)
+                @test occursin("--queue-env", help)
                 @test occursin("~/.distsshqueue/env", help)
                 @test occursin("julia --project=. -m DistSSHKit [qhost:HOST]", help)
                 @test occursin(DistSSHQueue.help_verb_line("Queue host", "julia -m DistSSHKit qhost …"), help)
-                @test occursin("`<command> --help`", help)
+                @test occursin("<command> --help", help)
                 @test !occursin("the hop", help)
                 @test !occursin("laptop", help)
                 @test occursin("Jobs", client_h)
@@ -1082,8 +1082,11 @@ end
                 @test occursin("julia -m DistSSHKit qhost up", queue_h)
                 @test !occursin("julia --project=. -m DistSSHKit qhost setup", queue_h)
                 @test occursin("Danger", queue_h)
-                @test occursin(DistSSHQueue.help_verb_line("teardown", "Stop serve and remove `~/.distsshqueue`"), queue_h)
-                @test occursin(DistSSHQueue.help_verb_line("", "Needs `-y`. Job trees stay."), queue_h)
+                @test occursin(DistSSHQueue.help_verb_line("teardown", "Stop serve and remove ~/.distsshqueue"), queue_h)
+                @test occursin(DistSSHQueue.help_verb_line("", "Needs -y. Job trees stay."), queue_h)
+                @test occursin("size", queue_h)
+                @test occursin("plan", queue_h)
+                @test occursin("pool", queue_h)
                 @test !occursin("teardown -y", queue_h)
                 @test_throws ArgumentError DistSSHQueue.print_queue_usage(IOBuffer(); topic = "nope")
                 code_topic, out_topic, _ = capture_stdio() do
@@ -1126,6 +1129,16 @@ end
                 @test occursin("--interval SEC", out_sv_h)
                 @test !occursin("julia -m DistSSHKit qhost serve", out_sv_h)
                 @test !occursin("submit drive", out_sv_h)
+                code_svc, out_svc, err_svc = capture_stdio() do
+                    DistSSHQueue.main(["service", "-h"])
+                end
+                @test code_svc == 0
+                @test occursin("service is gone", out_svc * err_svc)
+                code_svc_bad, _, err_svc_bad = capture_stdio() do
+                    DistSSHQueue.main(["service"])
+                end
+                @test code_svc_bad == 1
+                @test occursin("service is gone", err_svc_bad)
                 code_sub_h, out_sub_h, _ = capture_stdio() do
                     DistSSHQueue.main(["submit", "-h"])
                 end
@@ -1135,7 +1148,7 @@ end
                 @test !occursin("add-host", out_sub_h)
                 td_h = sprint(DistSSHQueue.print_teardown_usage)
                 @test occursin("-y / --yes", td_h)
-                @test occursin("  teardown", td_h)
+                @test occursin("$(DistSSHQueue.cli_m()) $(DistSSHQueue.cli_qhost())teardown", td_h)
                 @test !occursin("teardown -y", td_h)
                 code_sh, out_sh, _ = capture_stdio() do
                     DistSSHQueue.main(["submit", "go", "-h"])

@@ -560,8 +560,8 @@ function print_queue_root_usage(io::IO = stdout)
     print_help_section("Client / qhost"; io = io)
     print_help_lines(
         io,
-        help_verb_line("Client", "job `--project=.`; `qhost:HOST` is SSH to the queue"),
-        help_verb_line("Queue host", "`serve`; `--queue-env` (`~/.distsshqueue/env`)"),
+        help_verb_line("Client", "job --project=.; qhost:HOST is SSH to the queue"),
+        help_verb_line("Queue host", "serve; --queue-env (~/.distsshqueue/env)"),
     )
     print_help_blank(io)
     print_help_section("Usage"; io = io)
@@ -578,7 +578,7 @@ function print_queue_root_usage(io::IO = stdout)
         "  --help qhost",
     )
     print_help_blank(io)
-    println(io, "Run `<command> --help` (or `-h`) for flags.")
+    println(io, "Run <command> --help (or -h) for flags.")
     return nothing
 end
 
@@ -613,11 +613,11 @@ function print_queue_client_usage(io::IO = stdout)
     print_help_section("See DistSSHKit"; io = io)
     print_help_lines(
         io,
-        "  Same argv as DistSSHKit (`go` / `ride` / `drive parent:4 child:NAME:N …`).",
-        "  `$(cli_m_project()) --help`",
+        "  Same argv as DistSSHKit (go / ride / drive parent:4 child:NAME:N …).",
+        "  $(cli_m_project()) --help",
     )
     print_help_blank(io)
-    println(io, "Run `<command> --help` (or `-h`) for flags.")
+    println(io, "Run <command> --help (or -h) for flags.")
     return nothing
 end
 
@@ -641,6 +641,14 @@ function print_queue_host_usage(io::IO = stdout)
         help_verb_line("disable", "Remove that OS registration"),
     )
     print_help_blank(io)
+    print_help_section("Inspect"; io = io)
+    print_help_lines(
+        io,
+        help_verb_line("size", "Estimate worker counts"),
+        help_verb_line("plan", "Inspect a script; do not run"),
+        help_verb_line("pool", "Cluster cores and RAM"),
+    )
+    print_help_blank(io)
     print_help_section("Examples"; io = io)
     print_help_lines(
         io,
@@ -653,11 +661,11 @@ function print_queue_host_usage(io::IO = stdout)
     print_help_section("Danger"; io = io)
     print_help_lines(
         io,
-        help_verb_line("teardown", "Stop serve and remove `~/.distsshqueue`"),
-        help_verb_line("", "Needs `-y`. Job trees stay."),
+        help_verb_line("teardown", "Stop serve and remove ~/.distsshqueue"),
+        help_verb_line("", "Needs -y. Job trees stay."),
     )
     print_help_blank(io)
-    println(io, "Run `<command> --help` (or `-h`) for flags.")
+    println(io, "Run <command> --help (or -h) for flags.")
     return nothing
 end
 
@@ -720,36 +728,36 @@ function queue_command_help(verb::AbstractString)
         ("  fetch ID",), (
             ("--into PATH", "Dest directory (the leaf; may be outside the project)"),
             ("--force", "Copy even if dest already has this or another job (does not delete dest-only files)"),
-            ("--progress", "rsync `--info=progress2` on `qhost:` pull"),
+            ("--progress", "rsync --info=progress2 on a qhost: pull"),
             h,
         ),
     )
     v == "submit" && return (
         (
             "  submit go|ride|drive …",
-            "  `submit go --help` for DistSSHKit flags (same for ride / drive).",
+            "  submit go --help for DistSSHKit flags (same for ride / drive).",
         ), (h,),
     )
-    v == "add-host" && return (("  add-host [parent] [child:NAME...]",), (h,))
-    v == "remove-host" && return (("  remove-host [parent] [child:NAME...]",), (h,))
+    v == "add-host" && return (("  $(cli_m()) $(cli_qhost())add-host [parent] [child:NAME...]",), (h,))
+    v == "remove-host" && return (("  $(cli_m()) $(cli_qhost())remove-host [parent] [child:NAME...]",), (h,))
     v == "serve" && return (
-        ("  serve",), (
+        ("  $(cli_m()) $(cli_qhost())serve",), (
             ("--interval SEC", "Poll the store (default 0.2)"),
             h,
         ),
     )
-    v == "stop" && return (("  stop",), (h,))
+    v == "stop" && return (("  $(cli_m()) $(cli_qhost())stop",), (h,))
     v == "enable" && return (
-        ("  enable",), (
+        ("  $(cli_m()) $(cli_qhost())enable",), (
             ("--julia PATH", "Julia for the OS unit"),
-            ("--queue-env DIR", "Queue env (not job `--project=`)"),
+            ("--queue-env DIR", "Queue env (not job --project=)"),
             ("--write-only", "Write the unit file; do not load it"),
             h,
         ),
     )
     v == "disable" && return (
-        ("  disable",), (
-            ("--write-only", "Do not unload the OS unit"),
+        ("  $(cli_m()) $(cli_qhost())disable",), (
+            ("--write-only", "Skip launchctl or systemctl; still delete the unit file"),
             h,
         ),
     )
@@ -803,7 +811,7 @@ function print_teardown_usage(io::IO = stdout)
     print_help_section("Usage"; io = io)
     print_help_lines(
         io,
-        "  teardown",
+        "  $(cli_m()) $(cli_qhost())teardown",
     )
     print_help_blank(io)
     print_help_section("Flags"; io = io)

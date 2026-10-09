@@ -180,13 +180,13 @@ function submit_kind(kind::Symbol, args::Vector{String}; pool_slots::Union{Nothi
         print_help_section("Queue"; io = stdout)
         print_help_lines(
             stdout,
-            "  `submit $(kind)` enqueues. `qhost:HOST` is the SSH name of the queue machine, not a Kit slot.",
+            "  submit $(kind) enqueues. qhost:HOST is the SSH name of the queue machine, not a Kit slot.",
         )
         print_help_blank(stdout)
         print_help_section("DistSSHKit"; io = stdout)
         print_help_lines(
             stdout,
-            "  Same argv as `$(cli_m()) $(kind) …` (`parent:N` / `child:NAME:N`).",
+            "  Same argv as $(cli_m()) $(kind) … (parent:N / child:NAME:N).",
         )
         print_help_blank(stdout)
         kit_show_usage(kind)

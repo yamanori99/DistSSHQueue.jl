@@ -236,6 +236,16 @@ function disable_main(args::Vector{String})::Cint
     return service_uninstall(; apply = apply)
 end
 
-function service_main(::Vector{String})::Cint
+function service_main(args::Vector{String})::Cint
+    if length(args) == 1 && args[1] in ("-h", "--help")
+        print_help_chrome(cli_qhost_heading("service"); io = stdout)
+        print_help_section("Usage"; io = stdout)
+        print_help_lines(
+            stdout,
+            "  $(cli_m()) $(cli_qhost())service",
+            "  service is gone. Use enable (reboot serve) or disable (drop the OS unit).",
+        )
+        return 0
+    end
     throw(ArgumentError("service is gone; use enable (reboot serve) or disable (drop the OS unit)"))
 end
