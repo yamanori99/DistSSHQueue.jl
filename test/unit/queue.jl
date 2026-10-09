@@ -2242,6 +2242,23 @@ end
     @test occursin("<key>KeepAlive</key>", plist)
     unit = DistSSHQueue.systemd_user_unit("/usr/bin/julia", "/opt/Queue.jl")
     @test occursin("ExecStart=/usr/bin/julia --startup-file=no --project=/opt/Queue.jl -m DistSSHQueue serve", unit)
+    @test DistSSHQueue.m_package("/opt/Queue.jl") == "DistSSHQueue"
+    mktempdir() do env
+        write(
+            joinpath(env, "Project.toml"),
+            """
+            name = "QueueEnv"
+            [deps]
+            DistSSHKit = "ceec0504-c968-4be5-b215-667cae0e8f81"
+            """,
+        )
+        kit_unit = DistSSHQueue.systemd_user_unit("/usr/bin/julia", env)
+        @test occursin("-m DistSSHKit serve", kit_unit)
+        @test occursin(
+            "DistSSHKit.DistSSHQueue.fetch_source",
+            DistSSHQueue.fetch_source_expr(env, "abcdabcd"),
+        )
+    end
     @test occursin("Restart=on-failure", unit)
     @test occursin("Type=simple", unit)
     @test occursin("WantedBy=default.target", unit)

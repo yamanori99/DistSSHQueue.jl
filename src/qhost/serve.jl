@@ -41,7 +41,8 @@ function detached_serve_script(julia::AbstractString, project::AbstractString, l
     jl = sh_single_quote(julia)
     proj = sh_single_quote(project)
     lg = sh_single_quote(log)
-    inner = "$jl --startup-file=no --project=$proj -m DistSSHQueue serve </dev/null >>$lg 2>&1"
+    pkg = m_package(project)
+    inner = "$jl --startup-file=no --project=$proj -m $pkg serve </dev/null >>$lg 2>&1"
     tag = serve_tag()
     if !isempty(tag)
         inner = "env DISTSSHQUEUE_SERVE_TAG=$(sh_single_quote(tag)) $inner"
@@ -52,7 +53,8 @@ end
 function spawn_detached_serve!(julia::AbstractString, project::AbstractString, log::AbstractString)
     if Sys.iswindows()
         io = open(log, "a")
-        cmd = with_serve_tag(`$julia --startup-file=no --project=$project -m DistSSHQueue serve`)
+        pkg = m_package(project)
+        cmd = with_serve_tag(`$julia --startup-file=no --project=$project -m $pkg serve`)
         run(pipeline(detach(cmd); stdin = devnull, stdout = io, stderr = io); wait = false)
         close(io)
         return nothing

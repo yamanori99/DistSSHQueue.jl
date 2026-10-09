@@ -57,3 +57,35 @@ function default_queue_env(; dedicated::AbstractString = default_queue_env_dir()
     proj === nothing && throw(ArgumentError("service: no active project; pass --queue-env"))
     return resolve_pkg_env(dirname(proj)).env_dir
 end
+
+"""`-m` package for a queue env.
+
+Users add DistSSHKit. Main loads only a direct `[deps]` name, so a
+transitive DistSSHQueue cannot be `-m`'d or `using`'d. DistSSHKit when
+that name is in `[deps]`, otherwise DistSSHQueue. A missing or unreadable
+Project.toml is DistSSHQueue.
+"""
+function m_package(project::AbstractString)::String
+    path = joinpath(String(project), "Project.toml")
+    isfile(path) || return "DistSSHQueue"
+    raw = try
+        TOML.parsefile(path)
+    catch
+        return "DistSSHQueue"
+    end
+    raw isa AbstractDict || return "DistSSHQueue"
+    deps = get(raw, "deps", nothing)
+    deps isa AbstractDict && haskey(deps, "DistSSHKit") && return "DistSSHKit"
+    return "DistSSHQueue"
+end
+
+"""Remote `using` expression that prints `fetch_source` for `id`.
+
+`fetch_source` is not exported. After `using DistSSHKit` the name
+`DistSSHQueue` is not in Main, so the call goes through the loaded module.
+"""
+function fetch_source_expr(project::AbstractString, id::AbstractString)::String
+    pkg = m_package(project)
+    call = pkg == "DistSSHKit" ? "DistSSHKit.DistSSHQueue.fetch_source" : "DistSSHQueue.fetch_source"
+    return "using $(pkg); print($(call)($(repr(String(id)))))"
+end

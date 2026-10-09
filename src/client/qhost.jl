@@ -3,7 +3,8 @@
 # Kit `--hosts` / `--julia` stay on `go` / `ride` / `drive`. `setup` / `serve` /
 # `enable` / `disable` / `add-host` / `remove-host` are not forwarded.
 # Not a Kit placement token. Queue-host Julia is `julia --startup-file=no
-# --project=<queue-env> -m DistSSHQueue` (not the client's `--project=`).
+# --project=<queue-env> -m <pkg>` (not the client's `--project=`). `<pkg>` is
+# DistSSHKit when that env lists it, otherwise DistSSHQueue.
 function default_remote_julia()::String
     envj = strip(get(ENV, "JULIA_DISTRIBUTED_EXE", ""))
     return isempty(envj) ? "auto" : envj
@@ -256,10 +257,11 @@ function remote_dispatch(
     if !isempty(assigns)
         args = String[String(sub)]
         append!(args, String[String(a) for a in payload])
-        expr = join(assigns, "; ") * "; exit(Int(DistSSHQueue.main($(repr(args)))))"
-        core = String["-e", "using DistSSHQueue; " * expr]
+        pkg = m_package(queue_env)
+        expr = join(assigns, "; ") * "; exit(Int($(pkg).main($(repr(args)))))"
+        core = String["-e", "using $(pkg); " * expr]
     else
-        core = String["-m", "DistSSHQueue", String(sub)]
+        core = String["-m", m_package(queue_env), String(sub)]
         append!(core, payload)
     end
     argv = append!(hop_julia_prefix(queue_env), core)
