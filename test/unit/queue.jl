@@ -2254,10 +2254,14 @@ end
         )
         kit_unit = DistSSHQueue.systemd_user_unit("/usr/bin/julia", env)
         @test occursin("-m DistSSHKit serve", kit_unit)
-        @test occursin(
-            "DistSSHKit.DistSSHQueue.fetch_source",
-            DistSSHQueue.fetch_source_expr(env, "abcdabcd"),
-        )
+        expr = DistSSHQueue.fetch_source_expr("abcdabcd")
+        @test occursin("Base.active_project()", expr)
+        @test occursin("DistSSHKit.DistSSHQueue.fetch_source", expr)
+        @test occursin("DistSSHQueue.fetch_source", expr)
+        @test !occursin(env, expr)
+        hop = DistSSHQueue.remote_main_expr(["status"])
+        @test occursin("Base.active_project()", hop)
+        @test !occursin(env, hop)
     end
     @test occursin("Restart=on-failure", unit)
     @test occursin("Type=simple", unit)

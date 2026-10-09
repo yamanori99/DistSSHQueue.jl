@@ -58,12 +58,13 @@ function default_queue_env(; dedicated::AbstractString = default_queue_env_dir()
     return resolve_pkg_env(dirname(proj)).env_dir
 end
 
-"""`-m` package for a queue env.
+"""`-m` package for a queue env on this machine.
 
 Users add DistSSHKit. Main loads only a direct `[deps]` name, so a
 transitive DistSSHQueue cannot be `-m`'d or `using`'d. DistSSHKit when
 that name is in `[deps]`, otherwise DistSSHQueue. A missing or unreadable
-Project.toml is DistSSHQueue.
+Project.toml is DistSSHQueue. A `qhost:` hop does not use this: the env
+path is expanded on the queue host (`remote_main_expr`).
 """
 function m_package(project::AbstractString)::String
     path = joinpath(String(project), "Project.toml")
@@ -79,13 +80,52 @@ function m_package(project::AbstractString)::String
     return "DistSSHQueue"
 end
 
-"""Remote `using` expression that prints `fetch_source` for `id`.
+const _REMOTE_DOLLAR = '$'
+
+"""`-e` prelude that sets `pkg` from the active project's direct `[deps]`.
+
+The queue host expands `--project=`. The client must not read that
+Project.toml (`~/.distsshqueue/env` is not a path here).
+"""
+function remote_pkg_prelude()::String
+    return join(
+        (
+            "import TOML",
+            "proj = Base.active_project()",
+            "pkg = \"DistSSHQueue\"",
+            "if proj !== nothing",
+            "raw = try; TOML.parsefile(proj); catch; nothing; end",
+            "if raw isa AbstractDict",
+            "deps = get(raw, \"deps\", nothing)",
+            "if deps isa AbstractDict && haskey(deps, \"DistSSHKit\")",
+            "pkg = \"DistSSHKit\"",
+            "end",
+            "end",
+            "end",
+        ),
+        "; ",
+    )
+end
+
+"""Remote `-e` body: load the active project's package and call `main`."""
+function remote_main_expr(args::AbstractVector{<:AbstractString})::String
+    args_lit = repr(String[String(a) for a in args])
+    d = _REMOTE_DOLLAR
+    return remote_pkg_prelude() *
+        "; @eval using $(d)(Symbol(pkg)); exit(Int(getfield(Main, Symbol(pkg)).main($args_lit)))"
+end
+
+"""Remote `-e` body that prints `fetch_source` for `id`.
 
 `fetch_source` is not exported. After `using DistSSHKit` the name
-`DistSSHQueue` is not in Main, so the call goes through the loaded module.
+`DistSSHQueue` is not in Main, so that branch goes through the loaded module.
+The package is chosen on the queue host, not from a client-side path.
 """
-function fetch_source_expr(project::AbstractString, id::AbstractString)::String
-    pkg = m_package(project)
-    call = pkg == "DistSSHKit" ? "DistSSHKit.DistSSHQueue.fetch_source" : "DistSSHQueue.fetch_source"
-    return "using $(pkg); print($(call)($(repr(String(id)))))"
+function fetch_source_expr(id::AbstractString)::String
+    id_lit = repr(String(id))
+    d = _REMOTE_DOLLAR
+    return remote_pkg_prelude() *
+        "; @eval using $(d)(Symbol(pkg)); " *
+        "call = pkg == \"DistSSHKit\" ? DistSSHKit.DistSSHQueue.fetch_source : DistSSHQueue.fetch_source; " *
+        "print(call($id_lit))"
 end
