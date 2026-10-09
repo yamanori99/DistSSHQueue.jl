@@ -1,5 +1,4 @@
-"""Client `submit go` / `submit ride` / `submit drive` (Kit parsers). After `qhost:` ssh, on the staged tree."""
-
+# Client `submit go` / `submit ride` / `submit drive` (Kit parsers). After `qhost:` ssh, on the staged tree.
 function drop_nothing(d::Dict{String, Any})
     out = Dict{String, Any}()
     for (k, v) in d

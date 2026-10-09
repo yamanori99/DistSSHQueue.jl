@@ -1,8 +1,6 @@
-"""Local paths shared by `serve`, `setup`, and `enable`.
-
-Not CLI parsing. `queue_data_dir` lives in `config.jl`.
-"""
-
+# Local paths shared by `serve`, `setup`, and `enable`.
+#
+# Not CLI parsing. `queue_data_dir` lives in `config.jl`.
 function sh_single_quote(s::AbstractString)::String
     return string('\'', replace(String(s), "'" => "'\\''"), '\'')
 end

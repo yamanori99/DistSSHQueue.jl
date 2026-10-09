@@ -1,10 +1,8 @@
-"""CLI `size`: DistSSHKit `size` / `size!` on the queue host (cwd / project).
-
-Same argv as Kit (`parent` / `child:NAME`, `--gb-per-worker`, `--probe`, …).
-No tokens: size every name on config `hosts`. Does not enqueue.
-From a client: `qhost:HOST size …`.
-"""
-
+# CLI `size`: DistSSHKit `size` / `size!` on the queue host (cwd / project).
+#
+# Same argv as Kit (`parent` / `child:NAME`, `--gb-per-worker`, `--probe`, …).
+# No tokens: size every name on config `hosts`. Does not enqueue.
+# From a client: `qhost:HOST size …`.
 function size_hosts_from_allow(
         include_parent::Bool,
         hosts::Vector{String},

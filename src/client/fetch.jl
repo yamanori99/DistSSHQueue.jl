@@ -1,5 +1,4 @@
-"""Client `fetch <id>`: inverse of stage. Copy one finished Kit leaf onto this job tree."""
-
+# Client `fetch <id>`: inverse of stage. Copy one finished Kit leaf onto this job tree.
 const FETCH_SOURCE_SEP = '\t'
 const FETCH_EXTRA_SEP = '\x1e'
 const FETCH_NO_PRIMARY = "urn:distsshqueue:no-primary"

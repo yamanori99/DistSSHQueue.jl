@@ -1,5 +1,4 @@
-"""Client `cancel <id>`. Drops `:queued`; terminates `:running` when its live Kit run can be resolved."""
-
+# Client `cancel <id>`. Drops `:queued`; terminates `:running` when its live Kit run can be resolved.
 function cancel_cli(args::Vector{String})::Cint
     isempty(args) && throw(ArgumentError("cancel: need a job id"))
     args[1] in ("-h", "--help") && (show_usage(; command = "cancel"); return 0)

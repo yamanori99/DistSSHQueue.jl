@@ -1,5 +1,4 @@
-"""CLI chrome. Reuses DistSSHKit help helpers; job ids stay a bare line on stdout."""
-
+# CLI chrome. Reuses DistSSHKit help helpers; job ids stay a bare line on stdout.
 _q_short(path::String)::String = short_path(path)
 function _q_short(path::AbstractString)::String
     return short_path(string(path)::String)

@@ -1,8 +1,6 @@
-"""OS unit that runs `julia --project=<queue-env> -m DistSSHQueue serve`.
-
-Writes a LaunchAgent (macOS) or systemd user unit (Linux). Not a second protocol.
-"""
-
+# OS unit that runs `julia --project=<queue-env> -m DistSSHQueue serve`.
+#
+# Writes a LaunchAgent (macOS) or systemd user unit (Linux). Not a second protocol.
 const SERVICE_LABEL = "org.distsshqueue.serve"
 const SYSTEMD_UNIT = "distsshqueue.serve.service"
 const LEGACY_SERVICE_LABEL = "org.distsshkitqueue.serve"

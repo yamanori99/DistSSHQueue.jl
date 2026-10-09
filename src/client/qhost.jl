@@ -1,11 +1,9 @@
-"""Client `qhost:NAME` / `--remote-julia` / `--queue-env`: peel flags and `run_on_host`.
-
-Kit `--hosts` / `--julia` stay on `go` / `ride` / `drive`. `setup` / `serve` /
-`enable` / `disable` / `add-host` / `remove-host` are not forwarded.
-Not a Kit placement token. Queue-host Julia is `julia --startup-file=no
---project=<queue-env> -m DistSSHQueue` (not the client's `--project=`).
-"""
-
+# Client `qhost:NAME` / `--remote-julia` / `--queue-env`: peel flags and `run_on_host`.
+#
+# Kit `--hosts` / `--julia` stay on `go` / `ride` / `drive`. `setup` / `serve` /
+# `enable` / `disable` / `add-host` / `remove-host` are not forwarded.
+# Not a Kit placement token. Queue-host Julia is `julia --startup-file=no
+# --project=<queue-env> -m DistSSHQueue` (not the client's `--project=`).
 function default_remote_julia()::String
     envj = strip(get(ENV, "JULIA_DISTRIBUTED_EXE", ""))
     return isempty(envj) ? "auto" : envj

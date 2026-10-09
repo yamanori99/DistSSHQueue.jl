@@ -1,5 +1,4 @@
-"""CLI `add-host` / `remove-host`: write Kit placement tokens into config `hosts`."""
-
+# CLI `add-host` / `remove-host`: write Kit placement tokens into config `hosts`.
 function _remote_julia_mm(host::AbstractString)::Union{Nothing, Tuple{Int, Int}}
     is_parent_host_name(host) && return (VERSION.major, VERSION.minor)
     path = try

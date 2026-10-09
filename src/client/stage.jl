@@ -1,12 +1,10 @@
-"""Client `qhost:` submit: rsync the job tree onto the queue host.
-
-Omit `qhost:` is unchanged (cwd / `DISTRIBUTED_PROJECT_ROOT` on this box).
-Kit still copies queue host → workers. Same excludes as Kit `setup --rsync`
-(`.git/` / `.distsshkit/` / `.distsshqueue/` plus `.gitignore`).
-Stderr gets `rsync → HOST:path` when the copy starts (`DISTSSHKIT_QUIET`
-hides it). `DISTSSHQUEUE_NO_STAGE=1` skips (tests with a fake `ssh`).
-"""
-
+# Client `qhost:` submit: rsync the job tree onto the queue host.
+#
+# Omit `qhost:` is unchanged (cwd / `DISTRIBUTED_PROJECT_ROOT` on this box).
+# Kit still copies queue host → workers. Same excludes as Kit `setup --rsync`
+# (`.git/` / `.distsshkit/` / `.distsshqueue/` plus `.gitignore`).
+# Stderr gets `rsync → HOST:path` when the copy starts (`DISTSSHKIT_QUIET`
+# hides it). `DISTSSHQUEUE_NO_STAGE=1` skips (tests with a fake `ssh`).
 const NO_STAGE_ENV = "DISTSSHQUEUE_NO_STAGE"
 
 """Queue-host dest for one client submit. Unique per job UUID.

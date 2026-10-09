@@ -1,8 +1,6 @@
-"""CLI `plan`: DistSSHKit `plan` on the queue host (cwd / project).
-
-Inspect a script. Does not enqueue. From a client: `qhost:HOST plan …`.
-"""
-
+# CLI `plan`: DistSSHKit `plan` on the queue host (cwd / project).
+#
+# Inspect a script. Does not enqueue. From a client: `qhost:HOST plan …`.
 function print_queue_plan_submit(kp)
     kind = String(kp.suggest)
     parts = String[]

@@ -1,12 +1,10 @@
-"""Remove queue-host state: serve, OS unit, store, `~/.distsshqueue`.
-
-A leftover `dskq` shim from older `setup` is removed if present.
-Leftover DistSSHKitQueue `~/.distsshkitqueue` and old OS units are removed too.
-
-Does not `Pkg.rm` or delete a git clone. Kit `.distsshkit/` next to a clone stays.
-Needs `-y` / `--yes` (or Kit `DISTSSHKIT_YES`, same values as DistSSHKit: `1` / `true` / `yes` / `on`).
-"""
-
+# Remove queue-host state: serve, OS unit, store, `~/.distsshqueue`.
+#
+# A leftover `dskq` shim from older `setup` is removed if present.
+# Leftover DistSSHKitQueue `~/.distsshkitqueue` and old OS units are removed too.
+#
+# Does not `Pkg.rm` or delete a git clone. Kit `.distsshkit/` next to a clone stays.
+# Needs `-y` / `--yes` (or Kit `DISTSSHKIT_YES`, same values as DistSSHKit: `1` / `true` / `yes` / `on`).
 function teardown_yes()::Bool
     v = strip(get(ENV, "DISTSSHKIT_YES", ""))
     return v in ("1", "true", "yes", "on")

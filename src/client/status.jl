@@ -1,5 +1,4 @@
-"""Client `status` / `watch`. Table lives on the queue host (after ssh if `qhost:HOST`)."""
-
+# Client `status` / `watch`. Table lives on the queue host (after ssh if `qhost:HOST`).
 function _kit_env_on(name::AbstractString)::Bool
     return strip(get(ENV, String(name), "")) in ("1", "true", "yes", "on")
 end

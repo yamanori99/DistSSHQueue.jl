@@ -1,5 +1,4 @@
-"""Shared stdout for inspect verbs (`size` / `plan` / `pool`) on the queue host."""
-
+# Shared stdout for inspect verbs (`size` / `plan` / `pool`) on the queue host.
 const INSPECT_SUBMIT_HEADER = "Suggested submit (template):"
 
 function print_inspect_submit_template(kind::AbstractString, parts::Vector{String})

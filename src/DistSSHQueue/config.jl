@@ -1,9 +1,7 @@
-"""User config: `~/.distsshqueue/config.toml`. Override: `DISTSSHQUEUE_CONFIG`.
-
-Resolution: CLI / ENV > config.toml > built-in defaults.
-`[env]` keys are applied with `get!` so a real ENV value wins.
-"""
-
+# User config: `~/.distsshqueue/config.toml`. Override: `DISTSSHQUEUE_CONFIG`.
+#
+# Resolution: CLI / ENV > config.toml > built-in defaults.
+# `[env]` keys are applied with `get!` so a real ENV value wins.
 function default_config_path(; home::AbstractString = homedir())::String
     return joinpath(home, ".distsshqueue", "config.toml")
 end
