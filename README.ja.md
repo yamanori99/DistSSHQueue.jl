@@ -7,7 +7,7 @@
 [![Codecov](https://img.shields.io/codecov/c/github/yamanori99/DistSSHQueue.jl?style=flat-square&logo=codecov&logoColor=white)](https://codecov.io/gh/yamanori99/DistSSHQueue.jl)
 [![docs-stable](https://img.shields.io/badge/docs-stable-blue?style=flat-square&logo=gitbook&logoColor=white)](https://yamanori99.github.io/DistSSHQueue.jl/stable/)
 [![docs-dev](https://img.shields.io/badge/docs-dev-blue?style=flat-square&logo=gitbook&logoColor=white)](https://yamanori99.github.io/DistSSHQueue.jl/dev/)
-[![Julia 1.13+](https://img.shields.io/badge/Julia-1.13+-9558B2?style=flat-square&logo=julia&logoColor=white)](https://yamanori99.github.io/DistSSHKit.jl/dev/requirements/)
+[![Julia 1.13+](https://img.shields.io/badge/Julia-1.13+-9558B2?style=flat-square&logo=julia&logoColor=white)](https://yamanori99.github.io/DistSSHKit.jl/stable/requirements/)
 [![code style: runic](https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black)](https://github.com/fredrikekre/Runic.jl)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 <!-- markdownlint-enable MD013 -->
@@ -17,7 +17,7 @@ DistSSHQueue は、キューホストにジョブを置いて、1件ずつ走ら
 多くの人は DistSSHKit を入れる。そのパッケージがこれを同梱している。
 `pkg> add DistSSHQueue` は、キューだけを使うときである。
 長い説明は
-[DistSSHKit のマニュアル](https://yamanori99.github.io/DistSSHKit.jl/dev/)
+[DistSSHKit のマニュアル](https://yamanori99.github.io/DistSSHKit.jl/stable/)
 にある。
 対応は **macOS、Linux、WSL2 Ubuntu** (ネイティブ Windows は対象外)。
 
@@ -41,7 +41,7 @@ julia> import Pkg; Pkg.add("DistSSHQueue")
 キューホストには **`ssh`**、**`rsync`**、および (git デプロイを使うときだけ) **`git`** も必要。
 クライアントにも、`qhost:` の submit と fetch のために **`ssh`** と **`rsync`** が必要。
 `pkg> add` では入らない。詳細な利用条件については以下:
-[Requirements](https://yamanori99.github.io/DistSSHKit.jl/dev/requirements/)。
+[Requirements](https://yamanori99.github.io/DistSSHKit.jl/stable/requirements/)。
 
 パッケージの詳細は **[ドキュメント](https://yamanori99.github.io/DistSSHQueue.jl/stable/)** を参照。
 
@@ -83,7 +83,7 @@ julia> import Pkg; Pkg.add("DistSSHQueue")
 `DISTSSHQUEUE_LOCAL=1`。`--hosts` / `--julia` は `go` / `ride` / `drive` のまま。
 
 ホストトークン、`go` / `ride` / `drive` のフラグ、リモートの準備は
-[DistSSHKit のマニュアル](https://yamanori99.github.io/DistSSHKit.jl/dev/)
+[DistSSHKit のマニュアル](https://yamanori99.github.io/DistSSHKit.jl/stable/)
 にある。
 
 ### submit
@@ -91,7 +91,7 @@ julia> import Pkg; Pkg.add("DistSSHQueue")
 1つのargvに4つの入れ子がある。`submit` はキューホストにジョブを置く。
 その後ろは `go` / `ride` / `drive` とその先である。同じ argv をこのマシンで
 今走らせる説明は
-[DistSSHKit のマニュアル](https://yamanori99.github.io/DistSSHKit.jl/dev/manual/)
+[DistSSHKit のマニュアル](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/)
 にある。
 
 ```bash
@@ -118,7 +118,7 @@ julia -m DistSSHRun drive parent:4 SCRIPT.jl
 ```
 
 `pool:N` は `submit` の隣に置く。ホストトークンではない。詳細:
-[submit](https://yamanori99.github.io/DistSSHKit.jl/dev/queue/submit/)。
+[submit](https://yamanori99.github.io/DistSSHKit.jl/stable/queue/submit/)。
 
 ### ファイルの置き場
 
@@ -134,7 +134,7 @@ julia -m DistSSHRun drive parent:4 SCRIPT.jl
 
 stage では `.gitignore`、`.git/`、`.distsshkit/`、
 `.distsshqueue/` を除外する。詳細:
-[Artifacts and paths](https://yamanori99.github.io/DistSSHKit.jl/dev/queue/artifacts/)。
+[Artifacts and paths](https://yamanori99.github.io/DistSSHKit.jl/stable/queue/artifacts/)。
 
 #### クライアント
 
@@ -235,7 +235,7 @@ stdout 1 行。stderr に `Queued  N` (`DISTSSHKIT_QUIET` で隠す)。
 `.distsshqueue/<kind>/<stem>_<id8>/` へ戻す。
 
 打つ順 (マシンの準備 → submit / fetch → teardown):
-[Walkthrough](https://yamanori99.github.io/DistSSHKit.jl/dev/tutorial/queue-walkthrough/)。
+[Walkthrough](https://yamanori99.github.io/DistSSHKit.jl/stable/tutorial/queue-walkthrough/)。
 
 **キューホスト** で一度だけ。`setup` は `config.toml` を書く (`env/` は作らない)。
 既定の Julia 環境で `julia -m DistSSHQueue`。チェックアウトなら `--project=.`。
@@ -250,14 +250,14 @@ julia -m DistSSHQueue serve
 `--queue-env @`)。`enable` はその dir があれば使う。`setup` / `serve` /
 `enable` / `disable` / `add-host` / `remove-host` は `qhost:` を
 受け付けない。コマンド参照:
-[How it runs](https://yamanori99.github.io/DistSSHKit.jl/dev/queue/)。
+[How it runs](https://yamanori99.github.io/DistSSHKit.jl/stable/queue/)。
 
 ## ドキュメント
 
 - Home:
   [Home](https://yamanori99.github.io/DistSSHQueue.jl/stable/)
 - マニュアル:
-  [DistSSHKit](https://yamanori99.github.io/DistSSHKit.jl/dev/manual/)
+  [DistSSHKit](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/)
 - API: [API](https://yamanori99.github.io/DistSSHQueue.jl/stable/api/)
 - News: [NEWS.md](NEWS.md)
 
