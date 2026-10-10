@@ -8,7 +8,7 @@ Julia entry points when you embed DistSSHQueue. Day-to-day work stays
 on the CLI (`julia --project=. -m DistSSHQueue …`); see
 [Home](@ref DistSSHQueue.jl).
 The longer guide is the
-[DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/dev/).
+[DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/stable/).
 REPL help also works (`?DistSSHQueue.submit!`).
 
 Submitters `using DistSSHQueue`. Queue-host code `using DistSSHKit`.
@@ -38,7 +38,7 @@ Job
 
 `Job` persists the artifact-related fields used by cancel and fetch.
 Their ownership and fallback order are described in
-[Artifacts and paths](https://yamanori99.github.io/DistSSHKit.jl/dev/queue/artifacts/).
+[Artifacts and paths](https://yamanori99.github.io/DistSSHKit.jl/stable/queue/artifacts/).
 
 ## Enqueue and cancel
 

@@ -7,7 +7,7 @@
 [![Codecov](https://img.shields.io/codecov/c/github/yamanori99/DistSSHQueue.jl?style=flat-square&logo=codecov&logoColor=white)](https://codecov.io/gh/yamanori99/DistSSHQueue.jl)
 [![docs-stable](https://img.shields.io/badge/docs-stable-blue?style=flat-square&logo=gitbook&logoColor=white)](https://yamanori99.github.io/DistSSHQueue.jl/stable/)
 [![docs-dev](https://img.shields.io/badge/docs-dev-blue?style=flat-square&logo=gitbook&logoColor=white)](https://yamanori99.github.io/DistSSHQueue.jl/dev/)
-[![Julia 1.13+](https://img.shields.io/badge/Julia-1.13+-9558B2?style=flat-square&logo=julia&logoColor=white)](https://yamanori99.github.io/DistSSHKit.jl/dev/requirements/)
+[![Julia 1.13+](https://img.shields.io/badge/Julia-1.13+-9558B2?style=flat-square&logo=julia&logoColor=white)](https://yamanori99.github.io/DistSSHKit.jl/stable/requirements/)
 [![code style: runic](https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black)](https://github.com/fredrikekre/Runic.jl)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 <!-- markdownlint-enable MD013 -->
@@ -17,7 +17,7 @@ time. You can submit a job, check its status, fetch a finished leaf,
 and cancel. Most people install DistSSHKit, which bundles this
 package. `pkg> add DistSSHQueue` is for using the queue on its own.
 The longer guide is the
-[DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/dev/).
+[DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/stable/).
 Supported on **macOS, Linux, and WSL2 Ubuntu** (not native Windows).
 
 Even small labs and individuals can keep one always-on machine, add
@@ -42,7 +42,7 @@ The queue host needs **`ssh`**, **`rsync`**, and (only for git
 deploys) **`git`**. A client also needs **`ssh`** and **`rsync`**
 for `qhost:` submit and `fetch`. `pkg> add` does not install them.
 Full requirements:
-[Requirements](https://yamanori99.github.io/DistSSHKit.jl/dev/requirements/).
+[Requirements](https://yamanori99.github.io/DistSSHKit.jl/stable/requirements/).
 
 For everything else, see the
 **[Documentation](https://yamanori99.github.io/DistSSHQueue.jl/stable/)**.
@@ -86,14 +86,14 @@ Omit `qhost:` (this box's cwd is the job tree; placement is still
 `ride` / `drive`.
 
 Host tokens, `go` / `ride` / `drive` flags, and remote setup are in the
-[DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/dev/).
+[DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/stable/).
 
 ### submit
 
 One argv, four nested pieces. `submit` leaves the job on the queue
 host. After it, the line is `go` / `ride` / `drive` and the
 rest. The same argv, started on this machine now, is in the
-[DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/dev/manual/).
+[DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/).
 
 ```bash
 julia --project=. -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
@@ -119,7 +119,7 @@ julia -m DistSSHRun drive parent:4 SCRIPT.jl
 ```
 
 `pool:N` sits next to `submit`. It is not a host token. Full notes:
-[submit](https://yamanori99.github.io/DistSSHKit.jl/dev/queue/submit/).
+[submit](https://yamanori99.github.io/DistSSHKit.jl/stable/queue/submit/).
 
 ### Where files live
 
@@ -135,7 +135,7 @@ julia -m DistSSHRun drive parent:4 SCRIPT.jl
 
 The stage excludes `.gitignore`, `.git/`, `.distsshkit/`, and
 `.distsshqueue/`. Details:
-[Artifacts and paths](https://yamanori99.github.io/DistSSHKit.jl/dev/queue/artifacts/).
+[Artifacts and paths](https://yamanori99.github.io/DistSSHKit.jl/stable/queue/artifacts/).
 
 #### Client
 
@@ -235,7 +235,7 @@ bare stdout line; stderr shows `Queued  N` unless `DISTSSHKIT_QUIET` is set.
 `.distsshqueue/<kind>/<stem>_<id8>/` in this job tree.
 
 Typed path (prepare the machine → submit / fetch → teardown):
-[Walkthrough](https://yamanori99.github.io/DistSSHKit.jl/dev/tutorial/queue-walkthrough/).
+[Walkthrough](https://yamanori99.github.io/DistSSHKit.jl/stable/tutorial/queue-walkthrough/).
 
 On the **queue host** (once). `setup` writes `config.toml`, not `env/`.
 From the default Julia env (`julia -m DistSSHQueue`); from a
@@ -251,14 +251,14 @@ julia -m DistSSHQueue serve
 for the remote default env). `enable` uses that dir if present.
 `setup` / `serve` / `enable` / `disable` / `add-host` / `remove-host`
 refuse `qhost:`. Command reference:
-[How it runs](https://yamanori99.github.io/DistSSHKit.jl/dev/queue/).
+[How it runs](https://yamanori99.github.io/DistSSHKit.jl/stable/queue/).
 
 ## Documentation
 
 - Home:
   [Home](https://yamanori99.github.io/DistSSHQueue.jl/stable/)
 - Manual:
-  [DistSSHKit](https://yamanori99.github.io/DistSSHKit.jl/dev/manual/)
+  [DistSSHKit](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/)
 - API: [API](https://yamanori99.github.io/DistSSHQueue.jl/stable/api/)
 - News: [NEWS.md](NEWS.md)
 

@@ -5,7 +5,7 @@ submit a job, check its status, fetch a finished leaf, and cancel.
 Supported on **macOS, Linux, and WSL2 Ubuntu** (not native Windows).
 
 The longer guide is the
-[DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/dev/).
+[DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/stable/).
 
 ## Install
 
