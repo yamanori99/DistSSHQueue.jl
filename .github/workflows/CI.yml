@@ -8,8 +8,9 @@ on:
   workflow_dispatch:
 
 # Cancel redundant runs on the same branch/PR.
-# A Project.toml version increase (see version-cut.sh) runs 1.14-nightly,
-# Aqua on that nightly, and registry tree in this workflow. No label is involved.
+# A Project.toml version increase (see version-cut.sh) runs Ubuntu
+# 1.14-nightly, Aqua on that nightly, and registry tree in this workflow.
+# macOS and WSL2 nightly are CI weekly. No label is involved.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
@@ -169,50 +170,6 @@ jobs:
           delete-old-caches: false
       - uses: ./.github/actions/pkg-test
 
-  test-1-14-nightly-macos:
-    name: Pkg.test (1.14-nightly, macos-latest, aarch64)
-    needs: detect
-    if: github.event_name != 'pull_request' || needs.detect.outputs.version_cut == 'true'
-    runs-on: macos-latest
-    timeout-minutes: 45
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v7
-      - uses: julia-actions/setup-julia@v3
-        with:
-          version: "1.14-nightly"
-      - uses: julia-actions/cache@v3
-        with:
-          cache-scratchspaces: false
-          delete-old-caches: false
-      - uses: ./.github/actions/pkg-test
-
-  test-1-14-nightly-wsl:
-    name: Pkg.test (1.14-nightly, WSL2 ubuntu-24.04, x64)
-    needs: detect
-    if: github.event_name != 'pull_request' || needs.detect.outputs.version_cut == 'true'
-    runs-on: windows-latest
-    timeout-minutes: 45
-    continue-on-error: true
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - uses: Vampire/setup-wsl@d1da7f2c0322a5ee4f24975344f67fc0f5baf364 # v7
-        with:
-          distribution: Ubuntu-24.04
-          wsl-version: 2
-          additional-packages: ca-certificates curl git
-      - uses: actions/cache@v6
-        with:
-          path: .ci-cache/wsl-julia
-          key: wsl-julia-1.14-nightly-${{ hashFiles('Project.toml', 'test/Project.toml') }}
-      - name: Pkg.test in WSL2
-        shell: wsl-bash {0}
-        run: ./.github/wsl-julia.sh 1.14-nightly julia --project=. -e 'using Pkg; Pkg.test()'
-
   # Not required to merge. Catches checkout-only Pkg.test assumptions. Runs on 1.14-nightly.
   test-registry-tree:
     name: Pkg.test (registry, ubuntu-latest, x64)
@@ -270,51 +227,6 @@ jobs:
           delete-old-caches: false
       - name: Aqua.test_all (latest Aqua)
         run: ./.github/aqua-check.sh
-
-  aqua-1-14-nightly-macos:
-    name: Aqua (1.14-nightly, macos-latest, aarch64)
-    needs: detect
-    if: github.event_name != 'pull_request' || needs.detect.outputs.version_cut == 'true'
-    runs-on: macos-latest
-    timeout-minutes: 45
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v7
-      - uses: julia-actions/setup-julia@v3
-        with:
-          version: "1.14-nightly"
-      - uses: julia-actions/cache@v3
-        with:
-          cache-scratchspaces: false
-          delete-old-caches: false
-      - name: Aqua.test_all (latest Aqua)
-        run: ./.github/aqua-check.sh
-
-  aqua-1-14-nightly-wsl:
-    name: Aqua (1.14-nightly, WSL2 ubuntu-24.04, x64)
-    needs: detect
-    if: github.event_name != 'pull_request' || needs.detect.outputs.version_cut == 'true'
-    runs-on: windows-latest
-    timeout-minutes: 45
-    continue-on-error: true
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - uses: Vampire/setup-wsl@d1da7f2c0322a5ee4f24975344f67fc0f5baf364 # v7
-        with:
-          distribution: Ubuntu-24.04
-          wsl-version: 2
-          additional-packages: ca-certificates curl git
-      - uses: actions/cache@v6
-        with:
-          path: .ci-cache/wsl-julia
-          key: wsl-julia-1.14-nightly-${{ hashFiles('Project.toml', 'test/Project.toml') }}
-      - name: Aqua.test_all (latest Aqua)
-        shell: wsl-bash {0}
-        run: ./.github/wsl-julia.sh 1.14-nightly ./.github/aqua-check.sh
 
   # Literal names: skipped matrix jobs leave ${{ matrix.* }} unexpanded.
   # JETLS stays on a runtime it lists (today 1.13). No nightly JETLS.
