@@ -7,6 +7,8 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 `serve` and `default_store_path` have docstrings. `default_store_path()` is `~/.distsshqueue/jobs.toml`. `serve` runs `serve!` on that file.
 
+The guide moved to the DistSSHKit manual. This site keeps Home and API.
+
 ## 0.9.2
 
 `qhost:` hops and remote fetch choose the package on the queue host.
