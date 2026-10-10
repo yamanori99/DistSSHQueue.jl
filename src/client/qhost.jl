@@ -295,8 +295,8 @@ end
 
 """Note when the queue host's DistSSHQueue differs. `nothing` if same or unreadable.
 
-Does not refuse. `kit` is the remote DistSSHRun version when the line has one.
-Older hosts may still print DistSSHKit.
+Does not refuse. `kit` is the remote DistSSHRun version when the text has one.
+Older hosts may still print DistSSHKit, in parentheses on the same line.
 """
 function queue_version_skew_warning(
         remote_line::AbstractString;
@@ -306,7 +306,7 @@ function queue_version_skew_warning(
     remote = queue_version_from_line(remote_line)
     remote === nothing && return nothing
     remote == local_ver && return nothing
-    kit_m = match(r"\((DistSSHRun|DistSSHKit)\s+([^)]+)\)", remote_line)
+    kit_m = match(r"(DistSSHRun|DistSSHKit)\s+([0-9][^\s,)]*)", remote_line)
     kit = nothing
     kit_name = "DistSSHRun"
     if kit_m !== nothing

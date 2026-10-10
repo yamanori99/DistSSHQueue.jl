@@ -532,8 +532,8 @@ function _q_state_color(state::Symbol)
 end
 
 function println_queue_version(io::IO = stdout)
-    kv = DistSSHRun.dist_ssh_kit_version()
-    println(io, "DistSSHQueue $(pkgversion(DistSSHQueue)) (DistSSHRun $(kv))")
+    println(io, "DistSSHQueue $(pkgversion(DistSSHQueue))")
+    println(io, "DistSSHRun $(DistSSHRun.dist_ssh_kit_version())")
     return nothing
 end
 
