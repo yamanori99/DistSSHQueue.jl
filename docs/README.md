@@ -2,17 +2,9 @@
 
 Documenter site for DistSSHQueue.jl. Sources live in `docs/src/`.
 
-Layout (same headings as DistSSHKit; Queue verbs only — do not copy Kit
-`go` / `ride` / `drive` / `setup` pages):
-
-- **Introduction** — `index.md`
-- **First Steps** — `requirements.md`, `tutorial/`
-  (`prepare.md`, `client.md`, `walkthrough.md`)
-- **User Guide** — `manual/`
-- **API** — `api.md`
-
-Placement tokens and Kit flags stay in the
-[kit docs](https://yamanori99.github.io/DistSSHKit.jl/stable/).
+The site is Home and API. The longer guide is the
+[DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/dev/).
+Those links stay on `dev` until DistSSHKit is tagged, then move to `stable`.
 
 ```bash
 julia --project=docs -e 'using Pkg; Pkg.instantiate()'
