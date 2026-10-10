@@ -1,5 +1,6 @@
 using TOML
 
+"""Jobs file for a queue host: `~/.distsshqueue/jobs.toml` under `home`."""
 function default_store_path(; home::AbstractString = homedir())::String
     return joinpath(home, ".distsshqueue", "jobs.toml")
 end

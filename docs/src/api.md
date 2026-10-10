@@ -60,13 +60,12 @@ step!
 
 ```@docs
 serve!
+serve
 ```
 
 ## Paths
 
 ```@docs
 job_project
+default_store_path
 ```
-
-`default_store_path()` is `~/.distsshqueue/jobs.toml`.
-`serve` calls DistSSHKit `execute!(…; detached=true, job_id=…)`.
