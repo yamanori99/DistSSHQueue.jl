@@ -1066,6 +1066,11 @@ function serve!(q::Queue; interval::Real = 0.2)
     return nothing
 end
 
+"""
+    serve(; store=default_store_path(), interval=0.2) -> Nothing
+
+Run [`serve!`](@ref) on `store`. Ctrl-C stops this process, not a job that is already running.
+"""
 function serve(; store::AbstractString = default_store_path(), interval::Real = 0.2, runner::Function = run_kit)
     return serve!(Queue(; store = store, runner = runner); interval = interval)
 end
