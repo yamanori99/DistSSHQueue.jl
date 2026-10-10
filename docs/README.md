@@ -3,7 +3,7 @@
 Documenter site for DistSSHQueue.jl. Sources live in `docs/src/`.
 
 The site is Home and API. The longer guide is the
-[DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/stable/).
+[DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/dev/).
 
 ```bash
 julia --project=docs -e 'using Pkg; Pkg.instantiate()'
