@@ -523,7 +523,7 @@ function fetch_cli(
             "qhost fetch needs rsync (unset DISTSSHQUEUE_NO_STAGE / DISTSSHKIT_TEST_SSH)",
         )
     )
-    expr = "using DistSSHQueue; print(DistSSHQueue.fetch_source($(repr(id))))"
+    expr = fetch_source_expr(id)
     st, path, parsed_id, dest_rel, extras = parse_fetch_source(hop_print(hop, spec, expr; queue_env = qe))
     st in FETCH_READY || throw(ArgumentError("job $(repr(id)) is $(st)"))
     job_id = something(parsed_id, id)

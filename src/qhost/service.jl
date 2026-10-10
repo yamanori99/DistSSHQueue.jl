@@ -1,4 +1,5 @@
-# OS unit that runs `julia --project=<queue-env> -m DistSSHQueue serve`.
+# OS unit that runs `julia --project=<queue-env> -m <pkg> serve`.
+# `<pkg>` is DistSSHKit when that env lists it, otherwise DistSSHQueue.
 #
 # Writes a LaunchAgent (macOS) or systemd user unit (Linux). Not a second protocol.
 const SERVICE_LABEL = "org.distsshqueue.serve"
@@ -32,6 +33,7 @@ end
 function launch_agent_plist(julia::AbstractString, project::AbstractString)::String
     j = xml_escape(julia)
     p = xml_escape(project)
+    pkg = xml_escape(m_package(project))
     return """
     <?xml version="1.0" encoding="UTF-8"?>
     <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -45,7 +47,7 @@ function launch_agent_plist(julia::AbstractString, project::AbstractString)::Str
             <string>--startup-file=no</string>
             <string>--project=$p</string>
             <string>-m</string>
-            <string>DistSSHQueue</string>
+            <string>$pkg</string>
             <string>serve</string>
         </array>
         <key>RunAtLoad</key>
@@ -61,13 +63,14 @@ function systemd_user_unit(julia::AbstractString, project::AbstractString)::Stri
     # systemd ExecStart: quote if the path has spaces.
     exe = occursin(r"\s", julia) ? "'$(replace(julia, "'" => "'\\''"))'" : String(julia)
     proj = occursin(r"\s", project) ? "'$(replace(project, "'" => "'\\''"))'" : String(project)
+    pkg = m_package(project)
     return """
     [Unit]
     Description=DistSSHQueue serve
 
     [Service]
     Type=simple
-    ExecStart=$exe --startup-file=no --project=$proj -m DistSSHQueue serve
+    ExecStart=$exe --startup-file=no --project=$proj -m $pkg serve
     Restart=on-failure
 
     [Install]
@@ -203,7 +206,7 @@ function enable_main(args::Vector{String})::Cint
             throw(
                 ArgumentError(
                     "enable: use --queue-env DIR, not --project. " *
-                        "Julia `--project=` loads DistSSHQueue; project is cwd / DISTRIBUTED_PROJECT_ROOT.",
+                        "Julia `--project=` loads DistSSHKit when that env lists it, otherwise DistSSHQueue; project is cwd / DISTRIBUTED_PROJECT_ROOT.",
                 )
             )
         elseif args[i] == "--write-only"
