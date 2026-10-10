@@ -3,6 +3,14 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
+## 0.9.2
+
+`qhost:` hops and remote fetch choose the package on the queue host.
+DistSSHKit when that env lists it in direct `[deps]`, otherwise
+DistSSHQueue. The OS unit and autoserve use the same rule on the
+Project.toml they are given. A missing or unreadable Project.toml stays
+DistSSHQueue.
+
 ## 0.9.1
 
 CLI help only. Queue-host help lists size, plan, and pool.
