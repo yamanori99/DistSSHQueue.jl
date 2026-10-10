@@ -12,8 +12,10 @@
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 <!-- markdownlint-enable MD013 -->
 
-DistSSHQueue は、つけたままのマシンにジョブを置いて、1件ずつ走らせる。
+DistSSHQueue は、キューホストにジョブを置いて、1件ずつ走らせる。
 ジョブの投入、状態の確認、成果物の取得、取り消しができる。
+多くの人は DistSSHKit を入れる。そのパッケージがこれを同梱している。
+`pkg> add DistSSHQueue` は、キューだけを使うときである。
 長い説明は
 [DistSSHKit のマニュアル](https://yamanori99.github.io/DistSSHKit.jl/dev/)
 にある。
@@ -37,6 +39,7 @@ julia> import Pkg; Pkg.add("DistSSHQueue")
 ```
 
 キューホストには **`ssh`**、**`rsync`**、および (git デプロイを使うときだけ) **`git`** も必要。
+クライアントにも、`qhost:` の submit と fetch のために **`ssh`** と **`rsync`** が必要。
 `pkg> add` では入らない。詳細な利用条件については以下:
 [Requirements](https://yamanori99.github.io/DistSSHKit.jl/dev/requirements/)。
 
@@ -51,13 +54,13 @@ julia> import Pkg; Pkg.add("DistSSHQueue")
 - **キューホスト** — `~/.distsshqueue` を持ち、`serve` を動かす常時起動の
   **macOS または Linux** (VM でよい)。スリープするマシンはこれではない。
   WSL2 はクライアントまたはワーカーであり、この役ではない。
-- **クライアント** — 投入・一覧・監視・取消・成果物の取得をする開発マシン。台数に上限はない。
-  仕事を配るプロセスになってはならない。
-- **serve** — つけたままのマシン上の FIFO プロセス。
+- **クライアント** — 投入・一覧・監視・取消・成果物の取得をする開発マシン。
+  台数に上限はない。実行はクライアントでは始まらず、キューホストで始まる。
+- **serve** — キューホスト上の FIFO プロセス。
   (`execute!(…; detached=true)`) でジョブを始める。止めても、既に走っている
   ジョブは取り消されない。
 - **ワーカー** — スクリプトが実際に走る先。ホストトークン:
-  つけたままのマシン上は `parent[:N]`、SSH 先は `child:NAME[:N]`。
+  キューホスト上は `parent[:N]`、SSH 先は `child:NAME[:N]`。
 
 ```text
   clients = dev machines (no cap)         one queue host (always on)
@@ -72,7 +75,7 @@ julia> import Pkg; Pkg.add("DistSSHQueue")
                                           -> workers (host tokens)
 ```
 
-`qhost:NAME` はつけたままのマシンの SSH 名である (`child:NAME` と同じ形だが、
+`qhost:NAME` はキューホストの SSH 名である (`child:NAME` と同じ形だが、
 ワーカーではなくそのマシンを指す)。そのマシンにいないときはコマンドラインに
 `qhost:HOST` を付ける。`DISTSSHQUEUE_HOST` だけではそこへ SSH しない。
 すでにそのマシンにログインしていれば `qhost:` を省略する (このマシンの cwd
@@ -85,7 +88,7 @@ julia> import Pkg; Pkg.add("DistSSHQueue")
 
 ### submit
 
-1つのargvに4つの入れ子がある。`submit` はつけたままのマシンにジョブを置く。
+1つのargvに4つの入れ子がある。`submit` はキューホストにジョブを置く。
 その後ろは `go` / `ride` / `drive` とその先である。同じ argv をこのマシンで
 今走らせる説明は
 [DistSSHKit のマニュアル](https://yamanori99.github.io/DistSSHKit.jl/dev/manual/)
@@ -107,10 +110,11 @@ julia --project=. -m DistSSHQueue [qhost:HOST] submit \
     drive parent:4 child:NAME:N SCRIPT.jl
 ```
 
-同じ argv を、このマシンで今走らせる:
+同じ argv を、このマシンで今走らせる。この環境には DistSSHRun が必要である。
+DistSSHKit が入っていれば `julia -m DistSSHKit` でも同じコマンドになる。
 
 ```bash
-julia -m DistSSHKit drive parent:4 SCRIPT.jl
+julia -m DistSSHRun drive parent:4 SCRIPT.jl
 ```
 
 `pool:N` は `submit` の隣に置く。ホストトークンではない。詳細:
@@ -120,13 +124,13 @@ julia -m DistSSHKit drive parent:4 SCRIPT.jl
 
 `qhost:` は SSH 名であり、保存先の接頭辞ではない。
 
-- 待ち行列とジョブの結果は、つけたままのマシンに残る。
+- キューとジョブの結果は、キューホストに残る。
 - `qhost:` submit はクライアントの木を
   `~/.distsshqueue/stage/<uuid>` へ送る。
 - クライアントには `.distsshqueue/tickets/<uuid>` が残る。
 - 成果物はスクリプトが所有する。
-- つけたままのマシンの `.distsshkit/` run bundle はジョブが持つ。
-- スケジュールと取得後の `.distsshqueue/` copy はこのパッケージが持つ。
+- キューホストの `.distsshkit/` は実行層が持つ。
+- スケジュールと取得後の `.distsshqueue/` copy はキューが持つ。
 
 stage では `.gitignore`、`.git/`、`.distsshkit/`、
 `.distsshqueue/` を除外する。詳細:
@@ -147,9 +151,9 @@ stage では `.gitignore`、`.git/`、`.distsshkit/`、
     .distsshkit/collect/...
 ```
 
-#### つけたままのマシン
+#### キューホスト
 
-`~/.distsshqueue` は待ち行列を持つ。`qhost:` のジョブツリーは
+`~/.distsshqueue` はキューを持つ。`qhost:` のジョブツリーは
 `stage/<uuid>/`。`parent` はこの stage をこのマシン上で使う。共有
 config では `DISTRIBUTED_REMOTE_PROJECT_ROOT` を設定しない。`child:`
 へのコピーは `~/stage/<uuid>` のまま分かれる。
@@ -168,7 +172,7 @@ config では `DISTRIBUTED_REMOTE_PROJECT_ROOT` を設定しない。`child:`
     Project.toml        計算の依存
     SCRIPT.jl
     .distsshkit/runs/<kind>/<run>/  run.toml, kit.pid, kit.result
-    .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  result_path (ジョブかスクリプトが決める)
+    .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  result_path (実行層かスクリプトが決める)
     .distsshkit/setup/*.log         setup logs
 ```
 
@@ -182,16 +186,16 @@ config では `DISTRIBUTED_REMOTE_PROJECT_ROOT` を設定しない。`child:`
 
 #### ワーカー
 
-`parent` はつけたままのマシン自身である。stage
-(`~/.distsshqueue/stage/<uuid>/`) をその場で使う。待ち行列は隣に残る。
+`parent` はキューホスト自身である。stage
+(`~/.distsshqueue/stage/<uuid>/`) をその場で使う。キューの表は隣に残る。
 
-`child:` には待ち行列は無い。ジョブツリーはつけたままのマシンから
+`child:` にはキューの表は無い。ジョブツリーはキューホストから
 rsync し、実行前にそこで instantiate する。
 
 - `~/.distsshqueue` も `jobs.toml` も無い。
 - `qhost:` ならコピー先は `~/stage/<uuid>` でジョブごとに違う。共有
   `config.toml` に `DISTRIBUTED_REMOTE_PROJECT_ROOT` は書かない。
-- 成果物はここに残らない。つけたままのマシンへ収集する。既定 leaf は
+- 成果物はここに残らない。キューホストへ収集する。既定 leaf は
   上の `.distsshkit/<kind>/` だが、custom な `output_dir` はその先へ
   落ち、そのパスは `result_path` として残る (fetch は
   プロジェクト外でもそこを辿る)。
@@ -220,7 +224,7 @@ julia --project=. -m DistSSHQueue qhost:HOST fetch <id>  # 8文字プレフィ�
 julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
-`submit` は、`serve` が無ければつけたままのマシン上で起動する。`serve` が
+`submit` は、`serve` が無ければキューホスト上で起動する。`serve` が
 ジョブ木をそこで `Pkg.instantiate` し、`child:` には
 `setup!` を走らせる (stage で `setup` を手で打たない)。
 `:check` は `child:` で常に走る。`qhost:` の stage は `.git/`
@@ -233,7 +237,7 @@ stdout 1 行。stderr に `Queued  N` (`DISTSSHKIT_QUIET` で隠す)。
 打つ順 (マシンの準備 → submit / fetch → teardown):
 [Walkthrough](https://yamanori99.github.io/DistSSHKit.jl/dev/tutorial/queue-walkthrough/)。
 
-**つけたままのマシン** で一度だけ。`setup` は `config.toml` を書く (`env/` は作らない)。
+**キューホスト** で一度だけ。`setup` は `config.toml` を書く (`env/` は作らない)。
 既定の Julia 環境で `julia -m DistSSHQueue`。チェックアウトなら `--project=.`。
 
 ```bash

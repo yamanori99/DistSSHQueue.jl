@@ -1,6 +1,6 @@
 # [DistSSHQueue.jl](@id DistSSHQueue.jl)
 
-Leave jobs on a machine that stays on. They run one at a time. You can
+Leave jobs on a queue host. They run one at a time. You can
 submit a job, check its status, fetch a finished leaf, and cancel.
 Supported on **macOS, Linux, and WSL2 Ubuntu** (not native Windows).
 
@@ -13,8 +13,9 @@ The longer guide is the
 pkg> add DistSSHQueue
 ```
 
-Julia **1.13+**. The machine that stays on needs **`ssh`** and
-**`rsync`**. Git deploys also need **`git`**.
+Julia **1.13+**. The queue host and each client need **`ssh`** and
+**`rsync`**. A client uses them for `qhost:` submit and `fetch`.
+Git deploys also need **`git`**.
 
 ## Commands
 

@@ -12,9 +12,10 @@
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 <!-- markdownlint-enable MD013 -->
 
-DistSSHQueue leaves jobs on a machine that stays on. They run one at a
+DistSSHQueue leaves jobs on a queue host. They run one at a
 time. You can submit a job, check its status, fetch a finished leaf,
-and cancel.
+and cancel. Most people install DistSSHKit, which bundles this
+package. `pkg> add DistSSHQueue` is for using the queue on its own.
 The longer guide is the
 [DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/dev/).
 Supported on **macOS, Linux, and WSL2 Ubuntu** (not native Windows).
@@ -37,8 +38,10 @@ Or, equivalently, via the `Pkg` API:
 julia> import Pkg; Pkg.add("DistSSHQueue")
 ```
 
-The queue host also needs **`ssh`**, **`rsync`**, and (only for git
-deploys) **`git`** — `pkg> add` does not install them. Full requirements:
+The queue host needs **`ssh`**, **`rsync`**, and (only for git
+deploys) **`git`**. A client also needs **`ssh`** and **`rsync`**
+for `qhost:` submit and `fetch`. `pkg> add` does not install them.
+Full requirements:
 [Requirements](https://yamanori99.github.io/DistSSHKit.jl/dev/requirements/).
 
 For everything else, see the
@@ -52,12 +55,13 @@ For everything else, see the
   `~/.distsshqueue` and runs `serve` (a VM is fine). A machine that
   sleeps is not this box. WSL2 is a client or worker, not this role.
 - **Client** — a dev machine that submits, lists, watches, fetches, or
-  cancels. No cap. It must not be the process that farms the work.
-- **serve** — FIFO process on the machine that stays on. It starts the
+  cancels. No cap. The run does not start on a client; it starts
+  on the queue host.
+- **serve** — FIFO process on the queue host. It starts the
   job (`execute!(…; detached=true)`). Stopping it does not cancel a
   job that is already running.
 - **Workers** — where the script runs. Host tokens: `parent[:N]` on
-  the machine that stays on, `child:NAME[:N]` on SSH machines.
+  the queue host, `child:NAME[:N]` on SSH machines.
 
 ```text
   clients = dev machines (no cap)         one queue host (always on)
@@ -72,7 +76,7 @@ For everything else, see the
                                           -> workers (host tokens)
 ```
 
-`qhost:NAME` is the SSH name of the machine that stays on (same idea as
+`qhost:NAME` is the SSH name of the queue host (same idea as
 `child:NAME`, but it names that machine, not a worker). Not already
 on that box: put `qhost:HOST` on the command line.
 `DISTSSHQUEUE_HOST` alone does not hop. Already logged in there?
@@ -86,8 +90,8 @@ Host tokens, `go` / `ride` / `drive` flags, and remote setup are in the
 
 ### submit
 
-One argv, four nested pieces. `submit` leaves the job on the machine
-that stays on. After it, the line is `go` / `ride` / `drive` and the
+One argv, four nested pieces. `submit` leaves the job on the queue
+host. After it, the line is `go` / `ride` / `drive` and the
 rest. The same argv, started on this machine now, is in the
 [DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/dev/manual/).
 
@@ -107,10 +111,11 @@ julia --project=. -m DistSSHQueue [qhost:HOST] submit \
     drive parent:4 child:NAME:N SCRIPT.jl
 ```
 
-Same argv, started on this machine now:
+Same argv, started on this machine now. This env needs DistSSHRun.
+If DistSSHKit is installed, `julia -m DistSSHKit` is the same command:
 
 ```bash
-julia -m DistSSHKit drive parent:4 SCRIPT.jl
+julia -m DistSSHRun drive parent:4 SCRIPT.jl
 ```
 
 `pool:N` sits next to `submit`. It is not a host token. Full notes:
@@ -120,13 +125,13 @@ julia -m DistSSHKit drive parent:4 SCRIPT.jl
 
 `qhost:` is an SSH name, not a storage prefix.
 
-- The waiting list and job results stay on the machine that stays on.
+- The queue and job results stay on the queue host.
 - `qhost:` submit stages the client tree at
   `~/.distsshqueue/stage/<uuid>`.
 - The client keeps `.distsshqueue/tickets/<uuid>`.
 - The script owns result files.
-- The job owns the `.distsshkit/` run bundle on that machine.
-- This package owns scheduling and the fetched `.distsshqueue/` copy.
+- The run owns the `.distsshkit/` bundle on that machine.
+- The queue owns scheduling and the fetched `.distsshqueue/` copy.
 
 The stage excludes `.gitignore`, `.git/`, `.distsshkit/`, and
 `.distsshqueue/`. Details:
@@ -147,9 +152,9 @@ The stage excludes `.gitignore`, `.git/`, `.distsshkit/`, and
     .distsshkit/collect/...
 ```
 
-#### Always-on machine
+#### Queue host
 
-`~/.distsshqueue` holds the waiting list. Each `qhost:` job is a project
+`~/.distsshqueue` holds the queue. Each `qhost:` job is a project
 under `stage/<uuid>/`. `parent` runs from that stage on this box. Leave
 `DISTRIBUTED_REMOTE_PROJECT_ROOT` unset in shared config so each
 `child:` copy stays `~/stage/<uuid>`.
@@ -168,7 +173,7 @@ under `stage/<uuid>/`. `parent` runs from that stage on this box. Leave
     Project.toml        compute deps
     SCRIPT.jl
     .distsshkit/runs/<kind>/<run>/  run.toml, kit.pid, kit.result
-    .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  result_path (the job or the script picks it)
+    .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  result_path (the run or the script picks it)
     .distsshkit/setup/*.log         setup logs
 ```
 
@@ -182,17 +187,17 @@ User units (no root). Same command:
 
 #### Workers
 
-`parent` is the machine that stays on. It runs the staged tree in place
-(`~/.distsshqueue/stage/<uuid>/`). The waiting list stays next to it.
+`parent` is the queue host. It runs the staged tree in place
+(`~/.distsshqueue/stage/<uuid>/`). The queue's table stays next to it.
 
-A `child:` host has no waiting list. The job tree is rsynced there
+A `child:` host has no queue table. The job tree is rsynced there
 and instantiated before the run:
 
 - No `~/.distsshqueue`, no `jobs.toml`.
 - After `qhost:` the copy is `~/stage/<uuid>` (unique per job). Do not
   pin a shared `DISTRIBUTED_REMOTE_PROJECT_ROOT` in `config.toml`.
-- Artifacts do not stay here: results are collected back to the machine
-  that stays on. The default leaf is `.distsshkit/<kind>/` shown above; a custom
+- Artifacts do not stay here: results are collected back to the queue
+  host. The default leaf is `.distsshkit/<kind>/` shown above; a custom
   `output_dir` lands wherever it points, and that path is stored as
   `result_path` (fetch follows it, even outside the project).
 
@@ -220,7 +225,7 @@ julia --project=. -m DistSSHQueue qhost:HOST fetch <id>
 julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
-`submit` starts `serve` on the machine that stays on if none is running. `serve`
+`submit` starts `serve` on the queue host if none is running. `serve`
 instantiates the job project there and runs `setup!`
 on `child:` hosts before each job (you do not hand-run
 `setup` on the stage tree). `:check` always runs there
@@ -232,7 +237,7 @@ bare stdout line; stderr shows `Queued  N` unless `DISTSSHKIT_QUIET` is set.
 Typed path (prepare the machine → submit / fetch → teardown):
 [Walkthrough](https://yamanori99.github.io/DistSSHKit.jl/dev/tutorial/queue-walkthrough/).
 
-On the **machine that stays on** (once). `setup` writes `config.toml`, not `env/`.
+On the **queue host** (once). `setup` writes `config.toml`, not `env/`.
 From the default Julia env (`julia -m DistSSHQueue`); from a
 checkout add `--project=.`.
 
