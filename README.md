@@ -7,20 +7,21 @@
 [![Codecov](https://img.shields.io/codecov/c/github/yamanori99/DistSSHQueue.jl?style=flat-square&logo=codecov&logoColor=white)](https://codecov.io/gh/yamanori99/DistSSHQueue.jl)
 [![docs-stable](https://img.shields.io/badge/docs-stable-blue?style=flat-square&logo=gitbook&logoColor=white)](https://yamanori99.github.io/DistSSHQueue.jl/stable/)
 [![docs-dev](https://img.shields.io/badge/docs-dev-blue?style=flat-square&logo=gitbook&logoColor=white)](https://yamanori99.github.io/DistSSHQueue.jl/dev/)
-[![Julia 1.13+](https://img.shields.io/badge/Julia-1.13+-9558B2?style=flat-square&logo=julia&logoColor=white)](https://yamanori99.github.io/DistSSHQueue.jl/stable/requirements/)
+[![Julia 1.13+](https://img.shields.io/badge/Julia-1.13+-9558B2?style=flat-square&logo=julia&logoColor=white)](https://yamanori99.github.io/DistSSHKit.jl/stable/requirements/)
 [![code style: runic](https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black)](https://github.com/fredrikekre/Runic.jl)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 <!-- markdownlint-enable MD013 -->
 
-DistSSHQueue runs jobs one after another on machines that several
-people share. You can submit a job, check its status, fetch a finished
-leaf, and cancel.
-[DistSSHRun](https://github.com/yamanori99/DistSSHRun.jl) does the run.
+DistSSHQueue leaves jobs on a machine that stays on. They run one at a
+time. You can submit a job, check its status, fetch a finished leaf,
+and cancel.
+The longer guide is the
+[DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/stable/).
 Supported on **macOS, Linux, and WSL2 Ubuntu** (not native Windows).
 
 Even small labs and individuals can keep one always-on machine, add
 SSH hosts, and use them together as a small set of compute nodes.
-Julia **1.13+**, DistSSHRun **0.1**.
+Julia **1.13+**.
 
 ## Install
 
@@ -38,7 +39,7 @@ julia> import Pkg; Pkg.add("DistSSHQueue")
 
 The queue host also needs **`ssh`**, **`rsync`**, and (only for git
 deploys) **`git`** — `pkg> add` does not install them. Full requirements:
-[Requirements](https://yamanori99.github.io/DistSSHQueue.jl/stable/requirements/).
+[Requirements](https://yamanori99.github.io/DistSSHKit.jl/stable/requirements/).
 
 For everything else, see the
 **[Documentation](https://yamanori99.github.io/DistSSHQueue.jl/stable/)**.
@@ -51,49 +52,48 @@ For everything else, see the
   `~/.distsshqueue` and runs `serve` (a VM is fine). A machine that
   sleeps is not this box. WSL2 is a client or worker, not this role.
 - **Client** — a dev machine that submits, lists, watches, fetches, or
-  cancels. No cap. It must not become the Kit master.
-- **serve** — FIFO process on the queue host. It starts DistSSHKit
-  (`execute!(…; detached=true)`). Stopping it does not cancel a
-  Kit job that is already running.
-- **Workers** — where the script runs. DistSSHKit tokens: `parent[:N]` on
-  the queue host, `child:NAME[:N]` on SSH machines.
+  cancels. No cap. It must not be the process that farms the work.
+- **serve** — FIFO process on the machine that stays on. It starts the
+  job (`execute!(…; detached=true)`). Stopping it does not cancel a
+  job that is already running.
+- **Workers** — where the script runs. Host tokens: `parent[:N]` on
+  the machine that stays on, `child:NAME[:N]` on SSH machines.
 
 ```text
   clients = dev machines (no cap)         one queue host (always on)
   -------------------------------         --------------------------
-  yours / a colleague's / ...             FIFO     one Kit job at a time
+  yours / a colleague's / ...             FIFO     one job at a time
        |                                  table    ~/.distsshqueue
        |  julia -m DistSSHQueue           add-host / remove-host
        |    qhost:NAME                    serve    now, this terminal
        |    submit | status | list-host   enable   again after reboot
        |    watch | cancel | fetch | ...
-       +--------------------------------> then DistSSHKit go/ride/drive
-                                          -> workers (Kit tokens)
+       +--------------------------------> then go / ride / drive
+                                          -> workers (host tokens)
 ```
 
-`qhost:NAME` is the SSH name of the queue host (same idea as Kit
-`child:NAME`, but it names the queue host, not a worker). Not already
+`qhost:NAME` is the SSH name of the machine that stays on (same idea as
+`child:NAME`, but it names that machine, not a worker). Not already
 on that box: put `qhost:HOST` on the command line.
-`DISTSSHQUEUE_HOST` alone does not hop. Already logged in on the queue
-host? Omit `qhost:` (this box's cwd is the Kit tree; placement is still
+`DISTSSHQUEUE_HOST` alone does not hop. Already logged in there?
+Omit `qhost:` (this box's cwd is the job tree; placement is still
 `parent` / `child:`). Local trial:
-`DISTSSHQUEUE_LOCAL=1`. `--hosts` / `--julia` stay on Kit `go` /
+`DISTSSHQUEUE_LOCAL=1`. `--hosts` / `--julia` stay on `go` /
 `ride` / `drive`.
 
-Placement tokens, `go` / `ride` / `drive` flags, and remote setup are
-DistSSHKit's — see the
-[kit docs](https://yamanori99.github.io/DistSSHKit.jl/stable/).
+Host tokens, `go` / `ride` / `drive` flags, and remote setup are in the
+[DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/stable/).
 
 ### submit
 
-One argv, four nested pieces. `submit` is Queue. After it, the line is
-DistSSHKit argv (`go` / `ride` / `drive` and the rest) and runs as-is
-with `-m DistSSHRun` (no Queue). That Kit command starts compute on
-**this** machine now; `submit` only enqueues the same argv.
+One argv, four nested pieces. `submit` leaves the job on the machine
+that stays on. After it, the line is `go` / `ride` / `drive` and the
+rest. The same argv, started on this machine now, is in the
+[DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/).
 
 ```bash
 julia --project=. -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
-#──────────── Julia ────────────┘  └─ qhost ──┘  Queue   └─── DistSSHKit argv ────┘
+#──────────── Julia ────────────┘  └─ qhost ──┘  submit  └── go / ride / drive ──┘
 ```
 
 ```bash
@@ -107,30 +107,30 @@ julia --project=. -m DistSSHQueue [qhost:HOST] submit \
     drive parent:4 child:NAME:N SCRIPT.jl
 ```
 
-Same DistSSHKit argv, no queue:
+Same argv, started on this machine now:
 
 ```bash
-julia --project=. -m DistSSHRun drive parent:4 SCRIPT.jl
+julia -m DistSSHKit drive parent:4 SCRIPT.jl
 ```
 
-`pool:N` is Queue (next to `submit`), not a Kit token. Full notes:
-[submit](https://yamanori99.github.io/DistSSHQueue.jl/stable/manual/submit/).
+`pool:N` sits next to `submit`. It is not a host token. Full notes:
+[submit](https://yamanori99.github.io/DistSSHKit.jl/stable/queue/submit/).
 
 ### Where files live
 
 `qhost:` is an SSH name, not a storage prefix.
 
-- The queue table and Kit results stay on the queue host.
+- The waiting list and job results stay on the machine that stays on.
 - `qhost:` submit stages the client tree at
   `~/.distsshqueue/stage/<uuid>`.
 - The client keeps `.distsshqueue/tickets/<uuid>`.
 - The script owns result files.
-- Kit owns the queue-host `.distsshkit/` run bundle.
-- Queue owns scheduling and the fetched `.distsshqueue/` copy.
+- The job owns the `.distsshkit/` run bundle on that machine.
+- This package owns scheduling and the fetched `.distsshqueue/` copy.
 
 The stage excludes `.gitignore`, `.git/`, `.distsshkit/`, and
 `.distsshqueue/`. Details:
-[Artifacts and paths](https://yamanori99.github.io/DistSSHQueue.jl/stable/manual/artifacts/).
+[Artifacts and paths](https://yamanori99.github.io/DistSSHKit.jl/stable/queue/artifacts/).
 
 #### Client
 
@@ -147,9 +147,9 @@ The stage excludes `.gitignore`, `.git/`, `.distsshkit/`, and
     .distsshkit/collect/...
 ```
 
-#### Queue host
+#### Always-on machine
 
-`~/.distsshqueue` holds Queue state. Each `qhost:` job is a Kit project
+`~/.distsshqueue` holds the waiting list. Each `qhost:` job is a project
 under `stage/<uuid>/`. `parent` runs from that stage on this box. Leave
 `DISTRIBUTED_REMOTE_PROJECT_ROOT` unset in shared config so each
 `child:` copy stays `~/stage/<uuid>`.
@@ -168,8 +168,8 @@ under `stage/<uuid>/`. `parent` runs from that stage on this box. Leave
     Project.toml        compute deps
     SCRIPT.jl
     .distsshkit/runs/<kind>/<run>/  run.toml, kit.pid, kit.result
-    .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  result_path (Kit/script picks it)
-    .distsshkit/setup/*.log         Kit setup logs
+    .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  result_path (the job or the script picks it)
+    .distsshkit/setup/*.log         setup logs
 ```
 
 `enable` (optional; skip if you only `serve` in a terminal):
@@ -182,18 +182,18 @@ User units (no root). Same command:
 
 #### Workers
 
-`parent` is the queue host. It runs the staged tree in place
-(`~/.distsshqueue/stage/<uuid>/`). Queue state stays next to it.
+`parent` is the machine that stays on. It runs the staged tree in place
+(`~/.distsshqueue/stage/<uuid>/`). The waiting list stays next to it.
 
-A `child:` host has no Queue state. Kit rsyncs the job project there
-and instantiates it before the run:
+A `child:` host has no waiting list. The job tree is rsynced there
+and instantiated before the run:
 
 - No `~/.distsshqueue`, no `jobs.toml`.
 - After `qhost:` the copy is `~/stage/<uuid>` (unique per job). Do not
   pin a shared `DISTRIBUTED_REMOTE_PROJECT_ROOT` in `config.toml`.
-- Artifacts do not stay here: Kit collects results back to the queue
-  host. The default leaf is `.distsshkit/<kind>/` shown above; a custom
-  Kit `output_dir` lands wherever it points, and Queue persists that as
+- Artifacts do not stay here: results are collected back to the machine
+  that stays on. The default leaf is `.distsshkit/<kind>/` shown above; a custom
+  `output_dir` lands wherever it points, and that path is stored as
   `result_path` (fetch follows it, even outside the project).
 
 ```text
@@ -205,7 +205,7 @@ and instantiates it before the run:
 
 ### Examples
 
-From a **client** (job directory; Queue must be loadable from that env):
+From a **client** (job directory; this package must be loadable from that env):
 
 ```bash
 julia --project=. -m DistSSHQueue qhost:HOST list-host
@@ -220,20 +220,20 @@ julia --project=. -m DistSSHQueue qhost:HOST fetch <id>
 julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
-`submit` starts `serve` on the queue host if none is running. `serve`
-instantiates the job project on the queue host and runs Kit `setup!`
-on `child:` hosts before each job (you do not hand-run DistSSHKit
-`setup` on the stage tree). Kit `:check` always runs there
-(DistSSHKit **0.7.3+** warns if a `qhost:` stage has no `.git/`). Job ids are a
+`submit` starts `serve` on the machine that stays on if none is running. `serve`
+instantiates the job project there and runs `setup!`
+on `child:` hosts before each job (you do not hand-run
+`setup` on the stage tree). `:check` always runs there
+(a `qhost:` stage with no `.git/` warns). Job ids are a
 bare stdout line; stderr shows `Queued  N` unless `DISTSSHKIT_QUIET` is set.
 `fetch` copies the finished result to
 `.distsshqueue/<kind>/<stem>_<id8>/` in this job tree.
 
-Typed path (queue host → submit / fetch → teardown):
-[Walkthrough](https://yamanori99.github.io/DistSSHQueue.jl/stable/tutorial/walkthrough/).
+Typed path (prepare the machine → submit / fetch → teardown):
+[Walkthrough](https://yamanori99.github.io/DistSSHKit.jl/stable/tutorial/queue-walkthrough/).
 
-On the **queue host** (once). `setup` writes `config.toml`, not `env/`.
-Queue in the default Julia env (`julia -m DistSSHQueue`); from a
+On the **machine that stays on** (once). `setup` writes `config.toml`, not `env/`.
+From the default Julia env (`julia -m DistSSHQueue`); from a
 checkout add `--project=.`.
 
 ```bash
@@ -246,16 +246,14 @@ julia -m DistSSHQueue serve
 for the remote default env). `enable` uses that dir if present.
 `setup` / `serve` / `enable` / `disable` / `add-host` / `remove-host`
 refuse `qhost:`. Command reference:
-[User Guide](https://yamanori99.github.io/DistSSHQueue.jl/stable/manual/).
+[How it runs](https://yamanori99.github.io/DistSSHKit.jl/stable/queue/).
 
 ## Documentation
 
-- Introduction:
-  [Introduction](https://yamanori99.github.io/DistSSHQueue.jl/stable/)
-- First Steps:
-  [First Steps](https://yamanori99.github.io/DistSSHQueue.jl/stable/requirements/)
-- User Guide:
-  [User Guide](https://yamanori99.github.io/DistSSHQueue.jl/stable/manual/)
+- Home:
+  [Home](https://yamanori99.github.io/DistSSHQueue.jl/stable/)
+- Manual:
+  [DistSSHKit](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/)
 - API: [API](https://yamanori99.github.io/DistSSHQueue.jl/stable/api/)
 - News: [NEWS.md](NEWS.md)
 

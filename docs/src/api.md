@@ -6,12 +6,13 @@ CurrentModule = DistSSHQueue
 
 Julia entry points when you embed DistSSHQueue. Day-to-day work stays
 on the CLI (`julia --project=. -m DistSSHQueue …`); see
-[Introduction](@ref DistSSHQueue.jl),
-[First Steps](@ref Tutorial-Walkthrough), and the [User Guide](@ref Manual).
+[Home](@ref DistSSHQueue.jl).
+The longer guide is the
+[DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/stable/).
 REPL help also works (`?DistSSHQueue.submit!`).
 
 Submitters `using DistSSHQueue`. Queue-host code `using DistSSHKit`.
-Job files for Kit `go` / `ride` still do not import DistSSHKit.
+Job files for `go` / `ride` still do not call DistSSHKit.
 
 Prefer the CLI. From a client: `qhost:HOST` on the command line (not
 `--hosts`). `DISTSSHQUEUE_HOST` alone does not hop. CLI `submit` uses `follow_config`; library
@@ -37,7 +38,7 @@ Job
 
 `Job` persists the artifact-related fields used by cancel and fetch.
 Their ownership and fallback order are described in
-[Artifacts and paths](@ref Manual-artifacts).
+[Artifacts and paths](https://yamanori99.github.io/DistSSHKit.jl/stable/queue/artifacts/).
 
 ## Enqueue and cancel
 
