@@ -28,7 +28,6 @@ makedocs(;
         "API" => "api.md",
     ],
     checkdocs = :none,
-    warnonly = [:missing_docs, :docs_block, :cross_references],
 )
 
 function rewrite_favicon_types!(build)
