@@ -123,9 +123,9 @@ When a new RC of the floor's minor lands, point **1.13** jobs at `~1.13.0-0` so 
 These run as jobs of the `Test` workflow
 ([`.github/workflows/CI.yml`](.github/workflows/CI.yml)). Ubuntu:
 `Pkg.test` 1.13, JETLS 1.13, Aqua 1.13, Gitleaks
-(also rejects `< 0.0.1` in `Project.toml`). macOS (`macos-latest`):
-`Pkg.test` 1.13, same heavy gate, no coverage upload. That job runs
-`enable --write-only` on LaunchAgent. It is not a required check.
+(also rejects `< 0.0.1` in `Project.toml`). macOS (`macos-latest`) and
+WSL2 Ubuntu 24.04: `Pkg.test` 1.13, same heavy gate, no coverage upload.
+macOS runs `enable --write-only` on LaunchAgent. Both are required.
 Documenter 1.13 is
 [`.github/workflows/Documentation.yml`](.github/workflows/Documentation.yml).
 `Assets` (`draw SVG`) runs if `docs/src/assets/` or that workflow
@@ -134,7 +134,8 @@ changed. Linux E2E (1.13) uses the same **path filter** as **main** push
 `Project.toml`, `test/Project.toml`, `.github/workflows/CI.yml`). It also
 runs on a **version increase**, **E2E weekly** (`ssh-e2e-weekly.yml`; `CI.yml` has no
 `schedule`), and `workflow_dispatch`. **1.14-nightly** `Pkg.test` / Aqua
-stay on **main**, **CI weekly**, and a version increase, not ordinary PRs. Registry tree stays on **main**
+stay on **main**, **CI weekly**, and a version increase, on Ubuntu,
+macOS, and WSL2, not ordinary PRs. Registry tree stays on **main**
 and a version increase, not ordinary PRs.
 
 [Runic](https://github.com/fredrikekre/Runic.jl) is a separate light
@@ -143,8 +144,9 @@ It is not a substitute for `Pkg.test`. Soft on PRs (not in the
 required-name list). Monthly cron on `main` opens Issue
 `Runic monthly failed` (`alert`) when `--check` is red.
 
-These files **alone** skip the heavy jobs (UI: skipping; Pkg.test /
-JETLS / Aqua do not start). Documenter still runs when `docs/**`, README,
+These files **alone** skip the heavy jobs (UI: skipping; Pkg.test on
+Ubuntu, macOS, and WSL2, plus JETLS / Aqua, do not start). Documenter
+still runs when `docs/**`, README,
 `src/**`, or `Project.toml` changed; otherwise it is skipped too.
 Linux E2E is skipped on allowlisted markdown-only PRs (same skipping UI):
 
@@ -156,9 +158,9 @@ Linux E2E is skipped on allowlisted markdown-only PRs (same skipping UI):
 
 A new root markdown file stays heavy until listed in
 [`.github/actions/ci-heavy/action.yml`](.github/actions/ci-heavy/action.yml).
-A `Project.toml` version increase skips none of this: Pkg.test, JETLS, Aqua, Documenter,
-and Linux E2E all run (E2E Codecov too). macOS and WSL SSH E2E stay on
-`E2E weekly`, not the PR. `Pkg.test` 1.13 also runs on `macos-latest`.
+A `Project.toml` version increase skips none of this: Pkg.test (Ubuntu,
+macOS, and WSL2), JETLS, Aqua, Documenter, and Linux E2E all run (E2E
+Codecov too). macOS and WSL SSH E2E stay on `E2E weekly`, not the PR.
 Register when the required checks below are green. Intel / WSL weekly are
 watchers, not the register gate.
 
@@ -171,10 +173,12 @@ DISTSSHQUEUE_CODE_COVERAGE=1 ./testenv/docker-ssh/scripts/up.sh --e2e
 
 Required to merge (ruleset `main` uses these names). **1.14-nightly** jobs are allow-failure. A job skipped by the heavy / E2E gate shows as skipping (not a green empty run). Nightly runs on **main**, weekly, and a version increase, not ordinary PRs. E2E weekly and CI weekly are not required.
 
-- `Pkg.test - 1.13 - ubuntu-latest`
-- `JETLS - 1.13 - ubuntu-latest`
-- `Aqua - 1.13 - ubuntu-latest`
-- `Documenter - 1.13 - ubuntu-latest`
+- `Pkg.test (1.13, ubuntu-latest, x64)`
+- `Pkg.test (1.13, macos-latest, aarch64)`
+- `Pkg.test (1.13, WSL2 ubuntu-24.04, x64)`
+- `JETLS (1.13, ubuntu-latest, x64)`
+- `Aqua (1.13, ubuntu-latest, x64)`
+- `Documenter (1.13, ubuntu-latest, x64)`
 - `Gitleaks`
 - `ubuntu-latest → ubuntu-24.04`
 - `PR label`
@@ -182,7 +186,7 @@ Required to merge (ruleset `main` uses these names). **1.14-nightly** jobs are a
 | When | Workflow | What |
 | --- | --- | --- |
 | Sunday 04:00 JST, Run workflow, or a version-increase squash to `main` | `E2E weekly` | `ubuntu-latest`, `macos-15-intel`, WSL2 → `ubuntu-24.04`. Linux job uploads E2E Codecov. Not a PR check. Failure opens (or comments on) Issue `E2E weekly failed`; a later all-green run closes it. A red **Linux** job after a `cut` merge adds `cut-hold`. Intel / WSL red does not. Compat-only `Project.toml` edits start the workflow but skip the matrix. |
-| Sunday 10:00 JST, or Run workflow | `CI weekly` | Same `Pkg.test` / JETLS / Aqua versions as a PR, including `macos-latest` (no coverage). Not a PR check. Catches 1.13 / Aqua / JETLS `@release` drift when nothing merged that week. Failure of the 1.13 jobs opens Issue `CI weekly failed` (`alert`); 1.14-nightly is omitted from that notify. `cache-gc` keeps one Actions cache per restore-key prefix. |
+| Sunday 10:00 JST, or Run workflow | `CI weekly` | Same `Pkg.test` / JETLS / Aqua versions as a PR, including `macos-latest` and WSL2 (no coverage). Not a PR check. Catches 1.13 / Aqua / JETLS `@release` drift when nothing merged that week. Failure of the 1.13 jobs opens Issue `CI weekly failed` (`alert`); 1.14-nightly is omitted from that notify. `cache-gc` keeps one Actions cache per restore-key prefix. |
 | 1st 10:00 JST, or Run workflow | `Runic` | `runic --check` on tracked `.jl` (`version: '1'`). Not a required PR check. Catches Runic minor drift when nothing formatted that month. Failure opens Issue `Runic monthly failed` (`alert`). |
 
 ## Pull requests
