@@ -31,8 +31,12 @@ rm -rf "$dest"
 git config --global --add safe.directory '*'
 git clone "$src" "$dest"
 if [[ -f "$cache/julia.tgz" ]]; then
+  rm -rf "$HOME/.juliaup" "$HOME/.julia"
   tar -xzf "$cache/julia.tgz" -C "$HOME"
-else
+fi
+# A tarball packed from /root does not yield an executable julia in /home/ci.
+if [[ ! -x "$HOME/.juliaup/bin/julia" ]]; then
+  rm -rf "$HOME/.juliaup" "$HOME/.julia"
   curl --retry 5 --retry-delay 5 --retry-connrefused --connect-timeout 10 \
     -fsSL https://install.julialang.org | sh -s -- --yes --default-channel "$channel"
 fi
