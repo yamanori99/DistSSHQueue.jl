@@ -3,7 +3,7 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
-## Unreleased
+## 0.9.4
 
 - Opening a store lock pid no longer fails the job when that lock directory disappears between the check and the open. The waiter retries.
 - `-v` prints two lines: DistSSHQueue, then DistSSHRun.
