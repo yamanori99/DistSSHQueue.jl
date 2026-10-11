@@ -5,6 +5,7 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## 0.9.4
 
+- Opening a store lock pid no longer fails the job when that lock directory disappears between the check and the open. The waiter retries.
 - `-v` prints two lines: DistSSHQueue, then DistSSHRun.
 - `qhost:` rejects an SSH name that starts with `-`. `ssh` places `--` before the host.
 - `teardown` deletes when every existing path is passed with `--confirm-path`. Without that it prints `Would remove` and exits 0. Each path is single-quoted. `-y` and `DISTSSHKIT_YES` (process or config `[env]`) still delete. That skip stops in 0.10. `up default` still honors `DISTSSHKIT_YES`.
