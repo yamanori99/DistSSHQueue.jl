@@ -789,6 +789,30 @@ end
     end
 end
 
+@testset "store lock pid disappears while it is opened" begin
+    mktempdir() do d
+        lockdir = joinpath(d, "jobs.toml.lock")
+        stop = Threads.Atomic{Int}(0)
+        reader = Threads.@spawn begin
+            while stop[] == 0
+                DistSSHQueue._read_lock_pid(lockdir)
+                DistSSHQueue._store_lock_stale(lockdir)
+                yield()
+            end
+            return nothing
+        end
+        for _ in 1:5000
+            mkpath(lockdir)
+            write(joinpath(lockdir, "pid"), "1")
+            rm(lockdir; force = true, recursive = true)
+        end
+        Threads.atomic_xchg!(stop, 1)
+        wait(reader)
+        @test DistSSHQueue._read_lock_pid(lockdir) === nothing
+        @test !DistSSHQueue._store_lock_stale(lockdir)
+    end
+end
+
 @testset "save_jobs replaces the file" begin
     mktempdir() do d
         store = joinpath(d, "jobs.toml")
