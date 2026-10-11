@@ -1028,7 +1028,7 @@ end
                 queue_h = sprint(io -> DistSSHQueue.print_queue_usage(io; topic = "qhost"))
                 qv = string(pkgversion(DistSSHQueue))
                 kv = string(DistSSHRun.dist_ssh_kit_version())
-                @test occursin("DistSSHQueue $(qv) (DistSSHRun $(kv))", help)
+                @test occursin("DistSSHQueue $(qv)\nDistSSHRun $(kv)", help)
                 @test !occursin("DistSSHQueue $(qv)", client_h)
                 @test occursin("Usage", help)
                 @test occursin("  --help client", help)
@@ -1176,8 +1176,9 @@ end
                     end
                     @test code_v == 0
                     lines = split(strip(out_v), '\n')
-                    @test length(lines) == 1
-                    @test lines[1] == "DistSSHQueue $(qv) (DistSSHRun $(kv))"
+                    @test length(lines) == 2
+                    @test lines[1] == "DistSSHQueue $(qv)"
+                    @test lines[2] == "DistSSHRun $(kv)"
                 end
                 code_qv, out_qv, _ = capture_stdio() do
                     DistSSHQueue.main(["qhost:no-such-host", "--version"])
@@ -2362,6 +2363,19 @@ end
     @test DistSSHQueue.queue_version_skew_warning(
         "DistSSHQueue 0.6.0";
         local_ver = v"0.6.0",
+    ) === nothing
+    two = DistSSHQueue.queue_version_skew_warning(
+        "DistSSHQueue 0.0.1\nDistSSHRun 0.1.5";
+        local_ver = v"0.6.0",
+    )
+    if two === nothing
+        @test false
+    else
+        @test two.kit == "0.1.5"
+        @test two.kit_name == "DistSSHRun"
+    end
+    @test DistSSHQueue.queue_version_skew_warning(
+        "DistSSHQueue $(pkgversion(DistSSHQueue))\nDistSSHRun 0.1.5",
     ) === nothing
 end
 
