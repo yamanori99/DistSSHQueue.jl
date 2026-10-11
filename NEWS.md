@@ -13,6 +13,12 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
   still honors `DISTSSHKIT_YES` from the config file.
 - Config `[env]` does not set `DISTSSHKIT_TEST`, `DISTSSHKIT_TEST_*`, or
   `DISTSSHQUEUE_TEST_PIDS`.
+- `DISTRIBUTED_SSH_OPTS` is split with shell quoting. A quoted value that
+  contains spaces stays one argument. An unmatched quote is an error. A
+  non-empty value still replaces the default options.
+- A leftover `jobs.toml.lock` is taken when its pid is dead, or when it has no
+  pid and is older than 30 seconds. A live pid is left alone. `jobs.toml` is
+  written to a temporary file and then renamed into place.
 
 ## 0.9.3
 

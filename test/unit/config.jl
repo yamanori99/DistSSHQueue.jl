@@ -692,3 +692,56 @@ end
         @test ispath(data)
     end
 end
+
+@testset "ssh_opts keeps a quoted path" begin
+    withenv("DISTRIBUTED_SSH_OPTS" => "-F \"/tmp/cfg dir/config\" -o BatchMode=yes") do
+        @test DistSSHQueue.ssh_opts() == ["-F", "/tmp/cfg dir/config", "-o", "BatchMode=yes"]
+    end
+    withenv("DISTRIBUTED_SSH_OPTS" => "-F \"unterminated") do
+        @test_throws ArgumentError DistSSHQueue.ssh_opts()
+    end
+    withenv("DISTRIBUTED_SSH_OPTS" => nothing) do
+        @test "BatchMode=yes" in DistSSHQueue.ssh_opts()
+    end
+end
+
+@testset "stale store lock" begin
+    mktempdir() do d
+        store = joinpath(d, "jobs.toml")
+        lockdir = store * ".lock"
+        mkdir(lockdir)
+        @test !DistSSHQueue._store_lock_stale(lockdir)
+        @test !DistSSHQueue._store_lock_stale(lockdir; now = mtime(lockdir) + DistSSHQueue._STORE_LOCK_STALE_SEC)
+        @test DistSSHQueue._store_lock_stale(lockdir; now = mtime(lockdir) + DistSSHQueue._STORE_LOCK_STALE_SEC + 0.01)
+        write(joinpath(lockdir, "pid"), string(getpid()))
+        @test !DistSSHQueue._store_lock_stale(lockdir)
+        write(joinpath(lockdir, "pid"), "999999999")
+        @test DistSSHQueue._store_lock_stale(lockdir)
+        ran = Ref(false)
+        DistSSHQueue.with_store_lock(store) do
+            ran[] = true
+            @test read(joinpath(lockdir, "pid"), String) == string(getpid())
+        end
+        @test ran[]
+        @test !isdir(lockdir)
+    end
+end
+
+@testset "save_jobs replaces the file" begin
+    mktempdir() do d
+        store = joinpath(d, "jobs.toml")
+        j = DistSSHQueue.Job(;
+            id = "aaaaaaaa-4444-4000-8000-000000000004",
+            kind = :go,
+            script = joinpath(d, "S.jl"),
+            hosts = ["parent:1"],
+            state = :queued,
+        )
+        DistSSHQueue.save_jobs(store, [j])
+        @test !any(n -> occursin(".tmp.", n), readdir(d))
+        jobs = DistSSHQueue.read_jobs(store)
+        @test length(jobs) == 1
+        @test jobs[1].id == j.id
+        @test jobs[1].script == j.script
+    end
+end
