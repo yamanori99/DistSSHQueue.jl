@@ -146,12 +146,13 @@ function write_pid_file(store::AbstractString)
     return nothing
 end
 
-"""If tests set `DISTSSHQUEUE_TEST_PIDS`, append this serve pid.
+"""If tests set `DISTSSHQUEUE_TEST_PIDS` and `DISTSSHKIT_TEST=1`, append this serve pid.
 
 Harness `atexit` / parent-death reaper reads that list. Production leaves the
 env unset, so this is a no-op.
 """
 function record_test_serve_pid!(pid::Integer)
+    _test_doubles_on() || return nothing
     path = String(get(ENV, "DISTSSHQUEUE_TEST_PIDS", ""))
     isempty(path) && return nothing
     try

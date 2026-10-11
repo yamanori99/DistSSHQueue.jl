@@ -85,7 +85,11 @@ end
         store = joinpath(d, "jobs.toml")
         list = joinpath(d, "pids")
         write(list, "")
-        withenv("DISTSSHQUEUE_TEST_PIDS" => list) do
+        withenv("DISTSSHKIT_TEST" => nothing, "DISTSSHQUEUE_TEST_PIDS" => list) do
+            DistSSHQueue.write_pid_file(store)
+        end
+        @test !occursin(string(getpid()), read(list, String))
+        withenv("DISTSSHKIT_TEST" => "1", "DISTSSHQUEUE_TEST_PIDS" => list) do
             DistSSHQueue.write_pid_file(store)
         end
         @test occursin(string(getpid()), read(list, String))
@@ -621,7 +625,7 @@ end
     end
 end
 
-@testset "teardown DISTSSHKIT_YES from target config [env]" begin
+@testset "teardown ignores DISTSSHKIT_YES from target config [env]" begin
     mktempdir() do home
         data = joinpath(home, ".distsshqueue")
         mkpath(data)
@@ -634,11 +638,57 @@ end
             "DISTSSHQUEUE_STORE" => nothing,
             "DISTSSHKIT_YES" => nothing,
         ) do
-            code, _, _ = capture_stdio() do
+            code, out, err = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "--write-only"])
             end
             @test code == 0
+            @test occursin("Pass -y / --yes to delete", out * err)
         end
-        @test !ispath(data)
+        @test ispath(data)
+    end
+end
+
+@testset "teardown CLI ignores config YES and does not import test hooks" begin
+    mktempdir() do home
+        data = joinpath(home, ".distsshqueue")
+        mkpath(data)
+        cfg = joinpath(data, "config.toml")
+        store = joinpath(data, "jobs.toml")
+        write(
+            cfg,
+            "store = $(repr(store))\n\n[env]\nDISTSSHKIT_YES = \"1\"\n" *
+                "DISTSSHKIT_TEST = \"1\"\nDISTSSHKIT_TEST_SSH = \"/tmp/not-ssh.jl\"\n" *
+                "DISTSSHQUEUE_TEST_PIDS = \"/tmp/not-pids\"\n",
+        )
+        write(store, "jobs = []\n")
+        try
+            withenv(
+                "HOME" => home,
+                "DISTSSHQUEUE_CONFIG" => nothing,
+                "DISTSSHQUEUE_STORE" => nothing,
+                "DISTSSHKIT_YES" => nothing,
+                "DISTSSHKIT_TEST" => nothing,
+                "DISTSSHKIT_TEST_SSH" => nothing,
+                "DISTSSHQUEUE_TEST_PIDS" => nothing,
+            ) do
+                code, out, err = capture_stdio() do
+                    DistSSHQueue._main(["teardown", "--write-only"])
+                end
+                @test code == 0
+                @test occursin("Pass -y / --yes to delete", out * err)
+                @test get(ENV, "DISTSSHKIT_YES", "") == "1"
+                @test get(ENV, "DISTSSHKIT_TEST", "") == ""
+                @test get(ENV, "DISTSSHKIT_TEST_SSH", "") == ""
+                @test get(ENV, "DISTSSHQUEUE_TEST_PIDS", "") == ""
+                code2, out2, err2 = capture_stdio() do
+                    DistSSHQueue._main(["teardown", "--write-only"])
+                end
+                @test code2 == 0
+                @test occursin("Pass -y / --yes to delete", out2 * err2)
+            end
+        finally
+            DistSSHQueue._forget_absent_config_env!()
+        end
+        @test ispath(data)
     end
 end

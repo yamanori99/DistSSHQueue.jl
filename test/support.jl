@@ -43,6 +43,7 @@ function install_serve_reaper!()
     Sys.iswindows() && return nothing
     tag = "distsshqueue-$(getpid())-$(time_ns())"
     ENV["DISTSSHQUEUE_SERVE_TAG"] = tag
+    ENV["DISTSSHKIT_TEST"] = "1"
     pids = tempname()
     ENV["DISTSSHQUEUE_TEST_PIDS"] = pids
     write(pids, "")

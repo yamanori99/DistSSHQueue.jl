@@ -90,6 +90,8 @@ function main(args::Vector{String} = copy(ARGS))::Cint
 end
 
 function _main(args::Vector{String})::Cint
+    # teardown YES is the process value. Config `[env]` is applied below.
+    process_yes = teardown_yes()
     apply_config_env!(load_config())
     try
         qhost, gjulia, gqenv, after, explicit = extract_remote_opts(args)
@@ -175,7 +177,7 @@ function _main(args::Vector{String})::Cint
         elseif sub == "teardown"
             r = maybe_remote(hop, gjulia, "teardown", rest; queue_env = gqenv, explicit = explicit)
             r === nothing || return r
-            return teardown_main(_rest())
+            return teardown_main(_rest(); process_yes = process_yes)
         elseif sub == "enable"
             return enable_main(rest)
         elseif sub == "disable"

@@ -20,13 +20,40 @@ function load_config(; path::Union{Nothing, AbstractString} = nothing)::Dict{Str
     return Dict{String, Any}(String(k) => v for (k, v) in raw)
 end
 
+"""Test hooks stay out of config `[env]`. `DISTSSHKIT_YES` still applies (`up default`)."""
+function _config_env_skipped(key::AbstractString)::Bool
+    k = String(key)
+    return k == "DISTSSHKIT_TEST" || startswith(k, "DISTSSHKIT_TEST_") || k == "DISTSSHQUEUE_TEST_PIDS"
+end
+
+# Keys this process inserted from config `[env]`. A later `teardown` does not
+# treat those as process YES. `up default` still reads `ENV`.
+const _config_env_set = Set{String}()
+
+function _forget_absent_config_env!()
+    for key in collect(_config_env_set)
+        haskey(ENV, key) || delete!(_config_env_set, key)
+    end
+    return nothing
+end
+
+function _yes_from_config()::Bool
+    _forget_absent_config_env!()
+    return "DISTSSHKIT_YES" in _config_env_set
+end
+
 """Apply `cfg["env"]` into `ENV` without overwriting keys already set."""
 function apply_config_env!(cfg::AbstractDict)
+    _forget_absent_config_env!()
     env = get(cfg, "env", nothing)
     env isa AbstractDict || return nothing
     for (k, v) in env
         v === nothing && continue
-        get!(ENV, String(k), v isa AbstractString ? String(v) : string(v))
+        key = String(k)
+        _config_env_skipped(key) && continue
+        haskey(ENV, key) && continue
+        ENV[key] = v isa AbstractString ? String(v) : string(v)
+        push!(_config_env_set, key)
     end
     return nothing
 end
