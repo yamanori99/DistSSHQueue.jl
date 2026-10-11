@@ -1,7 +1,7 @@
 name = "DistSSHQueue"
 uuid = "24254401-70d8-4a51-8ea4-cfab19f5bc73"
 license = "MIT"
-version = "0.9.3"
+version = "0.9.4"
 authors = ["Yamamoto, Takanori <takanori.yamamoto.99@gmail.com>", "Ampuku, Honoka <ampk.hono@gmail.com>"]
 
 [workspace]
@@ -16,7 +16,7 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
 Dates = "1.11"
-DistSSHRun = "0.1.2"
+DistSSHRun = "0.1.6"
 Pkg = "1.13"
 SHA = "1"
 TOML = "1"

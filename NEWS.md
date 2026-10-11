@@ -3,7 +3,7 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
-## Unreleased
+## 0.9.4
 
 - `-v` prints two lines: DistSSHQueue, then DistSSHRun.
 - `qhost:` rejects an SSH name that starts with `-`. `ssh` places `--` before the host.
