@@ -16,6 +16,9 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 - `DISTRIBUTED_SSH_OPTS` is split with shell quoting. A quoted value that
   contains spaces stays one argument. An unmatched quote is an error. A
   non-empty value still replaces the default options.
+- `detect_julia_path` throws when the SSH connection itself fails. That
+  failure is not cached. A host whose shell ran and has no Julia still
+  returns nothing.
 - Client rsync `-e` quotes each SSH option, so a path with spaces stays one
   argument.
 - A leftover `jobs.toml.lock` is taken when its pid is dead, or when it has no
