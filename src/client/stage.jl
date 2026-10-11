@@ -65,7 +65,9 @@ end
 
 function staging_enabled()::Bool
     get(ENV, NO_STAGE_ENV, "") == "1" && return false
-    isempty(strip(get(ENV, "DISTSSHKIT_TEST_SSH", ""))) || return false
+    if _test_doubles_on() && !isempty(strip(get(ENV, "DISTSSHKIT_TEST_SSH", "")))
+        return false
+    end
     return true
 end
 

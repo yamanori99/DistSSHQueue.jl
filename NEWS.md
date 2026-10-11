@@ -5,15 +5,16 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 ## Unreleased
 
-`-v` prints two lines: DistSSHQueue, then DistSSHRun.
-
-`qhost:` rejects an SSH name that starts with `-`. `ssh` places `--` before the host.
+- `-v` prints two lines: DistSSHQueue, then DistSSHRun.
+- `qhost:` rejects an SSH name that starts with `-`. `ssh` places `--` before the host.
+- `teardown` does not treat `DISTSSHKIT_YES` in the config file as permission to delete.
+  `-y` and `DISTSSHKIT_YES` in the process environment still do.
 
 ## 0.9.3
 
-`serve` and `default_store_path` have docstrings. `default_store_path()` is `~/.distsshqueue/jobs.toml`. `serve` runs `serve!` on that file.
-
-The guide moved to the DistSSHKit manual. This site keeps Home and API.
+- `serve` and `default_store_path` have docstrings. `default_store_path()` is
+  `~/.distsshqueue/jobs.toml`. `serve` runs `serve!` on that file.
+- The guide moved to the DistSSHKit manual. This site keeps Home and API.
 
 ## 0.9.2
 

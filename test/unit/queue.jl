@@ -1591,6 +1591,7 @@ end
         withenv(
             "DISTSSHQUEUE_CONFIG" => cfg,
             "PATH" => path,
+            "DISTSSHKIT_TEST" => "1",
             "DISTSSHKIT_TEST_LOCAL_JULIAUP" => ju,
         ) do
             code, out, _ = capture_stdio() do

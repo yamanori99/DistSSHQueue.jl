@@ -621,7 +621,7 @@ end
     end
 end
 
-@testset "teardown DISTSSHKIT_YES from target config [env]" begin
+@testset "teardown ignores DISTSSHKIT_YES from target config [env]" begin
     mktempdir() do home
         data = joinpath(home, ".distsshqueue")
         mkpath(data)
@@ -634,11 +634,12 @@ end
             "DISTSSHQUEUE_STORE" => nothing,
             "DISTSSHKIT_YES" => nothing,
         ) do
-            code, _, _ = capture_stdio() do
+            code, out, err = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "--write-only"])
             end
             @test code == 0
+            @test occursin("Pass -y / --yes to delete", out * err)
         end
-        @test !ispath(data)
+        @test ispath(data)
     end
 end

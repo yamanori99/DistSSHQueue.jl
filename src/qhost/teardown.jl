@@ -4,7 +4,8 @@
 # Leftover DistSSHKitQueue `~/.distsshkitqueue` and old OS units are removed too.
 #
 # Does not `Pkg.rm` or delete a git clone. Kit `.distsshkit/` next to a clone stays.
-# Needs `-y` / `--yes` (or Kit `DISTSSHKIT_YES`, same values as DistSSHKit: `1` / `true` / `yes` / `on`).
+# Needs `-y` / `--yes`, or `DISTSSHKIT_YES` already set in the process
+# (`1` / `true` / `yes` / `on`). A value only in the config file does not count.
 function teardown_yes()::Bool
     v = strip(get(ENV, "DISTSSHKIT_YES", ""))
     return v in ("1", "true", "yes", "on")
@@ -122,7 +123,8 @@ function teardown_main(args::Vector{String})::Cint
     end
     bd = bindir === nothing ? default_bindir(; home = home) : String(bindir)
     cfg = config === nothing ? config_path(; home = home) : String(config)
-    apply_config_env!(load_config(; path = cfg))
+    # Sample YES before config `[env]` can set DISTSSHKIT_YES.
     yes = yes || teardown_yes()
+    apply_config_env!(load_config(; path = cfg))
     return teardown(; home = home, bindir = bd, config = cfg, yes = yes, apply = apply)
 end
