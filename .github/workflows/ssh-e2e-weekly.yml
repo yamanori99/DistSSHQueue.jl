@@ -196,6 +196,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: Vampire/setup-wsl@v7
+        timeout-minutes: 10
         with:
           distribution: Ubuntu-24.04
           wsl-version: 2
