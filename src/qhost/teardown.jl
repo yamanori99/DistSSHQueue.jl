@@ -63,10 +63,10 @@ function teardown(;
             print_help_lines(io, "  (nothing)")
         else
             for p in existing
-                print_help_lines(io, "  $(_q_short(p))")
+                print_help_lines(io, "  $(_confirm_path_quote(_q_short(p)))")
             end
         end
-        print_help_lines(io, "  Pass --confirm-path for each path above.")
+        print_help_lines(io, "  Pass --confirm-path for each quoted path above.")
         return 0
     end
     st = teardown_store(; home = home, config = config)
@@ -91,6 +91,10 @@ function teardown(;
     return 0
 end
 
+function _confirm_path_quote(path::AbstractString)::String
+    return "'" * replace(String(path), "'" => "'\\''") * "'"
+end
+
 function _teardown_confirm_set(paths)::Set{String}
     return Set(canonical_local_path(strip(String(p))) for p in paths if !isempty(strip(String(p))))
 end
@@ -102,6 +106,7 @@ function teardown_main(args::Vector{String}; process_yes::Bool = teardown_yes())
     bindir = nothing
     config = nothing
     confirm_paths = String[]
+    saw_yes = false
     apply = true
     i = 1
     while i <= length(args)
@@ -110,6 +115,7 @@ function teardown_main(args::Vector{String}; process_yes::Bool = teardown_yes())
             print_teardown_usage()
             return 0
         elseif a in ("-y", "--yes")
+            saw_yes = true
             i += 1
         elseif a == "--confirm-path" && i < length(args)
             raw = strip(args[i + 1])
@@ -139,6 +145,9 @@ function teardown_main(args::Vector{String}; process_yes::Bool = teardown_yes())
     existing = String[p for p in targets if ispath(p)]
     granted = !isempty(existing) &&
         _teardown_confirm_set(confirm_paths) == _teardown_confirm_set(existing)
+    if saw_yes && !granted
+        print_help_lines(stderr, "  -y / --yes does not delete. Pass --confirm-path.")
+    end
     if !isempty(confirm_paths) && !granted
         print_help_lines(stderr, "  --confirm-path does not match the paths that would be removed.")
         return 1
