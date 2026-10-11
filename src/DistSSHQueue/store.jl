@@ -11,10 +11,23 @@ function _store_lock_pid_path(lockdir::AbstractString)::String
     return joinpath(lockdir, "pid")
 end
 
+function _missing_path_io(e)::Bool
+    if e isa Base.SystemError
+        return e.errnum == Base.Libc.ENOENT || e.errnum == Base.Libc.ENOTDIR
+    end
+    return e isa Base.IOError && (e.code == Base.UV_ENOENT || e.code == Base.UV_ENOTDIR)
+end
+
 function _read_lock_pid(lockdir::AbstractString)::Union{Nothing, Int}
     p = _store_lock_pid_path(lockdir)
-    isfile(p) || return nothing
-    return tryparse(Int, strip(read(p, String)))
+    text = try
+        read(p, String)
+    catch e
+        # The holder removes the lock directory between the existence check and this open.
+        _missing_path_io(e) && return nothing
+        rethrow()
+    end
+    return tryparse(Int, strip(text))
 end
 
 """Whether a leftover lock directory can be taken.
@@ -24,12 +37,15 @@ only after [`_STORE_LOCK_STALE_SEC`](@ref) seconds. The holder writes the pid
 just after `mkdir`, so a fresh directory is left alone.
 """
 function _store_lock_stale(lockdir::AbstractString; now::Float64 = time())::Bool
-    isdir(lockdir) || return false
+    # `stat` does not throw when the path is gone. It returns a zero `StatStruct`,
+    # so one call is both the existence check and the mtime.
+    st = stat(lockdir)
+    isdir(st) || return false
     pid = _read_lock_pid(lockdir)
     if pid isa Int
         return !process_alive(pid)
     end
-    return now - mtime(lockdir) > _STORE_LOCK_STALE_SEC
+    return now - st.mtime > _STORE_LOCK_STALE_SEC
 end
 
 """Move `lockdir` aside and delete it. `false` when another process took it."""
@@ -68,6 +84,14 @@ function with_store_lock(f, path::String)
         end
         try
             write(_store_lock_pid_path(lockdir), string(getpid()))
+        catch e
+            # ENOENT means this directory is already gone. `rm` could delete a
+            # lock another process created in its place.
+            _missing_path_io(e) && continue
+            rm(lockdir; force = true, recursive = true)
+            rethrow()
+        end
+        try
             return f()
         finally
             rm(lockdir; force = true, recursive = true)

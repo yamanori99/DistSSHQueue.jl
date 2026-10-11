@@ -771,6 +771,7 @@ end
     mktempdir() do d
         store = joinpath(d, "jobs.toml")
         lockdir = store * ".lock"
+        @test !DistSSHQueue._store_lock_stale(joinpath(d, "missing.lock"); now = 1.0e12)
         mkdir(lockdir)
         @test !DistSSHQueue._store_lock_stale(lockdir)
         @test !DistSSHQueue._store_lock_stale(lockdir; now = mtime(lockdir) + DistSSHQueue._STORE_LOCK_STALE_SEC)
@@ -786,6 +787,33 @@ end
         end
         @test ran[]
         @test !isdir(lockdir)
+    end
+end
+
+@testset "store lock pid disappears while it is opened" begin
+    mktempdir() do d
+        lockdir = joinpath(d, "jobs.toml.lock")
+        stop = Threads.Atomic{Int}(0)
+        reader = Task() do
+            for _ in 1:100_000
+                stop[] == 1 && break
+                DistSSHQueue._read_lock_pid(lockdir)
+                DistSSHQueue._store_lock_stale(lockdir)
+                yield()
+            end
+            return nothing
+        end
+        reader.sticky = false
+        schedule(reader)
+        for _ in 1:5000
+            mkpath(lockdir)
+            write(joinpath(lockdir, "pid"), "1")
+            rm(lockdir; force = true, recursive = true)
+        end
+        Threads.atomic_xchg!(stop, 1)
+        wait(reader)
+        @test DistSSHQueue._read_lock_pid(lockdir) === nothing
+        @test !DistSSHQueue._store_lock_stale(lockdir)
     end
 end
 
