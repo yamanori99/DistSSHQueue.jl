@@ -216,7 +216,7 @@ On a breaking line bump `x` in `0.x.y`; otherwise bump `y`. Do not ship an empty
 
 ### DistSSHKit cuts
 
-Queue pins DistSSHRun **0.1**. Ordinary Queue work does not `Pkg.develop` Run and does not, by itself, trigger a DistSSHRun General patch. Docs, opt-in flags, and CI on Run wait.
+Queue requires DistSSHRun on the `0.1` line. The patch floor is [below](#dependency-floor). Ordinary Queue work does not `Pkg.develop` Run and does not, by itself, trigger a DistSSHRun General patch. Docs, opt-in flags, and CI on Run wait.
 
 If Queue cannot implement something without a kit hook, open a DistSSHKit Enhancement, land the small PR, then cut DistSSHKit so Queue can pin General. `Pkg.develop` a Kit checkout only until that cut is on General. Kit freeze and cut rules: [DistSSHKit CONTRIBUTING.md](https://github.com/yamanori99/DistSSHKit.jl/blob/main/CONTRIBUTING.md#when-to-cut).
 
@@ -230,6 +230,27 @@ Not a calendar. Cut when [NEWS.md](NEWS.md) **Unreleased** has something General
 | --- | --- |
 | Happy-path bug (FIFO enqueue / `serve`) | Yes, that patch promptly |
 | Opt-in flags, docs, CI | When someone needs it on General, **or** those items have sat in Unreleased for **two weeks** |
+
+### Dependency floor
+
+`[compat]` for DistSSHRun is a lower bound up to the next breaking
+release. `"0.1.6"` means `0.1.6` or newer, and older than `0.2`. A later
+`0.1` patch installs without another Queue cut. `0.2` waits until the
+`[compat]` entry in `Project.toml` allows it.
+
+Leave the bound open through that next breaking release. Run is a
+separate repository, so one exact version would need a Queue cut for
+every Run patch.
+
+A user who adds DistSSHQueue alone is held by this floor. A user who
+adds DistSSHKit is held by Kit's floor, because that environment
+resolves DistSSHRun once. When a Run fix must reach Queue-only users,
+register that Run release on General first, then raise this floor in a
+Queue cut.
+
+The floor does not rewrite an existing Manifest. When the user updates
+Queue, Run rises to at least that floor. For this kind of fix, raise the
+floor and write `NEWS.md`. Leave the older release on General.
 
 ### After a cut merges
 
