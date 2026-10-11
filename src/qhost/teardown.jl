@@ -58,7 +58,10 @@ function teardown(;
     targets = teardown_targets(; home = home, bindir = bindir, config = config)
     existing = String[p for p in targets if ispath(p)]
     if !_teardown_granted(confirm_paths, existing)
-        isempty(confirm_paths) || return 1
+        if !isempty(confirm_paths)
+            print_help_lines(io, "  confirm_paths does not match the paths that would be removed.")
+            return 1
+        end
         print_help_section("Would remove"; io = io)
         if isempty(existing)
             print_help_lines(io, "  (nothing)")

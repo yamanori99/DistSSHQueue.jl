@@ -606,12 +606,15 @@ end
             @test code0 == 0
             @test occursin("Would remove", out0)
             @test isdir(data)
-            code_bad = DistSSHQueue.teardown(;
-                home = home,
-                apply = false,
-                confirm_paths = ["/no/such"],
-            )
+            code_bad, out_bad, _ = capture_stdio() do
+                DistSSHQueue.teardown(;
+                    home = home,
+                    apply = false,
+                    confirm_paths = ["/no/such"],
+                )
+            end
             @test code_bad == 1
+            @test occursin("confirm_paths does not match", out_bad)
             @test isdir(data)
             paths = String[p for p in DistSSHQueue.teardown_targets(; home = home) if ispath(p)]
             @test !isempty(paths)
