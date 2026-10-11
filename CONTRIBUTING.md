@@ -248,6 +248,10 @@ resolves DistSSHRun once. When a Run fix must reach Queue-only users,
 register that Run release on General first, then raise this floor in a
 Queue cut.
 
+`DistSSHQueue.remote_delete_root` and the other copies under
+`src/DistSSHQueue/base/` are this package's own functions. A fix there
+needs a Queue release. The DistSSHRun floor does not replace them.
+
 The floor does not rewrite an existing Manifest. When the user updates
 Queue, Run rises to at least that floor. For this kind of fix, raise the
 floor and write `NEWS.md`. Leave the older release on General.
