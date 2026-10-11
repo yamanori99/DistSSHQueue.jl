@@ -197,6 +197,37 @@ function wait_store_job(store::AbstractString, id::AbstractString, states; tries
     error("timeout waiting for $sid in $want; last=$last")
 end
 
+# `:running` is persisted before Kit writes `kit.pid`. A second `serve`
+# `load_jobs` then marks that row lost and can run the next job. Wait until
+# the pid names a live process.
+function wait_store_kit_pid(store::AbstractString, id::AbstractString; tries = 600, sleep_s = 0.2)
+    sid = String(id)
+    last = DistSSHQueue.Job[]
+    for _ in 1:tries
+        last = try
+            DistSSHQueue.with_store_lock(store) do
+                isfile(store) ? DistSSHQueue.read_jobs(store) : DistSSHQueue.Job[]
+            end
+        catch e
+            string(typeof(e)) == "TOML.ParserError" || rethrow()
+            last
+        end
+        i = findfirst(j -> j.id == sid, last)
+        if i !== nothing
+            row = last[i]
+            st = row.state
+            if st in (:failed, :cancelled, :done)
+                err = row.error
+                extra = err === nothing || isempty(strip(String(err))) ? "" : ": $err"
+                error("job $sid is $st before kit.pid$extra")
+            end
+            st === :running && DistSSHQueue.kit_child_alive(row) && return row
+        end
+        sleep(sleep_s)
+    end
+    error("timeout waiting for kit.pid of $sid; last=$last")
+end
+
 # CLI for assertions. Product chrome (`Wrote`, `Started serve`, expected
 # `Error:`) stays off the test log; stdout is still returned when captured.
 function run_cli(cmd::Cmd)
@@ -772,16 +803,16 @@ end
                         rm(fetched; recursive = true, force = true)
                         rm(into_f; recursive = true, force = true)
 
-                        # Occupy serve on this box (`parent:1`); a worker
-                        # `pi_echo` finishes before cancel. Submit the queued row
-                        # immediately (same pattern as test/integration/cli.jl).
+                        # Occupy serve on this box (`parent:1`). Wait until `kit.pid`
+                        # is live so a second serve does not drop the hold and
+                        # finish the worker `pi_echo` before cancel.
                         hold = joinpath(d, "hold.jl")
                         write(hold, "while true; sleep(1); end\n")
                         cancel_out = joinpath(JOB_PROJECT, "e2e_kit_out", "qhost_cancel")
                         isdir(cancel_out) && rm(cancel_out; recursive = true)
                         id2 = read_cli(addenv(qh(["submit", "go", "parent:1", "--output-dir", cancel_out, hold]), client_env...))
                         wait_store_job(qh_store, id2, (:running,); tries = 600)
-                        isfile(joinpath(cancel_out, "kit.pid")) || sleep(0.5)
+                        wait_store_kit_pid(qh_store, id2)
                         id3 = read_cli(addenv(qh(["submit", "go", token, script, GO_N...]), client_env...))
                         wait_store_job(qh_store, id3, (:queued,); tries = 600)
                         cancelled = read_cli(addenv(qh(["cancel", id3]), client_env...))
