@@ -4,10 +4,10 @@
 # Leftover DistSSHKitQueue `~/.distsshkitqueue` and old OS units are removed too.
 #
 # Does not `Pkg.rm` or delete a git clone. Kit `.distsshkit/` next to a clone stays.
-# Deletion needs every existing target in `confirm_paths` (CLI `--confirm-path`).
-# `-y` / `--yes` and `DISTSSHKIT_YES` (process or config `[env]`) do not authorize it.
+# Deletion needs every existing target in `confirm_paths` (CLI `--confirm-path`),
+# or `-y` / `--yes` / `DISTSSHKIT_YES` (process or config `[env]`). That skip
+# stops in 0.10. `up default` still honors `DISTSSHKIT_YES`.
 function teardown_yes()::Bool
-    _yes_from_config() && return false
     v = strip(get(ENV, "DISTSSHKIT_YES", ""))
     return v in ("1", "true", "yes", "on")
 end
@@ -70,6 +70,7 @@ function teardown(;
                 print_help_lines(io, "  $(_confirm_path_quote(_q_short(p)))")
             end
         end
+        print_help_lines(io, "  Pass -y / --yes to delete.")
         print_help_lines(io, "  Pass --confirm-path for each quoted path above.")
         return 0
     end
@@ -110,7 +111,8 @@ function _teardown_granted(confirm_paths, existing)::Bool
 end
 
 function teardown_main(args::Vector{String}; process_yes::Bool = teardown_yes())::Cint
-    # Sampled by `_main` before config `[env]` is applied. Not a delete grant.
+    # `_main` samples this before config `[env]` is applied. Delete reads `ENV`
+    # after that apply, so config `DISTSSHKIT_YES` counts too.
     _ = process_yes
     home = homedir()
     bindir = nothing
@@ -154,12 +156,23 @@ function teardown_main(args::Vector{String}; process_yes::Bool = teardown_yes())
     targets = teardown_targets(; home = home, bindir = bd, config = cfg)
     existing = String[p for p in targets if ispath(p)]
     granted = _teardown_granted(confirm_paths, existing)
-    if saw_yes && !granted
-        print_help_lines(stderr, "  -y / --yes does not delete. Pass --confirm-path.")
-    end
     if !isempty(confirm_paths) && !granted
         print_help_lines(stderr, "  --confirm-path does not match the paths that would be removed.")
         return 1
+    end
+    yes = saw_yes || teardown_yes()
+    if yes && !granted
+        print_help_lines(
+            stderr,
+            "  -y / DISTSSHKIT_YES still deletes teardown. This stops in 0.10. Pass --confirm-path.",
+        )
+        return teardown(;
+            home = home,
+            bindir = bd,
+            config = cfg,
+            confirm_paths = existing,
+            apply = apply,
+        )
     end
     return teardown(;
         home = home,

@@ -1148,7 +1148,7 @@ end
                 @test !occursin("add-host", out_sub_h)
                 td_h = sprint(DistSSHQueue.print_teardown_usage)
                 @test occursin("--confirm-path PATH", td_h)
-                @test occursin("Ignored for teardown", td_h)
+                @test occursin("Still deletes. Removed in 0.10", td_h)
                 @test occursin("$(DistSSHQueue.cli_m()) $(DistSSHQueue.cli_qhost())teardown", td_h)
                 @test !occursin("teardown -y", td_h)
                 code_sh, out_sh, _ = capture_stdio() do
