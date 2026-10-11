@@ -93,6 +93,7 @@ jobs:
           chmod +x "${dest}/shellcheck"
           out="${RUNNER_TEMP}/generated-sh"
           mkdir -p "$out"
+          julia --project=. --startup-file=no -e 'using Pkg; Pkg.instantiate()'
           julia --project=. --startup-file=no .github/shellcheck-generated.jl "$out"
           shopt -s nullglob
           files=("$out"/*.sh)
