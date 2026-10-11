@@ -39,6 +39,11 @@ using DistSSHQueue
         @test !DistSSHQueue.should_stage("submit", ["go", "S.jl"])
         @test DistSSHQueue.should_submit_ticket("submit", ["go", "S.jl"])
     end
+    withenv("DISTRIBUTED_SSH_OPTS" => "-F \"/tmp/cfg dir/config\" -o BatchMode=yes") do
+        t = DistSSHQueue._ssh_transport()
+        @test startswith(t, "ssh ")
+        @test occursin(Base.shell_escape("/tmp/cfg dir/config"), t)
+    end
     opts = DistSSHQueue.stage_rsync_push_opts("ssh -o BatchMode=yes")
     @test opts[1] == "-az"
     @test !("--info=progress2" in opts)

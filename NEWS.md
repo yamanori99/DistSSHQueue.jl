@@ -16,6 +16,8 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 - `DISTRIBUTED_SSH_OPTS` is split with shell quoting. A quoted value that
   contains spaces stays one argument. An unmatched quote is an error. A
   non-empty value still replaces the default options.
+- Client rsync `-e` quotes each SSH option, so a path with spaces stays one
+  argument.
 - A leftover `jobs.toml.lock` is taken when its pid is dead, or when it has no
   pid and is older than 30 seconds. A live pid is left alone. `jobs.toml` is
   written to a temporary file and then renamed into place.
