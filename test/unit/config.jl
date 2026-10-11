@@ -590,6 +590,57 @@ end
     end
 end
 
+@testset "teardown confirm_paths" begin
+    mktempdir() do home
+        data = joinpath(home, ".distsshqueue")
+        mkpath(data)
+        write(joinpath(data, "config.toml"), "store = \"x\"\n")
+        withenv(
+            "DISTSSHQUEUE_CONFIG" => nothing,
+            "DISTSSHQUEUE_STORE" => nothing,
+            "DISTSSHKIT_YES" => "1",
+        ) do
+            code0, out0, _ = capture_stdio() do
+                DistSSHQueue.teardown(; home = home, apply = false)
+            end
+            @test code0 == 0
+            @test occursin("Would remove", out0)
+            @test isdir(data)
+            code_bad = DistSSHQueue.teardown(;
+                home = home,
+                apply = false,
+                confirm_paths = ["/no/such"],
+            )
+            @test code_bad == 1
+            @test isdir(data)
+            paths = String[p for p in DistSSHQueue.teardown_targets(; home = home) if ispath(p)]
+            @test !isempty(paths)
+            code_ok, _, _ = capture_stdio() do
+                DistSSHQueue.teardown(;
+                    home = home,
+                    apply = false,
+                    confirm_paths = paths,
+                )
+            end
+            @test code_ok == 0
+        end
+        @test !ispath(data)
+    end
+    mktempdir() do home
+        withenv(
+            "DISTSSHQUEUE_CONFIG" => nothing,
+            "DISTSSHQUEUE_STORE" => nothing,
+        ) do
+            code_empty = DistSSHQueue.teardown(;
+                home = home,
+                apply = false,
+                confirm_paths = [joinpath(home, "missing")],
+            )
+            @test code_empty == 1
+        end
+    end
+end
+
 @testset "teardown -y removes leftover DistSSHKitQueue home" begin
     mktempdir() do home
         data = joinpath(home, ".distsshqueue")

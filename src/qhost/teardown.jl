@@ -4,8 +4,8 @@
 # Leftover DistSSHKitQueue `~/.distsshkitqueue` and old OS units are removed too.
 #
 # Does not `Pkg.rm` or delete a git clone. Kit `.distsshkit/` next to a clone stays.
-# Deletion needs `--confirm-path` for every existing target. `-y` / `--yes` and
-# `DISTSSHKIT_YES` (process or config `[env]`) do not authorize it.
+# Deletion needs every existing target in `confirm_paths` (CLI `--confirm-path`).
+# `-y` / `--yes` and `DISTSSHKIT_YES` (process or config `[env]`) do not authorize it.
 function teardown_yes()::Bool
     _yes_from_config() && return false
     v = strip(get(ENV, "DISTSSHKIT_YES", ""))
@@ -51,13 +51,14 @@ function teardown(;
         home::AbstractString = homedir(),
         bindir::AbstractString = default_bindir(; home = home),
         config::AbstractString = config_path(; home = home),
-        yes::Bool = false,
+        confirm_paths::AbstractVector{<:AbstractString} = String[],
         apply::Bool = true,
         io::IO = stdout,
     )::Cint
     targets = teardown_targets(; home = home, bindir = bindir, config = config)
     existing = String[p for p in targets if ispath(p)]
-    if !yes
+    if !_teardown_granted(confirm_paths, existing)
+        isempty(confirm_paths) || return 1
         print_help_section("Would remove"; io = io)
         if isempty(existing)
             print_help_lines(io, "  (nothing)")
@@ -97,6 +98,12 @@ end
 
 function _teardown_confirm_set(paths)::Set{String}
     return Set(canonical_local_path(strip(String(p))) for p in paths if !isempty(strip(String(p))))
+end
+
+"""True when `confirm_paths` names every existing target and nothing else."""
+function _teardown_granted(confirm_paths, existing)::Bool
+    return !isempty(existing) &&
+        _teardown_confirm_set(confirm_paths) == _teardown_confirm_set(existing)
 end
 
 function teardown_main(args::Vector{String}; process_yes::Bool = teardown_yes())::Cint
@@ -143,8 +150,7 @@ function teardown_main(args::Vector{String}; process_yes::Bool = teardown_yes())
     apply_config_env!(load_config(; path = cfg))
     targets = teardown_targets(; home = home, bindir = bd, config = cfg)
     existing = String[p for p in targets if ispath(p)]
-    granted = !isempty(existing) &&
-        _teardown_confirm_set(confirm_paths) == _teardown_confirm_set(existing)
+    granted = _teardown_granted(confirm_paths, existing)
     if saw_yes && !granted
         print_help_lines(stderr, "  -y / --yes does not delete. Pass --confirm-path.")
     end
@@ -152,5 +158,11 @@ function teardown_main(args::Vector{String}; process_yes::Bool = teardown_yes())
         print_help_lines(stderr, "  --confirm-path does not match the paths that would be removed.")
         return 1
     end
-    return teardown(; home = home, bindir = bd, config = cfg, yes = granted, apply = apply)
+    return teardown(;
+        home = home,
+        bindir = bd,
+        config = cfg,
+        confirm_paths = confirm_paths,
+        apply = apply,
+    )
 end
