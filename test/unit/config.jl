@@ -634,12 +634,15 @@ end
             "DISTSSHQUEUE_CONFIG" => nothing,
             "DISTSSHQUEUE_STORE" => nothing,
         ) do
-            code_empty = DistSSHQueue.teardown(;
-                home = home,
-                apply = false,
-                confirm_paths = [joinpath(home, "missing")],
-            )
+            code_empty, out_empty, _ = capture_stdio() do
+                DistSSHQueue.teardown(;
+                    home = home,
+                    apply = false,
+                    confirm_paths = [joinpath(home, "missing")],
+                )
+            end
             @test code_empty == 1
+            @test occursin("confirm_paths does not match", out_empty)
         end
     end
 end
