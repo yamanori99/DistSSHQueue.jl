@@ -58,9 +58,10 @@ end
 
 rewrite_favicon_types!(joinpath(@__DIR__, "build"))
 
-deploydocs(;
-    repo = "github.com/yamanori99/DistSSHQueue.jl.git",
-    devbranch = "main",
-    push_preview = true,
-    versions = ["stable" => "v^", "v#.#", "dev" => "dev"],
-)
+if get(ENV, "GITHUB_EVENT_NAME", "") != "pull_request"
+    deploydocs(;
+        repo = "github.com/yamanori99/DistSSHQueue.jl.git",
+        devbranch = "main",
+        versions = ["stable" => "v^", "v#.#", "dev" => "dev"],
+    )
+end

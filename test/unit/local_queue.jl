@@ -70,8 +70,13 @@ end
             end
             @test code_setup == 0
             @test isfile(joinpath(home, ".distsshqueue", "config.toml"))
+            confirm = String[]
+            for p in DistSSHQueue.teardown_targets(; home = home)
+                ispath(p) || continue
+                push!(confirm, "--confirm-path", p)
+            end
             code_td, _, _ = capture_stdio() do
-                DistSSHQueue.teardown_main(["--home", home, "-y", "--write-only"])
+                DistSSHQueue.teardown_main(["--home", home, "--write-only", confirm...])
             end
             @test code_td == 0
             @test !ispath(joinpath(home, ".distsshqueue"))

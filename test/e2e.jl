@@ -792,7 +792,17 @@ end
                         @test occursin("cancelled", after)
 
                         @test run_cli(addenv(qh(["stop"]), client_env...)).exitcode == 0
-                        @test run_cli(addenv(qh(["teardown", "-y", "--write-only"]), client_env...)).exitcode == 0
+                        confirm = String[]
+                        withenv(
+                            "DISTSSHQUEUE_CONFIG" => cfg,
+                            "DISTSSHQUEUE_STORE" => qh_store,
+                        ) do
+                            for p in DistSSHQueue.teardown_targets(; home = e2e_home, config = cfg)
+                                ispath(p) || continue
+                                push!(confirm, "--confirm-path", p)
+                            end
+                        end
+                        @test run_cli(addenv(qh(["teardown", "--home", e2e_home, "--config", cfg, "--write-only", confirm...]), client_env...)).exitcode == 0
                     finally
                         write(gi, gi_body)
                         DistSSHQueue.stop_serve!(qh_store)
