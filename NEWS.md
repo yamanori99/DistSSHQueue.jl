@@ -7,7 +7,7 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 `-v` prints two lines: DistSSHQueue, then DistSSHRun.
 
-`qhost:` rejects an SSH name that starts with `-`.
+`qhost:` rejects an SSH name that starts with `-`. `ssh` places `--` before the host.
 
 ## 0.9.3
 
