@@ -85,7 +85,11 @@ end
         store = joinpath(d, "jobs.toml")
         list = joinpath(d, "pids")
         write(list, "")
-        withenv("DISTSSHQUEUE_TEST_PIDS" => list) do
+        withenv("DISTSSHKIT_TEST" => nothing, "DISTSSHQUEUE_TEST_PIDS" => list) do
+            DistSSHQueue.write_pid_file(store)
+        end
+        @test !occursin(string(getpid()), read(list, String))
+        withenv("DISTSSHKIT_TEST" => "1", "DISTSSHQUEUE_TEST_PIDS" => list) do
             DistSSHQueue.write_pid_file(store)
         end
         @test occursin(string(getpid()), read(list, String))
@@ -639,6 +643,42 @@ end
             end
             @test code == 0
             @test occursin("Pass -y / --yes to delete", out * err)
+        end
+        @test ispath(data)
+    end
+end
+
+@testset "teardown CLI ignores config YES and does not import test hooks" begin
+    mktempdir() do home
+        data = joinpath(home, ".distsshqueue")
+        mkpath(data)
+        cfg = joinpath(data, "config.toml")
+        store = joinpath(data, "jobs.toml")
+        write(
+            cfg,
+            "store = $(repr(store))\n\n[env]\nDISTSSHKIT_YES = \"1\"\n" *
+                "DISTSSHKIT_TEST = \"1\"\nDISTSSHKIT_TEST_SSH = \"/tmp/not-ssh.jl\"\n" *
+                "DISTSSHQUEUE_TEST_PIDS = \"/tmp/not-pids\"\n",
+        )
+        write(store, "jobs = []\n")
+        withenv(
+            "HOME" => home,
+            "DISTSSHQUEUE_CONFIG" => nothing,
+            "DISTSSHQUEUE_STORE" => nothing,
+            "DISTSSHKIT_YES" => nothing,
+            "DISTSSHKIT_TEST" => nothing,
+            "DISTSSHKIT_TEST_SSH" => nothing,
+            "DISTSSHQUEUE_TEST_PIDS" => nothing,
+        ) do
+            code, out, err = capture_stdio() do
+                DistSSHQueue._main(["teardown", "--write-only"])
+            end
+            @test code == 0
+            @test occursin("Pass -y / --yes to delete", out * err)
+            @test get(ENV, "DISTSSHKIT_YES", "") == "1"
+            @test get(ENV, "DISTSSHKIT_TEST", "") == ""
+            @test get(ENV, "DISTSSHKIT_TEST_SSH", "") == ""
+            @test get(ENV, "DISTSSHQUEUE_TEST_PIDS", "") == ""
         end
         @test ispath(data)
     end

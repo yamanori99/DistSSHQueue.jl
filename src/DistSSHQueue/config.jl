@@ -20,13 +20,21 @@ function load_config(; path::Union{Nothing, AbstractString} = nothing)::Dict{Str
     return Dict{String, Any}(String(k) => v for (k, v) in raw)
 end
 
+"""Test hooks stay out of config `[env]`. `DISTSSHKIT_YES` still applies (`up default`)."""
+function _config_env_skipped(key::AbstractString)::Bool
+    k = String(key)
+    return k == "DISTSSHKIT_TEST" || startswith(k, "DISTSSHKIT_TEST_") || k == "DISTSSHQUEUE_TEST_PIDS"
+end
+
 """Apply `cfg["env"]` into `ENV` without overwriting keys already set."""
 function apply_config_env!(cfg::AbstractDict)
     env = get(cfg, "env", nothing)
     env isa AbstractDict || return nothing
     for (k, v) in env
         v === nothing && continue
-        get!(ENV, String(k), v isa AbstractString ? String(v) : string(v))
+        key = String(k)
+        _config_env_skipped(key) && continue
+        get!(ENV, key, v isa AbstractString ? String(v) : string(v))
     end
     return nothing
 end

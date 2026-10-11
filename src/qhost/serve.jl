@@ -86,7 +86,7 @@ function reap_serve_tag!(tag::AbstractString)
         end
     catch
     end
-    list = String(get(ENV, "DISTSSHQUEUE_TEST_PIDS", ""))
+    list = _test_doubles_on() ? String(get(ENV, "DISTSSHQUEUE_TEST_PIDS", "")) : ""
     if !isempty(list) && isfile(list)
         for line in eachline(list)
             pid = tryparse(Int, strip(line))

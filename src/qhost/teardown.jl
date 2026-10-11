@@ -90,7 +90,7 @@ function teardown(;
     return 0
 end
 
-function teardown_main(args::Vector{String})::Cint
+function teardown_main(args::Vector{String}; process_yes::Bool = teardown_yes())::Cint
     home = homedir()
     bindir = nothing
     config = nothing
@@ -123,8 +123,8 @@ function teardown_main(args::Vector{String})::Cint
     end
     bd = bindir === nothing ? default_bindir(; home = home) : String(bindir)
     cfg = config === nothing ? config_path(; home = home) : String(config)
-    # Sample YES before config `[env]` can set DISTSSHKIT_YES.
-    yes = yes || teardown_yes()
+    # `process_yes` is sampled before config `[env]` can set DISTSSHKIT_YES.
+    yes = yes || process_yes
     apply_config_env!(load_config(; path = cfg))
     return teardown(; home = home, bindir = bd, config = cfg, yes = yes, apply = apply)
 end
