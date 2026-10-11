@@ -794,14 +794,17 @@ end
     mktempdir() do d
         lockdir = joinpath(d, "jobs.toml.lock")
         stop = Threads.Atomic{Int}(0)
-        reader = Threads.@spawn begin
-            while stop[] == 0
+        reader = Task() do
+            for _ in 1:100_000
+                stop[] == 1 && break
                 DistSSHQueue._read_lock_pid(lockdir)
                 DistSSHQueue._store_lock_stale(lockdir)
                 yield()
             end
             return nothing
         end
+        reader.sticky = false
+        schedule(reader)
         for _ in 1:5000
             mkpath(lockdir)
             write(joinpath(lockdir, "pid"), "1")
