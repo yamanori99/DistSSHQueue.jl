@@ -5,6 +5,46 @@ function default_store_path(; home::AbstractString = homedir())::String
     return joinpath(home, ".distsshqueue", "jobs.toml")
 end
 
+const _STORE_LOCK_STALE_SEC = 30.0
+
+function _store_lock_pid_path(lockdir::AbstractString)::String
+    return joinpath(lockdir, "pid")
+end
+
+function _read_lock_pid(lockdir::AbstractString)::Union{Nothing, Int}
+    p = _store_lock_pid_path(lockdir)
+    isfile(p) || return nothing
+    return tryparse(Int, strip(read(p, String)))
+end
+
+"""Whether a leftover lock directory can be taken.
+
+A live pid is never stale. A dead pid is stale. A lock with no pid is stale
+only after [`_STORE_LOCK_STALE_SEC`](@ref) seconds. The holder writes the pid
+just after `mkdir`, so a fresh directory is left alone.
+"""
+function _store_lock_stale(lockdir::AbstractString; now::Float64 = time())::Bool
+    isdir(lockdir) || return false
+    pid = _read_lock_pid(lockdir)
+    if pid isa Int
+        return !process_alive(pid)
+    end
+    return now - mtime(lockdir) > _STORE_LOCK_STALE_SEC
+end
+
+"""Move `lockdir` aside and delete it. `false` when another process took it."""
+function _steal_store_lock(lockdir::AbstractString)::Bool
+    _store_lock_stale(lockdir) || return false
+    trash = string(lockdir, ".stale.", getpid(), ".", time_ns())
+    try
+        mv(lockdir, trash)
+    catch
+        return false
+    end
+    rm(trash; force = true, recursive = true)
+    return true
+end
+
 function with_store_lock(f, path::AbstractString)
     return with_store_lock(f, String(path))
 end
@@ -16,14 +56,18 @@ function with_store_lock(f, path::String)
         try
             mkdir(lockdir)
         catch e
-            # Holder still has it, or they just `rm`'d it (EEXIST then !isdir). Retry.
+            # Holder still has it, or they just released it (EEXIST then !isdir).
             if e isa Base.IOError && e.code == Base.UV_EEXIST
+                if _store_lock_stale(lockdir) && _steal_store_lock(lockdir)
+                    continue
+                end
                 sleep(0.05)
                 continue
             end
             rethrow()
         end
         try
+            write(_store_lock_pid_path(lockdir), string(getpid()))
             return f()
         finally
             rm(lockdir; force = true, recursive = true)
@@ -79,8 +123,15 @@ function save_jobs(path::AbstractString, jobs::AbstractVector{Job})
     p = String(path)
     mkpath(dirname(p))
     data = Dict{String, Any}("jobs" => [job_to_toml(j) for j in jobs])
-    open(p, "w") do io
-        TOML.print(io, data)
+    tmp = string(p, ".tmp.", getpid(), ".", time_ns())
+    try
+        open(tmp, "w") do io
+            TOML.print(io, data)
+        end
+        mv(tmp, p; force = true)
+    catch
+        rm(tmp; force = true)
+        rethrow()
     end
     return nothing
 end

@@ -154,7 +154,7 @@ function _rsync_bin()::Vector{String}
 end
 
 function _ssh_transport()::String
-    return "ssh " * join(ssh_opts(), " ")
+    return join(Base.shell_escape.(["ssh"; ssh_opts()]), " ")
 end
 
 function _ssh_mkdir!(host::AbstractString, remote_dir::AbstractString)
