@@ -661,24 +661,33 @@ end
                 "DISTSSHQUEUE_TEST_PIDS = \"/tmp/not-pids\"\n",
         )
         write(store, "jobs = []\n")
-        withenv(
-            "HOME" => home,
-            "DISTSSHQUEUE_CONFIG" => nothing,
-            "DISTSSHQUEUE_STORE" => nothing,
-            "DISTSSHKIT_YES" => nothing,
-            "DISTSSHKIT_TEST" => nothing,
-            "DISTSSHKIT_TEST_SSH" => nothing,
-            "DISTSSHQUEUE_TEST_PIDS" => nothing,
-        ) do
-            code, out, err = capture_stdio() do
-                DistSSHQueue._main(["teardown", "--write-only"])
+        try
+            withenv(
+                "HOME" => home,
+                "DISTSSHQUEUE_CONFIG" => nothing,
+                "DISTSSHQUEUE_STORE" => nothing,
+                "DISTSSHKIT_YES" => nothing,
+                "DISTSSHKIT_TEST" => nothing,
+                "DISTSSHKIT_TEST_SSH" => nothing,
+                "DISTSSHQUEUE_TEST_PIDS" => nothing,
+            ) do
+                code, out, err = capture_stdio() do
+                    DistSSHQueue._main(["teardown", "--write-only"])
+                end
+                @test code == 0
+                @test occursin("Pass -y / --yes to delete", out * err)
+                @test get(ENV, "DISTSSHKIT_YES", "") == "1"
+                @test get(ENV, "DISTSSHKIT_TEST", "") == ""
+                @test get(ENV, "DISTSSHKIT_TEST_SSH", "") == ""
+                @test get(ENV, "DISTSSHQUEUE_TEST_PIDS", "") == ""
+                code2, out2, err2 = capture_stdio() do
+                    DistSSHQueue._main(["teardown", "--write-only"])
+                end
+                @test code2 == 0
+                @test occursin("Pass -y / --yes to delete", out2 * err2)
             end
-            @test code == 0
-            @test occursin("Pass -y / --yes to delete", out * err)
-            @test get(ENV, "DISTSSHKIT_YES", "") == "1"
-            @test get(ENV, "DISTSSHKIT_TEST", "") == ""
-            @test get(ENV, "DISTSSHKIT_TEST_SSH", "") == ""
-            @test get(ENV, "DISTSSHQUEUE_TEST_PIDS", "") == ""
+        finally
+            DistSSHQueue._forget_absent_config_env!()
         end
         @test ispath(data)
     end

@@ -7,6 +7,7 @@
 # Needs `-y` / `--yes`, or `DISTSSHKIT_YES` already set in the process
 # (`1` / `true` / `yes` / `on`). A value only in the config file does not count.
 function teardown_yes()::Bool
+    _yes_from_config() && return false
     v = strip(get(ENV, "DISTSSHKIT_YES", ""))
     return v in ("1", "true", "yes", "on")
 end
