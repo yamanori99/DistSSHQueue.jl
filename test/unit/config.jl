@@ -771,6 +771,7 @@ end
     mktempdir() do d
         store = joinpath(d, "jobs.toml")
         lockdir = store * ".lock"
+        @test !DistSSHQueue._store_lock_stale(joinpath(d, "missing.lock"); now = 1.0e12)
         mkdir(lockdir)
         @test !DistSSHQueue._store_lock_stale(lockdir)
         @test !DistSSHQueue._store_lock_stale(lockdir; now = mtime(lockdir) + DistSSHQueue._STORE_LOCK_STALE_SEC)

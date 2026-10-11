@@ -37,18 +37,15 @@ only after [`_STORE_LOCK_STALE_SEC`](@ref) seconds. The holder writes the pid
 just after `mkdir`, so a fresh directory is left alone.
 """
 function _store_lock_stale(lockdir::AbstractString; now::Float64 = time())::Bool
-    isdir(lockdir) || return false
+    # `stat` does not throw when the path is gone. It returns a zero `StatStruct`,
+    # so one call is both the existence check and the mtime.
+    st = stat(lockdir)
+    isdir(st) || return false
     pid = _read_lock_pid(lockdir)
     if pid isa Int
         return !process_alive(pid)
     end
-    mt = try
-        mtime(lockdir)
-    catch e
-        _missing_path_io(e) && return false
-        rethrow()
-    end
-    return now - mt > _STORE_LOCK_STALE_SEC
+    return now - st.mtime > _STORE_LOCK_STALE_SEC
 end
 
 """Move `lockdir` aside and delete it. `false` when another process took it."""
@@ -88,8 +85,10 @@ function with_store_lock(f, path::String)
         try
             write(_store_lock_pid_path(lockdir), string(getpid()))
         catch e
-            rm(lockdir; force = true, recursive = true)
+            # ENOENT means this directory is already gone. `rm` could delete a
+            # lock another process created in its place.
             _missing_path_io(e) && continue
+            rm(lockdir; force = true, recursive = true)
             rethrow()
         end
         try
