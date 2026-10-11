@@ -7,10 +7,7 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 - `-v` prints two lines: DistSSHQueue, then DistSSHRun.
 - `qhost:` rejects an SSH name that starts with `-`. `ssh` places `--` before the host.
-- `teardown` does not treat `DISTSSHKIT_YES` in the config file as permission to delete.
-  `-y` and `DISTSSHKIT_YES` in the process environment still do. A later call in
-  the same process still ignores the value the config file inserted. `up default`
-  still honors `DISTSSHKIT_YES` from the config file.
+- `teardown` deletes only when every existing path is passed with `--confirm-path`. Without that it prints `Would remove` and exits 0. Each path is single-quoted. `-y` prints a note on stderr and does not delete. `DISTSSHKIT_YES` (process or config `[env]`) does not authorize it. `up default` still honors `DISTSSHKIT_YES`.
 - Config `[env]` does not set `DISTSSHKIT_TEST`, `DISTSSHKIT_TEST_*`, or
   `DISTSSHQUEUE_TEST_PIDS`.
 - `DISTRIBUTED_SSH_OPTS` is split with shell quoting. A quoted value that

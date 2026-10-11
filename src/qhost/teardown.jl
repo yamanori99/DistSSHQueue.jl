@@ -4,8 +4,8 @@
 # Leftover DistSSHKitQueue `~/.distsshkitqueue` and old OS units are removed too.
 #
 # Does not `Pkg.rm` or delete a git clone. Kit `.distsshkit/` next to a clone stays.
-# Needs `-y` / `--yes`, or `DISTSSHKIT_YES` already set in the process
-# (`1` / `true` / `yes` / `on`). A value only in the config file does not count.
+# Deletion needs `--confirm-path` for every existing target. `-y` / `--yes` and
+# `DISTSSHKIT_YES` (process or config `[env]`) do not authorize it.
 function teardown_yes()::Bool
     _yes_from_config() && return false
     v = strip(get(ENV, "DISTSSHKIT_YES", ""))
@@ -63,10 +63,10 @@ function teardown(;
             print_help_lines(io, "  (nothing)")
         else
             for p in existing
-                print_help_lines(io, "  $(_q_short(p))")
+                print_help_lines(io, "  $(_confirm_path_quote(_q_short(p)))")
             end
         end
-        print_help_lines(io, "  Pass -y / --yes to delete.")
+        print_help_lines(io, "  Pass --confirm-path for each quoted path above.")
         return 0
     end
     st = teardown_store(; home = home, config = config)
@@ -91,11 +91,22 @@ function teardown(;
     return 0
 end
 
+function _confirm_path_quote(path::AbstractString)::String
+    return "'" * replace(String(path), "'" => "'\\''") * "'"
+end
+
+function _teardown_confirm_set(paths)::Set{String}
+    return Set(canonical_local_path(strip(String(p))) for p in paths if !isempty(strip(String(p))))
+end
+
 function teardown_main(args::Vector{String}; process_yes::Bool = teardown_yes())::Cint
+    # Sampled by `_main` before config `[env]` is applied. Not a delete grant.
+    _ = process_yes
     home = homedir()
     bindir = nothing
     config = nothing
-    yes = false
+    confirm_paths = String[]
+    saw_yes = false
     apply = true
     i = 1
     while i <= length(args)
@@ -104,8 +115,13 @@ function teardown_main(args::Vector{String}; process_yes::Bool = teardown_yes())
             print_teardown_usage()
             return 0
         elseif a in ("-y", "--yes")
-            yes = true
+            saw_yes = true
             i += 1
+        elseif a == "--confirm-path" && i < length(args)
+            raw = strip(args[i + 1])
+            isempty(raw) && throw(ArgumentError("--confirm-path needs a non-empty path"))
+            push!(confirm_paths, String(raw))
+            i += 2
         elseif a == "--write-only"
             apply = false
             i += 1
@@ -124,8 +140,17 @@ function teardown_main(args::Vector{String}; process_yes::Bool = teardown_yes())
     end
     bd = bindir === nothing ? default_bindir(; home = home) : String(bindir)
     cfg = config === nothing ? config_path(; home = home) : String(config)
-    # `process_yes` is sampled before config `[env]` can set DISTSSHKIT_YES.
-    yes = yes || process_yes
     apply_config_env!(load_config(; path = cfg))
-    return teardown(; home = home, bindir = bd, config = cfg, yes = yes, apply = apply)
+    targets = teardown_targets(; home = home, bindir = bd, config = cfg)
+    existing = String[p for p in targets if ispath(p)]
+    granted = !isempty(existing) &&
+        _teardown_confirm_set(confirm_paths) == _teardown_confirm_set(existing)
+    if saw_yes && !granted
+        print_help_lines(stderr, "  -y / --yes does not delete. Pass --confirm-path.")
+    end
+    if !isempty(confirm_paths) && !granted
+        print_help_lines(stderr, "  --confirm-path does not match the paths that would be removed.")
+        return 1
+    end
+    return teardown(; home = home, bindir = bd, config = cfg, yes = granted, apply = apply)
 end

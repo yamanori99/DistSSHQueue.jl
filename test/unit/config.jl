@@ -562,13 +562,25 @@ end
             @test code1 == 0
             @test occursin("Would remove", out1)
             @test occursin(".lock", out1)
-            @test occursin("Pass -y / --yes to delete", out1)
+            @test occursin("Pass --confirm-path for each quoted path above.", out1)
             @test !occursin("Error:", err1)
             @test !occursin("Error:", out1)
             @test isfile(store)
             @test isfile(wrap)
-            code2, out2, _ = capture_stdio() do
+            code_y, out_y, err_y = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "-y", "--write-only"])
+            end
+            @test code_y == 0
+            @test occursin("Would remove", out_y)
+            @test occursin("-y / --yes does not delete", err_y)
+            @test isfile(store)
+            confirm = String[]
+            for p in DistSSHQueue.teardown_targets(; home = home)
+                ispath(p) || continue
+                push!(confirm, "--confirm-path", p)
+            end
+            code2, out2, _ = capture_stdio() do
+                DistSSHQueue.teardown_main(["--home", home, "--write-only", confirm...])
             end
             @test code2 == 0
             @test occursin("Removed", out2)
@@ -591,8 +603,13 @@ end
             "DISTSSHQUEUE_STORE" => nothing,
             "DISTSSHKIT_YES" => nothing,
         ) do
+            confirm = String[]
+            for p in DistSSHQueue.teardown_targets(; home = home)
+                ispath(p) || continue
+                push!(confirm, "--confirm-path", p)
+            end
             code, _, _ = capture_stdio() do
-                DistSSHQueue.teardown_main(["--home", home, "-y", "--write-only"])
+                DistSSHQueue.teardown_main(["--home", home, "--write-only", confirm...])
             end
             @test code == 0
         end
@@ -601,7 +618,7 @@ end
     end
 end
 
-@testset "teardown honors DISTSSHKIT_YES like DistSSHKit" begin
+@testset "teardown ignores DISTSSHKIT_YES" begin
     mktempdir() do home
         data = joinpath(home, ".distsshqueue")
         mkpath(data)
@@ -614,14 +631,14 @@ end
             "DISTSSHQUEUE_STORE" => nothing,
             "DISTSSHKIT_YES" => "true",
         ) do
-            code, _, err = capture_stdio() do
+            code, out, err = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "--write-only"])
             end
             @test code == 0
-            @test !occursin("Would remove", err)
-            @test !occursin("Pass -y / --yes to delete", err)
+            @test occursin("Would remove", out)
+            @test occursin("Pass --confirm-path for each quoted path above.", out * err)
+            @test ispath(data)
         end
-        @test !ispath(data)
     end
 end
 
@@ -642,7 +659,7 @@ end
                 DistSSHQueue.teardown_main(["--home", home, "--write-only"])
             end
             @test code == 0
-            @test occursin("Pass -y / --yes to delete", out * err)
+            @test occursin("Pass --confirm-path for each quoted path above.", out * err)
         end
         @test ispath(data)
     end
@@ -675,7 +692,7 @@ end
                     DistSSHQueue._main(["teardown", "--write-only"])
                 end
                 @test code == 0
-                @test occursin("Pass -y / --yes to delete", out * err)
+                @test occursin("Pass --confirm-path for each quoted path above.", out * err)
                 @test get(ENV, "DISTSSHKIT_YES", "") == "1"
                 @test get(ENV, "DISTSSHKIT_TEST", "") == ""
                 @test get(ENV, "DISTSSHKIT_TEST_SSH", "") == ""
@@ -684,7 +701,7 @@ end
                     DistSSHQueue._main(["teardown", "--write-only"])
                 end
                 @test code2 == 0
-                @test occursin("Pass -y / --yes to delete", out2 * err2)
+                @test occursin("Pass --confirm-path for each quoted path above.", out2 * err2)
             end
         finally
             DistSSHQueue._forget_absent_config_env!()

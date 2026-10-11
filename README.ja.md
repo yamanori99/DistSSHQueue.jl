@@ -19,6 +19,8 @@ DistSSHQueue は、キューホストにジョブを置いて、1件ずつ走ら
 長い説明は
 [DistSSHKit のマニュアル](https://yamanori99.github.io/DistSSHKit.jl/stable/)
 にある。
+
+DistSSHQueue の UUID は `24254401-70d8-4a51-8ea4-cfab19f5bc73` である。
 対応は **macOS、Linux、WSL2 Ubuntu** (ネイティブ Windows は対象外)。
 
 小さな研究室や個人でも、常時起動のマシンを 1 台置き、SSH接続したマシンとまとめて小さな計算ノードとして使うことが出来る。

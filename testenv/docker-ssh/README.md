@@ -30,7 +30,7 @@ The host during `--e2e` is the **queue host**. docker-ssh containers are DistSSH
    `disable --write-only`, foreground `serve`, `submit go child:child-1:1 SCRIPT.jl`, `status`,
    `watch` (harness `DISTSSHQUEUE_WATCH_TICKS=1`), `stop`.
 8. Client `qhost:distsshqueue-qh` over a **loopback OpenSSH** (not a fake `ssh` binary):
-   `submit` / `status` / `watch` / `fetch` / `cancel` / `stop` / `teardown -y --write-only`.
+   `submit` / `status` / `watch` / `fetch` / `cancel` / `stop` / `teardown --confirm-path … --write-only`.
    `qhost:HOST setup` is refused.
 9. Does not `systemctl enable --now` or `launchctl bootstrap`. Does not treat
    `parent:N` on a client that sleeps as the product path.

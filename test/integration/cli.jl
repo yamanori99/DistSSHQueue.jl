@@ -297,12 +297,17 @@ end
                         "--config", joinpath(data, "config.toml"),
                     ]
                 ) == 0
+                confirm = String[]
+                for p in DistSSHQueue.teardown_targets(; home = home)
+                    ispath(p) || continue
+                    push!(confirm, "--confirm-path", p)
+                end
                 @test DistSSHQueue.main(
                     [
                         "teardown",
                         "--home", home,
-                        "-y",
                         "--write-only",
+                        confirm...,
                     ]
                 ) == 0
             end

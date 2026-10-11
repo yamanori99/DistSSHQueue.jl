@@ -817,7 +817,8 @@ function print_teardown_usage(io::IO = stdout)
     print_help_section("Flags"; io = io)
     print_help_lines(
         io,
-        help_verb_line("-y / --yes", "Required to delete (or DISTSSHKIT_YES)"),
+        help_verb_line("--confirm-path PATH", "Repeat once per quoted path from Would remove"),
+        help_verb_line("-y / --yes", "Ignored for teardown"),
         help_verb_line("--write-only", "Do not stop serve or unload the OS unit"),
         help_verb_line("--home DIR", "Home for ~/.distsshqueue"),
         help_verb_line("--bindir DIR", "Leftover dskq shim path"),
