@@ -13,7 +13,7 @@ function ssh_g_connect(name::AbstractString)::Dict{String, String}
     out = Dict{String, String}()
     h = String(name)
     try
-        dump = read(pipeline(Cmd(["ssh", "-n", ssh_opts()..., "-G", h]); stderr = devnull))
+        dump = read(pipeline(Cmd(["ssh", "-n", ssh_opts()..., "-G", _ssh_host_args(h)...]); stderr = devnull))
         for line in eachsplit(String(dump), '\n'; keepempty = false)
             sp = findfirst(isspace, line)
             sp === nothing && continue

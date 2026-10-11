@@ -7,6 +7,8 @@ GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator 
 
 `-v` prints two lines: DistSSHQueue, then DistSSHRun.
 
+`qhost:` rejects an SSH name that starts with `-`. `ssh` places `--` before the host.
+
 ## 0.9.3
 
 `serve` and `default_store_path` have docstrings. `default_store_path()` is `~/.distsshqueue/jobs.toml`. `serve` runs `serve!` on that file.

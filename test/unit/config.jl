@@ -285,6 +285,7 @@ end
         @test ex2 === true
         @test_throws ArgumentError DistSSHQueue.extract_remote_opts(["--qhost", "qbox", "status"])
         @test DistSSHQueue.parse_qhost_token("qhost:user@box") == "user@box"
+        @test_throws ArgumentError DistSSHQueue.parse_qhost_token("qhost:-oBatchMode=yes")
         @test_throws ArgumentError DistSSHQueue.parse_qhost_token("child:w:2")
         err4 = try
             DistSSHQueue.parse_qhost_token("qhost:4")

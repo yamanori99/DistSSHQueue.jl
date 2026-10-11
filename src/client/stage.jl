@@ -157,7 +157,7 @@ end
 
 function _ssh_mkdir!(host::AbstractString, remote_dir::AbstractString)
     inner = string("mkdir -p ", sh_single_quote(remote_dir))
-    cmd = Cmd(vcat(["ssh"], ssh_opts(), [String(host), inner]))
+    cmd = Cmd(vcat(["ssh"], ssh_opts(), _ssh_host_args(String(host), inner)))
     run(pipeline(cmd; stderr = stderr))
     return nothing
 end
