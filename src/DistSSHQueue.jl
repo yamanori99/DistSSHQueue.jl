@@ -3,7 +3,7 @@ DistSSHQueue — FIFO `serve` for DistSSHKit (`go` / `ride` / `drive`).
 
 Package entry: exports, `include`s, `main` (`@main` on Julia 1.13+).
 FIFO: `src/DistSSHQueue/`. Client CLI: `src/client/`. Queue host CLI: `src/qhost/`.
-`serve` runs DistSSHKit `execute!(...; detached=true)`.
+`serve` runs DistSSHRun `execute!(...; detached=true)` for kinds in `KIT_EXECUTE_KINDS`.
 `--project=<queue-env>` loads this package; the Kit project is `job_project()`.
 Config: `~/.distsshqueue/config.toml`.
 

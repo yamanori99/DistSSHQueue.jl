@@ -69,7 +69,7 @@ end
 
 """Worker path Kit would use for this queue-host project (`remote=` or Kit default / ENV).
 
-Matches DistSSHKit 0.4.2 detached `execute!` (`remote_env_project_root`):
+Matches DistSSHRun detached `execute!` (`remote_env_project_root`; the DistSSHKit 0.4.2 layout):
 `~…` stays a remote-shell layout; an absolute path is canonical. Empty `remote=`
 falls through to Kit's default / `DISTRIBUTED_REMOTE_PROJECT_ROOT`.
 """
@@ -282,11 +282,11 @@ function require_kit_ok(result)
     throw(ErrorException(msg))
 end
 
-"""Keywords DistSSHKit `execute!(...; detached=true)` accepts, from the job bag.
+"""Keywords DistSSHRun `execute!(...; detached=true)` accepts, from the job bag.
 
 `yes` is always `true` (unattended child). `path_anchor` and other names are dropped.
 `job_id` is not taken from the bag; `run_kit` passes `Job.id`.
-Allow-list is DistSSHKit `execute_detached_accepts`.
+Allow-list is DistSSHRun `execute_detached_accepts`.
 """
 function execute_kwargs(j::Job)
     raw = kit_kwargs(j.kwargs)
@@ -727,7 +727,7 @@ function _submit!(q::Queue, kind::Symbol, script::AbstractString, hosts; kwargs.
     end
 end
 
-"""Enqueue. `kind` is a DistSSHKit `execute!` kind (`:go`, `:ride`, `:drive`).
+"""Enqueue. `kind` is a DistSSHRun `execute!` kind in `KIT_EXECUTE_KINDS` (`:go`, `:ride`, `:drive`).
 
 `hosts` must be DistSSHKit 0.4 placement tokens (`parent[:N]` / `child:NAME[:N]`).
 Missing `project` uses `job_project()` (cwd / `DISTRIBUTED_PROJECT_ROOT`), not the
