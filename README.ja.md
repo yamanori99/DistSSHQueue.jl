@@ -20,7 +20,6 @@ DistSSHQueue は、キューホストにジョブを置いて、1件ずつ走ら
 [DistSSHKit のマニュアル](https://yamanori99.github.io/DistSSHKit.jl/stable/)
 にある。
 
-DistSSHQueue の UUID は `24254401-70d8-4a51-8ea4-cfab19f5bc73` である。
 対応は **macOS、Linux、WSL2 Ubuntu** (ネイティブ Windows は対象外)。
 
 小さな研究室や個人でも、常時起動のマシンを 1 台置き、SSH接続したマシンとまとめて小さな計算ノードとして使うことが出来る。
@@ -256,12 +255,15 @@ julia -m DistSSHQueue serve
 
 ## ドキュメント
 
-- Home:
-  [Home](https://yamanori99.github.io/DistSSHQueue.jl/stable/)
-- マニュアル:
-  [DistSSHKit](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/)
-- API: [API](https://yamanori99.github.io/DistSSHQueue.jl/stable/api/)
+公式ドキュメントの本体は英語である。
+
+- [Home](https://yamanori99.github.io/DistSSHQueue.jl/stable/)
+- [API](https://yamanori99.github.io/DistSSHQueue.jl/stable/api/)
+- DistSSHKit:
+  [マニュアル](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/)
 - News: [NEWS.md](NEWS.md)
+
+DistSSHQueue `24254401-70d8-4a51-8ea4-cfab19f5bc73`
 
 ## 貢献
 

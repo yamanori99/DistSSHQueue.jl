@@ -19,7 +19,6 @@ package. `pkg> add DistSSHQueue` is for using the queue on its own.
 The longer guide is the
 [DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/stable/).
 
-DistSSHQueue UUID: `24254401-70d8-4a51-8ea4-cfab19f5bc73`.
 Supported on **macOS, Linux, and WSL2 Ubuntu** (not native Windows).
 
 Even small labs and individuals can keep one always-on machine, add
@@ -257,12 +256,12 @@ refuse `qhost:`. Command reference:
 
 ## Documentation
 
-- Home:
-  [Home](https://yamanori99.github.io/DistSSHQueue.jl/stable/)
-- Manual:
-  [DistSSHKit](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/)
-- API: [API](https://yamanori99.github.io/DistSSHQueue.jl/stable/api/)
+- [Home](https://yamanori99.github.io/DistSSHQueue.jl/stable/)
+- [API](https://yamanori99.github.io/DistSSHQueue.jl/stable/api/)
+- [Kit manual](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/)
 - News: [NEWS.md](NEWS.md)
+
+DistSSHQueue `24254401-70d8-4a51-8ea4-cfab19f5bc73`
 
 ## Contributing
 
