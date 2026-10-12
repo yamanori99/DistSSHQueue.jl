@@ -1,5 +1,5 @@
 """One table row. `hosts` are DistSSHKit placement tokens (`parent[:N]` / `child:NAME[:N]`).
-`kwargs` is an opaque bag for DistSSHKit `execute!` (`project` is the Kit project)."""
+`kwargs` is an opaque bag for DistSSHRun `execute!` (`project` is the Kit project)."""
 mutable struct Job
     id::String
     kind::Symbol
@@ -14,7 +14,7 @@ mutable struct Job
     kwargs::Dict{String, Any}
 end
 
-"""DistSSHKit `execute!` kinds Queue can enqueue. Inspect verbs (`size` / `plan` / `pool`) are not this list."""
+"""DistSSHRun `execute!` kinds this package can enqueue. `KIT_EXECUTE_KINDS` is Queue's constant. Inspect verbs (`size` / `plan` / `pool`) are not this list."""
 const KIT_EXECUTE_KINDS = (:go, :drive, :ride)
 
 is_kit_execute_kind(k::Symbol)::Bool = k === :go || k === :drive || k === :ride

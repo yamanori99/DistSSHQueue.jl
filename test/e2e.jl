@@ -4,7 +4,7 @@
 # Stages DistSSHKit `demos/` into testenv/example-job, setup! to the workers,
 # then enqueue Kit go/drive jobs through Queue `serve`
 # (same as CLI `submit go` / `submit drive`). `serve` runs
-# DistSSHKit `execute!(…; detached=true)`.
+# DistSSHRun `execute!(…; detached=true)` for kinds in `KIT_EXECUTE_KINDS`.
 #
 # Also: `julia -m DistSSHKit` on the queue host (omit `qhost:HOST`) and as a
 # client (`qhost:HOST` over loopback OpenSSH, including `fetch`). Inspect verbs
