@@ -267,6 +267,7 @@ DistSSHQueue `24254401-70d8-4a51-8ea4-cfab19f5bc73`
 
 Bugs and feature requests: [Issues](https://github.com/yamanori99/DistSSHQueue.jl/issues).
 See [CONTRIBUTING.md](CONTRIBUTING.md).
+Versioning and releases: [DistSSHKit manual, Releasing](https://github.com/yamanori99/DistSSHKit.jl/blob/main/docs/src/developers/releasing.md).
 
 ## License
 

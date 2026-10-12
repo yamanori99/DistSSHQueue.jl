@@ -206,70 +206,40 @@ what is useful.
 
 ## Release
 
-| Label | Meaning |
-| --- | --- |
-| `breaking` | Incompatible behavior. May land **without** a version bump. |
-| version cut | `Project.toml` `version` went up. CI compares that file with the base (`version-cut.sh`). Labels adds `cut` on that rise. Removing it sticks until the next rise. CI still reads the file, not the label. |
-| `cut-hold` | Postpone register. CI adds this on Issue `E2E weekly failed` when Sunday **Linux** is red. Intel / WSL red does not. Not a PR `area:*` label. Do not lower `version`. |
+Versioning, when to cut, the dependency floor, and how to register are in
+the DistSSHKit manual:
+[Releasing](https://github.com/yamanori99/DistSSHKit.jl/blob/main/docs/src/developers/releasing.md)
+and
+[Packages](https://github.com/yamanori99/DistSSHKit.jl/blob/main/docs/src/developers/packages.md).
 
-On a breaking line bump `x` in `0.x.y`; otherwise bump `y`. Do not ship an empty cut. Do not automate the bump or `@JuliaRegistrator register`.
-
-### DistSSHKit cuts
-
-Queue requires DistSSHRun on the `0.1` line. The patch floor is [below](#dependency-floor). Ordinary Queue work does not `Pkg.develop` Run and does not, by itself, trigger a DistSSHRun General patch. Docs, opt-in flags, and CI on Run wait.
-
-If Queue cannot implement something without a kit hook, open a DistSSHKit Enhancement, land the small PR, then cut DistSSHKit so Queue can pin General. `Pkg.develop` a Kit checkout only until that cut is on General. Kit freeze and cut rules: [DistSSHKit CONTRIBUTING.md](https://github.com/yamanori99/DistSSHKit.jl/blob/main/CONTRIBUTING.md#when-to-cut).
-
-FIFO enqueue is DistSSHKit `execute!` kinds only (`KIT_EXECUTE_KINDS` / `kit_parse_args`). A new execute kind is one row there plus the Queue CLI. Inspect verbs (`size` / `plan` / `pool`) do not enqueue; copy [src/client/size.jl](src/client/size.jl). Do not add `plan!` in Kit to queue `plan`.
+In short: a breaking change raises `x` in `0.x.y`, anything else raises
+`y`. Label a breaking pull request `breaking`. Register on the merge
+commit with the NEWS section as the release notes. Do not lower
+`version`. A version held by `cut-hold` is registered after the hold
+lifts. Do not publish a later number in its place.
 
 ### When to cut
 
-Not a calendar. Cut when [NEWS.md](NEWS.md) **Unreleased** has something General users should get.
+[Releasing](https://github.com/yamanori99/DistSSHKit.jl/blob/main/docs/src/developers/releasing.md#when-to-cut).
 
-| Unreleased is… | Cut? |
-| --- | --- |
-| Happy-path bug (FIFO enqueue / `serve`) | Yes, that patch promptly |
-| Opt-in flags, docs, CI | When someone needs it on General, **or** those items have sat in Unreleased for **two weeks** |
+### DistSSHKit cuts
 
-### Dependency floor
+Queue requires DistSSHRun on the `0.1` line. The patch floor is on
+[Releasing](https://github.com/yamanori99/DistSSHKit.jl/blob/main/docs/src/developers/releasing.md#dependency-floor).
+Ordinary Queue work does not `Pkg.develop` Run and does not, by itself,
+trigger a DistSSHRun General patch. Docs, opt-in flags, and CI on Run wait.
 
-`[compat]` for DistSSHRun is a lower bound up to the next breaking
-release. `"0.1.6"` means `0.1.6` or newer, and older than `0.2`. A later
-`0.1` patch installs without another Queue cut. `0.2` waits until the
-`[compat]` entry in `Project.toml` allows it.
+If Queue cannot implement something without a kit hook, open a DistSSHKit
+Enhancement, land the small PR, then cut DistSSHKit so Queue can pin
+General. `Pkg.develop` a Kit checkout only until that cut is on General.
+Kit freeze and cut rules:
+[Releasing](https://github.com/yamanori99/DistSSHKit.jl/blob/main/docs/src/developers/releasing.md#when-to-cut).
 
-Leave the bound open through that next breaking release. Run is a
-separate repository, so one exact version would need a Queue cut for
-every Run patch.
-
-A user who adds DistSSHQueue alone is held by this floor. A user who
-adds DistSSHKit is held by Kit's floor, because that environment
-resolves DistSSHRun once. When a Run fix must reach Queue-only users,
-register that Run release on General first, then raise this floor in a
-Queue cut.
-
-`DistSSHQueue.remote_delete_root` and the other copies under
-`src/DistSSHQueue/base/` are this package's own functions. A fix there
-needs a Queue release. The DistSSHRun floor does not replace them.
-
-The floor does not rewrite an existing Manifest. When the user updates
-Queue, Run rises to at least that floor. For this kind of fix, raise the
-floor and write `NEWS.md`. Leave the older release on General.
-
-### After a cut merges
-
-1. Register when the required checks on the version-increase PR are green, including Linux E2E. Do not wait for E2E weekly.
-2. Register on the merge commit (not the PR body). Paste the NEWS section under `Release notes:`.
-3. **E2E weekly** is Sunday 04:00 JST and `workflow_dispatch` only. A version-and-NEWS merge does not start it.
-4. Sunday **Linux** red: Issue `E2E weekly failed` gets `cut-hold`. Do not `@JuliaRegistrator register` while `cut-hold` is open. Do not lower `version`. Intel / WSL red does not add `cut-hold`. A later green Sunday Linux removes `cut-hold` even if Intel / WSL are still red (the Issue stays open until the whole weekly run is green).
-5. Skip that version on General instead: keep `cut-hold` until a later cut (higher `version`) is ready, then register that later cut.
-6. TagBot tags once General has the release.
-
-TagBot uses SSH deploy key secret `DOCUMENTER_KEY` (write deploy key on this repo) so the `vX.Y.Z` tag starts Docs and `stable` updates. Docs still deploy with `GITHUB_TOKEN`. Do not add a `+doc1` tag unless that path failed. Manual rebuild: `gh workflow run Docs --ref vX.Y.Z`.
-
-GitHub Releases need a token that can `POST /repos/.../releases` (`Contents: write`). Keep cut commits to `Project.toml` + `NEWS.md` (no workflow files). For Releases, set repo secret **`TAGBOT_PAT`**: fine-grained PAT (this repo, or the same token as DistSSHKit), Contents read/write, Issues read/write. Add Workflows read/write only when the tagged SHA changes `.github/workflows` (GitHub then requires it). TagBot reads General with `GITHUB_TOKEN` (`registry_token`); a this-repo-only PAT 401s on `GET JuliaRegistries/General`. Empty `TAGBOT_PAT` still falls back to `GITHUB_TOKEN` for `token`. Do not put `permissions:` on `.github/workflows/TagBot.yml` (TagBot defaults). If TagBot opens `TagBot: Manual intervention needed for releases`, the tag may already exist; create the Release only (`gh release create vX.Y.Z --verify-tag --notes "…"`), then close the Issue. `--verify-tag` fails if the tag is missing (plain `gh release create` would mint it from the default branch).
-
-Repo Settings → Actions → Workflow permissions: **Read and write** (`GITHUB_TOKEN`).
+FIFO enqueue is DistSSHKit `execute!` kinds only (`KIT_EXECUTE_KINDS` /
+`kit_parse_args`). A new execute kind is one row there plus the Queue CLI.
+Inspect verbs (`size` / `plan` / `pool`) do not enqueue; copy
+[src/client/size.jl](src/client/size.jl). Do not add `plan!` in Kit to
+queue `plan`.
 
 ## Issues
 
@@ -283,7 +253,7 @@ A Queue failure is not automatically a Queue bug. Decide the repo first:
 
 Do not file DistSSHKit on speculation. Reproduce against Kit (or this E2E with Kit artifacts) first.
 
-Every PR needs one type label (`bug` / `enhancement` / `chore`) when labels exist.
+Every PR needs one type label (`bug` / `enhancement` / `breaking` / `chore`) when labels exist.
 
 ## Labels
 
@@ -316,11 +286,11 @@ Backfill every PR after a vocabulary change:
 
 ### Type labels
 
-Every PR needs one of `bug` / `enhancement` / `chore`. Dependabot skips the type check (`dependencies` only). Override with `gh pr edit N --add-label …`.
+Every PR needs one of `bug` / `enhancement` / `breaking` / `chore`. Dependabot skips the type check (`dependencies` only). Override with `gh pr edit N --add-label …`.
 
 Weekly Dependabot covers `github-actions` and Julia registry deps.
-Stdlib names are `ignore` in [`.github/dependabot.yml`](.github/dependabot.yml)
-(`Dates`, `Pkg`, `TOML`, `Test`). A new
+Stdlib names and `DistSSH*` are `ignore` in [`.github/dependabot.yml`](.github/dependabot.yml)
+(`Dates`, `Pkg`, `TOML`, `Test`, and our packages). Raise a DistSSHRun floor by hand. A new
 third-party `[deps]` entry is picked up with no YAML change; a new
 stdlib must be added to that ignore list. Stdlib `[compat]` stays with
 the Julia floor. The Julia updater otherwise appends `< 0.0.1` for the
@@ -331,7 +301,7 @@ that union (comma is or, not and). Scan /
 CI infers, in order:
 
 1. A unique type on a closing issue (`Fixes #N`)
-2. Else the branch prefix: `feat/` → enhancement, `fix/` → bug, `breaking/` → breaking, `chore/` / `docs/` / `ci/` / `test/` / anything else → chore
+2. Else the branch prefix: `feat/` → enhancement, `fix/` → bug, `breaking/` → breaking, `chore/` / `docs/` / `ci/` / `test/` → chore. Any other prefix fails the check until someone adds one of the four labels.
 
 `fix/` plus `Fixes` an enhancement issue gets `enhancement`. `breaking` may sit next to the type label. After a cut, a human registers when the required checks are green (or holds with `cut-hold` if weekly Linux is red); TagBot tags.
 
