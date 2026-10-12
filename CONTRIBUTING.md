@@ -224,21 +224,28 @@ lifts. Do not publish a later number in its place.
 
 ### DistSSHKit cuts
 
-Queue requires DistSSHRun on the `0.1` line. The patch floor is on
+Queue depends on DistSSHRun, not on DistSSHKit. The patch floor is on
 [Releasing](https://github.com/yamanori99/DistSSHKit.jl/blob/main/docs/src/developers/releasing.md#dependency-floor).
 Ordinary Queue work does not `Pkg.develop` Run and does not, by itself,
 trigger a DistSSHRun General patch. Docs, opt-in flags, and CI on Run wait.
 
-If Queue cannot implement something without a kit hook, open a DistSSHKit
-Enhancement, land the small PR, then cut DistSSHKit so Queue can pin
-General. `Pkg.develop` a Kit checkout only until that cut is on General.
-Kit freeze and cut rules:
+A missing `execute!` behavior is a DistSSHRun change. Land it, register
+Run, then raise this floor. A missing `julia -m DistSSHKit` surface is a
+DistSSHKit change: open an Enhancement, land the small PR, then cut
+DistSSHKit. `Pkg.develop` that checkout only until the cut is on General.
+Cut rules:
 [Releasing](https://github.com/yamanori99/DistSSHKit.jl/blob/main/docs/src/developers/releasing.md#when-to-cut).
 
-FIFO enqueue is DistSSHKit `execute!` kinds only (`KIT_EXECUTE_KINDS` /
-`kit_parse_args`). A new execute kind is one row there plus the Queue CLI.
-Inspect verbs (`size` / `plan` / `pool`) do not enqueue; copy
-[src/client/size.jl](src/client/size.jl). Do not add `plan!` in Kit to
+FIFO enqueue calls DistSSHRun `execute!` for the kinds in Queue's
+`KIT_EXECUTE_KINDS`
+([src/DistSSHQueue/job.jl](src/DistSSHQueue/job.jl)).
+`kit_parse_args`
+([src/client/submit.jl](src/client/submit.jl))
+turns that argv into Run's `parse_go_args`, `parse_drive_args`, or
+`parse_ride_args`. A new kind needs a row in `kit_parse_args`, an entry
+in `KIT_EXECUTE_KINDS`, the Queue CLI, and that kind already on Run
+`execute!`. Inspect verbs (`size` / `plan` / `pool`) do not enqueue; copy
+[src/client/size.jl](src/client/size.jl). Do not add `plan!` on Run to
 queue `plan`.
 
 ## Issues
@@ -249,7 +256,7 @@ A Queue failure is not automatically a Queue bug. Decide the repo first:
 
 - Queue lagged Kit's contract (demo argv, translating `terminate_run!` wait into `:cancelled`, collect under a gitignored path): fix Queue. Do not open DistSSHKit.
 - Queue cannot land the feature without a Kit hook: DistSSHKit Enhancement, Kit PR, Kit cut, then pin here ([DistSSHKit cuts](#distsshkit-cuts)).
-- Reproduced Kit defect (`execute!` `ok` with empty collect, wait/cancel that contradicts Kit docs): open a [DistSSHKit issue](https://github.com/yamanori99/DistSSHKit.jl/issues) with the Kit log / `kit.result` / `failed_step`. Link it from the Queue issue or PR. A Queue-only workaround is temporary and must say so.
+- Reproduced DistSSHRun defect (`execute!` `ok` with empty collect, wait/cancel that contradicts the Run docs): open a [DistSSHRun issue](https://github.com/yamanori99/DistSSHRun.jl/issues) with the log / `kit.result` / `failed_step`. Link it from the Queue issue or PR. A Queue-only workaround is temporary and must say so.
 
 Do not file DistSSHKit on speculation. Reproduce against Kit (or this E2E with Kit artifacts) first.
 
