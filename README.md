@@ -174,7 +174,7 @@ under `stage/<uuid>/`. `parent` runs from that stage on this box. Leave
     Project.toml        compute deps
     SCRIPT.jl
     .distsshkit/runs/<kind>/<run>/  run.toml, kit.pid, kit.result
-    .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  result_path (the run or the script picks it)
+    .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  result_path (run or script picks it)
     .distsshkit/setup/*.log         setup logs
 ```
 
