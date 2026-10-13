@@ -22,6 +22,7 @@ for arg in "$@"; do
       echo "  DISTSSHQUEUE_SKIP_UP=1     skip compose up (push-only)"
       echo "  DISTSSHQUEUE_CODE_COVERAGE=1  e2e with --code-coverage=user"
       echo "  DISTSSHQUEUE_BUILD_RETRIES=N  image build attempts (default 3)"
+      echo "  DISTSSHQUEUE_BUILD_CACHE=gha  CI only: buildx with the GitHub Actions layer cache"
       exit 0
       ;;
     *)
@@ -76,7 +77,19 @@ else
   distsshqueue_export_julia_release
   # A failed RUN layer is discarded, so a rebuild starts that layer clean
   # and reuses the cached layers before it.
-  distsshqueue_retry "worker image build" "${COMPOSE[@]}" -f compose.yml build child-1
+  if [[ "${DISTSSHQUEUE_BUILD_CACHE:-}" == "gha" ]]; then
+    # CI: reuse layers across runs. The release ARG is the cache key for the
+    # juliaup layer, so a hit skips julialang-s3 entirely.
+    distsshqueue_retry "worker image build" docker buildx build --load \
+      -t "${LOCAL_IMAGE}" \
+      --cache-from "type=gha,scope=distsshqueue-ssh-worker" \
+      --cache-to "type=gha,scope=distsshqueue-ssh-worker,mode=max" \
+      --build-arg JULIA_CHANNEL \
+      --build-arg JULIA_RELEASE \
+      -f Dockerfile .
+  else
+    distsshqueue_retry "worker image build" "${COMPOSE[@]}" -f compose.yml build child-1
+  fi
   if [[ -n "${DISTSSHQUEUE_PUSH_IMAGE:-}" ]]; then
     DISTSSHQUEUE_LOCAL_IMAGE="$LOCAL_IMAGE" ./scripts/push-image.sh "$DISTSSHQUEUE_PUSH_IMAGE"
   fi
