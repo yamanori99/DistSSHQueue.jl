@@ -248,16 +248,17 @@ jobs:
           echo "$(cat "$src/.ci-cache/ghcr.token")" | docker login ghcr.io -u "$actor" --password-stdin
           rm -f "$src/.ci-cache/ghcr.token" "$src/.ci-cache/ghcr.actor"
           julia_channel=1.13
+          # shellcheck source=/dev/null
+          source "$dest/testenv/docker-ssh/scripts/retry.sh"
           if [[ -f "$cache/julia.tgz" ]]; then
             tar -xzf "$cache/julia.tgz" -C "$HOME"
           else
-            curl --retry 5 --retry-delay 5 --retry-connrefused --connect-timeout 10 \
-              -fsSL https://install.julialang.org | sh -s -- --yes --default-channel "$julia_channel"
+            distsshqueue_retry "WSL juliaup install" distsshqueue_install_juliaup "$julia_channel"
           fi
           export PATH="$HOME/.juliaup/bin:$PATH"
           # Current patch before the suite starts. A later juliaup version-db
           # check must not delete the install this job is about to run.
-          juliaup update "$julia_channel"
+          distsshqueue_retry "WSL juliaup update" juliaup update "$julia_channel"
           juliaup default "$julia_channel"
           cd "$dest"
           ./testenv/docker-ssh/scripts/up.sh --e2e

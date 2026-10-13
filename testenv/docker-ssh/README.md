@@ -107,6 +107,12 @@ of building locally (`DISTSSHQUEUE_WORKER_PULL_RETRIES` for wait-on-push). After
 build, `DISTSSHQUEUE_PUSH_IMAGE=<tag>` tags and pushes that image (`scripts/push-image.sh`,
 retries). `DISTSSHQUEUE_SKIP_UP=1` skips compose up (image job: build+push only).
 
+A local image build retries up to three times (`DISTSSHQUEUE_BUILD_RETRIES`,
+default 3; waits 30 s, then 60 s). juliaup fetches its version list from
+S3 after the installer download, and a short network failure there would
+otherwise fail the run. Set `DISTSSHQUEUE_BUILD_RETRIES=1` while debugging
+the Dockerfile.
+
 ## CI
 
 | Controller | Worker | Where |
