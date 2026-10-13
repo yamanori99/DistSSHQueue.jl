@@ -21,6 +21,7 @@ for arg in "$@"; do
       echo "  DISTSSHQUEUE_PUSH_IMAGE  after local build, tag and push this name"
       echo "  DISTSSHQUEUE_SKIP_UP=1     skip compose up (push-only)"
       echo "  DISTSSHQUEUE_CODE_COVERAGE=1  e2e with --code-coverage=user"
+      echo "  DISTSSHQUEUE_BUILD_RETRIES=N  image build attempts (default 3)"
       exit 0
       ;;
     *)
@@ -34,6 +35,8 @@ cd "${ROOT}"
 
 # shellcheck source=julia-release.sh
 source "${ROOT}/scripts/julia-release.sh"
+# shellcheck source=retry.sh
+source "${ROOT}/scripts/retry.sh"
 
 ./scripts/gen-keys.sh
 
@@ -71,7 +74,9 @@ else
   # Build a single service so logs are not interleaved (both share the image).
   # Compose passes JULIA_CHANNEL and the resolved release into Dockerfile ARGs.
   distsshqueue_export_julia_release
-  "${COMPOSE[@]}" -f compose.yml build child-1
+  # A failed RUN layer is discarded, so a rebuild starts that layer clean
+  # and reuses the cached layers before it.
+  distsshqueue_retry "worker image build" "${COMPOSE[@]}" -f compose.yml build child-1
   if [[ -n "${DISTSSHQUEUE_PUSH_IMAGE:-}" ]]; then
     DISTSSHQUEUE_LOCAL_IMAGE="$LOCAL_IMAGE" ./scripts/push-image.sh "$DISTSSHQUEUE_PUSH_IMAGE"
   fi
