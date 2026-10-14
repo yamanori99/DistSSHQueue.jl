@@ -23,6 +23,7 @@ for arg in "$@"; do
       echo "  DISTSSHQUEUE_CODE_COVERAGE=1  e2e with --code-coverage=user"
       echo "  DISTSSHQUEUE_BUILD_RETRIES=N  image build attempts (default 3)"
       echo "  DISTSSHQUEUE_BUILD_CACHE=gha  CI only: buildx with the GitHub Actions layer cache"
+      echo "  DISTSSHQUEUE_DEV_RUN       DistSSHRun checkout to develop into test/ before E2E"
       exit 0
       ;;
     *)
@@ -121,8 +122,20 @@ if [[ "$RUN_E2E" -eq 1 ]]; then
     using Pkg
     isempty(Pkg.Registry.reachable_registries()) && Pkg.Registry.add("General")
     Pkg.Registry.update()
+    dev = get(ENV, "DISTSSHQUEUE_DEV_RUN", "")
+    if !isempty(dev)
+      isdir(dev) || error("DISTSSHQUEUE_DEV_RUN is not a directory: ", dev)
+      Pkg.develop(PackageSpec(path = dev))
+    end
     Pkg.resolve()
     Pkg.instantiate()
+    if !isempty(dev)
+      @eval using DistSSHRun
+      loaded = realpath(pkgdir(DistSSHRun))
+      expected = realpath(dev)
+      loaded == expected ||
+        error("DistSSHRun loaded from ", loaded, ", expected ", expected)
+    end
   '
   julia_e2e=(julia --project=test --color=yes)
   if [[ "${DISTSSHQUEUE_CODE_COVERAGE:-}" == "1" ]]; then
