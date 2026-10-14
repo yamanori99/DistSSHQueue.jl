@@ -1,9 +1,8 @@
 # Capture CLI stdio the way DistSSHKit tests do.
 #
 # `redirect_stdout` does not accept `IOBuffer`. Kit uses `mktemp`
-# (`test/unit/DistSSHKit/main_dispatch.jl`). Redirecting also makes
-# `DistSSHQueue.use_colors()` false (`stdout isa TTY`), so ANSI does not leak
-# into `Pkg.test()` output.
+# (`test/unit/DistSSHKit/main_dispatch.jl`). `stdout` is not a TTY, so help
+# chrome stays plain and ANSI does not leak into `Pkg.test()` output.
 function capture_stdio(f)
     return mktemp() do out_path, out_io
         mktemp() do err_path, err_io

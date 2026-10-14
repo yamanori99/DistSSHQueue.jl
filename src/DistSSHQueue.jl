@@ -13,10 +13,17 @@ module DistSSHQueue
 
 using Dates
 using Pkg
-using SHA
 using TOML
 
 import DistSSHRun
+using DistSSHRun.DistSSHBase
+using DistSSHRun.DistSSHBase: PARENT_HOST_NAME, _ssh_host_args, _test_doubles_on,
+    cli_entry, cli_heading, cli_m, cli_m_project, cli_qhost, cli_qhost_heading,
+    format_placement_token, get_remote_julia_version, julia_project_rel,
+    parse_placement_token, remote_env_project_root, resolve_remote_julia,
+    resolve_remote_project_root, with_cli_entry
+using DistSSHRun.DistSSHUp: juliaup_add_host!, juliaup_default_host!,
+    juliaup_default_patch, juliaup_status_lines, juliaup_update_host!
 
 export Queue
 export Job
@@ -30,22 +37,6 @@ export serve!
 export serve
 export job_project
 export default_store_path
-
-include("DistSSHQueue/base/paths.jl")
-include("DistSSHQueue/base/explain.jl")
-include("DistSSHQueue/base/argv.jl")
-include("DistSSHQueue/base/hosts.jl")
-include("DistSSHQueue/base/host_tokens.jl")
-include("DistSSHQueue/base/cli_entry.jl")
-include("DistSSHQueue/base/help.jl")
-include("DistSSHQueue/base/ssh.jl")
-include("DistSSHQueue/base/julia_where.jl")
-include("DistSSHQueue/base/namespace.jl")
-include("DistSSHQueue/up/version.jl")
-include("DistSSHQueue/up/status.jl")
-include("DistSSHQueue/up/remote.jl")
-include("DistSSHQueue/up/local.jl")
-include("DistSSHQueue/up/hosts.jl")
 
 include("DistSSHQueue/job.jl")
 include("DistSSHQueue/store.jl")
@@ -83,9 +74,7 @@ end
 """CLI entry. Prefer `julia -m DistSSHKit` (client `qhost:HOST` / queue-host `setup`)."""
 function main(args::Vector{String} = copy(ARGS))::Cint
     return with_cli_entry(:DistSSHQueue) do
-        DistSSHRun.with_cli_entry(:DistSSHQueue) do
-            _main(args)
-        end
+        _main(args)
     end
 end
 
