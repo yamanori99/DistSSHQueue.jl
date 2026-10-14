@@ -100,7 +100,6 @@ EOF
           - "Project.toml"
           - "test/unit/config.jl"
           - "test/unit/queue.jl"
-          - "test/unit/shell_quote.jl"
           - "test/integration/cli.jl"
 
 "area:client":
