@@ -1,4 +1,5 @@
 using Test
+using DistSSHRun
 
 # `/bin/sh` executes the quoted word. A quote that is only syntactically valid
 # (for example a double-quoted `$(...)`) still fails here, because the sentinel
@@ -28,7 +29,7 @@ end
             "",
         ]
         for s in samples
-            got = _remote_sh_printf(dir, DistSSHQueue._remote_sh_quote(s))
+            got = _remote_sh_printf(dir, DistSSHRun.DistSSHBase._remote_sh_quote(s))
             @test got == s
             @test !isfile(sentinel)
         end
@@ -42,7 +43,7 @@ end
             "x;y|&",
         ]
         for rest in rests
-            got = _remote_sh_printf(dir, DistSSHQueue._remote_shell_path_word("~/" * rest))
+            got = _remote_sh_printf(dir, DistSSHRun.DistSSHBase._remote_shell_path_word("~/" * rest))
             @test got == home * "/" * rest
             @test !isfile(sentinel)
         end
@@ -53,14 +54,14 @@ end
             "rel/" * "`" * touch * "`",
         ]
         for p in literals
-            got = _remote_sh_printf(dir, DistSSHQueue._remote_shell_path_word(p))
+            got = _remote_sh_printf(dir, DistSSHRun.DistSSHBase._remote_shell_path_word(p))
             @test got == p
             @test !isfile(sentinel)
         end
     end
 
     err = try
-        DistSSHQueue._remote_ancestor("~/Repo/proj", "a/proj")
+        DistSSHRun.DistSSHBase._remote_ancestor("~/Repo/proj", "a/proj")
         ""
     catch e
         e isa ArgumentError ? e.msg : sprint(showerror, e)

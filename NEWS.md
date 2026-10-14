@@ -3,6 +3,12 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
+## Unreleased
+
+- Host SSH and juliaup come from DistSSHRun 0.1.7 (`DistSSHBase` and `DistSSHUp`). The copies in this package are gone. DistSSHRun compat is `0.1.7`.
+- `job_project` also skips a vendored DistSSHKit `Project.toml`, the same walk as DistSSHRun.
+- CLI flags, confirmation, and exit codes are unchanged.
+
 ## 0.9.4
 
 - Opening a store lock pid no longer fails the job when that lock directory disappears between the check and the open. The waiter retries.
