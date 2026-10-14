@@ -1,10 +1,9 @@
 #!/usr/bin/env julia
 # Queue SSH E2E against testenv/docker-ssh workers. Not part of Pkg.test().
 #
-# Copies testenv/example-job to its own git root, stages DistSSHRun `demos/`
-# there, then setup! to the workers. The Queue repo `.gitignore` does not
-# apply to that root.
-# then enqueue Kit go/drive jobs through Queue `serve`
+# Copies testenv/example-job to its own git root and stages DistSSHRun `demos/`
+# there. The Queue repo `.gitignore` does not apply to that root. Then setup!
+# to the workers and enqueue Kit go/drive jobs through Queue `serve`
 # (same as CLI `submit go` / `submit drive`). `serve` runs
 # DistSSHRun `execute!(…; detached=true)` for kinds in `KIT_EXECUTE_KINDS`.
 #
@@ -46,6 +45,22 @@ _e2e_enabled() = get(ENV, "DISTSSHQUEUE_SSH_E2E", "") == "1"
 if !_e2e_enabled()
     @info "Skipping Queue SSH E2E (set DISTSSHQUEUE_SSH_E2E=1 to enable)"
     exit(0)
+end
+
+# Location variables still name the repo when `-C` is set. A hook can export
+# them. Drop them before any git call so `init` and the later `setup!` git
+# both use the job tree.
+for k in (
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_INDEX_FILE",
+        "GIT_COMMON_DIR",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_CEILING_DIRECTORIES",
+        "GIT_DISCOVERY_ACROSS_FILESYSTEM",
+    )
+    delete!(ENV, k)
 end
 
 include(joinpath(@__DIR__, "support.jl"))
@@ -118,19 +133,9 @@ function isolate_job_git_root(src::AbstractString)::String
     cp(src, dest; force = true)
     git = joinpath(dest, ".git")
     ispath(git) && rm(git; recursive = true)
-    # `GIT_DIR` still names the repo when `-C` is set. `setup!` runs git in
-    # this tree later, so drop the location variables for the rest of this process.
-    for name in (
-            "GIT_DIR",
-            "GIT_WORK_TREE",
-            "GIT_COMMON_DIR",
-            "GIT_INDEX_FILE",
-            "GIT_OBJECT_DIRECTORY",
-            "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-        )
-        delete!(ENV, name)
-    end
     run(`git -C $dest init -q`)
+    top = realpath(strip(read(`git -C $dest rev-parse --show-toplevel`, String)))
+    top == realpath(dest) || error("job git root is $top, expected $dest")
     return dest
 end
 
