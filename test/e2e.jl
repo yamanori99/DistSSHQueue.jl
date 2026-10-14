@@ -127,12 +127,18 @@ function stage_kit_demos!(proj::AbstractString)
     return nothing
 end
 
-"""Copy `src` to a new git root. This repo's `.gitignore` is not the send list."""
+"""Copy tracked files from `src` to a new git root.
+
+This repo's `.gitignore` is not the send list. Untracked leftovers stay behind.
+"""
 function isolate_job_git_root(src::AbstractString)::String
     dest = mktempdir()
-    cp(src, dest; force = true)
-    git = joinpath(dest, ".git")
-    ispath(git) && rm(git; recursive = true)
+    listed = read(`git -C $src ls-files -z`, String)
+    for rel in split(listed, '\0'; keepempty = false)
+        to = joinpath(dest, rel)
+        mkpath(dirname(to))
+        cp(joinpath(src, rel), to)
+    end
     run(`git -C $dest init -q`)
     top = realpath(strip(read(`git -C $dest rev-parse --show-toplevel`, String)))
     top == realpath(dest) || error("job git root is $top, expected $dest")
