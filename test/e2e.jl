@@ -118,6 +118,18 @@ function isolate_job_git_root(src::AbstractString)::String
     cp(src, dest; force = true)
     git = joinpath(dest, ".git")
     ispath(git) && rm(git; recursive = true)
+    # `GIT_DIR` still names the repo when `-C` is set. `setup!` runs git in
+    # this tree later, so drop the location variables for the rest of this process.
+    for name in (
+            "GIT_DIR",
+            "GIT_WORK_TREE",
+            "GIT_COMMON_DIR",
+            "GIT_INDEX_FILE",
+            "GIT_OBJECT_DIRECTORY",
+            "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        )
+        delete!(ENV, name)
+    end
     run(`git -C $dest init -q`)
     return dest
 end
