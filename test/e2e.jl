@@ -1,7 +1,9 @@
 #!/usr/bin/env julia
 # Queue SSH E2E against testenv/docker-ssh workers. Not part of Pkg.test().
 #
-# Stages DistSSHKit `demos/` into testenv/example-job, setup! to the workers,
+# Copies testenv/example-job to its own git root, stages DistSSHRun `demos/`
+# there, then setup! to the workers. The Queue repo `.gitignore` does not
+# apply to that root.
 # then enqueue Kit go/drive jobs through Queue `serve`
 # (same as CLI `submit go` / `submit drive`). `serve` runs
 # DistSSHRun `execute!(…; detached=true)` for kinds in `KIT_EXECUTE_KINDS`.
@@ -35,7 +37,7 @@ using DistSSHQueue
 
 const QUEUE_ROOT = abspath(joinpath(@__DIR__, ".."))
 const DOCKER_SSH = joinpath(QUEUE_ROOT, "testenv", "docker-ssh")
-const JOB_PROJECT = joinpath(QUEUE_ROOT, "testenv", "example-job")
+const JOB_SOURCE = joinpath(QUEUE_ROOT, "testenv", "example-job")
 const REMOTE_ROOT = "/home/dev/distsshqueue-e2e"
 const E2E_JULIA = DistSSHQueue.default_julia_bin()
 
@@ -105,6 +107,38 @@ function stage_kit_demos!(proj::AbstractString)
             src = joinpath(kit, "demos", subdir, name)
             isfile(src) || error("missing DistSSHKit demo: $src")
             cp(src, joinpath(dest, name); force = true)
+        end
+    end
+    return nothing
+end
+
+"""Copy `src` to a new git root. This repo's `.gitignore` is not the send list."""
+function isolate_job_git_root(src::AbstractString)::String
+    dest = mktempdir()
+    cp(src, dest; force = true)
+    git = joinpath(dest, ".git")
+    ispath(git) && rm(git; recursive = true)
+    run(`git -C $dest init -q`)
+    return dest
+end
+
+const JOB_PROJECT = isolate_job_git_root(JOB_SOURCE)
+
+const _E2E_DEMO_RELS = (
+    "demos/without_kit/pi_file.jl",
+    "demos/without_kit/pi_echo.jl",
+    "demos/with_kit/square_file.jl",
+    "demos/with_kit/square_echo.jl",
+)
+
+"""Fail with the missing path when `setup!` did not deliver a demo."""
+function require_remote_demos!()
+    for host in HOSTS
+        for rel in _E2E_DEMO_RELS
+            remote = REMOTE_ROOT * "/" * rel
+            cmd = `ssh -F $SSH_CONFIG -o BatchMode=yes -o ConnectTimeout=15 $host test -f $remote`
+            proc = run(pipeline(ignorestatus(cmd); stdout = devnull, stderr = devnull))
+            proc.exitcode == 0 || error("setup! did not deliver $remote on $host")
         end
     end
     return nothing
@@ -430,6 +464,7 @@ end
             @test prep.ok
             @test length(prep.hosts) == length(HOSTS)
             @test all(h -> h.ok, prep.hosts)
+            require_remote_demos!()
             # This tree lists DistSSHKit in [deps], so Kit 0.7.2 still uses
             # `--project=` here (not pkgdir).
             DistSSHQueue._queue_local_instantiate!(JOB_PROJECT)

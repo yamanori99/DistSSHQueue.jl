@@ -40,7 +40,9 @@ id_ed25519.pub
 # Local dev notes (not shared)
 ROADMAP.ja.local.md
 
-# Staged DistSSHKit demos (copied at E2E start; rsync still sends them)
+# DistSSHRun demos copied here are local only. This ignore applies to
+# `setup!` rsync while the job stays in this work tree (Run 0.1.7 follows
+# git). E2E sends from its own git root. Do not drop this rule to make CI green.
 testenv/example-job/demos/
 # Kit go collect. Not in example-job/.gitignore: setup rsync honors that file
 # and would drop slot artifacts (`go_out/` was ignored, so pi_file never landed).
