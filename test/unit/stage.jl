@@ -121,17 +121,19 @@ using DistSSHQueue
             mkpath(joinpath(tmp, "build"))
             mkpath(joinpath(tmp, ".distsshqueue"))
             write(joinpath(tmp, ".distsshqueue", "ticket"), "nope\n")
+            mkpath(joinpath(tmp, "keep", ".distsshqueue"))
+            write(joinpath(tmp, "keep", ".distsshqueue", "nested"), "nope\n")
             env = DistSSHRun.resolve_pkg_env(tmp)
             want = String[
                 rel for rel in DistSSHRun.rsync_send_list(env.env_dir, env)
-                    if rel != ".distsshqueue" && !startswith(rel, ".distsshqueue/")
+                    if !(".distsshqueue" in split(rel, '/'))
             ]
             listed = DistSSHQueue.stage_send_list(tmp)
             @test listed == want
             @test "keep" in listed
             @test "keep/a.txt" in listed
             @test !("build" in listed)
-            @test !any(startswith.(listed, ".distsshqueue"))
+            @test !any(".distsshqueue" in split(rel, '/') for rel in listed)
         end
     end
 

@@ -169,7 +169,7 @@ end
 """True when `rel` is `.distsshqueue` or a file under it."""
 function _stage_rel_is_queue(rel::AbstractString)::Bool
     r = replace(String(rel), '\\' => '/')
-    return r == ".distsshqueue" || startswith(r, ".distsshqueue/") || occursin("/.distsshqueue/", r)
+    return ".distsshqueue" in split(r, '/')
 end
 
 """
