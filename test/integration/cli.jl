@@ -284,7 +284,7 @@ end
     end
 
     @testset "teardown -y after setup" begin
-        mktempdir() do home
+        mktempdir() do home::String
             data = joinpath(home, ".distsshqueue")
             bindir = joinpath(home, ".local", "bin")
             mkpath(bindir)

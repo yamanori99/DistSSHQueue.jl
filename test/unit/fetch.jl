@@ -277,7 +277,7 @@ end
         @test DistSSHQueue.job_id_from_submit_stdout(id * "\n") == id
         dest = DistSSHQueue.write_submit_ticket(
             proj, id * "\n"; script = script, qhost = "mini",
-        )
+        )::String
         @test dest == DistSSHQueue.submit_ticket_path(proj, id)
         @test occursin(joinpath(".distsshqueue", "tickets"), dest)
         @test isfile(dest)
@@ -288,7 +288,7 @@ end
         @test !occursin("/go/", dest)
         @test !occursin("/drive/", dest)
         id2 = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
-        dest2 = DistSSHQueue.write_submit_ticket(proj, id2 * "\n")
+        dest2 = DistSSHQueue.write_submit_ticket(proj, id2 * "\n")::String
         @test dest2 == DistSSHQueue.submit_ticket_path(proj, id2)
         @test isfile(dest)
         @test isfile(dest2)
@@ -307,7 +307,7 @@ end
     id = "aaaaaaaa-1111-4000-8000-000000000001"
     id2 = "bbbbbbbb-2222-4000-8000-000000000002"
     src = "/qh/.distsshqueue/drive/demo_aaaaaaaa"
-    mktempdir() do d
+    mktempdir() do d::String
         dest = joinpath(d, "payoff456")
         @test DistSSHQueue.check_fetch_dest(dest, id) === :copy
         mkpath(dest)

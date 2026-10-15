@@ -5,7 +5,8 @@
 #   ./.github/jetls-check.sh --progress=none
 #   ./.github/jetls-check.sh --print-files   # CI file list
 #
-# `test/e2e.jl` is a second test entry (not included from `runtests.jl`).
+# `test/e2e.jl` is not included from `runtests.jl` (it exits the process).
+# JETLS reports toplevel/analysis-skipped; `.JETLSConfig.toml` turns that off.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
