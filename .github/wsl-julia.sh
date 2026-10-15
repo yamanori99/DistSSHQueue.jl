@@ -30,6 +30,8 @@ rm -rf "$dest"
 # ownership check inside clone, so record it for this user.
 git config --global --add safe.directory '*'
 git clone "$src" "$dest"
+# shellcheck source=/dev/null
+source "$src/testenv/docker-ssh/scripts/retry.sh"
 # juliaup does not retry its own download of a nightly tarball. The curl
 # retries cover only https://install.julialang.org.
 install_julia() {
@@ -51,13 +53,16 @@ if [[ -f "$cache/julia.tgz" ]]; then
   rm -rf "$HOME/.juliaup" "$HOME/.julia"
   tar -xzf "$cache/julia.tgz" -C "$HOME"
 fi
-# A tarball packed from /root does not yield an executable julia in /home/ci.
-if [[ ! -x "$HOME/.juliaup/bin/julia" ]]; then
+# The SSH E2E job packs this tarball as root. An absolute julia symlink from
+# that home is not executable for ci.
+if [[ ! -x "$HOME/.juliaup/bin/julialauncher" && ! -x "$HOME/.juliaup/bin/juliaup" ]]; then
   install_julia
 fi
+distsshqueue_relink_julia
 export PATH="$HOME/.juliaup/bin:$PATH"
 cd "$dest"
 "$@"
+distsshqueue_relink_julia
 if [[ -d "$HOME/.julia" ]]; then
   tar -czf "$cache/julia.tgz" -C "$HOME" .juliaup .julia
 else
