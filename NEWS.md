@@ -1,7 +1,7 @@
 # News
 
 User-facing changes.
-GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
+GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are often shorter than the section below.
 
 ## 0.9.5
 
