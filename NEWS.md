@@ -3,8 +3,9 @@
 User-facing changes.
 GitHub Releases may copy these sections (`Release notes:` on `@JuliaRegistrator register`).
 
-## Unreleased
+## 0.9.5
 
+- Requires DistSSHRun 0.1.7.
 - Host SSH and juliaup come from DistSSHRun 0.1.7 (`DistSSHBase` and `DistSSHUp`). The copies in this package are gone. DistSSHRun compat is `0.1.7`.
 - `job_project` also skips a vendored DistSSHKit `Project.toml`, the same walk as DistSSHRun.
 - CLI flags, confirmation, and exit codes are unchanged.
