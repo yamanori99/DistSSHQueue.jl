@@ -39,4 +39,24 @@ distsshqueue_install_juliaup() {
       -fsSL https://install.julialang.org | sh -s -- --yes --default-channel "${channel}"
   ) || return 1
   [[ -x "$HOME/.juliaup/bin/juliaup" ]] || { echo "juliaup not installed" >&2; return 1; }
+  distsshqueue_relink_julia
+}
+
+# juliaup symlinks `julia` to an absolute `julialauncher` path. The WSL cache
+# is one tarball shared by root (SSH E2E) and user ci (Pkg.test). Restoring it
+# into the other home leaves a dangling symlink, and bash reports
+# `julia: command not found`. Point `julia` at the launcher in this home.
+distsshqueue_relink_julia() {
+  local bin="$HOME/.juliaup/bin"
+  local launcher=""
+  if [[ -x "${bin}/julialauncher" ]]; then
+    launcher="julialauncher"
+  elif [[ -x "${bin}/juliaup" ]]; then
+    launcher="juliaup"
+  else
+    echo "julia launcher missing in ${bin}" >&2
+    return 1
+  fi
+  ln -sfn "${launcher}" "${bin}/julia"
+  [[ -x "${bin}/julia" ]] || { echo "julia is not executable at ${bin}/julia" >&2; return 1; }
 }

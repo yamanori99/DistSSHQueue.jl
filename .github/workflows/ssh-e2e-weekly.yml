@@ -208,13 +208,21 @@ jobs:
           else
             distsshqueue_retry "WSL juliaup install" distsshqueue_install_juliaup "$julia_channel"
           fi
+          # Pkg.test packs this tarball as user ci. juliaup's julia symlink is
+          # absolute, so it does not run as root until it points at this home.
+          if ! distsshqueue_relink_julia; then
+            distsshqueue_retry "WSL juliaup install" distsshqueue_install_juliaup "$julia_channel"
+            distsshqueue_relink_julia
+          fi
           export PATH="$HOME/.juliaup/bin:$PATH"
           # Current patch before the suite starts. A later juliaup version-db
           # check must not delete the install this job is about to run.
           distsshqueue_retry "WSL juliaup update" juliaup update "$julia_channel"
           juliaup default "$julia_channel"
+          distsshqueue_relink_julia
           cd "$dest"
           ./testenv/docker-ssh/scripts/up.sh --e2e
+          distsshqueue_relink_julia
           if [[ -d "$HOME/.julia" ]]; then
             tar -czf "$cache/julia.tgz" -C "$HOME" .juliaup .julia
           else

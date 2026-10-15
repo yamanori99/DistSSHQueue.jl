@@ -163,7 +163,7 @@ end
 end
 
 @testset "serve! stops when its pidfile is removed" begin
-    mktempdir() do d
+    mktempdir() do d::String
         store = joinpath(d, "jobs.toml")
         write(store, "jobs = []\n")
         q = DistSSHQueue.Queue(; store = store, runner = _ -> nothing)
@@ -231,7 +231,9 @@ end
 @testset "default_queue_env prefers the dedicated env dir" begin
     mktempdir() do d
         dedicated = joinpath(d, "env")
-        fallback = DistSSHQueue.resolve_pkg_env(dirname(Base.active_project())).env_dir
+        project = Base.active_project()
+        @test project isa String
+        fallback = DistSSHQueue.resolve_pkg_env(dirname(project::String)).env_dir
         @test DistSSHQueue.default_queue_env(; dedicated = dedicated) == fallback
         mkpath(dedicated)
         write(joinpath(dedicated, "Project.toml"), "name = \"x\"\n")
@@ -537,7 +539,7 @@ end
 end
 
 @testset "teardown -y removes queue-host files" begin
-    mktempdir() do home
+    mktempdir() do home::String
         data = joinpath(home, ".distsshqueue")
         mkpath(joinpath(data, "env"))
         cfg = joinpath(data, "config.toml")
@@ -583,7 +585,7 @@ end
 end
 
 @testset "teardown confirm_paths" begin
-    mktempdir() do home
+    mktempdir() do home::String
         data = joinpath(home, ".distsshqueue")
         mkpath(data)
         write(joinpath(data, "config.toml"), "store = \"x\"\n")
@@ -621,7 +623,7 @@ end
         end
         @test !ispath(data)
     end
-    mktempdir() do home
+    mktempdir() do home::String
         withenv(
             "DISTSSHQUEUE_CONFIG" => nothing,
             "DISTSSHQUEUE_STORE" => nothing,
@@ -640,7 +642,7 @@ end
 end
 
 @testset "teardown -y removes leftover DistSSHKitQueue home" begin
-    mktempdir() do home
+    mktempdir() do home::String
         data = joinpath(home, ".distsshqueue")
         mkpath(data)
         write(joinpath(data, "config.toml"), "store = \"x\"\n")
@@ -668,7 +670,7 @@ end
 end
 
 @testset "teardown DISTSSHKIT_YES still deletes" begin
-    mktempdir() do home
+    mktempdir() do home::String
         data = joinpath(home, ".distsshqueue")
         mkpath(data)
         cfg = joinpath(data, "config.toml")
@@ -692,7 +694,7 @@ end
 end
 
 @testset "teardown DISTSSHKIT_YES from target config [env] still deletes" begin
-    mktempdir() do home
+    mktempdir() do home::String
         data = joinpath(home, ".distsshqueue")
         mkpath(data)
         cfg = joinpath(data, "config.toml")
@@ -818,7 +820,7 @@ end
 end
 
 @testset "save_jobs replaces the file" begin
-    mktempdir() do d
+    mktempdir() do d::String
         store = joinpath(d, "jobs.toml")
         j = DistSSHQueue.Job(;
             id = "aaaaaaaa-4444-4000-8000-000000000004",

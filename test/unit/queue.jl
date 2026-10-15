@@ -545,8 +545,8 @@ end
             kwargs = Dict{String, Any}("project" => String(d)),
         )
         DistSSHQueue._allocate_queue_leaf!(j)
-        leaf = DistSSHQueue.kit_output_dir(j)
-        @test leaf !== nothing
+        leaf = DistSSHQueue.kit_output_dir(j)::String
+        @test leaf isa String
         fake_setup!(_, mode::Symbol) = mode === :instantiate ? (; ok = false) : (; ok = true)
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
@@ -578,8 +578,8 @@ end
             kwargs = Dict{String, Any}("project" => String(d)),
         )
         DistSSHQueue._allocate_queue_leaf!(j)
-        leaf = DistSSHQueue.kit_output_dir(j)
-        @test leaf !== nothing
+        leaf = DistSSHQueue.kit_output_dir(j)::String
+        @test leaf isa String
         fake_setup!(_, mode::Symbol) = mode === :rsync ? error("rsync failed") : (; ok = true)
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
@@ -2060,7 +2060,7 @@ end
 
 @testset "serve live line" begin
     @test DistSSHQueue._serve_live_text('⠋', nothing) == "  ⠋  idle"
-    mktempdir() do d
+    mktempdir() do d::String
         script = joinpath(d, "demos", "pi_echo.jl")
         mkpath(dirname(script))
         write(script, "1\n")
@@ -2246,7 +2246,7 @@ end
     unit = DistSSHQueue.systemd_user_unit("/usr/bin/julia", "/opt/Queue.jl")
     @test occursin("ExecStart=/usr/bin/julia --startup-file=no --project=/opt/Queue.jl -m DistSSHQueue serve", unit)
     @test DistSSHQueue.m_package("/opt/Queue.jl") == "DistSSHQueue"
-    mktempdir() do env
+    mktempdir() do env::String
         write(
             joinpath(env, "Project.toml"),
             """
