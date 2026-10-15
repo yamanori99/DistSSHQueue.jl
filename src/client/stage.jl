@@ -181,7 +181,7 @@ An empty list throws `ArgumentError`.
 """
 function stage_send_list(local_root::AbstractString)::Union{Nothing, Vector{String}}
     env = resolve_pkg_env(local_root)
-    listed = DistSSHRun.rsync_send_list(env.env_dir, env)
+    listed = DistSSHRun.rsync_send_list(env.env_dir, env; warn = true)
     listed === nothing && return nothing
     filtered = String[String(rel) for rel in listed if !_stage_rel_is_queue(rel)]
     isempty(filtered) && throw(
