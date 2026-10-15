@@ -1,8 +1,10 @@
 # Client `qhost:` submit: rsync the job tree onto the queue host.
 #
 # Omit `qhost:` is unchanged (cwd / `DISTRIBUTED_PROJECT_ROOT` on this box).
-# Kit still copies queue host → workers. Same excludes as Kit `setup --rsync`
-# (`.git/` / `.distsshkit/` / `.distsshqueue/` plus `.gitignore`).
+# Kit still copies queue host → workers. Inside a git work tree the file list
+# is DistSSHRun's `rsync_send_list` (the same list as `setup --rsync`). Outside
+# one, rsync keeps its per-directory `.gitignore` filter. `.distsshqueue/`
+# stays off the queue host either way.
 # Stderr gets `rsync → HOST:path` when the copy starts (`DISTSSHKIT_QUIET`
 # hides it). `DISTSSHQUEUE_NO_STAGE=1` skips (tests with a fake `ssh`).
 const NO_STAGE_ENV = "DISTSSHQUEUE_NO_STAGE"
@@ -164,7 +166,33 @@ function _ssh_mkdir!(host::AbstractString, remote_dir::AbstractString)
     return nothing
 end
 
-"""rsync flags for client → queue-host stage (Kit `setup --rsync` plus `.distsshqueue/`)."""
+"""True when `rel` is `.distsshqueue` or a file under it."""
+function _stage_rel_is_queue(rel::AbstractString)::Bool
+    r = replace(String(rel), '\\' => '/')
+    return r == ".distsshqueue" || startswith(r, ".distsshqueue/") || occursin("/.distsshqueue/", r)
+end
+
+"""
+Send list for `local_root`'s Manifest directory.
+
+`nothing` outside a git work tree: the caller keeps rsync's dir-merge filter.
+Inside one, the same paths as `setup --rsync`, without `.distsshqueue/`.
+An empty list throws `ArgumentError`.
+"""
+function stage_send_list(local_root::AbstractString)::Union{Nothing, Vector{String}}
+    env = resolve_pkg_env(local_root)
+    listed = DistSSHRun.rsync_send_list(env.env_dir, env)
+    listed === nothing && return nothing
+    filtered = String[String(rel) for rel in listed if !_stage_rel_is_queue(rel)]
+    isempty(filtered) && throw(
+        ArgumentError(
+            "qhost submit: nothing to send from $(env.env_dir) after dropping .distsshqueue",
+        ),
+    )
+    return filtered
+end
+
+"""rsync flags for a non-git stage (dir-merge `.gitignore`, plus `.distsshqueue/`)."""
 function stage_rsync_push_opts(transport::AbstractString; progress::Bool = false)::Vector{String}
     opts = String["-az"]
     progress && push!(opts, "--info=progress2")
@@ -184,6 +212,48 @@ function stage_rsync_push_opts(transport::AbstractString; progress::Bool = false
         ]
     )
     return opts
+end
+
+"""rsync flags for a git send list. `.distsshqueue/` is still excluded."""
+function stage_rsync_files_from_opts(transport::AbstractString; progress::Bool = false)::Vector{String}
+    opts = String["-az"]
+    progress && push!(opts, "--info=progress2")
+    append!(
+        opts, String[
+            "-e",
+            String(transport),
+            "--exclude",
+            ".git/",
+            "--exclude",
+            ".distsshkit/",
+            "--exclude",
+            ".distsshqueue/",
+        ]
+    )
+    return opts
+end
+
+function _stage_rsync_files_from!(
+        rsync::Vector{String},
+        opts::Vector{String},
+        src::AbstractString,
+        dest::AbstractString,
+        files::Vector{String},
+    )
+    mktemp() do path, io
+        for rel in files
+            println(io, rel)
+        end
+        close(io)
+        run(
+            pipeline(
+                Cmd(vcat(rsync, opts, String["--files-from=$path", src * "/", dest]));
+                stdout = stderr,
+                stderr = stderr,
+            ),
+        )
+    end
+    return nothing
 end
 
 function rsync_progress_on(args::Vector{String} = String[])::Bool
@@ -219,13 +289,30 @@ function rsync_to_qhost!(
     rsync = _rsync_bin()
     transport = _ssh_transport()
     print_rsync_start(host, remote_root)
-    run(
-        pipeline(
-            Cmd(vcat(rsync, stage_rsync_push_opts(transport; progress = progress), String[src * "/", dest]));
-            stdout = stderr,
-            stderr = stderr,
-        ),
-    )
+    listed = stage_send_list(src)
+    if listed === nothing
+        run(
+            pipeline(
+                Cmd(
+                    vcat(
+                        rsync,
+                        stage_rsync_push_opts(transport; progress = progress),
+                        String[src * "/", dest],
+                    ),
+                );
+                stdout = stderr,
+                stderr = stderr,
+            ),
+        )
+    else
+        _stage_rsync_files_from!(
+            rsync,
+            stage_rsync_files_from_opts(transport; progress = progress),
+            src,
+            dest,
+            listed,
+        )
+    end
     extra_opts = String["-az"]
     progress && push!(extra_opts, "--info=progress2")
     append!(extra_opts, String["-e", transport])
