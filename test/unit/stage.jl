@@ -108,6 +108,78 @@ using DistSSHQueue
             @test same.remote_proj == remote
         end
     end
+    @testset "stage send list matches setup --rsync" begin
+        mktempdir() do tmp
+            write(joinpath(tmp, "Project.toml"), "name = \"App\"\n")
+            @test DistSSHQueue.stage_send_list(tmp) === nothing
+            run(pipeline(`git -C $tmp init -q`; stdout = devnull, stderr = devnull))
+            run(pipeline(`git -C $tmp config user.email test@example.com`; stdout = devnull, stderr = devnull))
+            run(pipeline(`git -C $tmp config user.name Test`; stdout = devnull, stderr = devnull))
+            write(joinpath(tmp, ".gitignore"), "*/\n!keep/\n")
+            mkpath(joinpath(tmp, "keep"))
+            write(joinpath(tmp, "keep", "a.txt"), "x\n")
+            mkpath(joinpath(tmp, "build"))
+            mkpath(joinpath(tmp, ".distsshqueue"))
+            write(joinpath(tmp, ".distsshqueue", "ticket"), "nope\n")
+            env = DistSSHRun.resolve_pkg_env(tmp)
+            want = String[
+                rel for rel in DistSSHRun.rsync_send_list(env.env_dir, env)
+                    if rel != ".distsshqueue" && !startswith(rel, ".distsshqueue/")
+            ]
+            listed = DistSSHQueue.stage_send_list(tmp)
+            @test listed == want
+            @test "keep" in listed
+            @test "keep/a.txt" in listed
+            @test !("build" in listed)
+            @test !any(startswith.(listed, ".distsshqueue"))
+        end
+    end
+
+    @testset "stage drops a tree that is only .distsshqueue" begin
+        mktempdir() do tmp
+            write(joinpath(tmp, "Project.toml"), "name = \"App\"\n")
+            write(joinpath(tmp, ".gitignore"), "*\n!.distsshqueue/\n!.distsshqueue/**\n")
+            mkpath(joinpath(tmp, ".distsshqueue"))
+            write(joinpath(tmp, ".distsshqueue", "ticket"), "nope\n")
+            run(pipeline(`git -C $tmp init -q`; stdout = devnull, stderr = devnull))
+            run(pipeline(`git -C $tmp config user.email test@example.com`; stdout = devnull, stderr = devnull))
+            run(pipeline(`git -C $tmp config user.name Test`; stdout = devnull, stderr = devnull))
+            @test_throws ArgumentError DistSSHQueue.stage_send_list(tmp)
+        end
+    end
+
+    @testset "stage lists a workspace member from the manifest directory" begin
+        mktempdir() do root
+            lab = joinpath(root, "lab")
+            member = joinpath(lab, "experiments", "run1")
+            mkpath(member)
+            write(
+                joinpath(lab, "Project.toml"),
+                """
+                name = "Lab"
+                [workspace]
+                projects = ["experiments/run1"]
+                """,
+            )
+            write(joinpath(member, "Project.toml"), "name = \"Run1\"\n[deps]\n")
+            write(joinpath(member, "job.jl"), "1\n")
+            write(joinpath(lab, "Manifest.toml"), "# lock\n")
+            run(pipeline(`git -C $lab init -q`; stdout = devnull, stderr = devnull))
+            run(pipeline(`git -C $lab config user.email test@example.com`; stdout = devnull, stderr = devnull))
+            run(pipeline(`git -C $lab config user.name Test`; stdout = devnull, stderr = devnull))
+            listed = DistSSHQueue.stage_send_list(member)
+            @test "experiments/run1/job.jl" in listed
+            @test "Project.toml" in listed
+        end
+    end
+
+    files_opts = DistSSHQueue.stage_rsync_files_from_opts("ssh -o BatchMode=yes")
+    @test !(":- .gitignore" in files_opts)
+    @test !("--delete" in files_opts)
+    @test ".distsshqueue/" in files_opts
+    @test ".git/" in files_opts
+    @test "--info=progress2" in DistSSHQueue.stage_rsync_files_from_opts("ssh"; progress = true)
+
     fetch_h = sprint(io -> DistSSHQueue.print_queue_command_usage(io, "fetch"))
     @test occursin("--progress", fetch_h)
     @test occursin("progress2", fetch_h)
