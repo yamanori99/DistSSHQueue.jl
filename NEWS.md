@@ -5,6 +5,13 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- Two `serve` processes claim `jobs.toml.pid` under the store lock. The
+  second prints `Already running` and does not load the store. The pidfile
+  is replaced by a rename, so a reader does not see a half-written pid.
+- A `jobs` value that is not a list is left on disk. `serve` and `status`
+  warn once and do not write an empty store over it. DistSSHQueue 0.10 will
+  reject that file. Invalid TOML, or a job row that is missing a field or
+  has the wrong type, is `Error:` and the file is left unchanged.
 - `qhost:` staging inside a git work tree sends the same file list as
   `setup --rsync`, including negation and a `.gitignore` above the send
   root. That warning is printed once. Outside a git work tree it still

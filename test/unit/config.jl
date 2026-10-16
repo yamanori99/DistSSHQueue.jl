@@ -837,3 +837,121 @@ end
         @test jobs[1].script == j.script
     end
 end
+
+@testset "corrupt jobs store is not rewritten" begin
+    mktempdir() do d::String
+        store = joinpath(d, "jobs.toml")
+        write(store, "jobs = [\n")
+        original = read(store, String)
+        err = try
+            DistSSHQueue.read_jobs(store)
+            nothing
+        catch e
+            e
+        end
+        @test err isa ArgumentError
+        @test startswith(err.msg, "jobs store is not valid TOML:")
+        err2 = try
+            DistSSHQueue.save_jobs(store, DistSSHQueue.Job[])
+            nothing
+        catch e
+            e
+        end
+        @test err2 isa ArgumentError
+        @test read(store, String) == original
+
+        write(store, "jobs = [{id = \"only\"}]\n")
+        row = try
+            DistSSHQueue.read_jobs(store)
+            nothing
+        catch e
+            e
+        end
+        @test row isa ArgumentError
+        @test occursin("missing a field or has the wrong type", row.msg)
+        @test read(store, String) == "jobs = [{id = \"only\"}]\n"
+
+        write(store, "jobs = 1\n")
+        kept = read(store, String)
+        warned = mktemp() do path, io
+            redirect_stdout(io) do
+                @test isempty(DistSSHQueue.read_jobs(store))
+                DistSSHQueue.save_jobs(store, DistSSHQueue.Job[])
+                @test isempty(DistSSHQueue.read_jobs(store))
+            end
+            close(io)
+            return read(path, String)
+        end
+        @test read(store, String) == kept
+        @test count("not a list", warned) == 1
+        @test occursin("0.10 will reject", warned)
+    end
+end
+
+@testset "claim_serve replaces a dead pid and keeps a live one" begin
+    mktempdir() do d::String
+        store = joinpath(d, "jobs.toml")
+        pid = DistSSHQueue.store_pid_path(store)
+        write(pid, "999999999")
+        @test DistSSHQueue.claim_serve!(store) === nothing
+        @test DistSSHQueue.serve_pid(store) == getpid()
+        @test DistSSHQueue.claim_serve!(store) === nothing
+        @test strip(read(pid, String)) == string(getpid())
+        @test !any(n -> occursin(".tmp.", n), readdir(d))
+    end
+end
+
+@testset "claim_serve admits one process" begin
+    mktempdir() do d::String
+        store = joinpath(d, "jobs.toml")
+        proj = Base.active_project()
+        code = "using DistSSHQueue; other = DistSSHQueue.claim_serve!(ARGS[1]); if other === nothing; println(\"won \", getpid()); flush(stdout); sleep(30); else; println(\"lost \", other); end"
+        cmd = `$(Base.julia_cmd()) --startup-file=no --project=$proj -e $code $store`
+        holder_out = IOBuffer()
+        holder = run(pipeline(cmd; stdout = holder_out, stderr = devnull); wait = false)
+        live = nothing
+        try
+            deadline = time() + 20
+            while time() < deadline
+                live = DistSSHQueue.serve_pid(store)
+                live === nothing || break
+                sleep(0.05)
+            end
+            @test live isa Int
+            loser_out = IOBuffer()
+            loser_err = IOBuffer()
+            loser = run(pipeline(cmd; stdout = loser_out, stderr = loser_err); wait = false)
+            wait(loser)
+            @test loser.exitcode == 0
+            line = strip(String(take!(loser_out)))
+            @test startswith(line, "lost ")
+            @test parse(Int, split(line)[2]) == live
+        finally
+            kill(holder)
+            wait(holder)
+        end
+    end
+end
+
+@testset "status prints Error for invalid jobs TOML" begin
+    mktempdir() do d::String
+        store = joinpath(d, "jobs.toml")
+        write(store, "jobs = [\n")
+        proj = Base.active_project()
+        cmd = `$(Base.julia_cmd()) --startup-file=no --project=$proj -m DistSSHQueue status`
+        out = IOBuffer()
+        err = IOBuffer()
+        p = withenv(
+            "DISTSSHQUEUE_STORE" => store,
+            "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
+        ) do
+            run(pipeline(cmd; stdout = out, stderr = err); wait = false)
+        end
+        wait(p)
+        text = String(take!(err))
+        @test p.exitcode == 1
+        @test occursin("Error:", text)
+        @test occursin("not valid TOML", text)
+        @test read(store, String) == "jobs = [\n"
+    end
+end

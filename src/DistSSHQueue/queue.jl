@@ -986,16 +986,15 @@ A second `serve` on the same store prints `Already running` and returns.
 function serve!(q::Queue; interval::Real = 0.2)
     store = q.store
     if store isa String
-        existing = serve_pid(store)
-        if existing !== nothing && existing != getpid()
-            print_serve_already(existing, store)
-            return nothing
-        end
         # Claim the pidfile before `load!`. Two autoserve processes otherwise both
         # pass `serve_alive` and the second `load_jobs` persists `:failed` on a
         # `:running` row that has no `kit.pid` yet.
+        existing = claim_serve!(store)
+        if existing !== nothing
+            print_serve_already(existing, store)
+            return nothing
+        end
         clear_stopped!(store)
-        write_pid_file(store)
     end
     load!(q)
     adopt_running!(q)

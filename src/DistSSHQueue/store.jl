@@ -143,8 +143,68 @@ function job_from_toml(d::AbstractDict)::Job
     )
 end
 
+const _JOBS_NOT_LIST_WARNED = Set{String}()
+const _JOBS_NOT_LIST_LOCK = ReentrantLock()
+
+"""`jobs` missing, a list, not a list, or TOML that does not parse."""
+function _jobs_store_shape(path::AbstractString)::Symbol
+    isfile(path) || return :absent
+    raw = try
+        TOML.parsefile(String(path))
+    catch e
+        e isa TOML.ParserError && return :bad_toml
+        rethrow()
+    end
+    raw isa AbstractDict || return :not_list
+    haskey(raw, "jobs") || return :absent
+    return raw["jobs"] isa AbstractVector ? :list : :not_list
+end
+
+function _warn_jobs_not_list(path::AbstractString)
+    p = abspath(String(path))
+    fresh = lock(_JOBS_NOT_LIST_LOCK) do
+        p in _JOBS_NOT_LIST_WARNED && return false
+        push!(_JOBS_NOT_LIST_WARNED, p)
+        return true
+    end
+    fresh || return nothing
+    DistSSHRun.print_warn(
+        "jobs store has a jobs value that is not a list; leaving the file unchanged: $p. DistSSHQueue 0.10 will reject this file.",
+    )
+    return nothing
+end
+
+function _jobs_store_bad_toml(path::AbstractString)
+    return ArgumentError("jobs store is not valid TOML: $path")
+end
+
+function _jobs_store_bad_row(path::AbstractString)
+    return ArgumentError(
+        "jobs store has a job row that is missing a field or has the wrong type: $path",
+    )
+end
+
+function _job_row(row, path::AbstractString)::Job
+    row isa AbstractDict || throw(_jobs_store_bad_row(path))
+    try
+        return job_from_toml(row)
+    catch e
+        if e isa KeyError || e isa MethodError || e isa TypeError
+            throw(_jobs_store_bad_row(path))
+        end
+        rethrow()
+    end
+end
+
 function save_jobs(path::AbstractString, jobs::AbstractVector{Job})
     p = String(path)
+    shape = _jobs_store_shape(p)
+    if shape === :bad_toml
+        throw(_jobs_store_bad_toml(p))
+    elseif shape === :not_list
+        _warn_jobs_not_list(p)
+        return nothing
+    end
     mkpath(dirname(p))
     data = Dict{String, Any}("jobs" => [job_to_toml(j) for j in jobs])
     tmp = string(p, ".tmp.", getpid(), ".", time_ns())
@@ -162,10 +222,22 @@ end
 
 function read_jobs(path::AbstractString)::Vector{Job}
     isfile(path) || return Job[]
-    raw = TOML.parsefile(String(path))
-    rows = get(raw, "jobs", nothing)
+    shape = _jobs_store_shape(path)
+    if shape === :bad_toml
+        throw(_jobs_store_bad_toml(path))
+    elseif shape === :not_list
+        _warn_jobs_not_list(path)
+        return Job[]
+    end
+    raw = try
+        TOML.parsefile(String(path))
+    catch e
+        e isa TOML.ParserError && throw(_jobs_store_bad_toml(path))
+        rethrow()
+    end
+    rows = get(raw, "jobs", Job[])
     rows isa AbstractVector || return Job[]
-    return Job[job_from_toml(r) for r in rows]
+    return Job[_job_row(r, String(path)) for r in rows]
 end
 
 store_pid_path(store::AbstractString)::String = string(store, ".pid")
@@ -216,9 +288,35 @@ serve_alive(store::AbstractString)::Bool = serve_pid(store) !== nothing
 
 function write_pid_file(store::AbstractString)
     mkpath(dirname(store))
-    write(store_pid_path(store), string(getpid()))
+    dest = store_pid_path(store)
+    tmp = string(dest, ".tmp.", getpid(), ".", time_ns())
+    try
+        write(tmp, string(getpid()))
+        mv(tmp, dest; force = true)
+    catch
+        rm(tmp; force = true)
+        rethrow()
+    end
     record_test_serve_pid!(getpid())
     return nothing
+end
+
+"""Claim the serve pid under the store lock.
+
+Returns another live pid when one is already running, otherwise `nothing`
+after this process owns the pidfile. A dead pidfile is replaced. The lock
+closes the window where two processes both observe no live pid and both
+enter `load!`.
+"""
+function claim_serve!(store::AbstractString)::Union{Nothing, Int}
+    return with_store_lock(store) do
+        existing = serve_pid(store)
+        if existing !== nothing && existing != getpid()
+            return existing
+        end
+        write_pid_file(store)
+        return nothing
+    end
 end
 
 """If tests set `DISTSSHQUEUE_TEST_PIDS` and `DISTSSHKIT_TEST=1`, append this serve pid.
