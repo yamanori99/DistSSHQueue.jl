@@ -134,8 +134,11 @@ julia -m DistSSHRun drive parent:4 SCRIPT.jl
 - The run owns the `.distsshkit/` bundle on that machine.
 - The queue owns scheduling and the fetched `.distsshqueue/` copy.
 
-The stage excludes `.gitignore`, `.git/`, `.distsshkit/`, and
-`.distsshqueue/`. Details:
+The stage excludes `.git/`, `.distsshkit/`, and `.distsshqueue/`.
+Inside a git work tree the file list matches `setup --rsync`
+(negation, and a `.gitignore` above the project). Outside one, rsync
+still applies each directory's `.gitignore`. A name such as
+`.distsshqueue-backup` is sent. Details:
 [Artifacts and paths](https://yamanori99.github.io/DistSSHKit.jl/stable/queue/artifacts/).
 
 #### Client

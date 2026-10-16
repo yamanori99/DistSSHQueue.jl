@@ -123,6 +123,7 @@ using DistSSHQueue
             write(joinpath(tmp, ".distsshqueue", "ticket"), "nope\n")
             mkpath(joinpath(tmp, "keep", ".distsshqueue"))
             write(joinpath(tmp, "keep", ".distsshqueue", "nested"), "nope\n")
+            write(joinpath(tmp, ".distsshqueue-backup"), "keep\n")
             env = DistSSHRun.resolve_pkg_env(tmp)
             want = String[
                 rel for rel in DistSSHRun.rsync_send_list(env.env_dir, env)
@@ -133,6 +134,7 @@ using DistSSHQueue
             @test "keep" in listed
             @test "keep/a.txt" in listed
             @test !("build" in listed)
+            @test ".distsshqueue-backup" in listed
             @test !any(".distsshqueue" in split(rel, '/') for rel in listed)
         end
     end
@@ -146,7 +148,64 @@ using DistSSHQueue
             run(pipeline(`git -C $tmp init -q`; stdout = devnull, stderr = devnull))
             run(pipeline(`git -C $tmp config user.email test@example.com`; stdout = devnull, stderr = devnull))
             run(pipeline(`git -C $tmp config user.name Test`; stdout = devnull, stderr = devnull))
-            @test_throws ArgumentError DistSSHQueue.stage_send_list(tmp)
+            err = try
+                DistSSHQueue.stage_send_list(tmp)
+                nothing
+            catch e
+                e
+            end
+            @test err isa ArgumentError
+            @test occursin("after dropping .distsshqueue", sprint(showerror, err))
+        end
+    end
+
+    @testset "an empty git send list stays Run's error" begin
+        mktempdir() do tmp
+            write(joinpath(tmp, "Project.toml"), "name = \"App\"\n")
+            write(joinpath(tmp, ".gitignore"), "*\n")
+            run(pipeline(`git -C $tmp init -q`; stdout = devnull, stderr = devnull))
+            run(pipeline(`git -C $tmp config user.email test@example.com`; stdout = devnull, stderr = devnull))
+            run(pipeline(`git -C $tmp config user.name Test`; stdout = devnull, stderr = devnull))
+            err = try
+                DistSSHQueue.stage_send_list(tmp)
+                nothing
+            catch e
+                e
+            end
+            @test err isa ArgumentError
+            msg = sprint(showerror, err)
+            @test occursin("nothing to send", msg)
+            @test !occursin("after dropping", msg)
+        end
+    end
+
+    @testset "ancestor gitignore warns once on stdout" begin
+        mktempdir() do tmp
+            write(joinpath(tmp, ".gitignore"), "dropped.txt\n")
+            sub = joinpath(tmp, "sub")
+            mkpath(sub)
+            write(joinpath(sub, "Project.toml"), "name = \"App\"\n")
+            write(joinpath(sub, "dropped.txt"), "nope\n")
+            write(joinpath(sub, "keep.txt"), "yes\n")
+            run(pipeline(`git -C $tmp init -q`; stdout = devnull, stderr = devnull))
+            run(pipeline(`git -C $tmp config user.email test@example.com`; stdout = devnull, stderr = devnull))
+            run(pipeline(`git -C $tmp config user.name Test`; stdout = devnull, stderr = devnull))
+            run(pipeline(`git -C $tmp add -A`; stdout = devnull, stderr = devnull))
+            run(pipeline(`git -C $tmp commit -q -m init`; stdout = devnull, stderr = devnull))
+            text = mktemp() do _, io
+                listed = redirect_stdout(io) do
+                    redirect_stderr(devnull) do
+                        DistSSHQueue.stage_send_list(sub)
+                    end
+                end
+                @test "keep.txt" in listed
+                @test !("dropped.txt" in listed)
+                flush(io)
+                seekstart(io)
+                return read(io, String)
+            end
+            @test count("Warning:", text) == 1
+            @test occursin("dropped.txt", text)
         end
     end
 
@@ -172,6 +231,105 @@ using DistSSHQueue
             listed = DistSSHQueue.stage_send_list(member)
             @test "experiments/run1/job.jl" in listed
             @test "Project.toml" in listed
+        end
+    end
+
+    @testset "stage rsync argv and a local error skips ssh" begin
+        mktempdir() do tmp
+            bin = joinpath(tmp, "bin")
+            mkpath(bin)
+            sshlog = joinpath(tmp, "ssh.log")
+            rsynclog = joinpath(tmp, "rsync.log")
+            filesfrom = joinpath(tmp, "files-from")
+            write(sshlog, "")
+            write(
+                joinpath(bin, "ssh"),
+                """
+                #!/bin/sh
+                printf '%s\\n' "\$@" >> "\$FAKE_SSH_LOG"
+                exit 0
+                """,
+            )
+            write(
+                joinpath(bin, "rsync"),
+                """
+                #!/bin/sh
+                printf '%s\\n' "\$@" >> "\$FAKE_RSYNC_LOG"
+                for arg in "\$@"; do
+                  case "\$arg" in
+                    --files-from=*)
+                      cp "\${arg#--files-from=}" "\$FAKE_FILES_FROM"
+                      ;;
+                  esac
+                done
+                exit 0
+                """,
+            )
+            chmod(joinpath(bin, "ssh"), 0o755)
+            chmod(joinpath(bin, "rsync"), 0o755)
+            fakeenv = [
+                "PATH" => bin * ":" * get(ENV, "PATH", ""),
+                "FAKE_SSH_LOG" => sshlog,
+                "FAKE_RSYNC_LOG" => rsynclog,
+                "FAKE_FILES_FROM" => filesfrom,
+            ]
+
+            emptygit = joinpath(tmp, "emptygit")
+            mkpath(emptygit)
+            write(joinpath(emptygit, "Project.toml"), "name = \"App\"\n")
+            write(joinpath(emptygit, ".gitignore"), "*\n!.distsshqueue/\n!.distsshqueue/**\n")
+            mkpath(joinpath(emptygit, ".distsshqueue"))
+            write(joinpath(emptygit, ".distsshqueue", "ticket"), "nope\n")
+            run(pipeline(`git -C $emptygit init -q`; stdout = devnull, stderr = devnull))
+            run(pipeline(`git -C $emptygit config user.email test@example.com`; stdout = devnull, stderr = devnull))
+            run(pipeline(`git -C $emptygit config user.name Test`; stdout = devnull, stderr = devnull))
+            withenv(fakeenv...) do
+                @test_throws ArgumentError DistSSHQueue.rsync_to_qhost!(
+                    "qh", emptygit, "/stage/empty", String[]
+                )
+            end
+            @test isempty(read(sshlog, String))
+
+            plain = joinpath(tmp, "plain")
+            mkpath(plain)
+            write(joinpath(plain, "Project.toml"), "name = \"App\"\n")
+            withenv(fakeenv...) do
+                @test_throws ArgumentError DistSSHQueue.rsync_to_qhost!(
+                    "qh", plain, "/stage/plain", [joinpath(tmp, "missing.jl")]
+                )
+            end
+            @test isempty(read(sshlog, String))
+
+            gitproj = joinpath(tmp, "gitproj")
+            mkpath(gitproj)
+            write(joinpath(gitproj, "Project.toml"), "name = \"App\"\n")
+            write(joinpath(gitproj, "a.txt"), "x\n")
+            run(pipeline(`git -C $gitproj init -q`; stdout = devnull, stderr = devnull))
+            run(pipeline(`git -C $gitproj config user.email test@example.com`; stdout = devnull, stderr = devnull))
+            run(pipeline(`git -C $gitproj config user.name Test`; stdout = devnull, stderr = devnull))
+            withenv(fakeenv...) do
+                DistSSHQueue.rsync_to_qhost!("qh", gitproj, "/stage/git", String[])
+            end
+            gitargv = read(rsynclog, String)
+            @test occursin("--files-from=", gitargv)
+            @test !occursin(":- .gitignore", gitargv)
+            listed = read(filesfrom, String)
+            @test occursin("a.txt", listed)
+            @test occursin("Project.toml", listed)
+            @test !isempty(read(sshlog, String))
+
+            write(sshlog, "")
+            write(rsynclog, "")
+            nogit = joinpath(tmp, "nogit")
+            mkpath(nogit)
+            write(joinpath(nogit, "Project.toml"), "name = \"App\"\n")
+            withenv(fakeenv...) do
+                DistSSHQueue.rsync_to_qhost!("qh", nogit, "/stage/nogit", String[])
+            end
+            plainargv = read(rsynclog, String)
+            @test occursin(":- .gitignore", plainargv)
+            @test !occursin("--files-from=", plainargv)
+            @test !isempty(read(sshlog, String))
         end
     end
 

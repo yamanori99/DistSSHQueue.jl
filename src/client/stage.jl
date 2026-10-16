@@ -4,7 +4,8 @@
 # Kit still copies queue host → workers. Inside a git work tree the file list
 # is DistSSHRun's `rsync_send_list` (the same list as `setup --rsync`). Outside
 # one, rsync keeps its per-directory `.gitignore` filter. `.distsshqueue/`
-# stays off the queue host either way.
+# stays off the queue host either way. The send list and extra files are
+# checked before `ssh mkdir`, so a local error leaves no empty stage directory.
 # Stderr gets `rsync → HOST:path` when the copy starts (`DISTSSHKIT_QUIET`
 # hides it). `DISTSSHQUEUE_NO_STAGE=1` skips (tests with a fake `ssh`).
 const NO_STAGE_ENV = "DISTSSHQUEUE_NO_STAGE"
@@ -275,6 +276,16 @@ function print_rsync_start(
     return nothing
 end
 
+function _stage_extra_paths(extra_files)::Vector{String}
+    out = String[]
+    for f in extra_files
+        p = canonical_local_path(f)
+        isfile(p) || throw(ArgumentError("qhost submit: extra file missing: $(repr(p))"))
+        push!(out, p)
+    end
+    return out
+end
+
 function rsync_to_qhost!(
         host::AbstractString,
         local_root::AbstractString,
@@ -284,12 +295,13 @@ function rsync_to_qhost!(
     )
     src = canonical_local_path(local_root)
     isdir(src) || throw(ArgumentError("qhost submit: job project is not a directory: $(repr(src))"))
+    listed = stage_send_list(src)
+    extras = _stage_extra_paths(extra_files)
     _ssh_mkdir!(host, remote_root)
     dest = string(host, ":", remote_root, "/")
     rsync = _rsync_bin()
     transport = _ssh_transport()
     print_rsync_start(host, remote_root)
-    listed = stage_send_list(src)
     if listed === nothing
         run(
             pipeline(
@@ -316,9 +328,7 @@ function rsync_to_qhost!(
     extra_opts = String["-az"]
     progress && push!(extra_opts, "--info=progress2")
     append!(extra_opts, String["-e", transport])
-    for f in extra_files
-        p = canonical_local_path(f)
-        isfile(p) || throw(ArgumentError("qhost submit: extra file missing: $(repr(p))"))
+    for p in extras
         run(
             pipeline(
                 Cmd(
