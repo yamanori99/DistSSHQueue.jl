@@ -8,7 +8,9 @@
 # DistSSHRun `execute!(…; detached=true)` for kinds in `KIT_EXECUTE_KINDS`.
 #
 # Also: `julia -m DistSSHKit` on the queue host (omit `qhost:HOST`) and as a
-# client (`qhost:HOST` over loopback OpenSSH, including `fetch`). Inspect verbs
+# client (`qhost:HOST` over loopback OpenSSH, including `fetch`). The staged
+# tree is the git send list (`setup --rsync`), with `.distsshqueue/` left
+# out and `.distsshqueue-backup` kept. Inspect verbs
 # (`size` / `plan` / `pool`) are Queue chrome only (header + submit footer).
 # Kit slots on docker-ssh (`child:child-1:1`).
 # Three roles, one suite: client = loopback, qhost = this host, child = containers.
@@ -1166,6 +1168,9 @@ end
                         # must reach it. Do not instantiate that Manifest on
                         # workers (path-dev Kit).
                         write(gi, replace(gi_body, r"^Manifest\.toml\r?\n?"m => ""))
+                        write(joinpath(JOB_PROJECT, ".distsshqueue-backup"), "keep\n")
+                        mkpath(joinpath(JOB_PROJECT, ".distsshqueue"))
+                        write(joinpath(JOB_PROJECT, ".distsshqueue", "ticket"), "nope\n")
                         remote_env = Dict{String, String}(
                             "HOME" => e2e_home,
                             "JULIA_DEPOT_PATH" => julia_depot_path_env(),
@@ -1197,6 +1202,37 @@ end
                         id1 = read_cli(addenv(qh(["submit", "go", token, "--output-dir", outdir, script, GO_N...]), client_env...))
                         @test !isempty(id1)
                         @test isfile(DistSSHQueue.submit_ticket_path(JOB_PROJECT, id1))
+                        stage = joinpath(e2e_home, ".distsshqueue", "stage", id1)
+                        @test isdir(stage)
+                        listed = DistSSHQueue.stage_send_list(JOB_PROJECT)
+                        @test listed isa Vector{String}
+                        if listed isa Vector{String}
+                            env = DistSSHRun.resolve_pkg_env(JOB_PROJECT)
+                            raw = DistSSHRun.rsync_send_list(env.env_dir, env)
+                            @test raw isa Vector
+                            if raw isa Vector
+                                want = String[
+                                    String(rel) for rel in raw if !(".distsshqueue" in split(String(rel), '/'))
+                                ]
+                                @test listed == want
+                            end
+                            @test ".distsshqueue-backup" in listed
+                            @test !any(rel -> ".distsshqueue" in split(rel, '/'), listed)
+                            for rel in listed
+                                @test ispath(joinpath(stage, rel))
+                            end
+                            want_set = Set(listed)
+                            for (root, _, files) in walkdir(stage)
+                                relroot = relpath(root, stage)
+                                for f in files
+                                    rel = relroot == "." ? f : joinpath(relroot, f)
+                                    @test replace(rel, '\\' => '/') in want_set
+                                end
+                            end
+                        end
+                        @test isfile(joinpath(stage, ".distsshqueue-backup"))
+                        @test read(joinpath(stage, ".distsshqueue-backup"), String) == "keep\n"
+                        @test !ispath(joinpath(stage, ".distsshqueue"))
                         wait_store_job(qh_store, id1, (:done,); tries = 600)
                         listed = read_cli(addenv(qh(["status"]), client_env...))
                         @test status_shows_id(listed, id1)
