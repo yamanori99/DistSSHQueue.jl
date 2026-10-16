@@ -20,12 +20,21 @@ function load_config(; path::Union{Nothing, AbstractString} = nothing)::Dict{Str
         TOML.parsefile(p)
     catch e
         e isa TOML.ParserError || rethrow()
-        throw(ArgumentError("config is not valid TOML: $p"))
+        detail = replace(strip(sprint(showerror, e)), r"\s+" => " ")
+        if length(detail) > 240
+            detail = first(detail, 240) * "…"
+        end
+        throw(ArgumentError("config is not valid TOML: $p: $detail"))
     end
     return Dict{String, Any}(String(k) => v for (k, v) in raw)
 end
 
-"""Serialize host-list edits. The directory lock is the store lock on this path."""
+"""Run `f` while holding the directory lock `path * ".lock"`.
+
+`add-host` and `remove-host` hold it across the read and the replace.
+The lock creates the parent directory, so the first `add-host` can create a
+missing config directory. A killed process can leave `path.tmp.*`.
+"""
 with_config_lock(f, path::AbstractString) = with_store_lock(f, String(path))
 
 """Test hooks stay out of config `[env]`. `DISTSSHKIT_YES` still applies (`up default`)."""

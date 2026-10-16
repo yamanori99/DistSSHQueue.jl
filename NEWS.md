@@ -7,8 +7,10 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 - `add-host` and `remove-host` update `hosts` under the config lock. The
   temporary file is unique to that write and is removed if the replace fails.
-- A `config.toml` that is not valid TOML is `Error:` and the file is left
-  unchanged. Every command reads that file first.
+  A killed process can leave that file. The first `add-host` creates a missing
+  config directory.
+- A `config.toml` that is not valid TOML is `Error:` and includes the parser
+  location. The file is left unchanged. Every command reads that file first.
 - `fetch` reads `jobs.toml` under the store lock and does not rewrite it.
   A `:running` row stays `:running`.
 - Two `serve` processes claim `jobs.toml.pid` under the store lock. The

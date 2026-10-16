@@ -129,8 +129,7 @@ end
         catch e
             e
         end
-        @test err isa ArgumentError
-        @test occursin("still running", err.msg)
+        @test err isa ArgumentError && occursin("still running", err.msg)
         @test read(store, String) == before
         @test DistSSHQueue.read_jobs(store)[1].state === :running
     end
