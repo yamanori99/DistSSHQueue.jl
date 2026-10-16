@@ -460,6 +460,39 @@ end
     end
 end
 
+@testset "invalid config is an error and host edits keep both names" begin
+    mktempdir() do d::String
+        cfg = joinpath(d, "config.toml")
+        broken = "store = [\n"
+        write(cfg, broken)
+        err = try
+            DistSSHQueue.load_config(; path = cfg)
+            nothing
+        catch e
+            e
+        end
+        @test err isa ArgumentError
+        @test occursin("not valid TOML", err.msg)
+        @test read(cfg, String) == broken
+        code = withenv("DISTSSHQUEUE_CONFIG" => cfg) do
+            DistSSHQueue.main(["status"])
+        end
+        @test code == 1
+        @test read(cfg, String) == broken
+
+        write(cfg, "store = \"/tmp/jobs.toml\"\n")
+        @sync begin
+            @async DistSSHQueue.add_host_names!(cfg, ["child:host1"])
+            @async DistSSHQueue.add_host_names!(cfg, ["child:host2"])
+        end
+        names = DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = cfg))
+        @test names isa DistSSHQueue.HostAllow
+        @test haskey(names, "host1")
+        @test haskey(names, "host2")
+        @test !any(n -> occursin(".tmp", n), readdir(d))
+    end
+end
+
 @testset "setup writes config, not a dskq shim" begin
     mktempdir() do d
         bindir = joinpath(d, "bin")

@@ -106,6 +106,36 @@ end
     end
 end
 
+@testset "fetch_source does not rewrite a running row" begin
+    mktempdir() do d::String
+        store = joinpath(d, "jobs.toml")
+        id = "cccccccc-1111-4000-8000-000000000003"
+        DistSSHQueue.save_jobs(
+            store,
+            [
+                DistSSHQueue.Job(;
+                    id = id,
+                    kind = :go,
+                    script = joinpath(d, "S.jl"),
+                    hosts = ["parent:1"],
+                    state = :running,
+                ),
+            ],
+        )
+        before = read(store, String)
+        err = try
+            DistSSHQueue.fetch_source(id; store = store)
+            nothing
+        catch e
+            e
+        end
+        @test err isa ArgumentError
+        @test occursin("still running", err.msg)
+        @test read(store, String) == before
+        @test DistSSHQueue.read_jobs(store)[1].state === :running
+    end
+end
+
 @testset "fetch_source uses run.toml snapshot when result_path is empty" begin
     mktempdir() do d
         store = joinpath(d, "jobs.toml")
