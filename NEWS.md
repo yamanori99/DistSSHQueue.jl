@@ -5,6 +5,18 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+### Planned breaking (next minor)
+
+- `serve --interval <= 0` will be rejected.
+- `DISTSSHQUEUE_STORE` that starts with `~` will be rejected.
+- `teardown` will refuse a path that is a symlink.
+- Declining `up default` will exit 1.
+- `status` will not show a `:running` row whose `kit.pid` is dead as running.
+  The stored row stays `:running` until `serve` writes it.
+
+## 0.9.6
+
+- Requires DistSSHRun 0.1.9.
 - Autoserve starts `serve` with the Julia and `--project=` from the `enable`
   unit when that file exists. With no unit file it still uses
   `default_julia_bin` and `default_queue_env`.
@@ -44,16 +56,7 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
   uses rsync's per-directory `.gitignore` filter. `.distsshqueue/` stays
   off the queue host. A name such as `.distsshqueue-backup` is not that
   directory. The send list and extra files are checked before the remote
-  stage directory is created. Requires DistSSHRun 0.1.8.
-
-### Planned breaking (next minor)
-
-- `serve --interval <= 0` will be rejected.
-- `DISTSSHQUEUE_STORE` that starts with `~` will be rejected.
-- `teardown` will refuse a path that is a symlink.
-- Declining `up default` will exit 1.
-- `status` will not show a `:running` row whose `kit.pid` is dead as running.
-  The stored row stays `:running` until `serve` writes it.
+  stage directory is created. Requires DistSSHRun 0.1.9.
 
 ## 0.9.5
 
