@@ -22,7 +22,11 @@
 # Also: FIFO one-at-a-time, cancel queued (skip that row), cancel running
 # (`terminate_run!`, then the next queued row).
 #
-# Inner `@testset`s print `[i/N]` (see `_E2E_N`) so CI logs are not a long stall.
+# Also: 0.9.6 CLI rejects a non-finite `--interval`, warns once on the 0.10
+# bridges, and `teardown` without `--confirm-path` prints `Would remove`.
+#
+# Inner `@testset`s print `[i/N]`. `N` is how many `@e2e_announce` / `@e2e_plan`
+# labels the file registered, so adding one does not need a hand count.
 #
 #   testenv/docker-ssh/scripts/up.sh --e2e
 #   testenv/apple-container-ssh/scripts/up.sh --e2e   # macOS Apple silicon, not CI
@@ -311,6 +315,33 @@ function read_cli(cmd::Cmd)::String
     end
 end
 
+"""Exit code plus both streams. A failing CLI is an assertion, not a test error."""
+function capture_cli(cmd::Cmd; stdin::Union{Nothing, AbstractString} = nothing)::Tuple{Int, String, String}
+    out = IOBuffer()
+    err = IOBuffer()
+    redir = stdin === nothing ? cmd : pipeline(cmd; stdin = stdin)
+    proc = run(pipeline(ignorestatus(redir); stdout = out, stderr = err))
+    return proc.exitcode, String(take!(out)), String(take!(err))
+end
+
+"""Stop a background `serve`. SIGINT lets it drop its pidfile; SIGKILL is the fallback."""
+function stop_e2e_proc!(proc::Base.Process)
+    process_running(proc) || return nothing
+    try
+        run(pipeline(`kill -INT $(getpid(proc))`; stdout = devnull, stderr = devnull))
+    catch
+    end
+    t0 = time()
+    while process_running(proc) && (time() - t0) < 10
+        sleep(0.05)
+    end
+    if process_running(proc)
+        kill(proc)
+    end
+    wait(proc)
+    return nothing
+end
+
 function ssh_login_user()
     u = strip(get(ENV, "USER", ""))
     isempty(u) && (u = strip(get(ENV, "LOGNAME", "")))
@@ -458,12 +489,44 @@ function write_remote_julia(path::AbstractString, env::Dict{String, String})
 end
 
 # Same banner idea as `test/runtests.jl`. Inner `@testset`s can take minutes
-# of SSH with no Test output until they finish. Update `_E2E_N` when adding one.
-const _E2E_N = 11
+# of SSH with no Test output until they finish. Macros below run while this
+# file expands, before the suite body, so `length(_E2E_PLAN)` is the step count.
+const _E2E_PLAN = String[]
 const _E2E_I = Ref(0)
-function _e2e_announce(label::AbstractString)
+
+function _e2e_push!(label::AbstractString)
+    lab = String(label)
+    lab in _E2E_PLAN && error("duplicate e2e step: $lab")
+    push!(_E2E_PLAN, lab)
+    return nothing
+end
+
+"""Register one literal step. The printed index is this step's place in `_E2E_PLAN`."""
+macro e2e_announce(label)
+    label isa String || error("@e2e_announce needs a string literal")
+    _e2e_push!(label)
+    lab = String(label)
+    return quote
+        _e2e_print($lab)
+    end
+end
+
+"""Register loop steps in run order. The loop then calls `_e2e_print` with each label."""
+macro e2e_plan(labels...)
+    for lab in labels
+        lab isa String || error("@e2e_plan needs string literals")
+        _e2e_push!(lab)
+    end
+    return :(nothing)
+end
+
+function _e2e_print(label::AbstractString)
     _E2E_I[] += 1
-    println("[$(_E2E_I[])/$_E2E_N]  $label")
+    i = _E2E_I[]
+    1 <= i <= length(_E2E_PLAN) || error("e2e step $i is outside 1:$(length(_E2E_PLAN))")
+    planned = _E2E_PLAN[i]
+    planned == label || error("e2e step $i is $(repr(planned)), ran $(repr(label))")
+    println("[$i/$(length(_E2E_PLAN))]  $label")
     flush(stdout)
     return nothing
 end
@@ -472,7 +535,7 @@ end
     withenv(SSH_ENV...) do
         kit = kit_root()
         @testset "pipeline_* demos are Kit API scripts, not Queue jobs" begin
-            _e2e_announce("pipeline_* demos are Kit API scripts, not Queue jobs")
+            @e2e_announce "pipeline_* demos are Kit API scripts, not Queue jobs"
             @test isfile(joinpath(kit, "demos", "without_kit", "pipeline_pi.jl"))
             @test isfile(joinpath(kit, "demos", "with_kit", "pipeline_square.jl"))
             pi_src = read(joinpath(kit, "demos", "without_kit", "pipeline_pi.jl"), String)
@@ -484,7 +547,7 @@ end
         stage_kit_demos!(JOB_PROJECT)
 
         @testset "setup! deploys example job (Kit demos + DistSSHKit)" begin
-            _e2e_announce("setup! deploys example job (Kit demos + DistSSHKit)")
+            @e2e_announce "setup! deploys example job (Kit demos + DistSSHKit)"
             session = KitSession(
                 project = JOB_PROJECT,
                 workers = ["child:$(h)" for h in HOSTS],
@@ -542,9 +605,10 @@ end
                         nothing,
                     ),
                 )
+                @e2e_plan "pi_file" "pi_echo" "square_file" "square_echo"
                 for (kind, script, label, args, artifact, needle) in cases
                     @testset "$label" begin
-                        _e2e_announce(label)
+                        _e2e_print(label)
                         case_store = joinpath(d, "store_$label.toml")
                         out = joinpath(JOB_PROJECT, "e2e_kit_out", label)
                         isdir(out) && rm(out; recursive = true)
@@ -571,7 +635,7 @@ end
             end
 
             @testset "FIFO one Kit job at a time" begin
-                _e2e_announce("FIFO one Kit job at a time")
+                @e2e_announce "FIFO one Kit job at a time"
                 store_fifo = joinpath(d, "fifo.toml")
                 echo = joinpath(JOB_PROJECT, "demos", "without_kit", "pi_echo.jl")
                 q = Queue(; store = store_fifo)
@@ -594,7 +658,7 @@ end
             end
 
             @testset "cancel queued skips that row" begin
-                _e2e_announce("cancel queued skips that row")
+                @e2e_announce "cancel queued skips that row"
                 store_c = joinpath(d, "cancel.toml")
                 echo = joinpath(JOB_PROJECT, "demos", "without_kit", "pi_echo.jl")
                 h = Queue(; store = store_c)
@@ -618,7 +682,7 @@ end
             end
 
             @testset "cancel running then the next queued row" begin
-                _e2e_announce("cancel running then the next queued row")
+                @e2e_announce "cancel running then the next queued row"
                 store_r = joinpath(d, "cancel-running.toml")
                 echo = joinpath(JOB_PROJECT, "demos", "without_kit", "pi_echo.jl")
                 hold = joinpath(d, "hold_cancel.jl")
@@ -664,6 +728,158 @@ end
         qcmd(args) = e2e_qcmd(test_project, args)
 
         @testset "CLI (queue host + qhost:)" verbose = true begin
+            @testset "0.9.6 CLI warnings and rejects" begin
+                @e2e_announce "0.9.6 CLI warnings and rejects"
+                # No worker SSH. `status` / `watch` need a config file or they
+                # reject the hop before parsing `--interval`. Do not set HOME:
+                # the juliaup shim would install into that home.
+                mktempdir() do d
+                    cfg = joinpath(d, "config.toml")
+                    store = joinpath(d, "jobs.toml")
+                    env = Dict{String, String}(
+                        "JULIA_DEPOT_PATH" => julia_depot_path_env(),
+                        "DISTSSHQUEUE_CONFIG" => cfg,
+                        "DISTSSHQUEUE_STORE" => store,
+                        "DISTSSHKIT_YES" => "",
+                        "DISTSSHKIT_QUIET" => "1",
+                        "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
+                    )
+                    @test capture_cli(addenv(qcmd(["setup"]), env...))[1] == 0
+                    @test isfile(cfg)
+
+                    for verb in ("serve", "status", "watch"), raw in ("nan", "inf")
+                        code, _, err = capture_cli(addenv(qcmd([verb, "--interval", raw]), env...))
+                        @test code == 1
+                        @test occursin("Error:", err)
+                        @test occursin("must be finite", err)
+                    end
+
+                    neg_store = joinpath(d, "neg.toml")
+                    code, out, err = capture_cli(
+                        addenv(
+                            qcmd(["serve", "--interval", "-0.1"]),
+                            merge(env, Dict("DISTSSHQUEUE_STORE" => neg_store))...,
+                        ),
+                    )
+                    @test code == 1
+                    @test count("will require --interval > 0", out) == 1
+                    @test occursin("cannot sleep", err)
+
+                    zstore = joinpath(d, "zero.toml")
+                    zout = joinpath(d, "zero.out")
+                    zerr = joinpath(d, "zero.err")
+                    proc = run(
+                        pipeline(
+                            addenv(
+                                qcmd(["serve", "--interval", "0"]),
+                                merge(env, Dict("DISTSSHQUEUE_STORE" => zstore))...,
+                            );
+                            stdout = zout,
+                            stderr = zerr,
+                        );
+                        wait = false,
+                    )
+                    ready = false
+                    try
+                        for _ in 1:120
+                            DistSSHQueue.serve_alive(zstore) && (ready = true; break)
+                            process_running(proc) || break
+                            sleep(0.5)
+                        end
+                        @test ready
+                    finally
+                        stop_e2e_proc!(proc)
+                        DistSSHQueue.stop_serve!(zstore)
+                    end
+                    ztext = isfile(zout) ? read(zout, String) : ""
+                    @test count("will require --interval > 0", ztext) == 1
+
+                    @test capture_cli(addenv(qcmd(["add-host", "parent"]), env...))[1] == 0
+                    decline = joinpath(d, "decline.txt")
+                    write(decline, "no\n")
+                    code, out, _ = capture_cli(
+                        addenv(qcmd(["up", "default", "1.13"]), env...);
+                        stdin = decline,
+                    )
+                    @test code == 0
+                    @test count("will exit 1", out) == 1
+                    @test !occursin("✓ juliaup", out)
+
+                    code, out, err = capture_cli(
+                        addenv(
+                            qcmd(["status"]),
+                            merge(env, Dict("DISTSSHQUEUE_STORE" => "~/distsshqueue-e2e-tilde/jobs.toml"))...,
+                        ),
+                    )
+                    @test code == 0
+                    @test count("starts with ~", out) == 1
+                    @test occursin("0.10 will reject", out)
+                    @test !occursin("Error:", err)
+
+                    dead = joinpath(d, "dead.toml")
+                    script = joinpath(d, "a.jl")
+                    write(script, "1\n")
+                    rundir = joinpath(d, "run")
+                    mkpath(rundir)
+                    write(joinpath(rundir, "kit.pid"), "99999999\n")
+                    DistSSHQueue.save_jobs(
+                        dead,
+                        [
+                            DistSSHQueue.Job(;
+                                kind = :go,
+                                script = script,
+                                hosts = ["parent"],
+                                state = :running,
+                                kwargs = Dict{String, Any}("run_dir" => rundir),
+                            ),
+                        ],
+                    )
+                    before = read(dead, String)
+                    code, out, _ = capture_cli(
+                        addenv(qcmd(["status"]), merge(env, Dict("DISTSSHQUEUE_STORE" => dead))...),
+                    )
+                    @test code == 0
+                    @test count("kit.pid is dead", out) == 1
+                    @test read(dead, String) == before
+
+                    home = joinpath(d, "tdhome")
+                    mkpath(home)
+                    code, out, err = capture_cli(
+                        addenv(qcmd(["teardown", "--home", home, "--config", cfg, "--write-only"]), env...),
+                    )
+                    @test code == 0
+                    @test occursin("Would remove", out)
+                    @test !occursin("Removed", out)
+                    @test isempty(err) || !occursin("still deletes", err)
+                    @test isfile(cfg)
+
+                    shome = joinpath(d, "slink")
+                    mkpath(joinpath(shome, ".distsshqueue"))
+                    real = joinpath(d, "real.toml")
+                    write(real, "store = $(repr(joinpath(d, "unused.toml")))\n")
+                    link = joinpath(shome, ".distsshqueue", "config.toml")
+                    symlink(real, link)
+                    code, out, _ = capture_cli(
+                        addenv(
+                            qcmd(["teardown", "--home", shome, "--config", link, "--write-only"]),
+                            merge(
+                                env,
+                                Dict(
+                                    "DISTSSHQUEUE_CONFIG" => link,
+                                    "DISTSSHQUEUE_STORE" => joinpath(d, "unused.toml"),
+                                ),
+                            )...,
+                        ),
+                    )
+                    @test code == 0
+                    @test occursin("Would remove", out)
+                    @test count("will refuse", out) == 1
+                    @test !occursin("Removed", out)
+                    @test islink(link)
+                    @test isfile(real)
+                end
+            end
+
             mktempdir() do d
                 e2e_home = joinpath(d, "home")
                 mkpath(e2e_home)
@@ -691,7 +907,7 @@ end
                 )
 
                 @testset "queue-host verbs (logged in; omit qhost:)" begin
-                    _e2e_announce("queue-host verbs (logged in; omit qhost:)")
+                    @e2e_announce "queue-host verbs (logged in; omit qhost:)"
                     env = merge(host_env, Dict("DISTSSHQUEUE_NO_AUTOSERVE" => "1"))
                     @test run_cli(addenv(qcmd(["setup"]), env...)).exitcode == 0
                     @test isfile(cfg)
@@ -780,7 +996,7 @@ end
                 end
 
                 @testset "client qhost: (real ssh to loopback queue host)" begin
-                    _e2e_announce("client qhost: (real ssh to loopback queue host)")
+                    @e2e_announce "client qhost: (real ssh to loopback queue host)"
                     sshd_dir = joinpath(d, "sshd")
                     mkpath(sshd_dir)
                     port = free_loopback_port()
@@ -910,5 +1126,6 @@ end
                 end
             end
         end
+        @test _E2E_I[] == length(_E2E_PLAN)
     end
 end
