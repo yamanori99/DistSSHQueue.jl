@@ -8,6 +8,10 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 - Two `serve` processes claim `jobs.toml.pid` under the store lock. The
   second prints `Already running` and does not load the store. The pidfile
   is replaced by a rename, so a reader does not see a half-written pid.
+- If `serve` claims the pidfile and then cannot load the store, it removes
+  that pidfile only when the file still names this process. `stop` removes
+  the pidfile only when it still names the pid it signaled, and only while
+  holding the store lock.
 - A `jobs` value that is not a list is left on disk. `status` warns once
   and shows no jobs. `serve`, `submit`, and any other write stop with
   `Error:` and do not replace the file. DistSSHQueue 0.10 will reject that

@@ -995,8 +995,16 @@ function serve!(q::Queue; interval::Real = 0.2)
             return nothing
         end
         clear_stopped!(store)
+        try
+            load!(q)
+        catch
+            # `load!` is outside the serve `finally`. Drop only this process's pid.
+            remove_pid_file_if!(store, getpid())
+            rethrow()
+        end
+    else
+        load!(q)
     end
-    load!(q)
     adopt_running!(q)
     label = store isa String ? store : "(memory)"
     io = stdout
@@ -1058,8 +1066,8 @@ function serve!(q::Queue; interval::Real = 0.2)
         end
         if gone
             print_serve_gone(label; io = io)
-        elseif store isa String && serve_pid(store) == getpid()
-            remove_pid_file(store)
+        elseif store isa String
+            remove_pid_file_if!(store, getpid())
         end
     end
     return nothing

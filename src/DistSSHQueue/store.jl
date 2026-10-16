@@ -392,6 +392,18 @@ end
 
 remove_pid_file(store::AbstractString) = rm(store_pid_path(store); force = true)
 
+"""Remove the pidfile when it still names `pid`. Holds the store lock."""
+function remove_pid_file_if!(store::AbstractString, pid::Integer)::Bool
+    return with_store_lock(store) do
+        path = store_pid_path(store)
+        isfile(path) || return false
+        cur = tryparse(Int, strip(read(path, String)))
+        cur == pid || return false
+        remove_pid_file(store)
+        return true
+    end
+end
+
 """Latch that `stop` leaves next to the store so `submit` will not auto-serve.
 An explicit `serve` clears it; that is the only thing that resumes serve."""
 store_stop_path(store::AbstractString)::String = string(store, ".stopped")
@@ -406,15 +418,23 @@ end
 
 clear_stopped!(store::AbstractString) = rm(store_stop_path(store); force = true)
 
-"""SIGTERM a serve recorded in the store pidfile. Does not kill this process."""
+"""SIGTERM a serve recorded in the store pidfile. Does not kill this process.
+
+The pidfile is removed only when it still names that pid, and only under the
+store lock. A serve that claimed the file during the wait is left alone.
+"""
 function stop_serve!(store::AbstractString)::Bool
-    p = store_pid_path(store)
-    isfile(p) || return false
-    pid = tryparse(Int, strip(read(p, String)))
-    if pid === nothing
-        remove_pid_file(store)
-        return false
+    pid = with_store_lock(store) do
+        path = store_pid_path(store)
+        isfile(path) || return nothing
+        parsed = tryparse(Int, strip(read(path, String)))
+        if parsed === nothing
+            remove_pid_file(store)
+            return nothing
+        end
+        return parsed
     end
+    pid === nothing && return false
     pid == getpid() && return false
     if process_alive(pid)
         try
@@ -426,8 +446,7 @@ function stop_serve!(store::AbstractString)::Bool
             sleep(0.05)
         end
     end
-    remove_pid_file(store)
-    return true
+    return remove_pid_file_if!(store, pid)
 end
 
 function fail_stale_running!(jobs::Vector{Job})

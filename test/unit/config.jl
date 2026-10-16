@@ -932,6 +932,31 @@ end
     end
 end
 
+@testset "a failed serve load drops only this process pidfile" begin
+    mktempdir() do d::String
+        store = joinpath(d, "jobs.toml")
+        pid = DistSSHQueue.store_pid_path(store)
+        write(store, "not toml {{\n")
+        err = try
+            DistSSHQueue.serve!(DistSSHQueue.Queue(; store = store))
+            nothing
+        catch e
+            e
+        end
+        @test err isa ArgumentError
+        @test !isfile(pid)
+        write(pid, "999999999")
+        @test DistSSHQueue.remove_pid_file_if!(store, getpid()) == false
+        @test strip(read(pid, String)) == "999999999"
+        write(pid, string(getpid()))
+        @test DistSSHQueue.stop_serve!(store) == false
+        @test strip(read(pid, String)) == string(getpid())
+        write(pid, "999999999")
+        @test DistSSHQueue.stop_serve!(store)
+        @test !isfile(pid)
+    end
+end
+
 @testset "claim_serve admits one process" begin
     mktempdir() do d::String
         store = joinpath(d, "jobs.toml")
