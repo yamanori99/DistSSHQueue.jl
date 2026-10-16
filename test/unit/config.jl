@@ -1113,7 +1113,7 @@ end
 end
 
 @testset "teardown warns once for a symlink and still lists it" begin
-    mktempdir() do home
+    mktempdir() do home::String
         real = joinpath(home, "real.toml")
         write(real, "store = $(repr(joinpath(home, "jobs.toml")))\n")
         link = joinpath(home, ".distsshqueue", "config.toml")
@@ -1158,7 +1158,7 @@ end
 end
 
 @testset "status warns once for a dead kit.pid and does not rewrite the store" begin
-    mktempdir() do d
+    mktempdir() do d::String
         store = joinpath(d, "jobs.toml")
         script = joinpath(d, "a.jl")
         write(script, "1\n")
