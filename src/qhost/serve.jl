@@ -105,7 +105,7 @@ function reap_serve_tag!(tag::AbstractString)
     return nothing
 end
 
-"""0.9.x still accepts `serve --interval <= 0` and warns once."""
+"""Warn once for `serve --interval <= 0`. `0` still runs. A negative finite value then fails in `sleep`."""
 function _note_serve_interval!(interval::Float64)
     interval <= 0 || return nothing
     return _warn_plan_once!(

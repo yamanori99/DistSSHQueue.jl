@@ -1077,7 +1077,7 @@ end
     serve(; store=default_store_path(), interval=0.2) -> Nothing
 
 Run [`serve!`](@ref) on `store`. Ctrl-C stops this process, not a job that is already running.
-The CLI rejects a non-finite `--interval`. `interval <= 0` still runs and warns once.
+The CLI rejects a non-finite `--interval`. `interval == 0` still runs and warns once; a negative finite value warns once, then `sleep` fails.
 """
 function serve(; store::AbstractString = default_store_path(), interval::Real = 0.2, runner::Function = run_kit)
     return serve!(Queue(; store = store, runner = runner); interval = interval)
