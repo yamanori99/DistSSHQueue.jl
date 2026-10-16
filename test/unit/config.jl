@@ -876,15 +876,46 @@ end
         warned = mktemp() do path, io
             redirect_stdout(io) do
                 @test isempty(DistSSHQueue.read_jobs(store))
-                DistSSHQueue.save_jobs(store, DistSSHQueue.Job[])
                 @test isempty(DistSSHQueue.read_jobs(store))
             end
             close(io)
             return read(path, String)
         end
+        refused = try
+            DistSSHQueue.save_jobs(store, DistSSHQueue.Job[])
+            nothing
+        catch e
+            e
+        end
+        @test refused isa ArgumentError
+        @test occursin("not a list", refused.msg)
         @test read(store, String) == kept
         @test count("not a list", warned) == 1
         @test occursin("0.10 will reject", warned)
+
+        rm(store)
+        DistSSHQueue.save_jobs(
+            store, [
+                DistSSHQueue.Job(;
+                    id = "bbbbbbbb-4444-4000-8000-000000000004",
+                    kind = :go,
+                    script = joinpath(d, "S.jl"),
+                    hosts = ["parent:1"],
+                    state = :queued,
+                ),
+            ]
+        )
+        dated = replace(read(store, String), r"queued_at = \"[^\"]*\"" => "queued_at = \"garbage\"")
+        write(store, dated)
+        bad_dt = try
+            DistSSHQueue.read_jobs(store)
+            nothing
+        catch e
+            e
+        end
+        @test bad_dt isa ArgumentError
+        @test occursin("missing a field or has the wrong type", bad_dt.msg)
+        @test read(store, String) == dated
     end
 end
 
@@ -905,30 +936,37 @@ end
     mktempdir() do d::String
         store = joinpath(d, "jobs.toml")
         proj = Base.active_project()
-        code = "using DistSSHQueue; other = DistSSHQueue.claim_serve!(ARGS[1]); if other === nothing; println(\"won \", getpid()); flush(stdout); sleep(30); else; println(\"lost \", other); end"
-        cmd = `$(Base.julia_cmd()) --startup-file=no --project=$proj -e $code $store`
-        holder_out = IOBuffer()
-        holder = run(pipeline(cmd; stdout = holder_out, stderr = devnull); wait = false)
-        live = nothing
+        code = "using DistSSHQueue; other = DistSSHQueue.claim_serve!(ARGS[1]); open(ARGS[2], \"w\") do io; println(io, other === nothing ? \"won \$(getpid())\" : \"lost \$other\"); end; other === nothing && sleep(30)"
+        procs = Base.Process[]
         try
-            deadline = time() + 20
+            for i in 1:2
+                out = joinpath(d, "out$i")
+                cmd = `$(Base.julia_cmd()) --startup-file=no --project=$proj -e $code $store $out`
+                push!(procs, run(pipeline(cmd; stdout = devnull, stderr = devnull); wait = false))
+            end
+            lines = String[]
+            deadline = time() + 45
             while time() < deadline
-                live = DistSSHQueue.serve_pid(store)
-                live === nothing || break
+                lines = String[]
+                for i in 1:2
+                    out = joinpath(d, "out$i")
+                    isfile(out) || continue
+                    s = strip(read(out, String))
+                    isempty(s) || push!(lines, s)
+                end
+                length(lines) == 2 && break
                 sleep(0.05)
             end
-            @test live isa Int
-            loser_out = IOBuffer()
-            loser_err = IOBuffer()
-            loser = run(pipeline(cmd; stdout = loser_out, stderr = loser_err); wait = false)
-            wait(loser)
-            @test loser.exitcode == 0
-            line = strip(String(take!(loser_out)))
-            @test startswith(line, "lost ")
-            @test parse(Int, split(line)[2]) == live
+            @test count(startswith("won "), lines) == 1
+            @test count(startswith("lost "), lines) == 1
+            won = parse(Int, split(first(filter(startswith("won "), lines)))[2])
+            lost = parse(Int, split(first(filter(startswith("lost "), lines)))[2])
+            @test lost == won
         finally
-            kill(holder)
-            wait(holder)
+            for p in procs
+                kill(p)
+                wait(p)
+            end
         end
     end
 end

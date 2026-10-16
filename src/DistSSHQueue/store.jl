@@ -146,18 +146,19 @@ end
 const _JOBS_NOT_LIST_WARNED = Set{String}()
 const _JOBS_NOT_LIST_LOCK = ReentrantLock()
 
-"""`jobs` missing, a list, not a list, or TOML that does not parse."""
-function _jobs_store_shape(path::AbstractString)::Symbol
-    isfile(path) || return :absent
+"""One parse: `:absent`, `:list` plus rows, `:not_list`, or `:bad_toml`."""
+function _jobs_table(path::AbstractString)::Tuple{Symbol, Any}
+    isfile(path) || return (:absent, nothing)
     raw = try
         TOML.parsefile(String(path))
     catch e
-        e isa TOML.ParserError && return :bad_toml
+        e isa TOML.ParserError && return (:bad_toml, nothing)
         rethrow()
     end
-    raw isa AbstractDict || return :not_list
-    haskey(raw, "jobs") || return :absent
-    return raw["jobs"] isa AbstractVector ? :list : :not_list
+    raw isa AbstractDict || return (:not_list, nothing)
+    haskey(raw, "jobs") || return (:absent, nothing)
+    rows = raw["jobs"]
+    return rows isa AbstractVector ? (:list, rows) : (:not_list, nothing)
 end
 
 function _warn_jobs_not_list(path::AbstractString)
@@ -178,32 +179,91 @@ function _jobs_store_bad_toml(path::AbstractString)
     return ArgumentError("jobs store is not valid TOML: $path")
 end
 
+function _jobs_store_not_list(path::AbstractString)
+    return ArgumentError("jobs store has a jobs value that is not a list: $path")
+end
+
 function _jobs_store_bad_row(path::AbstractString)
     return ArgumentError(
         "jobs store has a job row that is missing a field or has the wrong type: $path",
     )
 end
 
+function _row_string(v, path::AbstractString)::String
+    v isa AbstractString || throw(_jobs_store_bad_row(path))
+    return String(v)
+end
+
+function _row_dt(v, path::AbstractString)::DateTime
+    v isa DateTime && return v
+    v isa AbstractString || throw(_jobs_store_bad_row(path))
+    try
+        return DateTime(String(v))
+    catch e
+        e isa ArgumentError || rethrow()
+        throw(_jobs_store_bad_row(path))
+    end
+end
+
+"""Field conversion only. A `MethodError` inside `Job` still propagates."""
 function _job_row(row, path::AbstractString)::Job
     row isa AbstractDict || throw(_jobs_store_bad_row(path))
     try
-        return job_from_toml(row)
+        hosts = row["hosts"]
+        hosts isa AbstractVector || throw(_jobs_store_bad_row(path))
+        kw = get(row, "kwargs", Dict{String, Any}())
+        kw isa AbstractDict || throw(_jobs_store_bad_row(path))
+        cleaned_kw = Dict{String, Any}()
+        for (k, v) in kw
+            k isa AbstractString || throw(_jobs_store_bad_row(path))
+            cleaned_kw[String(k)] = v
+        end
+        started = get(row, "started_at", "")
+        finished = get(row, "finished_at", "")
+        err = get(row, "error", "")
+        result_path = get(row, "result_path", "")
+        cleaned = Dict{String, Any}(
+            "id" => _row_string(row["id"], path),
+            "kind" => _row_string(row["kind"], path),
+            "script" => _row_string(row["script"], path),
+            "hosts" => String[_row_string(h, path) for h in hosts],
+            "state" => _row_string(row["state"], path),
+            "queued_at" => _row_dt(row["queued_at"], path),
+            "started_at" => _row_dt_text(started, path),
+            "finished_at" => _row_dt_text(finished, path),
+            "error" => _row_text(err, path),
+            "result_path" => _row_text(result_path, path),
+            "kwargs" => cleaned_kw,
+        )
+        return job_from_toml(cleaned)
     catch e
-        if e isa KeyError || e isa MethodError || e isa TypeError
+        e isa KeyError && throw(_jobs_store_bad_row(path))
+        if e isa ArgumentError && !startswith(e.msg, "jobs store has a job row")
             throw(_jobs_store_bad_row(path))
         end
         rethrow()
     end
 end
 
+function _row_text(v, path::AbstractString)::String
+    v isa AbstractString || throw(_jobs_store_bad_row(path))
+    return String(v)
+end
+
+"""Empty stays empty. A non-empty value must be a `DateTime` string."""
+function _row_dt_text(v, path::AbstractString)::String
+    text = _row_text(v, path)
+    isempty(text) || _row_dt(text, path)
+    return text
+end
+
 function save_jobs(path::AbstractString, jobs::AbstractVector{Job})
     p = String(path)
-    shape = _jobs_store_shape(p)
+    shape, _ = _jobs_table(p)
     if shape === :bad_toml
         throw(_jobs_store_bad_toml(p))
     elseif shape === :not_list
-        _warn_jobs_not_list(p)
-        return nothing
+        throw(_jobs_store_not_list(p))
     end
     mkpath(dirname(p))
     data = Dict{String, Any}("jobs" => [job_to_toml(j) for j in jobs])
@@ -221,22 +281,15 @@ function save_jobs(path::AbstractString, jobs::AbstractVector{Job})
 end
 
 function read_jobs(path::AbstractString)::Vector{Job}
-    isfile(path) || return Job[]
-    shape = _jobs_store_shape(path)
+    shape, rows = _jobs_table(path)
     if shape === :bad_toml
         throw(_jobs_store_bad_toml(path))
     elseif shape === :not_list
         _warn_jobs_not_list(path)
         return Job[]
+    elseif shape !== :list
+        return Job[]
     end
-    raw = try
-        TOML.parsefile(String(path))
-    catch e
-        e isa TOML.ParserError && throw(_jobs_store_bad_toml(path))
-        rethrow()
-    end
-    rows = get(raw, "jobs", Job[])
-    rows isa AbstractVector || return Job[]
     return Job[_job_row(r, String(path)) for r in rows]
 end
 
