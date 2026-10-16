@@ -216,22 +216,6 @@ function find_named(dir, name::AbstractString)
     return nothing
 end
 
-"""True when any file under `dir` contains `needle` (ride stdout, fetched logs)."""
-function e2e_tree_has(dir, needle::AbstractString)::Bool
-    isdir(dir) || return false
-    for (root, _, files) in walkdir(dir)
-        for f in files
-            text = try
-                read(joinpath(root, f), String)
-            catch
-                continue
-            end
-            occursin(needle, text) && return true
-        end
-    end
-    return false
-end
-
 function julia_depot_path_env()::String
     return join((p for p in DEPOT_PATH if !isempty(p)), Sys.iswindows() ? ";" : ":")
 end
@@ -660,12 +644,15 @@ end
                                 @test occursin(needle, read(found, String))
                             end
                         elseif needle !== nothing
+                            # Detached `execute!` sends the child stdout to `run_dir/kit.out`.
+                            # Quiet drops Kit chrome, not this script `println`.
                             rundir = get(row.kwargs, "run_dir", nothing)
-                            hit = e2e_tree_has(out, needle)
+                            @test rundir isa AbstractString
                             if rundir isa AbstractString
-                                hit = hit || e2e_tree_has(rundir, needle)
+                                kit_out = joinpath(rundir, "kit.out")
+                                @test isfile(kit_out)
+                                @test occursin(needle, read(kit_out, String))
                             end
-                            @test hit
                         end
                     end
                 end
