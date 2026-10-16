@@ -24,6 +24,8 @@
 #
 # Also: 0.9.6 CLI rejects a non-finite `--interval`, warns once on the 0.10
 # bridges, and `teardown` without `--confirm-path` prints `Would remove`.
+# Autoserve (`submit` without `DISTSSHQUEUE_NO_AUTOSERVE`) starts the Julia
+# and `--project=` from the `enable` unit, not `default_queue_env`.
 #
 # Inner `@testset`s print `[i/N]`. `N` is how many `@e2e_announce` / `@e2e_plan`
 # labels the file registered, so adding one does not need a hand count.
@@ -877,6 +879,94 @@ end
                     @test !occursin("Removed", out)
                     @test islink(link)
                     @test isfile(real)
+                end
+            end
+
+            @testset "autoserve reads the enable unit" begin
+                @e2e_announce "autoserve reads the enable unit"
+                # `--queue-env` is a symlink to the instantiated test project.
+                # `canonical_local_path` keeps that path, so a serve that ignored
+                # the unit and used `default_queue_env` would show a different
+                # `--project=`. HOME is the temp home: `homedir()` follows it,
+                # and `JULIA_DEPOT_PATH` stays the real depot.
+                mktempdir() do d
+                    e2e_home = joinpath(d, "home")
+                    mkpath(e2e_home)
+                    cfg = joinpath(d, "config.toml")
+                    store = joinpath(d, "jobs.toml")
+                    qenv = joinpath(d, "qenv")
+                    symlink(test_project, qenv)
+                    script = joinpath(d, "once.jl")
+                    write(script, "println(1)\n")
+                    outdir = joinpath(d, "out")
+                    env = Dict{String, String}(
+                        "HOME" => e2e_home,
+                        "JULIA_DEPOT_PATH" => julia_depot_path_env(),
+                        "DISTSSHQUEUE_CONFIG" => cfg,
+                        "DISTSSHQUEUE_STORE" => store,
+                        "DISTSSHKIT_YES" => "1",
+                        "DISTSSHKIT_QUIET" => "1",
+                        "DISTSSHQUEUE_NO_AUTOSERVE" => "",
+                        DistSSHQueue.NO_KIT_SETUP_ENV => "1",
+                    )
+                    enabled = false
+                    try
+                        @test capture_cli(addenv(qcmd(["setup"]), env...))[1] == 0
+                        @test capture_cli(addenv(qcmd(["add-host", "parent"]), env...))[1] == 0
+                        @test capture_cli(
+                            addenv(
+                                qcmd(["enable", "--write-only", "--queue-env", qenv, "--julia", E2E_JULIA]),
+                                env...,
+                            ),
+                        )[1] == 0
+                        enabled = true
+                        spec = DistSSHQueue.enabled_serve_command(; home = e2e_home)
+                        @test spec !== nothing
+                        if spec === nothing
+                            @test false
+                        else
+                            @test spec.project == DistSSHQueue.canonical_local_path(qenv)
+                            @test spec.project != DistSSHQueue.canonical_local_path(test_project)
+                            @test spec.julia == DistSSHQueue.canonical_local_path(E2E_JULIA)
+                            tag = get(ENV, "DISTSSHQUEUE_SERVE_TAG", "")
+                            @test !isempty(tag)
+                            code, _, err = capture_cli(
+                                addenv(
+                                    qcmd(["submit", "go", "parent:1", "--output-dir", outdir, script]),
+                                    env...,
+                                ),
+                            )
+                            @test code == 0
+                            @test !occursin("Error:", err)
+                            proj_arg = "--project=$(spec.project)"
+                            needle = "DISTSSHQUEUE_SERVE_TAG=$tag"
+                            seen = false
+                            for _ in 1:40
+                                text = try
+                                    read(`ps axeww`, String)
+                                catch
+                                    ""
+                                end
+                                for line in eachsplit(text, '\n')
+                                    occursin(needle, line) || continue
+                                    occursin(proj_arg, line) || continue
+                                    occursin("-m DistSSHQueue serve", line) || continue
+                                    occursin(spec.julia, line) || continue
+                                    seen = true
+                                    break
+                                end
+                                seen && break
+                                sleep(0.25)
+                            end
+                            @test seen
+                        end
+                    finally
+                        DistSSHQueue.stop_serve!(store)
+                        DistSSHQueue.reap_serve_tag!(get(ENV, "DISTSSHQUEUE_SERVE_TAG", ""))
+                        if enabled
+                            capture_cli(addenv(qcmd(["disable", "--write-only"]), env...))
+                        end
+                    end
                 end
             end
 
