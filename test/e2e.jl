@@ -3,8 +3,8 @@
 #
 # Copies testenv/example-job to its own git root and stages DistSSHRun `demos/`
 # there. The Queue repo `.gitignore` does not apply to that root. Then setup!
-# to the workers and enqueue Kit go/drive jobs through Queue `serve`
-# (same as CLI `submit go` / `submit drive`). `serve` runs
+# to the workers and enqueue Kit go/drive/ride jobs through Queue `serve`
+# (same as CLI `submit go` / `submit drive` / `submit ride`). `serve` runs
 # DistSSHRun `execute!(…; detached=true)` for kinds in `KIT_EXECUTE_KINDS`.
 #
 # Also: `julia -m DistSSHKit` on the queue host (omit `qhost:HOST`) and as a
@@ -16,8 +16,10 @@
 # Not a client-as-`parent:N` topology. `enable` / `disable` / `teardown` use
 # `--write-only` (no user systemd / launchctl).
 #
-# Table jobs are the four *file*/*echo* demos. `pipeline_pi.jl` /
-# `pipeline_square.jl` call `go!` / `pipeline!` themselves — not Queue rows.
+# Table jobs are the four *file*/*echo* demos plus `ride/map_echo.jl`.
+# `pipeline_pi.jl` / `pipeline_square.jl` call `go!` / `pipeline!` themselves —
+# not Queue rows. One `go` uses `child:HOST:2` (`go_manifest.txt` `slots=2`).
+# `size` / `plan` / `pool` list every worker in the hosts file.
 #
 # Also: FIFO one-at-a-time, cancel queued (skip that row), cancel running
 # (`terminate_run!`, then the next queued row).
@@ -121,6 +123,7 @@ function stage_kit_demos!(proj::AbstractString)
     for (subdir, names) in (
             ("without_kit", ("pi_file.jl", "pi_echo.jl")),
             ("with_kit", ("square_file.jl", "square_echo.jl")),
+            ("ride", ("map_echo.jl",)),
         )
         dest = joinpath(proj, "demos", subdir)
         mkpath(dest)
@@ -158,6 +161,7 @@ const _E2E_DEMO_RELS = (
     "demos/without_kit/pi_echo.jl",
     "demos/with_kit/square_file.jl",
     "demos/with_kit/square_echo.jl",
+    "demos/ride/map_echo.jl",
 )
 
 """Fail with the missing path when `setup!` did not deliver a demo."""
@@ -210,6 +214,22 @@ function find_named(dir, name::AbstractString)
         end
     end
     return nothing
+end
+
+"""True when any file under `dir` contains `needle` (ride stdout, fetched logs)."""
+function e2e_tree_has(dir, needle::AbstractString)::Bool
+    isdir(dir) || return false
+    for (root, _, files) in walkdir(dir)
+        for f in files
+            text = try
+                read(joinpath(root, f), String)
+            catch
+                continue
+            end
+            occursin(needle, text) && return true
+        end
+    end
+    return false
 end
 
 function julia_depot_path_env()::String
@@ -572,7 +592,7 @@ end
             host = HOSTS[1]
             token = "child:$(host):1"
 
-            @testset "Kit go/drive demos through serve" begin
+            @testset "Kit go/drive/ride demos through serve" begin
                 cases = (
                     (
                         :go,
@@ -606,8 +626,16 @@ end
                         nothing,
                         nothing,
                     ),
+                    (
+                        :ride,
+                        joinpath(JOB_PROJECT, "demos", "ride", "map_echo.jl"),
+                        "map_echo",
+                        String[],
+                        nothing,
+                        "1,4,9,16,25,36,49,64",
+                    ),
                 )
-                @e2e_plan "pi_file" "pi_echo" "square_file" "square_echo"
+                @e2e_plan "pi_file" "pi_echo" "square_file" "square_echo" "map_echo"
                 for (kind, script, label, args, artifact, needle) in cases
                     @testset "$label" begin
                         _e2e_print(label)
@@ -631,8 +659,41 @@ end
                             if found !== nothing
                                 @test occursin(needle, read(found, String))
                             end
+                        elseif needle !== nothing
+                            rundir = get(row.kwargs, "run_dir", nothing)
+                            hit = e2e_tree_has(out, needle)
+                            if rundir isa AbstractString
+                                hit = hit || e2e_tree_has(rundir, needle)
+                            end
+                            @test hit
                         end
                     end
+                end
+            end
+
+            @testset "go on child:HOST:2" begin
+                @e2e_announce "go on child:HOST:2"
+                # One job, two Kit slots on the same worker. `step!` still runs
+                # a single row; this checks the `:2` token is accepted and finishes.
+                wide = "child:$(host):2"
+                store_w = joinpath(d, "wide.toml")
+                echo = joinpath(JOB_PROJECT, "demos", "without_kit", "pi_echo.jl")
+                out_w = joinpath(JOB_PROJECT, "e2e_kit_out", "wide")
+                isdir(out_w) && rm(out_w; recursive = true)
+                q = Queue(; store = store_w)
+                id = enqueue_kit!(q, :go, echo, wide; out = out_w, args = GO_N)
+                @test job(q, id).hosts == [wide]
+                q = Queue(; store = store_w)
+                load!(q)
+                st = drive_until_terminal!(q, id)
+                st === :done || @warn "job not done" state = st error = job(q, id).error
+                @test st === :done
+                manifest = find_named(out_w, "go_manifest.txt")
+                @test manifest !== nothing
+                if manifest !== nothing
+                    text = read(manifest, String)
+                    @test occursin("slots=2", text)
+                    @test count("kind=child", text) == 2
                 end
             end
 
@@ -1031,7 +1092,7 @@ end
 
                     # Glue only: header + submit template footer. Table layout is Kit E2E.
                     size_env = merge(env, Dict("DISTSSHKIT_QUIET" => "0"))
-                    inspect_hosts = ["parent", "child:$(HOSTS[1])"]
+                    inspect_hosts = ["parent"; ["child:$(h)" for h in HOSTS]]
                     size_out = read_cli(
                         addenv(
                             qcmd(["size", "--gb-per-worker", "1.5", inspect_hosts...]),
@@ -1040,14 +1101,18 @@ end
                     )
                     @test occursin("DistSSHQueue size", size_out)
                     @test occursin("Suggested submit (template):", size_out)
-                    @test occursin("child:$(HOSTS[1]):", size_out)
+                    for h in HOSTS
+                        @test occursin("child:$(h):", size_out)
+                    end
 
                     plan_out = read_cli(addenv(qcmd(["plan", inspect_hosts..., script]), size_env...))
                     @test occursin("DistSSHQueue plan", plan_out)
                     @test occursin("Suggested submit (template):", plan_out)
                     @test occursin("submit go", plan_out) || occursin("submit ride", plan_out) ||
                         occursin("submit drive", plan_out)
-                    @test occursin("child:$(HOSTS[1]):", plan_out)
+                    for h in HOSTS
+                        @test occursin("child:$(h):", plan_out)
+                    end
 
                     pool_out = read_cli(
                         addenv(
@@ -1058,7 +1123,9 @@ end
                     @test occursin("DistSSHQueue pool", pool_out)
                     @test occursin("Suggested submit (template):", pool_out)
                     @test occursin("no RSS; use size to measure", pool_out)
-                    @test occursin("child:$(HOSTS[1]):", pool_out)
+                    for h in HOSTS
+                        @test occursin("child:$(h):", pool_out)
+                    end
                     @test !isfile(store)
 
                     serve_proc = run(pipeline(addenv(qcmd(["serve", "--interval", "0.2"]), env...); stdout = devnull, stderr = devnull); wait = false)
