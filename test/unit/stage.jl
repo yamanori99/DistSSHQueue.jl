@@ -304,6 +304,8 @@ using DistSSHQueue
             mkpath(gitproj)
             write(joinpath(gitproj, "Project.toml"), "name = \"App\"\n")
             write(joinpath(gitproj, "a.txt"), "x\n")
+            write(joinpath(gitproj, "#hash.txt"), "hash\n")
+            write(joinpath(gitproj, ";semi.txt"), "semi\n")
             run(pipeline(`git -C $gitproj init -q`; stdout = devnull, stderr = devnull))
             run(pipeline(`git -C $gitproj config user.email test@example.com`; stdout = devnull, stderr = devnull))
             run(pipeline(`git -C $gitproj config user.name Test`; stdout = devnull, stderr = devnull))
@@ -311,11 +313,14 @@ using DistSSHQueue
                 DistSSHQueue.rsync_to_qhost!("qh", gitproj, "/stage/git", String[])
             end
             gitargv = read(rsynclog, String)
+            @test occursin("--from0", gitargv)
             @test occursin("--files-from=", gitargv)
             @test !occursin(":- .gitignore", gitargv)
-            listed = read(filesfrom, String)
-            @test occursin("a.txt", listed)
-            @test occursin("Project.toml", listed)
+            listed = Set(split(read(filesfrom, String), '\0'; keepempty = false))
+            @test "a.txt" in listed
+            @test "Project.toml" in listed
+            @test "./#hash.txt" in listed
+            @test "./;semi.txt" in listed
             @test !isempty(read(sshlog, String))
 
             write(sshlog, "")
@@ -328,6 +333,7 @@ using DistSSHQueue
             end
             plainargv = read(rsynclog, String)
             @test occursin(":- .gitignore", plainargv)
+            @test !occursin("--from0", plainargv)
             @test !occursin("--files-from=", plainargv)
             @test !isempty(read(sshlog, String))
         end

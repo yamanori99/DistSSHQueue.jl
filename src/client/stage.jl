@@ -243,15 +243,13 @@ function _stage_rsync_files_from!(
     )
     mktemp() do path, io
         for rel in files
-            println(io, rel)
+            entry = !isempty(rel) && first(rel) in ('#', ';') ? string("./", rel) : rel
+            write(io, entry, '\0')
         end
         close(io)
+        cmd = Cmd(vcat(rsync, opts, String["--from0", "--files-from=$path", src * "/", dest]))
         run(
-            pipeline(
-                Cmd(vcat(rsync, opts, String["--files-from=$path", src * "/", dest]));
-                stdout = stderr,
-                stderr = stderr,
-            ),
+            pipeline(cmd; stdout = stderr, stderr = stderr),
         )
     end
     return nothing
