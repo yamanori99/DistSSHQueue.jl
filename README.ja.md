@@ -133,8 +133,11 @@ julia -m DistSSHRun drive parent:4 SCRIPT.jl
 - キューホストの `.distsshkit/` は実行層が持つ。
 - スケジュールと取得後の `.distsshqueue/` copy はキューが持つ。
 
-stage では `.gitignore`、`.git/`、`.distsshkit/`、
-`.distsshqueue/` を除外する。詳細:
+stage では `.git/`、`.distsshkit/`、`.distsshqueue/` を除外する。
+git work tree の中では、送るファイルは `setup --rsync` と同じである
+(否定パターンと、プロジェクトより上の `.gitignore` を含む)。外では、
+rsync が各ディレクトリの `.gitignore` を使う。`.distsshqueue-backup`
+のような名前は送る。詳細:
 [Artifacts and paths](https://yamanori99.github.io/DistSSHKit.jl/stable/queue/artifacts/)。
 
 #### クライアント

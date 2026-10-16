@@ -3,6 +3,16 @@
 User-facing changes.
 GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are often shorter than the section below.
 
+## Unreleased
+
+- `qhost:` staging inside a git work tree sends the same file list as
+  `setup --rsync`, including negation and a `.gitignore` above the send
+  root. That warning is printed once. Outside a git work tree it still
+  uses rsync's per-directory `.gitignore` filter. `.distsshqueue/` stays
+  off the queue host. A name such as `.distsshqueue-backup` is not that
+  directory. The send list and extra files are checked before the remote
+  stage directory is created. Requires DistSSHRun 0.1.8.
+
 ## 0.9.5
 
 - Requires DistSSHRun 0.1.7.
