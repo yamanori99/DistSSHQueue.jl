@@ -58,6 +58,114 @@ function default_queue_env(; dedicated::AbstractString = default_queue_env_dir()
     return resolve_pkg_env(dirname(proj)).env_dir
 end
 
+function _xml_unescape(s::AbstractString)::String
+    t = replace(String(s), "&quot;" => "\"")
+    t = replace(t, "&gt;" => ">")
+    t = replace(t, "&lt;" => "<")
+    return replace(t, "&amp;" => "&")
+end
+
+"""`<string>` values inside the plist `ProgramArguments` array."""
+function _plist_program_args(text::AbstractString)::Vector{String}
+    s = String(text)
+    key = findfirst("<key>ProgramArguments</key>", s)
+    key === nothing && return String[]
+    rest = s[nextind(s, last(key)):end]
+    stop = findfirst("</array>", rest)
+    stop === nothing && return String[]
+    block = rest[1:prevind(rest, first(stop))]
+    out = String[]
+    for m in eachmatch(r"<string>(.*?)</string>"s, block)
+        cap = m.captures[1]
+        cap isa AbstractString || continue
+        push!(out, _xml_unescape(cap))
+    end
+    return out
+end
+
+"""Split a systemd `ExecStart=` body. Single quotes match the unit writer, including `'\\''`."""
+function _split_posix_words(s::AbstractString)::Vector{String}
+    out = String[]
+    buf = IOBuffer()
+    in_quote = false
+    started = false
+    i = firstindex(s)
+    while i <= lastindex(s)
+        c = s[i]
+        if in_quote
+            if c == '\''
+                in_quote = false
+            else
+                print(buf, c)
+                started = true
+            end
+            i = nextind(s, i)
+        elseif c == '\\' && i < lastindex(s) && s[nextind(s, i)] == '\''
+            print(buf, '\'')
+            started = true
+            i = nextind(s, nextind(s, i))
+        elseif c == '\''
+            in_quote = true
+            started = true
+            i = nextind(s, i)
+        elseif c == ' ' || c == '\t'
+            if started
+                push!(out, String(take!(buf)))
+                started = false
+            end
+            i = nextind(s, i)
+        else
+            print(buf, c)
+            started = true
+            i = nextind(s, i)
+        end
+    end
+    started && push!(out, String(take!(buf)))
+    return out
+end
+
+function _serve_from_args(args::AbstractVector{<:AbstractString})
+    isempty(args) && return nothing
+    proj = nothing
+    for a in args
+        startswith(a, "--project=") || continue
+        proj = chopprefix(String(a), "--project=")
+        break
+    end
+    (proj === nothing || isempty(proj)) && return nothing
+    return (julia = String(args[1]), project = String(proj))
+end
+
+"""Julia and `--project=` from an `enable` unit body, or `nothing`."""
+function serve_command_from_unit(text::AbstractString)
+    s = String(text)
+    if occursin("<key>ProgramArguments</key>", s)
+        return _serve_from_args(_plist_program_args(s))
+    end
+    for line in eachsplit(s, '\n')
+        row = strip(String(line))
+        startswith(row, "ExecStart=") || continue
+        return _serve_from_args(_split_posix_words(chopprefix(row, "ExecStart=")))
+    end
+    return nothing
+end
+
+"""The `enable` unit's Julia and queue env, when that file exists and parses.
+
+Autoserve uses this so a later `submit` starts the same process `enable` registered.
+No unit file, or a file without `--project=`, is `nothing` (caller uses the defaults).
+"""
+function enabled_serve_command(; home::AbstractString = homedir())
+    path = _enable_unit_path(; home = home)
+    path === nothing && return nothing
+    text = try
+        read(path, String)
+    catch
+        return nothing
+    end
+    return serve_command_from_unit(text)
+end
+
 """`-m` package for a queue env on this machine.
 
 Users add DistSSHKit. Main loads only a direct `[deps]` name, so a

@@ -662,7 +662,7 @@ function print_queue_host_usage(io::IO = stdout)
     print_help_lines(
         io,
         help_verb_line("teardown", "Stop serve and remove ~/.distsshqueue"),
-        help_verb_line("", "Needs -y. Job trees stay."),
+        help_verb_line("", "Would remove, then --confirm-path. Job trees stay."),
     )
     print_help_blank(io)
     println(io, "Run <command> --help (or -h) for flags.")
@@ -709,7 +709,7 @@ function queue_command_help(verb::AbstractString)
     v == "status" && return (
         ("  status",), (
             ("-q / --quiet", "Table only"),
-            ("--interval SEC", "Refresh like watch"),
+            ("--interval SEC", "Refresh like watch. Must be finite."),
             ("--tail N|full", "How many jobs to show"),
             h,
         ),
@@ -717,7 +717,7 @@ function queue_command_help(verb::AbstractString)
     v == "watch" && return (
         ("  watch",), (
             ("-q / --quiet", "Table only"),
-            ("--interval SEC", "Refresh interval (default 0.5)"),
+            ("--interval SEC", "Refresh interval (default 0.5). Must be finite."),
             ("--tail N|full", "How many jobs to show"),
             h,
         ),
@@ -742,7 +742,7 @@ function queue_command_help(verb::AbstractString)
     v == "remove-host" && return (("  $(cli_m()) $(cli_qhost())remove-host [parent] [child:NAME...]",), (h,))
     v == "serve" && return (
         ("  $(cli_m()) $(cli_qhost())serve",), (
-            ("--interval SEC", "Poll the store (default 0.2)"),
+            ("--interval SEC", "Poll interval (default 0.2). Must be finite."),
             h,
         ),
     )
@@ -797,7 +797,7 @@ function print_up_usage(io::IO = stdout)
     print_help_lines(
         io,
         help_verb_line("up add CHANNEL", "Install a channel on config hosts"),
-        help_verb_line("up default CHANNEL", "Switch config hosts to that channel"),
+        help_verb_line("up default CHANNEL", "Switch config hosts. Decline exits 0."),
         help_verb_line("up update", "Patch installed channels; leave default"),
         help_verb_line("up status", "Show installed channels"),
         help_verb_line("--config PATH", "Config file"),

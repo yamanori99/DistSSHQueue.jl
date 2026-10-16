@@ -5,6 +5,7 @@ Package entry: exports, `include`s, `main` (`@main` on Julia 1.13+).
 FIFO: `src/DistSSHQueue/`. Client CLI: `src/client/`. Queue host CLI: `src/qhost/`.
 `serve` runs DistSSHRun `execute!(...; detached=true)` for kinds in `KIT_EXECUTE_KINDS`.
 `--project=<queue-env>` loads this package; the Kit project is `job_project()`.
+Autoserve uses the Julia and `--project=` from the `enable` unit when that file exists.
 Config: `~/.distsshqueue/config.toml`.
 
 Concept: [docs](https://yamanori99.github.io/DistSSHQueue.jl/stable/).

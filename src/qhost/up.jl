@@ -1,4 +1,5 @@
 # juliaup verbs on config hosts. `default` changes the host default.
+# Declining that prompt exits 0. DistSSHQueue 0.10 will exit 1.
 function up_main(args::Vector{String})::Cint
     config = config_path()
     verb = ""
@@ -47,7 +48,10 @@ function up_main(args::Vector{String})::Cint
     return _up_run_on_hosts(names; verb = verb, channel = channel, confirm = confirm)
 end
 
-"""Run one juliaup verb on config hosts. `default` confirms unless `confirm` is false."""
+"""Run one juliaup verb on config hosts. `default` confirms unless `confirm` is false.
+
+Declining the prompt exits 0 and warns once. DistSSHQueue 0.10 will exit 1.
+"""
 function _up_run_on_hosts(
         names::Vector{String};
         verb::AbstractString,
