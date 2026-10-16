@@ -837,3 +837,159 @@ end
         @test jobs[1].script == j.script
     end
 end
+
+@testset "corrupt jobs store is not rewritten" begin
+    mktempdir() do d::String
+        store = joinpath(d, "jobs.toml")
+        write(store, "jobs = [\n")
+        original = read(store, String)
+        err = try
+            DistSSHQueue.read_jobs(store)
+            nothing
+        catch e
+            e
+        end
+        @test err isa ArgumentError
+        @test startswith(err.msg, "jobs store is not valid TOML:")
+        err2 = try
+            DistSSHQueue.save_jobs(store, DistSSHQueue.Job[])
+            nothing
+        catch e
+            e
+        end
+        @test err2 isa ArgumentError
+        @test read(store, String) == original
+
+        write(store, "jobs = [{id = \"only\"}]\n")
+        row = try
+            DistSSHQueue.read_jobs(store)
+            nothing
+        catch e
+            e
+        end
+        @test row isa ArgumentError
+        @test occursin("missing a field or has the wrong type", row.msg)
+        @test read(store, String) == "jobs = [{id = \"only\"}]\n"
+
+        write(store, "jobs = 1\n")
+        kept = read(store, String)
+        warned = mktemp() do path, io
+            redirect_stdout(io) do
+                @test isempty(DistSSHQueue.read_jobs(store))
+                @test isempty(DistSSHQueue.read_jobs(store))
+            end
+            close(io)
+            return read(path, String)
+        end
+        refused = try
+            DistSSHQueue.save_jobs(store, DistSSHQueue.Job[])
+            nothing
+        catch e
+            e
+        end
+        @test refused isa ArgumentError
+        @test occursin("not a list", refused.msg)
+        @test read(store, String) == kept
+        @test count("not a list", warned) == 1
+        @test occursin("0.10 will reject", warned)
+
+        rm(store)
+        DistSSHQueue.save_jobs(
+            store, [
+                DistSSHQueue.Job(;
+                    id = "bbbbbbbb-4444-4000-8000-000000000004",
+                    kind = :go,
+                    script = joinpath(d, "S.jl"),
+                    hosts = ["parent:1"],
+                    state = :queued,
+                ),
+            ]
+        )
+        dated = replace(read(store, String), r"queued_at = \"[^\"]*\"" => "queued_at = \"garbage\"")
+        write(store, dated)
+        bad_dt = try
+            DistSSHQueue.read_jobs(store)
+            nothing
+        catch e
+            e
+        end
+        @test bad_dt isa ArgumentError
+        @test occursin("missing a field or has the wrong type", bad_dt.msg)
+        @test read(store, String) == dated
+    end
+end
+
+@testset "claim_serve replaces a dead pid and keeps a live one" begin
+    mktempdir() do d::String
+        store = joinpath(d, "jobs.toml")
+        pid = DistSSHQueue.store_pid_path(store)
+        write(pid, "999999999")
+        @test DistSSHQueue.claim_serve!(store) === nothing
+        @test DistSSHQueue.serve_pid(store) == getpid()
+        @test DistSSHQueue.claim_serve!(store) === nothing
+        @test strip(read(pid, String)) == string(getpid())
+        @test !any(n -> occursin(".tmp.", n), readdir(d))
+    end
+end
+
+@testset "claim_serve admits one process" begin
+    mktempdir() do d::String
+        store = joinpath(d, "jobs.toml")
+        proj = Base.active_project()
+        code = "using DistSSHQueue; other = DistSSHQueue.claim_serve!(ARGS[1]); open(ARGS[2], \"w\") do io; println(io, other === nothing ? \"won \$(getpid())\" : \"lost \$other\"); end; other === nothing && sleep(30)"
+        procs = Base.Process[]
+        try
+            for i in 1:2
+                out = joinpath(d, "out$i")
+                cmd = `$(Base.julia_cmd()) --startup-file=no --project=$proj -e $code $store $out`
+                push!(procs, run(pipeline(cmd; stdout = devnull, stderr = devnull); wait = false))
+            end
+            lines = String[]
+            deadline = time() + 45
+            while time() < deadline
+                lines = String[]
+                for i in 1:2
+                    out = joinpath(d, "out$i")
+                    isfile(out) || continue
+                    s = strip(read(out, String))
+                    isempty(s) || push!(lines, s)
+                end
+                length(lines) == 2 && break
+                sleep(0.05)
+            end
+            @test count(startswith("won "), lines) == 1
+            @test count(startswith("lost "), lines) == 1
+            won = parse(Int, split(first(filter(startswith("won "), lines)))[2])
+            lost = parse(Int, split(first(filter(startswith("lost "), lines)))[2])
+            @test lost == won
+        finally
+            for p in procs
+                kill(p)
+                wait(p)
+            end
+        end
+    end
+end
+
+@testset "status prints Error for invalid jobs TOML" begin
+    mktempdir() do d::String
+        store = joinpath(d, "jobs.toml")
+        write(store, "jobs = [\n")
+        proj = Base.active_project()
+        cmd = `$(Base.julia_cmd()) --startup-file=no --project=$proj -m DistSSHQueue status`
+        out = IOBuffer()
+        err = IOBuffer()
+        p = withenv(
+            "DISTSSHQUEUE_STORE" => store,
+            "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
+        ) do
+            run(pipeline(cmd; stdout = out, stderr = err); wait = false)
+        end
+        wait(p)
+        text = String(take!(err))
+        @test p.exitcode == 1
+        @test occursin("Error:", text)
+        @test occursin("not valid TOML", text)
+        @test read(store, String) == "jobs = [\n"
+    end
+end

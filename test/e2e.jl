@@ -221,6 +221,15 @@ function e2e_qcmd(test_project::AbstractString, args)
     )
 end
 
+# `read_jobs` turns a torn TOML read into `ArgumentError`. A replace can
+# still be observed mid-write on some filesystems, so the waiter retries that
+# and a raw `TOML.ParserError`. A bad job row is a different message and
+# must not be retried.
+function _e2e_transient_store(e)::Bool
+    e isa TOML.ParserError && return true
+    return e isa ArgumentError && startswith(e.msg, "jobs store is not valid TOML:")
+end
+
 # Poll `jobs.toml` (same as test/integration/cli.jl). Waiting on `status`
 # chrome used to sit through 600×0.2s when Store `serve  running` looked
 # like a job STATE. Default 150×0.2s (~30 s) is enough for local E2E.
@@ -236,7 +245,7 @@ function wait_store_job(store::AbstractString, id::AbstractString, states; tries
                 isfile(store) ? DistSSHQueue.read_jobs(store) : DistSSHQueue.Job[]
             end
         catch e
-            string(typeof(e)) == "TOML.ParserError" || rethrow()
+            _e2e_transient_store(e) || rethrow()
             last
         end
         i = findfirst(j -> j.id == sid, last)
@@ -266,7 +275,7 @@ function wait_store_kit_pid(store::AbstractString, id::AbstractString; tries = 6
                 isfile(store) ? DistSSHQueue.read_jobs(store) : DistSSHQueue.Job[]
             end
         catch e
-            string(typeof(e)) == "TOML.ParserError" || rethrow()
+            _e2e_transient_store(e) || rethrow()
             last
         end
         i = findfirst(j -> j.id == sid, last)

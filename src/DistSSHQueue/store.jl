@@ -143,8 +143,128 @@ function job_from_toml(d::AbstractDict)::Job
     )
 end
 
+const _JOBS_NOT_LIST_WARNED = Set{String}()
+const _JOBS_NOT_LIST_LOCK = ReentrantLock()
+
+"""One parse: `:absent`, `:list` plus rows, `:not_list`, or `:bad_toml`."""
+function _jobs_table(path::AbstractString)::Tuple{Symbol, Any}
+    isfile(path) || return (:absent, nothing)
+    raw = try
+        TOML.parsefile(String(path))
+    catch e
+        e isa TOML.ParserError && return (:bad_toml, nothing)
+        rethrow()
+    end
+    raw isa AbstractDict || return (:not_list, nothing)
+    haskey(raw, "jobs") || return (:absent, nothing)
+    rows = raw["jobs"]
+    return rows isa AbstractVector ? (:list, rows) : (:not_list, nothing)
+end
+
+function _warn_jobs_not_list(path::AbstractString)
+    p = abspath(String(path))
+    fresh = lock(_JOBS_NOT_LIST_LOCK) do
+        p in _JOBS_NOT_LIST_WARNED && return false
+        push!(_JOBS_NOT_LIST_WARNED, p)
+        return true
+    end
+    fresh || return nothing
+    DistSSHRun.print_warn(
+        "jobs store has a jobs value that is not a list; leaving the file unchanged: $p. DistSSHQueue 0.10 will reject this file.",
+    )
+    return nothing
+end
+
+function _jobs_store_bad_toml(path::AbstractString)
+    return ArgumentError("jobs store is not valid TOML: $path")
+end
+
+function _jobs_store_not_list(path::AbstractString)
+    return ArgumentError("jobs store has a jobs value that is not a list: $path")
+end
+
+function _jobs_store_bad_row(path::AbstractString)
+    return ArgumentError(
+        "jobs store has a job row that is missing a field or has the wrong type: $path",
+    )
+end
+
+function _row_string(v, path::AbstractString)::String
+    v isa AbstractString || throw(_jobs_store_bad_row(path))
+    return String(v)
+end
+
+function _row_dt(v, path::AbstractString)::DateTime
+    v isa DateTime && return v
+    v isa AbstractString || throw(_jobs_store_bad_row(path))
+    try
+        return DateTime(String(v))
+    catch e
+        e isa ArgumentError || rethrow()
+        throw(_jobs_store_bad_row(path))
+    end
+end
+
+"""Field conversion only. A `MethodError` inside `Job` still propagates."""
+function _job_row(row, path::AbstractString)::Job
+    row isa AbstractDict || throw(_jobs_store_bad_row(path))
+    try
+        hosts = row["hosts"]
+        hosts isa AbstractVector || throw(_jobs_store_bad_row(path))
+        kw = get(row, "kwargs", Dict{String, Any}())
+        kw isa AbstractDict || throw(_jobs_store_bad_row(path))
+        cleaned_kw = Dict{String, Any}()
+        for (k, v) in kw
+            k isa AbstractString || throw(_jobs_store_bad_row(path))
+            cleaned_kw[String(k)] = v
+        end
+        started = get(row, "started_at", "")
+        finished = get(row, "finished_at", "")
+        err = get(row, "error", "")
+        result_path = get(row, "result_path", "")
+        cleaned = Dict{String, Any}(
+            "id" => _row_string(row["id"], path),
+            "kind" => _row_string(row["kind"], path),
+            "script" => _row_string(row["script"], path),
+            "hosts" => String[_row_string(h, path) for h in hosts],
+            "state" => _row_string(row["state"], path),
+            "queued_at" => _row_dt(row["queued_at"], path),
+            "started_at" => _row_dt_text(started, path),
+            "finished_at" => _row_dt_text(finished, path),
+            "error" => _row_text(err, path),
+            "result_path" => _row_text(result_path, path),
+            "kwargs" => cleaned_kw,
+        )
+        return job_from_toml(cleaned)
+    catch e
+        e isa KeyError && throw(_jobs_store_bad_row(path))
+        if e isa ArgumentError && !startswith(e.msg, "jobs store has a job row")
+            throw(_jobs_store_bad_row(path))
+        end
+        rethrow()
+    end
+end
+
+function _row_text(v, path::AbstractString)::String
+    v isa AbstractString || throw(_jobs_store_bad_row(path))
+    return String(v)
+end
+
+"""Empty stays empty. A non-empty value must be a `DateTime` string."""
+function _row_dt_text(v, path::AbstractString)::String
+    text = _row_text(v, path)
+    isempty(text) || _row_dt(text, path)
+    return text
+end
+
 function save_jobs(path::AbstractString, jobs::AbstractVector{Job})
     p = String(path)
+    shape, _ = _jobs_table(p)
+    if shape === :bad_toml
+        throw(_jobs_store_bad_toml(p))
+    elseif shape === :not_list
+        throw(_jobs_store_not_list(p))
+    end
     mkpath(dirname(p))
     data = Dict{String, Any}("jobs" => [job_to_toml(j) for j in jobs])
     tmp = string(p, ".tmp.", getpid(), ".", time_ns())
@@ -161,11 +281,16 @@ function save_jobs(path::AbstractString, jobs::AbstractVector{Job})
 end
 
 function read_jobs(path::AbstractString)::Vector{Job}
-    isfile(path) || return Job[]
-    raw = TOML.parsefile(String(path))
-    rows = get(raw, "jobs", nothing)
-    rows isa AbstractVector || return Job[]
-    return Job[job_from_toml(r) for r in rows]
+    shape, rows = _jobs_table(path)
+    if shape === :bad_toml
+        throw(_jobs_store_bad_toml(path))
+    elseif shape === :not_list
+        _warn_jobs_not_list(path)
+        return Job[]
+    elseif shape !== :list
+        return Job[]
+    end
+    return Job[_job_row(r, String(path)) for r in rows]
 end
 
 store_pid_path(store::AbstractString)::String = string(store, ".pid")
@@ -216,9 +341,35 @@ serve_alive(store::AbstractString)::Bool = serve_pid(store) !== nothing
 
 function write_pid_file(store::AbstractString)
     mkpath(dirname(store))
-    write(store_pid_path(store), string(getpid()))
+    dest = store_pid_path(store)
+    tmp = string(dest, ".tmp.", getpid(), ".", time_ns())
+    try
+        write(tmp, string(getpid()))
+        mv(tmp, dest; force = true)
+    catch
+        rm(tmp; force = true)
+        rethrow()
+    end
     record_test_serve_pid!(getpid())
     return nothing
+end
+
+"""Claim the serve pid under the store lock.
+
+Returns another live pid when one is already running, otherwise `nothing`
+after this process owns the pidfile. A dead pidfile is replaced. The lock
+closes the window where two processes both observe no live pid and both
+enter `load!`.
+"""
+function claim_serve!(store::AbstractString)::Union{Nothing, Int}
+    return with_store_lock(store) do
+        existing = serve_pid(store)
+        if existing !== nothing && existing != getpid()
+            return existing
+        end
+        write_pid_file(store)
+        return nothing
+    end
 end
 
 """If tests set `DISTSSHQUEUE_TEST_PIDS` and `DISTSSHKIT_TEST=1`, append this serve pid.
