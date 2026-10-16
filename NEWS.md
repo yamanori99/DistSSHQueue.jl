@@ -5,8 +5,15 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- Autoserve starts `serve` with the Julia and `--project=` from the `enable`
+  unit when that file exists. With no unit file it still uses
+  `default_julia_bin` and `default_queue_env`.
+- Queue-host help for `teardown` says `Would remove` and `--confirm-path`.
+  `serve --help` says `--interval` must be finite. `up default` help says
+  declining exits 0.
 - `--interval` must be finite. `NaN` and `Inf` are `Error:`.
-- `serve --interval <= 0` still runs and warns once. `DISTSSHQUEUE_STORE`
+- `serve --interval 0` still runs and warns once. A negative finite
+  `--interval` warns once, then fails. `DISTSSHQUEUE_STORE`
   that starts with `~` is still a relative path and warns once. `teardown`
   still removes a symlink and warns once. Declining `up default` still
   exits 0 and warns once. `status` still shows a `:running` row whose

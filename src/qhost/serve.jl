@@ -2,13 +2,17 @@
 watching `store`, spawn one detached (log next to the store). Opt out with
 `DISTSSHQUEUE_NO_AUTOSERVE=1` (tests, or a harness that manages `serve` itself).
 A prior `stop` also holds it off until an explicit `serve` clears the latch.
+
+The child uses the Julia and `--project=` in the `enable` unit when that file
+exists. Otherwise `default_julia_bin` and `default_queue_env`.
 """
 function ensure_serve!(store::AbstractString)::Bool
     get(ENV, "DISTSSHQUEUE_NO_AUTOSERVE", "") == "1" && return false
     serve_stopped(store) && return false
     serve_alive(store) && return false
-    julia = default_julia_bin()
-    project = default_queue_env()
+    spec = enabled_serve_command()
+    julia = spec === nothing ? default_julia_bin() : spec.julia
+    project = spec === nothing ? default_queue_env() : spec.project
     log = string(store, ".log")
     mkpath(dirname(log))
     spawn_detached_serve!(julia, project, log)
@@ -101,7 +105,7 @@ function reap_serve_tag!(tag::AbstractString)
     return nothing
 end
 
-"""0.9.x still accepts `serve --interval <= 0` and warns once."""
+"""Warn once for `serve --interval <= 0`. `0` still runs. A negative finite value then fails in `sleep`."""
 function _note_serve_interval!(interval::Float64)
     interval <= 0 || return nothing
     return _warn_plan_once!(

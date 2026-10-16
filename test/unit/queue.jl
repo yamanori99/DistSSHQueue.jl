@@ -1083,7 +1083,7 @@ end
                 @test !occursin("julia --project=. -m DistSSHKit qhost setup", queue_h)
                 @test occursin("Danger", queue_h)
                 @test occursin(DistSSHQueue.help_verb_line("teardown", "Stop serve and remove ~/.distsshqueue"), queue_h)
-                @test occursin(DistSSHQueue.help_verb_line("", "Needs -y. Job trees stay."), queue_h)
+                @test occursin(DistSSHQueue.help_verb_line("", "Would remove, then --confirm-path. Job trees stay."), queue_h)
                 @test occursin("size", queue_h)
                 @test occursin("plan", queue_h)
                 @test occursin("pool", queue_h)
@@ -2379,6 +2379,57 @@ end
     @test DistSSHQueue.queue_version_skew_warning(
         "DistSSHQueue $(pkgversion(DistSSHQueue))\nDistSSHRun 0.1.5",
     ) === nothing
+end
+
+@testset "autoserve reads the enable unit" begin
+    plist = DistSSHQueue.serve_command_from_unit(
+        DistSSHQueue.launch_agent_plist("/opt/a&b", "/opt/my env"),
+    )
+    if plist === nothing
+        @test false
+    else
+        @test plist.julia == "/opt/a&b"
+        @test plist.project == "/opt/my env"
+    end
+    unit = DistSSHQueue.serve_command_from_unit(
+        DistSSHQueue.systemd_user_unit("/opt/it's julia", "/opt/env"),
+    )
+    if unit === nothing
+        @test false
+    else
+        @test unit.julia == "/opt/it's julia"
+        @test unit.project == "/opt/env"
+    end
+    @test DistSSHQueue.serve_command_from_unit("ExecStart=/usr/bin/julia serve\n") === nothing
+    mktempdir() do home::String
+        @test DistSSHQueue.enabled_serve_command(; home = home) === nothing
+        if Sys.isapple()
+            path = DistSSHQueue.launch_agent_path(; home = home)
+            body = DistSSHQueue.launch_agent_plist("/opt/julia", "/opt/env")
+        elseif Sys.islinux()
+            path = DistSSHQueue.systemd_user_path(; home = home)
+            body = DistSSHQueue.systemd_user_unit("/opt/julia", "/opt/env")
+        else
+            return nothing
+        end
+        DistSSHQueue.write_serve_unit(path, body)
+        spec = DistSSHQueue.enabled_serve_command(; home = home)
+        if spec === nothing
+            @test false
+        else
+            @test spec.julia == "/opt/julia"
+            @test spec.project == "/opt/env"
+        end
+    end
+    qh = sprint(io -> DistSSHQueue.print_queue_usage(io; topic = "qhost"))
+    @test occursin("Would remove, then --confirm-path", qh)
+    @test !occursin("Needs -y", qh)
+    up = sprint(DistSSHQueue.print_up_usage)
+    @test occursin("Decline exits 0", up)
+    _, serve_h, _ = capture_stdio() do
+        DistSSHQueue.main(["serve", "--help"])
+    end
+    @test occursin("Must be finite", serve_h)
 end
 
 @testset "enable refuses --project; --queue-env is the Queue env" begin
