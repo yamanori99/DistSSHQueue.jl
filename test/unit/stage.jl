@@ -109,7 +109,7 @@ using DistSSHQueue
         end
     end
     @testset "stage send list matches setup --rsync" begin
-        mktempdir() do tmp
+        mktempdir() do tmp::String
             write(joinpath(tmp, "Project.toml"), "name = \"App\"\n")
             @test DistSSHQueue.stage_send_list(tmp) === nothing
             run(pipeline(`git -C $tmp init -q`; stdout = devnull, stderr = devnull))
@@ -140,7 +140,7 @@ using DistSSHQueue
     end
 
     @testset "stage drops a tree that is only .distsshqueue" begin
-        mktempdir() do tmp
+        mktempdir() do tmp::String
             write(joinpath(tmp, "Project.toml"), "name = \"App\"\n")
             write(joinpath(tmp, ".gitignore"), "*\n!.distsshqueue/\n!.distsshqueue/**\n")
             mkpath(joinpath(tmp, ".distsshqueue"))
@@ -160,7 +160,7 @@ using DistSSHQueue
     end
 
     @testset "an empty git send list stays Run's error" begin
-        mktempdir() do tmp
+        mktempdir() do tmp::String
             write(joinpath(tmp, "Project.toml"), "name = \"App\"\n")
             write(joinpath(tmp, ".gitignore"), "*\n")
             run(pipeline(`git -C $tmp init -q`; stdout = devnull, stderr = devnull))
@@ -180,7 +180,7 @@ using DistSSHQueue
     end
 
     @testset "ancestor gitignore warns once on stdout" begin
-        mktempdir() do tmp
+        mktempdir() do tmp::String
             write(joinpath(tmp, ".gitignore"), "dropped.txt\n")
             sub = joinpath(tmp, "sub")
             mkpath(sub)
@@ -235,7 +235,7 @@ using DistSSHQueue
     end
 
     @testset "stage rsync argv and a local error skips ssh" begin
-        mktempdir() do tmp
+        mktempdir() do tmp::String
             bin = joinpath(tmp, "bin")
             mkpath(bin)
             sshlog = joinpath(tmp, "ssh.log")
