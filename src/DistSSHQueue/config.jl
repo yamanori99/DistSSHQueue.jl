@@ -260,9 +260,38 @@ function write_config_template(path::AbstractString; store::AbstractString = def
     return true
 end
 
+const _PLAN_WARNED = Set{String}()
+const _PLAN_WARN_LOCK = ReentrantLock()
+
+"""Print `msg` once per process for `key`. 0.10 warnings use this."""
+function _warn_plan_once!(key::AbstractString, msg::AbstractString)
+    fresh = lock(_PLAN_WARN_LOCK) do
+        k = String(key)
+        k in _PLAN_WARNED && return false
+        push!(_PLAN_WARNED, k)
+        return true
+    end
+    fresh || return nothing
+    DistSSHRun.print_warn(msg)
+    return nothing
+end
+
+"""`DISTSSHQUEUE_STORE` that starts with `~` is a relative path in 0.9.x."""
+function _warn_tilde_store!(path::AbstractString)
+    s = String(path)
+    startswith(s, "~") || return nothing
+    return _warn_plan_once!(
+        "tilde-store:" * s,
+        "DISTSSHQUEUE_STORE starts with ~ and is used as a relative path. DistSSHQueue 0.10 will reject it.",
+    )
+end
+
 function store_path()::String
     env = strip(get(ENV, "DISTSSHQUEUE_STORE", ""))
-    isempty(env) || return env
+    if !isempty(env)
+        _warn_tilde_store!(env)
+        return env
+    end
     st = config_store_path(load_config())
     st === nothing || return st
     return default_store_path()

@@ -68,7 +68,7 @@ function peel_status_watch_interval(
     while i <= length(rest)
         a = rest[i]
         if a == "--interval" && i < length(rest)
-            interval = parse(Float64, rest[i + 1])
+            interval = parse_cli_interval(verb, rest[i + 1])
             i += 2
         elseif a == "--tail" && i < length(rest)
             raw = strip(rest[i + 1])
@@ -89,6 +89,29 @@ function peel_status_watch_interval(
     return :run, interval, tail
 end
 
+"""`--interval` for `status`, `watch`, and `serve`. `NaN` and `Inf` are rejected."""
+function parse_cli_interval(verb::AbstractString, raw::AbstractString)::Float64
+    interval = parse(Float64, String(raw))
+    isfinite(interval) || throw(ArgumentError("$verb: --interval must be finite"))
+    return interval
+end
+
+"""Warn once when a shown `:running` row has a dead `kit.pid`. The row is not rewritten."""
+function _warn_dead_kit_pid!(rows)
+    for j in rows
+        j.state === :running || continue
+        dir = kit_sidecar_dir(j)
+        dir === nothing && continue
+        isfile(joinpath(dir, "kit.pid")) || continue
+        kit_child_alive(j) && continue
+        _warn_plan_once!(
+            "dead-pid:" * j.id,
+            "status shows a running job whose kit.pid is dead. DistSSHQueue 0.10 will not show that row as running. The stored row stays running.",
+        )
+    end
+    return nothing
+end
+
 function show_status(
         store::AbstractString;
         io::IO = stdout,
@@ -98,6 +121,7 @@ function show_status(
         verbose::Bool = false,
     )
     rows = isfile(store) ? read_jobs(store) : Job[]
+    _warn_dead_kit_pid!(rows)
     shown, hidden = _tail_jobs(rows, tail)
     return print_status_table(
         store, shown; io = io, qhost = qhost, quiet = quiet, hidden = hidden, verbose = verbose,
@@ -181,6 +205,7 @@ function watch!(
         while true
             n += 1
             rows = isfile(store) ? read_jobs(store) : Job[]
+            _warn_dead_kit_pid!(rows)
             shown, hidden = _tail_jobs(rows, tail)
             if quiet || io isa Base.TTY
                 _watch_redraw!(io, prev) do buf

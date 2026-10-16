@@ -61,7 +61,13 @@ function _up_run_on_hosts(
         println(stderr, "  That changes the host default Julia.")
         println(stderr, "  Targets: $(join(names, ", "))")
         println(stderr, "  The running process keeps its current Julia until restart.")
-        DistSSHRun.kit_confirm("Type 'default' to confirm: "; keyword = "default") || return Cint(0)
+        if !DistSSHRun.kit_confirm("Type 'default' to confirm: "; keyword = "default")
+            _warn_plan_once!(
+                "up-default-decline",
+                "Declining up default exits 0. DistSSHQueue 0.10 will exit 1.",
+            )
+            return Cint(0)
+        end
     end
     failed = 0
     for host in names
