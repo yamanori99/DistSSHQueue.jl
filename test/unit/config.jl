@@ -460,6 +460,58 @@ end
     end
 end
 
+@testset "invalid config is an error and host edits keep both names" begin
+    mktempdir() do d::String
+        cfg = joinpath(d, "config.toml")
+        broken = "store = [\n"
+        write(cfg, broken)
+        err = try
+            DistSSHQueue.load_config(; path = cfg)
+            nothing
+        catch e
+            e
+        end
+        @test err isa ArgumentError && occursin("not valid TOML", err.msg)
+        @test err isa ArgumentError && occursin("unexpected end of file", err.msg)
+        @test read(cfg, String) == broken
+        code = withenv("DISTSSHQUEUE_CONFIG" => cfg) do
+            DistSSHQueue.main(["status"])
+        end
+        @test code == 1
+        @test read(cfg, String) == broken
+
+        nested = joinpath(d, "newdir", "config.toml")
+        @test !isdir(dirname(nested))
+        DistSSHQueue.add_host_names!(nested, ["parent"])
+        @test isfile(nested)
+        nested_names = DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = nested))
+        @test nested_names isa DistSSHQueue.HostAllow && haskey(nested_names, "parent")
+
+        fresh = joinpath(d, "fresh.toml")
+        write(fresh, "store = \"/tmp/jobs.toml\"\n")
+        proj = Base.active_project()
+        code_add = "using DistSSHQueue; DistSSHQueue.add_host_names!(ARGS[1], [ARGS[2]])"
+        procs = Base.Process[]
+        try
+            for token in ("child:host1", "child:host2")
+                cmd = `$(Base.julia_cmd()) --startup-file=no --project=$proj -e $code_add $fresh $token`
+                push!(procs, run(pipeline(cmd; stdout = devnull, stderr = devnull); wait = false))
+            end
+            for p in procs
+                wait(p)
+                @test p.exitcode == 0
+            end
+        finally
+            for p in procs
+                process_running(p) && kill(p)
+            end
+        end
+        names = DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = fresh))
+        @test names isa DistSSHQueue.HostAllow && haskey(names, "host1") && haskey(names, "host2")
+        @test !any(n -> occursin(".tmp", n), readdir(d))
+    end
+end
+
 @testset "setup writes config, not a dskq shim" begin
     mktempdir() do d
         bindir = joinpath(d, "bin")

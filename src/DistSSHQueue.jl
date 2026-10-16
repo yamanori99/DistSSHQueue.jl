@@ -81,8 +81,8 @@ end
 function _main(args::Vector{String})::Cint
     # teardown YES is the process value. Config `[env]` is applied below.
     process_yes = teardown_yes()
-    apply_config_env!(load_config())
     try
+        apply_config_env!(load_config())
         qhost, gjulia, gqenv, after, explicit = extract_remote_opts(args)
         if isempty(after) || after[1] in ("-h", "--help", "help")
             topic = length(after) >= 2 ? String(after[2]) : nothing

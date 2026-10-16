@@ -218,11 +218,19 @@ function fetch_live_primary(j::Job, extras)::Union{Nothing, String}
     return nothing
 end
 
-"""One machine line: `state<TAB>abs-path<TAB>canonical-uuid`. Used by `hop_print`, not `main`."""
+"""One machine line: `state<TAB>abs-path<TAB>canonical-uuid`. Used by `hop_print`, not `main`.
+
+Reads the store under its lock and does not rewrite it. A `:running` row stays
+`:running`.
+"""
 function fetch_source(id::AbstractString; store::AbstractString = store_path())::String
-    q = Queue(; store = store)
-    load!(q)
-    j = job(q, id)
+    j = with_store_lock(store) do
+        rows = isfile(store) ? read_jobs(store) : Job[]
+        full = _resolve_id(rows, id)
+        i = _index_id(rows, full)
+        i isa Int || throw(ArgumentError("unknown job $(repr(id))"))
+        return copy(rows[i])
+    end
     j.state === :queued && throw(ArgumentError("job $(repr(id)) is still queued"))
     j.state === :running && throw(ArgumentError("job $(repr(id)) is still running"))
     j.state in FETCH_READY || throw(

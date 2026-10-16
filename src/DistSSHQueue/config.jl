@@ -16,9 +16,26 @@ end
 function load_config(; path::Union{Nothing, AbstractString} = nothing)::Dict{String, Any}
     p = path === nothing ? config_path() : String(path)
     isfile(p) || return Dict{String, Any}()
-    raw = TOML.parsefile(p)
+    raw = try
+        TOML.parsefile(p)
+    catch e
+        e isa TOML.ParserError || rethrow()
+        detail = replace(strip(sprint(showerror, e)), r"\s+" => " ")
+        if length(detail) > 240
+            detail = first(detail, 240) * "…"
+        end
+        throw(ArgumentError("config is not valid TOML: $p: $detail"))
+    end
     return Dict{String, Any}(String(k) => v for (k, v) in raw)
 end
+
+"""Run `f` while holding the directory lock `path * ".lock"`.
+
+`add-host` and `remove-host` hold it across the read and the replace.
+The lock creates the parent directory, so the first `add-host` can create a
+missing config directory. A killed process can leave `path.tmp.*`.
+"""
+with_config_lock(f, path::AbstractString) = with_store_lock(f, String(path))
 
 """Test hooks stay out of config `[env]`. `DISTSSHKIT_YES` still applies (`up default`)."""
 function _config_env_skipped(key::AbstractString)::Bool
@@ -167,9 +184,14 @@ function write_host_names!(path::AbstractString, allow::HostAllow)
     p = String(path)
     isfile(p) || write_config_template(p)
     body = replace_or_insert_hosts_line(read(p, String), hosts_toml_line(allow))
-    tmp = string(p, ".tmp")
-    write(tmp, body)
-    mv(tmp, p; force = true)
+    tmp = string(p, ".tmp.", getpid(), ".", time_ns())
+    try
+        write(tmp, body)
+        mv(tmp, p; force = true)
+    catch
+        rm(tmp; force = true)
+        rethrow()
+    end
     return allow
 end
 
@@ -190,26 +212,30 @@ Tokens are Kit's (`parent[:N]` / `child:NAME[:N]`). `:N` is an optional max.
 function add_host_names!(path::AbstractString, raws)
     extra = parse_host_caps(raws)
     isempty(extra) && throw(ArgumentError("add-host needs a Kit token (`parent` / `child:NAME`)"))
-    cur = isfile(path) ? config_host_names(load_config(; path = path)) : nothing
-    names = cur === nothing ? extra : merge(HostAllow(), cur, extra)
-    return write_host_names!(path, names)
+    return with_config_lock(path) do
+        cur = isfile(path) ? config_host_names(load_config(; path = path)) : nothing
+        names = cur === nothing ? extra : merge(HostAllow(), cur, extra)
+        return write_host_names!(path, names)
+    end
 end
 
 function remove_host_names!(path::AbstractString, raws)
     extra = parse_host_caps(raws)
     isempty(extra) && throw(ArgumentError("remove-host needs a Kit token (`parent` / `child:NAME`)"))
-    isfile(path) || throw(ArgumentError("no config.toml; add-host first"))
-    cur = config_host_names(load_config(; path = path))
-    cur === nothing && throw(ArgumentError("no hosts= in config; add-host first"))
-    for n in keys(extra)
-        haskey(cur, n) || throw(ArgumentError("Kit name $(repr(n)) is not on hosts"))
+    return with_config_lock(path) do
+        isfile(path) || throw(ArgumentError("no config.toml; add-host first"))
+        cur = config_host_names(load_config(; path = path))
+        cur === nothing && throw(ArgumentError("no hosts= in config; add-host first"))
+        for n in keys(extra)
+            haskey(cur, n) || throw(ArgumentError("Kit name $(repr(n)) is not on hosts"))
+        end
+        keep = HostAllow()
+        for (n, cap) in cur
+            haskey(extra, n) && continue
+            keep[n] = cap
+        end
+        return write_host_names!(path, keep)
     end
-    keep = HostAllow()
-    for (n, cap) in cur
-        haskey(extra, n) && continue
-        keep[n] = cap
-    end
-    return write_host_names!(path, keep)
 end
 
 function default_config_body(; store::AbstractString = default_store_path())::String
