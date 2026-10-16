@@ -5,6 +5,12 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- `--interval` must be finite. `NaN` and `Inf` are `Error:`.
+- `serve --interval <= 0` still runs and warns once. `DISTSSHQUEUE_STORE`
+  that starts with `~` is still a relative path and warns once. `teardown`
+  still removes a symlink and warns once. Declining `up default` still
+  exits 0 and warns once. `status` still shows a `:running` row whose
+  `kit.pid` is dead, warns once, and does not rewrite the store.
 - `add-host` and `remove-host` update `hosts` under the config lock. The
   temporary file is unique to that write and is removed if the replace fails.
   A killed process can leave that file. The first `add-host` creates a missing
@@ -32,6 +38,15 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
   off the queue host. A name such as `.distsshqueue-backup` is not that
   directory. The send list and extra files are checked before the remote
   stage directory is created. Requires DistSSHRun 0.1.8.
+
+### Planned breaking (next minor)
+
+- `serve --interval <= 0` will be rejected.
+- `DISTSSHQUEUE_STORE` that starts with `~` will be rejected.
+- `teardown` will refuse a path that is a symlink.
+- Declining `up default` will exit 1.
+- `status` will not show a `:running` row whose `kit.pid` is dead as running.
+  The stored row stays `:running` until `serve` writes it.
 
 ## 0.9.5
 

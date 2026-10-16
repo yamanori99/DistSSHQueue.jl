@@ -101,12 +101,22 @@ function reap_serve_tag!(tag::AbstractString)
     return nothing
 end
 
+"""0.9.x still accepts `serve --interval <= 0` and warns once."""
+function _note_serve_interval!(interval::Float64)
+    interval <= 0 || return nothing
+    return _warn_plan_once!(
+        "serve-interval",
+        "serve --interval <= 0 is still accepted. DistSSHQueue 0.10 will require --interval > 0.",
+    )
+end
+
 function serve_cli(args::Vector{String})::Cint
     interval = 0.2
     i = 1
     while i <= length(args)
         if args[i] == "--interval" && i < length(args)
-            interval = parse(Float64, args[i + 1])
+            interval = parse_cli_interval("serve", args[i + 1])
+            _note_serve_interval!(interval)
             i += 2
         elseif args[i] in ("-h", "--help")
             show_usage(; command = "serve")

@@ -14,7 +14,10 @@ end
 
 function teardown_store(; home::AbstractString = homedir(), config::AbstractString = config_path(; home = home))::String
     env = strip(get(ENV, "DISTSSHQUEUE_STORE", ""))
-    isempty(env) || return env
+    if !isempty(env)
+        _warn_tilde_store!(env)
+        return env
+    end
     st = config_store_path(load_config(; path = config))
     st === nothing || return st
     return default_store_path(; home = home)
@@ -57,6 +60,7 @@ function teardown(;
     )::Cint
     targets = teardown_targets(; home = home, bindir = bindir, config = config)
     existing = String[p for p in targets if ispath(p)]
+    _warn_teardown_symlinks!(existing)
     if !_teardown_granted(confirm_paths, existing)
         if !isempty(confirm_paths)
             print_help_lines(io, "  confirm_paths does not match the paths that would be removed.")
@@ -94,6 +98,18 @@ function teardown(;
         print_removed(p; io = io)
     end
     return 0
+end
+
+"""0.9.x still removes a symlink. 0.10 will refuse it."""
+function _warn_teardown_symlinks!(paths)
+    for p in paths
+        islink(p) || continue
+        _warn_plan_once!(
+            "teardown-link:" * String(p),
+            "teardown removes a symlink. DistSSHQueue 0.10 will refuse it: $(p)",
+        )
+    end
+    return nothing
 end
 
 function _confirm_path_quote(path::AbstractString)::String

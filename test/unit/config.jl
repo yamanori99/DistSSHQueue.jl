@@ -1074,3 +1074,132 @@ end
         @test read(store, String) == "jobs = [\n"
     end
 end
+
+@testset "non-finite --interval is rejected; serve <= 0 warns once" begin
+    for raw in ("NaN", "Inf", "-Inf")
+        err = try
+            DistSSHQueue.parse_cli_interval("watch", raw)
+            nothing
+        catch e
+            e
+        end
+        @test err isa ArgumentError
+        @test occursin("must be finite", err.msg)
+    end
+    code, _, err = capture_stdio() do
+        DistSSHQueue.main(["serve", "--interval", "Inf"])
+    end
+    @test code == 1
+    @test occursin("Error:", err)
+    @test occursin("must be finite", err)
+    _, warned, _ = capture_stdio() do
+        DistSSHQueue._note_serve_interval!(0.0)
+        DistSSHQueue._note_serve_interval!(-1.0)
+        DistSSHQueue._note_serve_interval!(0.2)
+    end
+    @test count("will require --interval > 0", warned) == 1
+end
+
+@testset "DISTSSHQUEUE_STORE=~ warns once and stays a relative path" begin
+    raw = "~/distsshqueue-010-warn/jobs.toml"
+    withenv("DISTSSHQUEUE_STORE" => raw, "DISTSSHQUEUE_CONFIG" => nothing) do
+        _, warned, _ = capture_stdio() do
+            @test DistSSHQueue.store_path() == raw
+            @test DistSSHQueue.store_path() == raw
+        end
+        @test count("starts with ~", warned) == 1
+        @test occursin("0.10 will reject", warned)
+    end
+end
+
+@testset "teardown warns once for a symlink and still lists it" begin
+    mktempdir() do home
+        real = joinpath(home, "real.toml")
+        write(real, "store = $(repr(joinpath(home, "jobs.toml")))\n")
+        link = joinpath(home, ".distsshqueue", "config.toml")
+        mkpath(dirname(link))
+        symlink(real, link)
+        withenv("DISTSSHQUEUE_STORE" => nothing, "DISTSSHQUEUE_CONFIG" => nothing) do
+            _, warned, _ = capture_stdio() do
+                @test DistSSHQueue.teardown(; home = home, config = link, apply = false) == 0
+                @test DistSSHQueue.teardown(; home = home, config = link, apply = false) == 0
+            end
+            @test count("will refuse", warned) == 1
+            @test islink(link)
+            @test isfile(real)
+        end
+    end
+end
+
+@testset "declining up default warns once and exits 0" begin
+    prev = DistSSHRun.kit_noninteractive()
+    DistSSHRun.set_kit_noninteractive!(false)
+    try
+        decline() = mktemp() do path, io
+            println(io, "no")
+            close(io)
+            open(path) do inp
+                redirect_stdin(inp) do
+                    DistSSHQueue._up_run_on_hosts(
+                        ["parent"]; verb = "default", channel = "1.13", confirm = true,
+                    )
+                end
+            end
+        end
+        code, warned, _ = capture_stdio(decline)
+        code2, warned2, _ = capture_stdio(decline)
+        @test code == 0
+        @test code2 == 0
+        @test count("will exit 1", warned) == 1
+        @test !occursin("will exit 1", warned2)
+    finally
+        DistSSHRun.set_kit_noninteractive!(prev)
+    end
+end
+
+@testset "status warns once for a dead kit.pid and does not rewrite the store" begin
+    mktempdir() do d
+        store = joinpath(d, "jobs.toml")
+        script = joinpath(d, "a.jl")
+        write(script, "1\n")
+        rundir = joinpath(d, "run")
+        mkpath(rundir)
+        write(joinpath(rundir, "kit.pid"), "99999999\n")
+        DistSSHQueue.save_jobs(
+            store,
+            [
+                DistSSHQueue.Job(;
+                    kind = :go,
+                    script = script,
+                    hosts = ["parent"],
+                    state = :running,
+                    kwargs = Dict{String, Any}("run_dir" => rundir),
+                ),
+            ],
+        )
+        before = read(store, String)
+        _, warned, _ = capture_stdio() do
+            DistSSHQueue.show_status(store)
+            DistSSHQueue.show_status(store)
+        end
+        @test read(store, String) == before
+        @test count("kit.pid is dead", warned) == 1
+        @test occursin("running", warned)
+        fresh = joinpath(d, "live.toml")
+        DistSSHQueue.save_jobs(
+            fresh,
+            [
+                DistSSHQueue.Job(;
+                    kind = :go,
+                    script = script,
+                    hosts = ["parent"],
+                    state = :running,
+                ),
+            ],
+        )
+        _, quiet, _ = capture_stdio() do
+            DistSSHQueue.show_status(fresh)
+        end
+        @test !occursin("kit.pid is dead", quiet)
+    end
+end
