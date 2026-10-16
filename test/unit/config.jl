@@ -954,6 +954,10 @@ end
         write(pid, "999999999")
         @test DistSSHQueue.stop_serve!(store)
         @test !isfile(pid)
+        # stop reports success for a signaled pid even if the pidfile was taken
+        # over in the meantime; here a fresh dead pid stands in for that file.
+        write(pid, "888888888")
+        @test DistSSHQueue.stop_serve!(store)
     end
 end
 

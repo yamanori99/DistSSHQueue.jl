@@ -446,7 +446,10 @@ function stop_serve!(store::AbstractString)::Bool
             sleep(0.05)
         end
     end
-    return remove_pid_file_if!(store, pid)
+    # A replacement serve may have claimed the pidfile during the wait. The
+    # targeted serve was still signaled, so report success; leave that file.
+    remove_pid_file_if!(store, pid)
+    return true
 end
 
 function fail_stale_running!(jobs::Vector{Job})
