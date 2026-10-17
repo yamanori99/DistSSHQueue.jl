@@ -14,7 +14,7 @@
 #   - SSH E2E entry (`test/e2e.jl`) also gets area:client and area:qhost.
 #   - Documenter → area:docs (docs/**)
 #   - GitHub / repo prose → area:project-docs (README, NEWS, CONTRIBUTING,
-#     SECURITY, AGENTS, CODEOWNERS)
+#     SECURITY, AGENTS, REVIEW, CODEOWNERS)
 #   - .github/**, codecov.yml, .coderabbit.yaml, .JETLSConfig.toml → area:ci
 #
 # Product tests live only under the trees in `product_test_trees`. Shared
@@ -53,6 +53,7 @@ trap 'rm -f "$tmp"' EXIT
           - "CONTRIBUTING.md"
           - "SECURITY.md"
           - "AGENTS.md"
+          - "REVIEW.md"
           - "CODEOWNERS"
 
 "area:ci":
