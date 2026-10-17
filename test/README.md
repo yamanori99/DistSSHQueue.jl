@@ -65,7 +65,7 @@ SSH Host, container name, and hostname are `child-1` / `child-2`. Do not run bes
 
 ## PkgEval
 
-[PkgEval](https://github.com/JuliaCI/PkgEval.jl) runs the daily ecosystem check. The sandbox is Debian bookworm without `tzdata`, with `LANG=C.UTF-8`, a pipe for stdout, and a 45 minute test limit. Daily uses the General tarball. This recipe mounts this checkout read-only, and dependencies resolve from General, so an unreleased DistSSHKit or DistSSHRun change is not in the sandbox. This package: [DistSSHQueue PkgEval](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/D/DistSSHQueue.html). Latest ecosystem report: [NanosoldierReports](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/report.html). Run it on Linux with cgroup v2 and unprivileged user namespaces, before a General cut. The host Julia is 1.12 or newer. The tested Julia is nightly. CI: `PkgEval (nightly, ubuntu-latest, x64)` on **main** and a `Project.toml` version increase (`continue-on-error`; not a required check). Not ordinary PRs.
+[PkgEval](https://github.com/JuliaCI/PkgEval.jl) runs the daily ecosystem check. The sandbox is Debian bookworm without `tzdata`, with `LANG=C.UTF-8`, a pipe for stdout, and a 45 minute test limit. Daily uses the General tarball. This recipe mounts this checkout read-only, and dependencies resolve from General, so an unreleased DistSSHKit or DistSSHRun change is not in the sandbox. This package: [DistSSHQueue PkgEval](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/D/DistSSHQueue.html). Latest ecosystem report: [NanosoldierReports](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/report.html). Run it on Linux with cgroup v2 and unprivileged user namespaces, before a General cut. The host Julia is 1.12 or newer. PkgEval is not in General, so this adds it from its repository. The tested Julia is nightly. CI: `PkgEval (nightly, ubuntu-latest, x64)` on **main** and a `Project.toml` version increase (`continue-on-error`; not a required check). Not ordinary PRs.
 
 From this checkout:
 
@@ -73,7 +73,7 @@ From this checkout:
 julia -e '
   using Pkg
   Pkg.activate(temp=true)
-  Pkg.add("PkgEval")
+  Pkg.add(url="https://github.com/JuliaCI/PkgEval.jl")
   using PkgEval
   config = Configuration(; julia="nightly")
   pkg = Package(; name="DistSSHQueue", url="/package")
