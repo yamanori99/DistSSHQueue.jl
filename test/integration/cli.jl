@@ -43,6 +43,51 @@ function wait_kit_pid(path::AbstractString; tries = 300, sleep_s = 0.1)
     error("timeout waiting for $path")
 end
 
+# `read(cmd)` returns only when the child exits. A child that never exits
+# sits at 0% CPU until PkgEval's inactivity kill, with no test name. This
+# bounds that wait and names the command.
+function read_cli(
+        args::AbstractVector{<:AbstractString},
+        env::AbstractDict;
+        label::AbstractString,
+        seconds::Real = 90,
+    )::String
+    cmd = addenv(qcli(args), env...)
+    out = IOBuffer()
+    err = IOBuffer()
+    proc = run(pipeline(cmd; stdout = out, stderr = err); wait = false)
+    timed_out = Ref(false)
+    arm = Timer(Float64(seconds)) do _
+        process_running(proc) || return
+        timed_out[] = true
+        try
+            kill(proc)
+        catch
+        end
+    end
+    kill_later = Timer(Float64(seconds) + 5) do _
+        timed_out[] || return
+        process_running(proc) || return
+        try
+            kill(proc, Base.SIGKILL)
+        catch
+        end
+    end
+    try
+        wait(proc)
+    finally
+        close(arm)
+        close(kill_later)
+    end
+    text = String(take!(out))
+    etext = String(take!(err))
+    if timed_out[] || !success(proc)
+        why = timed_out[] ? "timed out" : "failed"
+        error("$label $why (exit=$(proc.exitcode)): stdout=$(repr(text)) stderr=$(repr(etext))")
+    end
+    return text
+end
+
 function cli_env(d::AbstractString)
     cfg = joinpath(d, "config.toml")
     store = joinpath(d, "jobs.toml")
@@ -105,14 +150,18 @@ end
             proc = run(serve_cmd; wait = false)
             try
                 cd(jobdir) do
-                    id = strip(read(addenv(qcli(["submit", "go", "parent:1", "hello.jl"]), env...), String))
+                    id = strip(read_cli(["submit", "go", "parent:1", "hello.jl"], env; label = "submit hello"))
                     @test !isempty(id)
                     row = wait_job(env, id, (:done, :failed))
                     @test row.state === :done
                     @test isfile(joinpath(jobdir, "hello.ran"))
-                    out = read(addenv(qcli(["status"]), env...), String)
+                    out = read_cli(["status"], env; label = "status")
                     @test status_shows_id(out, id)
-                    wout = read(addenv(qcli(["watch", "--interval", "0.05"]), env..., "DISTSSHQUEUE_WATCH_TICKS" => "1"), String)
+                    wout = read_cli(
+                        ["watch", "--interval", "0.05"],
+                        merge(env, Dict("DISTSSHQUEUE_WATCH_TICKS" => "1"));
+                        label = "watch",
+                    )
                     @test occursin("serve", wout)
                     @test occursin("running", wout)
                     @test occursin("queued", wout)
@@ -135,17 +184,29 @@ end
             try
                 cd(jobdir) do
                     hold_out = joinpath(d, "hold-queued-out")
-                    id1 = strip(read(addenv(qcli(["submit", "go", "parent:1", "--output-dir", hold_out, "hold.jl"]), env...), String))
+                    id1 = strip(
+                        read_cli(
+                            ["submit", "go", "parent:1", "--output-dir", hold_out, "hold.jl"],
+                            env;
+                            label = "submit hold",
+                        )
+                    )
                     @test !isempty(id1)
                     row = wait_job(env, id1, (:running,))
                     wait_kit_pid(joinpath(hold_out, "kit.pid"))
                     @test row.state === :running
-                    id2 = strip(read(addenv(qcli(["submit", "go", "parent:1", "hello.jl"]), env...), String))
+                    id2 = strip(
+                        read_cli(
+                            ["submit", "go", "parent:1", "hello.jl"],
+                            env;
+                            label = "submit hello while hold runs",
+                        )
+                    )
                     queued = wait_job(env, id2, (:queued,))
                     @test queued.state === :queued
-                    c = strip(read(addenv(qcli(["cancel", id2]), env...), String))
+                    c = strip(read_cli(["cancel", id2], env; label = "cancel queued"))
                     @test c == id2
-                    listed = read(addenv(qcli(["status"]), env...), String)
+                    listed = read_cli(["status"], env; label = "status after cancel queued")
                     @test status_shows_id(listed, id1)
                     @test status_shows_id(listed, id2)
                     @test occursin("cancelled", listed)
@@ -161,7 +222,13 @@ end
             env, _, store, jobdir = cli_env(d)
             try
                 cd(jobdir) do
-                    id = strip(read(addenv(qcli(["submit", "go", "parent:1", "hold.jl"]), env...), String))
+                    id = strip(
+                        read_cli(
+                            ["submit", "go", "parent:1", "hold.jl"],
+                            env;
+                            label = "submit running hold",
+                        )
+                    )
                     @test !isempty(id)
                     row = wait_job(env, id, (:running,))
                     sidecar = nothing
@@ -182,7 +249,7 @@ end
                     sidecar === nothing && error("timeout waiting for kit.pid")
                     wait_kit_pid(joinpath(sidecar, "kit.pid"))
                     @test row.state === :running
-                    c = strip(read(addenv(qcli(["cancel", id]), env...), String))
+                    c = strip(read_cli(["cancel", id], env; label = "cancel running"))
                     @test c == id
                     done = wait_job(env, id, (:cancelled,); tries = 200)
                     @test done.state === :cancelled
