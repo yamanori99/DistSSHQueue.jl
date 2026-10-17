@@ -1030,15 +1030,38 @@ end
 end
 
 @testset "claim_serve admits one process" begin
+    # The winner waits for a release file. A child stuck in startup can
+    # ignore SIGTERM (PkgEval then sees a silent wait and kills for
+    # inactivity), so the reaper escalates to SIGKILL on a bound.
+    function reap!(p::Base.Process)
+        process_running(p) || return
+        try
+            kill(p)
+        catch
+        end
+        killer = Timer(5) do _
+            process_running(p) || return
+            try
+                kill(p, Base.SIGKILL)
+            catch
+            end
+        end
+        try
+            wait(p)
+        finally
+            close(killer)
+        end
+    end
     mktempdir() do d::String
         store = joinpath(d, "jobs.toml")
+        release = joinpath(d, "release")
         proj = Base.active_project()
-        code = "using DistSSHQueue; other = DistSSHQueue.claim_serve!(ARGS[1]); open(ARGS[2], \"w\") do io; println(io, other === nothing ? \"won \$(getpid())\" : \"lost \$other\"); end; other === nothing && sleep(30)"
+        code = "using DistSSHQueue; other = DistSSHQueue.claim_serve!(ARGS[1]); open(ARGS[2], \"w\") do io; println(io, other === nothing ? \"won \$(getpid())\" : \"lost \$other\"); end; other === nothing || exit(0); deadline = time() + 20; while !isfile(ARGS[3]) && time() < deadline; sleep(0.05); end"
         procs = Base.Process[]
         try
             for i in 1:2
                 out = joinpath(d, "out$i")
-                cmd = `$(Base.julia_cmd()) --startup-file=no --project=$proj -e $code $store $out`
+                cmd = `$(Base.julia_cmd()) --startup-file=no --project=$proj -e $code $store $out $release`
                 push!(procs, run(pipeline(cmd; stdout = devnull, stderr = devnull); wait = false))
             end
             lines = String[]
@@ -1054,15 +1077,16 @@ end
                 length(lines) == 2 && break
                 sleep(0.05)
             end
+            touch(release)
             @test count(startswith("won "), lines) == 1
             @test count(startswith("lost "), lines) == 1
             won = parse(Int, split(first(filter(startswith("won "), lines)))[2])
             lost = parse(Int, split(first(filter(startswith("lost "), lines)))[2])
             @test lost == won
         finally
+            touch(release)
             for p in procs
-                kill(p)
-                wait(p)
+                reap!(p)
             end
         end
     end
