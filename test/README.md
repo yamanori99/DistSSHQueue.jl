@@ -10,7 +10,7 @@ From the Queue checkout root:
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-That is `test/runtests.jl` (unit + integration). Each included file prints `[i/N]` at start (update `_RUNTEST_N` when adding one). It tags autoserve `serve` pids and SIGTERMs them on exit or if `Pkg.test`'s parent dies, so Ctrl-C does not leave `nohup` `serve` on this machine. `Pkg.test()` must pass on a Registry install (no Queue `Manifest.toml`, often mode 444): real `ssh` spawn runs only when that binary is on `PATH` (tests inject a fake `ssh` when they need `-G`); real SSH clusters stay in `e2e.jl`. Occasional copy recipe: [Registry tree](#registry-tree). Real SSH:
+That is `test/runtests.jl` (unit + integration). Each included file prints `[i/N]` at start (update `_RUNTEST_N` when adding one). It tags autoserve `serve` pids and SIGTERMs them on exit or if `Pkg.test`'s parent dies, so Ctrl-C does not leave `nohup` `serve` on this machine. `Pkg.test()` on this checkout is not the PkgEval sandbox. Real `ssh` spawn runs only when that binary is on `PATH` (tests inject a fake `ssh` when they need `-G`); real SSH clusters stay in `e2e.jl`. Reproduce that sandbox: [PkgEval](#pkgeval). Real SSH:
 
 ```bash
 testenv/docker-ssh/scripts/up.sh --e2e
@@ -63,32 +63,22 @@ Keep one `up.sh --e2e`. Do not split client↔qhost vs qhost↔child into two su
 
 SSH Host, container name, and hostname are `child-1` / `child-2`. Do not run beside DistSSHKit's workers (same names; Docker also shares ports `2222` / `2223`). Loopback client is `distsshqueue-qh`. Three physical hosts is dedicated-host smoke ([#46](https://github.com/yamanori99/DistSSHQueue.jl/issues/46)), not this file.
 
-## Registry tree
+## PkgEval
 
-[PkgEval](https://github.com/JuliaCI/PkgEval.jl) (via [Nanosoldier](https://github.com/JuliaCI/Nanosoldier.jl)) and `Pkg.add` use a Registry tarball, not this checkout. This package: [DistSSHQueue PkgEval](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/D/DistSSHQueue.html). Latest ecosystem report: [NanosoldierReports](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/report.html). Reproduce that tree: copy without Queue `.git` / `Manifest.toml`, `Pkg.add` from a **bare** `file://` git (installed `pkgdir` has no `.git`), `chmod a-w` on `pkgdir`, then `Pkg.test`. DistSSHKit **0.9.x** comes from General in that env. Child CLI tests use the Pkg.test project, not `pkgdir`. Do this after changing those gates, and before a General cut. CI: `Pkg.test (registry, ubuntu-latest, x64)` on **main** and a `Project.toml` version increase (Julia 1.14-nightly, no `ssh`; not a required check). Not ordinary PRs.
+[PkgEval](https://github.com/JuliaCI/PkgEval.jl) runs the daily ecosystem check. The sandbox is Debian bookworm without `tzdata`, with `LANG=C.UTF-8`, a pipe for stdout, and a 45 minute test limit. Daily uses the General tarball. This recipe mounts this checkout read-only, and dependencies resolve from General, so an unreleased DistSSHKit or DistSSHRun change is not in the sandbox. This package: [DistSSHQueue PkgEval](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/D/DistSSHQueue.html). Latest ecosystem report: [NanosoldierReports](https://juliaci.github.io/NanosoldierReports/pkgeval_badges/report.html). Run it on Linux with cgroup v2 and unprivileged user namespaces, before a General cut. The host Julia is 1.12 or newer. The tested Julia is nightly. CI: `PkgEval (nightly, ubuntu-latest, x64)` on **main** and a `Project.toml` version increase (`continue-on-error`; not a required check). Not ordinary PRs.
 
-Copy without `Manifest.toml` (and without `.git`). On Linux, `mktemp -d` is enough. On macOS, put the copy under `$HOME`.
-
-```bash
-WORKDIR=$(mktemp -d "$HOME/distsshqueue.XXXXXX")
-rsync -a \
-  --exclude .git \
-  --exclude Manifest.toml \
-  --exclude docs/Manifest.toml \
-  --exclude docs/build \
-  --exclude test/artifacts \
-  ./ "$WORKDIR/"
-```
-
-This machine (Julia 1.13, or 1.14-nightly). Distro `ssh` / `git` stay on `PATH`. On Linux this is enough for the tree; it does not reproduce a missing `ssh`. Do not `git init` inside the copy. Use a bare repo, then `Pkg.add(; url=)`.
+From this checkout:
 
 ```bash
-BARE=$(mktemp -d "$HOME/distsshqueue.git.XXXXXX")
-git init --bare -q "$BARE"
-git --git-dir="$BARE" --work-tree="$WORKDIR" add -A
-git --git-dir="$BARE" --work-tree="$WORKDIR" \
-  -c user.email=ci@distsshqueue -c user.name=ci commit -q -m tree
-julia -e 'using Pkg; Pkg.activate(temp=true); Pkg.add(; url=ARGS[1]); using DistSSHQueue; run(Cmd(["chmod", "-R", "a-w", pkgdir(DistSSHQueue)])); Pkg.test("DistSSHQueue")' "file://$BARE"
+julia -e '
+  using Pkg
+  Pkg.activate(temp=true)
+  Pkg.add("PkgEval")
+  using PkgEval
+  config = Configuration(; julia="nightly")
+  pkg = Package(; name="DistSSHQueue", url="/package")
+  result = PkgEval.evaluate_package(config, pkg; echo=true,
+      mounts=Dict("/package:ro" => pwd()))
+  exit(result.status == :test ? 0 : 1)
+'
 ```
-
-Linux without `ssh`: CI removes `openssh-client` on the registry-tree job. Locally, prepend a fake `ssh` only inside tests that need `-G`; do not rely on the distro client.
