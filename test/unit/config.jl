@@ -1056,7 +1056,11 @@ end
         store = joinpath(d, "jobs.toml")
         release = joinpath(d, "release")
         proj = Base.active_project()
-        code = "using DistSSHQueue; other = DistSSHQueue.claim_serve!(ARGS[1]); open(ARGS[2], \"w\") do io; println(io, other === nothing ? \"won \$(getpid())\" : \"lost \$other\"); end; other === nothing || exit(0); deadline = time() + 20; while !isfile(ARGS[3]) && time() < deadline; sleep(0.05); end"
+        # The winner waits for the parent's release file, with no deadline of
+        # its own: a slow second child must still see one winner. The parent
+        # always `touch`es the file (both in the body and in `finally`), and
+        # `reap!` escalates to SIGKILL, so this wait is already bounded.
+        code = "using DistSSHQueue; other = DistSSHQueue.claim_serve!(ARGS[1]); open(ARGS[2], \"w\") do io; println(io, other === nothing ? \"won \$(getpid())\" : \"lost \$other\"); end; other === nothing || exit(0); while !isfile(ARGS[3]); sleep(0.05); end"
         procs = Base.Process[]
         try
             for i in 1:2
