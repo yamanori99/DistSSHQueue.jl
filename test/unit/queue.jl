@@ -1606,7 +1606,11 @@ end
             @test shows_hostname_prefix(out)
             @test occursin("this machine", out)
             @test !occursin("queue host", out)
-            @test occursin("lab@10.0.0.8:2222", out)
+            # SSH wraps when NAME is wide: PkgEval's long hostname in a
+            # 72-column pipe leaves no room for the 17-char field. Order is
+            # kept, so match without the wrap whitespace. lab / 10.0.0.8 /
+            # 2222 are also checked below.
+            @test occursin("lab@10.0.0.8:2222", replace(out, r"\s+" => ""))
             @test !occursin("    host      host1", out)
             @test occursin("10.0.0.8", out)
             @test occursin("lab", out)
@@ -2191,7 +2195,10 @@ end
     @test all(l -> textwidth(l) <= 40, nlines)
     @test any(l -> startswith(l, "    "), nlines)
     @test any(l -> occursin("error", l), nlines)
-    if !Sys.iswindows()
+    # _utc_to_local is libc localtime. Needs the America/New_York zone file;
+    # PkgEval's Debian sandbox has no tzdata, so TZ stays UTC there. Skip
+    # rather than accept the UTC passthrough, which would hide a conversion bug.
+    if !Sys.iswindows() && isfile("/usr/share/zoneinfo/America/New_York")
         winter = DateTime(2026, 1, 15, 12, 0)
         summer = DateTime(2026, 7, 15, 12, 0)
         old_tz = get(ENV, "TZ", nothing)
