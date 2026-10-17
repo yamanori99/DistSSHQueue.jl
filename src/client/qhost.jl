@@ -77,6 +77,24 @@ function _set_queue_env(cur::Union{Nothing, String}, next::AbstractString)::Stri
     return n
 end
 
+# DistSSHKit calls `leading_hop_span`. A 0.9 patch keeps this name and the
+# kinds `:qhost`, `:remote_julia`, and `:queue_env`. Not `public`.
+# `--project` and `--qhost` are not hop options. A flag with no value is
+# `(0, :none)`, so the caller still sees that word as a command.
+function leading_hop_span(args::Vector{String}, i::Int)::Tuple{Int, Symbol}
+    1 <= i <= length(args) || return (0, :none)
+    a = args[i]
+    if startswith(a, "qhost:")
+        return (1, :qhost)
+    elseif a == "--remote-julia" && i < length(args)
+        return (2, :remote_julia)
+    elseif a == "--queue-env" && i < length(args)
+        return (2, :queue_env)
+    else
+        return (0, :none)
+    end
+end
+
 """Peel leading `qhost:NAME` / `--remote-julia PATH` / `--queue-env DIR`.
 
 Also peels `qhost:NAME` immediately after the first verb. `explicit` is true
@@ -99,18 +117,21 @@ function extract_remote_opts(args::Vector{String})
                         "Client julia --project= loads Queue locally; it is not forwarded.",
                 )
             )
-        elseif startswith(a, "qhost:")
-            host = _set_qhost(host, parse_qhost_token(a))
-            explicit = true
-            i += 1
-        elseif a == "--remote-julia" && i < length(args)
-            rjulia = args[i + 1]
-            i += 2
-        elseif a == "--queue-env" && i < length(args)
-            qenv = _set_queue_env(qenv, args[i + 1])
-            i += 2
         else
-            break
+            n, kind = leading_hop_span(args, i)
+            if n == 0
+                break
+            elseif kind === :qhost
+                host = _set_qhost(host, parse_qhost_token(a))
+                explicit = true
+            elseif kind === :remote_julia
+                rjulia = args[i + 1]
+            elseif kind === :queue_env
+                qenv = _set_queue_env(qenv, args[i + 1])
+            else
+                error("unhandled leading hop: $(repr(kind))")
+            end
+            i += n
         end
     end
     rest = args[i:end]
