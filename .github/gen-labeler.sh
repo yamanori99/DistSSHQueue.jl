@@ -15,7 +15,8 @@
 #   - Documenter → area:docs (docs/**)
 #   - GitHub / repo prose → area:project-docs (README, NEWS, CONTRIBUTING,
 #     SECURITY, AGENTS, REVIEW, CODEOWNERS)
-#   - .github/**, codecov.yml, .coderabbit.yaml, .JETLSConfig.toml → area:ci
+#   - .github/**, bench/**, codecov.yml, .coderabbit.yaml,
+#     .JETLSConfig.toml → area:ci
 #
 # Product tests live only under the trees in `product_test_trees`. Shared
 # unit / integration files stay area:queue. Any other path under test/ is
@@ -60,6 +61,7 @@ trap 'rm -f "$tmp"' EXIT
   - changed-files:
       - any-glob-to-any-file:
           - ".github/**"
+          - "bench/**"
           - "codecov.yml"
           - ".coderabbit.yaml"
           - ".JETLSConfig.toml"
