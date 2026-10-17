@@ -9,7 +9,7 @@ on:
 
 # Cancel redundant runs on the same branch/PR.
 # A Project.toml version increase (see version-cut.sh) runs Ubuntu
-# 1.14-nightly, Aqua on that nightly, and registry tree in this workflow.
+# 1.14-nightly, Aqua on that nightly, and PkgEval in this workflow.
 # macOS and WSL2 nightly are CI weekly. No label is involved.
 # A main push that changes only Project.toml and NEWS.md, and raises
 # version, skips Test and does not start Linux E2E.
@@ -179,13 +179,14 @@ jobs:
           delete-old-caches: false
       - uses: ./.github/actions/pkg-test
 
-  # Not required to merge. Catches checkout-only Pkg.test assumptions. Runs on 1.14-nightly.
-  test-registry-tree:
-    name: Pkg.test (registry, ubuntu-latest, x64)
+  # Not required to merge. This checkout inside PkgEval's sandbox, against
+  # Julia nightly. Host Julia is 1.12. Dependencies come from General.
+  pkgeval:
+    name: PkgEval (nightly, ubuntu-latest, x64)
     needs: detect
     if: needs.detect.outputs.heavy == 'true' && (github.event_name != 'pull_request' || needs.detect.outputs.version_cut == 'true')
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 90
     continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -193,12 +194,14 @@ jobs:
           persist-credentials: false
       - uses: julia-actions/setup-julia@fa02766e078afaaf09b14210362cee14137e6a32 # v3.0.2
         with:
-          version: "1.14-nightly"
+          version: "1.12"
       - uses: julia-actions/cache@9353db09a0f2bbbdec6f41791918c75d37391b36 # v3.5.0
         with:
           cache-scratchspaces: false
           delete-old-caches: false
-      - uses: ./.github/actions/registry-tree-test
+      - uses: ./.github/actions/pkgeval
+        with:
+          package: DistSSHQueue
 
   aqua-1-13:
     name: Aqua (1.13, ubuntu-latest, x64)

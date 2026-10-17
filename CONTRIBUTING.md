@@ -45,7 +45,7 @@ julia --project=. -e 'using Pkg; Pkg.test()'
 
 Run this on Julia **1.13** (and **1.14-nightly** if you have it). Layout: [test/README.md](test/README.md). When adding a file under `test/runtests.jl` or an inner SSH E2E `@testset`, bump `_RUNTEST_N` / `_E2E_N` so `[i/N]` stays honest.
 
-Checkout `Pkg.test()` is not a Registry tarball. After changing those gates (child CLI project, `ssh` spawn), and before a General cut, run the disposable copy in [test/README.md](test/README.md#registry-tree). CI runs that shape on **main** and a version increase (Julia 1.14-nightly; not a required check).
+Checkout `Pkg.test()` is not the PkgEval sandbox. Before a General cut, run the recipe in [test/README.md](test/README.md#pkgeval). CI runs that job on **main** and a version increase (host Julia 1.12, test Julia nightly; `continue-on-error`; not a required check).
 
 ```bash
 julia -e 'using Pkg; Pkg.Apps.add("Runic")'   # once
@@ -99,7 +99,7 @@ Workflows pass the version to `julia-actions/setup-julia`. The job name is that 
 | Version | Role | Required |
 | --- | --- | --- |
 | **1.13** | `Project.toml` julia floor. Pkg.test, Aqua, JETLS, Documenter, draw, E2E, Runic. Codecov `pkgtest` on **main push** only | yes |
-| **1.14-nightly** | Next-minor nightly. Pkg.test, Aqua, registry tree. `continue-on-error` | no |
+| **1.14-nightly** | Next-minor nightly. Pkg.test, Aqua. `continue-on-error` | no |
 
 **1.13** runs on ordinary PRs (heavy gate). Ubuntu **1.14-nightly** runs on **main**, **CI weekly**, and a `Project.toml` version increase ([`.github/version-cut.sh`](.github/version-cut.sh)), not ordinary PRs. macOS and WSL2 nightly run on **CI weekly** only.
 
@@ -135,8 +135,8 @@ changed. Linux E2E (1.13) uses the same **path filter** as **main** push
 runs on a **version increase**, **E2E weekly** (`ssh-e2e-weekly.yml`; `CI.yml` has no
 `schedule`), and `workflow_dispatch`. **1.14-nightly** `Pkg.test` / Aqua
 on Ubuntu stay on **main**, **CI weekly**, and a version increase, not
-ordinary PRs. macOS and WSL2 nightly stay on **CI weekly** only. Registry tree stays on **main**
-and a version increase, not ordinary PRs.
+ordinary PRs. macOS and WSL2 nightly stay on **CI weekly** only. PkgEval stays on **main**
+and a version increase, not ordinary PRs. It is `continue-on-error` and not a required check.
 
 [Runic](https://github.com/fredrikekre/Runic.jl) is a separate light
 workflow ([`.github/workflows/runic.yml`](.github/workflows/runic.yml)).
