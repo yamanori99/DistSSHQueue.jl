@@ -157,11 +157,9 @@ end
                     @test isfile(joinpath(jobdir, "hello.ran"))
                     out = read_cli(["status"], env; label = "status")
                     @test status_shows_id(out, id)
-                    wout = read_cli(
-                        ["watch", "--interval", "0.05"],
-                        merge(env, Dict("DISTSSHQUEUE_WATCH_TICKS" => "1"));
-                        label = "watch",
-                    )
+                    watch_env = Dict{String, String}(env)
+                    watch_env["DISTSSHQUEUE_WATCH_TICKS"] = "1"
+                    wout = read_cli(["watch", "--interval", "0.05"], watch_env; label = "watch")
                     @test occursin("serve", wout)
                     @test occursin("running", wout)
                     @test occursin("queued", wout)
