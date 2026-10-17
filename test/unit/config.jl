@@ -241,6 +241,22 @@ end
     end
 end
 
+@testset "leading_hop_span" begin
+    args = ["--remote-julia", "J", "--queue-env", "E", "qhost:H", "status"]
+    @test DistSSHQueue.leading_hop_span(args, 1) == (2, :remote_julia)
+    @test DistSSHQueue.leading_hop_span(args, 3) == (2, :queue_env)
+    @test DistSSHQueue.leading_hop_span(args, 5) == (1, :qhost)
+    @test DistSSHQueue.leading_hop_span(args, 6) == (0, :none)
+    @test DistSSHQueue.leading_hop_span(["--remote-julia"], 1) == (0, :none)
+    @test DistSSHQueue.leading_hop_span(["--queue-env"], 1) == (0, :none)
+    @test DistSSHQueue.leading_hop_span(["--project", "P"], 1) == (0, :none)
+    @test DistSSHQueue.leading_hop_span(["--project=P"], 1) == (0, :none)
+    @test DistSSHQueue.leading_hop_span(["--qhost"], 1) == (0, :none)
+    @test DistSSHQueue.leading_hop_span(String[], 1) == (0, :none)
+    @test !Base.isexported(DistSSHQueue, :leading_hop_span)
+    @test !Base.ispublic(DistSSHQueue, :leading_hop_span)
+end
+
 @testset "extract_remote_opts" begin
     withenv("DISTSSHQUEUE_HOST" => nothing) do
         withenv("JULIA_DISTRIBUTED_EXE" => nothing) do
