@@ -72,11 +72,138 @@ function show_usage(;
     return print_queue_usage(io; topic = topic)
 end
 
+"""What `main` knows before it hands argv to one command."""
+struct CliContext
+    qhost::Union{Nothing, String}
+    julia::Union{Nothing, String}
+    queue_env::Union{Nothing, String}
+    explicit::Bool
+    process_yes::Bool
+end
+
+"""How one subcommand is reached. The callable stays in `_QUEUE_CALLS`, not here, so this stays concrete."""
+struct QueueCommand
+    hop::Symbol
+    label_qhost::Bool
+    watch_tty::Bool
+end
+
+function _argv(f::Function)
+    return (_ctx, rest) -> f(rest)::Cint
+end
+
+function _fetch(ctx::CliContext, rest::Vector{String})::Cint
+    hop = ctx.explicit ? ctx.qhost : nothing
+    return fetch_cli(hop, ctx.julia, ctx.queue_env, rest; explicit = ctx.explicit)
+end
+
+function _teardown(ctx::CliContext, rest::Vector{String})::Cint
+    return teardown_main(rest; process_yes = ctx.process_yes)
+end
+
+function _payload(rest::Vector{String})::Vector{String}
+    _, _, _, payload, _ = extract_remote_opts(rest)
+    return payload
+end
+
+function _forward(
+        sub::String,
+        run::Function,
+        ctx::CliContext,
+        rest::Vector{String};
+        label_qhost::Bool,
+        watch_tty::Bool,
+    )::Cint
+    hop = ctx.explicit ? ctx.qhost : nothing
+    tty = watch_tty ? status_watch_hop_tty(rest) : false
+    remote = maybe_remote(
+        hop, ctx.julia, sub, rest;
+        tty = tty,
+        label_qhost = label_qhost,
+        queue_env = ctx.queue_env,
+        explicit = ctx.explicit,
+    )
+    remote === nothing || return remote::Cint
+    return run(ctx, _payload(rest))::Cint
+end
+
+function _entry_forward(call::Function, sub::String, label_qhost::Bool, watch_tty::Bool)
+    return (ctx, rest) -> _forward(
+        sub, call, ctx, rest; label_qhost = label_qhost, watch_tty = watch_tty,
+    )
+end
+
+function _entry_direct(call::Function)
+    return (ctx, rest) -> call(ctx, rest)::Cint
+end
+
+function _queue_command(
+        hop::Symbol,
+        call::Function,
+        sub::String;
+        label_qhost::Bool = false,
+        watch_tty::Bool = false,
+    )::Tuple{QueueCommand, Function}
+    body = if hop === :forward
+        _entry_forward(call, sub, label_qhost, watch_tty)
+    elseif hop === :local || hop === :own
+        _entry_direct(call)
+    else
+        error("unhandled hop: $(repr(hop))")
+    end
+    return (QueueCommand(hop, label_qhost, watch_tty), body)
+end
+
+function _queue_tables()
+    rows = (
+        "serve" => _queue_command(:local, _argv(serve_cli), "serve"),
+        "stop" => _queue_command(:forward, _argv(stop_cli), "stop"),
+        "status" => _queue_command(:forward, _argv(status_cli), "status"; label_qhost = true, watch_tty = true),
+        "list-host" => _queue_command(:forward, _argv(list_host_cli), "list-host"; label_qhost = true),
+        "size" => _queue_command(:forward, _argv(size_cli), "size"),
+        "plan" => _queue_command(:forward, _argv(plan_cli), "plan"),
+        "pool" => _queue_command(:forward, _argv(pool_cli), "pool"),
+        "add-host" => _queue_command(:local, _argv(add_host_cli), "add-host"),
+        "remove-host" => _queue_command(:local, _argv(remove_host_cli), "remove-host"),
+        "watch" => _queue_command(:forward, _argv(watch_cli), "watch"; label_qhost = true, watch_tty = true),
+        "submit" => _queue_command(:forward, _argv(submit_main), "submit"; label_qhost = true),
+        "fetch" => _queue_command(:own, _fetch, "fetch"),
+        "cancel" => _queue_command(:forward, _argv(cancel_cli), "cancel"),
+        "teardown" => _queue_command(:forward, _teardown, "teardown"),
+        "enable" => _queue_command(:local, _argv(enable_main), "enable"),
+        "disable" => _queue_command(:local, _argv(disable_main), "disable"),
+        "service" => _queue_command(:local, _argv(service_main), "service"),
+        "setup" => _queue_command(:local, _argv(setup_main), "setup"),
+        "up" => _queue_command(:local, _argv(up_main), "up"),
+    )
+    hops = Dict{String, QueueCommand}()
+    calls = Dict{String, Function}()
+    for (name, (spec, call)) in rows
+        hops[name] = spec
+        calls[name] = call
+    end
+    return hops, calls
+end
+
+const QUEUE_COMMANDS, _QUEUE_CALLS = _queue_tables()
+
 """CLI entry. Prefer `julia -m DistSSHKit` (client `qhost:HOST` / queue-host `setup`)."""
 function main(args::Vector{String} = copy(ARGS))::Cint
     return with_cli_entry(:DistSSHQueue) do
         _main(args)
     end
+end
+
+function _reject_subcommand(sub::AbstractString)::Cint
+    if is_kit_execute_kind(Symbol(sub))
+        DistSSHRun.print_cli_error(
+            "$sub is DistSSHRun. Enqueue with submit: $(cli_m()) [qhost:HOST] submit $sub …",
+        )
+        return 1
+    end
+    DistSSHRun.print_cli_error("unknown subcommand: $sub")
+    show_usage(io = stderr)
+    return 1
 end
 
 function _main(args::Vector{String})::Cint
@@ -101,88 +228,11 @@ function _main(args::Vector{String})::Cint
         end
         reject_qhost_on_local(sub, explicit ? qhost : nothing)
         require_queue_target!(sub; explicit = explicit)
-        hop = explicit ? qhost : nothing
-        _rest() = let
-            _, _, _, payload, _ = extract_remote_opts(rest)
-            payload
-        end
-        if sub == "serve"
-            return serve_cli(rest)
-        elseif sub == "stop"
-            r = maybe_remote(hop, gjulia, "stop", rest; queue_env = gqenv, explicit = explicit)
-            r === nothing || return r
-            return stop_cli(_rest())
-        elseif sub == "status"
-            r = maybe_remote(
-                hop, gjulia, "status", rest;
-                tty = status_watch_hop_tty(rest),
-                label_qhost = true, queue_env = gqenv, explicit = explicit,
-            )
-            r === nothing || return r
-            return status_cli(_rest())
-        elseif sub == "list-host"
-            r = maybe_remote(
-                hop, gjulia, "list-host", rest; label_qhost = true, queue_env = gqenv, explicit = explicit,
-            )
-            r === nothing || return r
-            return list_host_cli(_rest())
-        elseif sub == "size"
-            r = maybe_remote(hop, gjulia, "size", rest; queue_env = gqenv, explicit = explicit)
-            r === nothing || return r
-            return size_cli(_rest())
-        elseif sub == "plan"
-            r = maybe_remote(hop, gjulia, "plan", rest; queue_env = gqenv, explicit = explicit)
-            r === nothing || return r
-            return plan_cli(_rest())
-        elseif sub == "pool"
-            r = maybe_remote(hop, gjulia, "pool", rest; queue_env = gqenv, explicit = explicit)
-            r === nothing || return r
-            return pool_cli(_rest())
-        elseif sub == "add-host"
-            return add_host_cli(rest)
-        elseif sub == "remove-host"
-            return remove_host_cli(rest)
-        elseif sub == "watch"
-            r = maybe_remote(hop, gjulia, "watch", rest; tty = status_watch_hop_tty(rest), label_qhost = true, queue_env = gqenv, explicit = explicit)
-            r === nothing || return r
-            return watch_cli(_rest())
-        elseif sub == "submit"
-            r = maybe_remote(
-                hop, gjulia, "submit", rest;
-                label_qhost = true, queue_env = gqenv, explicit = explicit,
-            )
-            r === nothing || return r
-            return submit_main(_rest())
-        elseif is_kit_execute_kind(Symbol(sub))
-            DistSSHRun.print_cli_error(
-                "$sub is DistSSHRun. Enqueue with submit: $(cli_m()) [qhost:HOST] submit $sub …",
-            )
-            return 1
-        elseif sub == "fetch"
-            return fetch_cli(hop, gjulia, gqenv, rest; explicit = explicit)
-        elseif sub == "cancel"
-            r = maybe_remote(hop, gjulia, "cancel", rest; queue_env = gqenv, explicit = explicit)
-            r === nothing || return r
-            return cancel_cli(_rest())
-        elseif sub == "teardown"
-            r = maybe_remote(hop, gjulia, "teardown", rest; queue_env = gqenv, explicit = explicit)
-            r === nothing || return r
-            return teardown_main(_rest(); process_yes = process_yes)
-        elseif sub == "enable"
-            return enable_main(rest)
-        elseif sub == "disable"
-            return disable_main(rest)
-        elseif sub == "service"
-            return service_main(rest)
-        elseif sub == "setup"
-            return setup_main(rest)
-        elseif sub == "up"
-            return up_main(rest)
-        else
-            DistSSHRun.print_cli_error("unknown subcommand: $sub")
-            show_usage(io = stderr)
-            return 1
-        end
+        call = get(_QUEUE_CALLS, sub, nothing)
+        call === nothing && return _reject_subcommand(sub)
+        ctx = CliContext(qhost, gjulia, gqenv, explicit, process_yes)
+        # `call` is a `Function` from the table, so this does not infer the other commands.
+        return call(ctx, rest)::Cint
     catch e
         e isa ArgumentError || rethrow()
         DistSSHRun.print_cli_error(e.msg)

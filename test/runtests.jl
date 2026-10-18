@@ -17,7 +17,7 @@ get!(ENV, DistSSHQueue.LOCAL_QUEUE_ENV, "1")
 get!(ENV, DistSSHQueue.NO_KIT_SETUP_ENV, "1")
 install_serve_reaper!()
 
-const _RUNTEST_N = 6
+const _RUNTEST_N = 7
 const _RUNTEST_I = Ref(0)
 function _runtest_announce(rel::AbstractString)
     _RUNTEST_I[] += 1
@@ -38,6 +38,8 @@ end
         include(joinpath(@__DIR__, "unit", "fetch.jl"))
         _runtest_announce("unit/local_queue.jl")
         include(joinpath(@__DIR__, "unit", "local_queue.jl"))
+        _runtest_announce("unit/commands.jl")
+        include(joinpath(@__DIR__, "unit", "commands.jl"))
     end
     @testset "integration" verbose = true begin
         _runtest_announce("integration/cli.jl")

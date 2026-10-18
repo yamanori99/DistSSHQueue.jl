@@ -102,6 +102,7 @@ EOF
           - "LICENSE"
           - "Project.toml"
           - "test/unit/config.jl"
+          - "test/unit/commands.jl"
           - "test/unit/queue.jl"
           - "test/integration/cli.jl"
 
