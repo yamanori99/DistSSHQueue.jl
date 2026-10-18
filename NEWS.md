@@ -14,6 +14,9 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 - `status` will not show a `:running` row whose `kit.pid` is dead as running.
   The stored row stays `:running` until `serve` writes it.
 
+- The first `julia -m DistSSHQueue` compiles the subcommand it runs, not
+  every subcommand. Commands, flags, and exit codes are unchanged.
+
 ## 0.9.6
 
 - Requires DistSSHRun 0.1.9.

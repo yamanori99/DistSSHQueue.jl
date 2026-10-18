@@ -100,7 +100,7 @@ end
 Also peels `qhost:NAME` immediately after the first verb. `explicit` is true
 when argv contained `qhost:` (not only `$QHOST_DEFAULT_ENV`).
 """
-function extract_remote_opts(args::Vector{String})
+function extract_remote_opts(args::Vector{String})::Tuple{Union{Nothing, String}, Union{Nothing, String}, Union{Nothing, String}, Vector{String}, Bool}
     host = nothing
     rjulia = nothing
     qenv = nothing
