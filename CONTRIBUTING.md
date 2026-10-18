@@ -45,7 +45,7 @@ julia --project=. -e 'using Pkg; Pkg.test()'
 
 Run this on Julia **1.13** (and **1.14-nightly** or **nightly** if you have them). Layout: [test/README.md](test/README.md). When adding a file under `test/runtests.jl` or an inner SSH E2E `@testset`, bump `_RUNTEST_N` / `_E2E_N` so `[i/N]` stays honest.
 
-Checkout `Pkg.test()` is not the PkgEval sandbox. Before a General cut, run the recipe in [test/README.md](test/README.md#pkgeval). CI runs that job on **main** and a version increase (host Julia 1.12, test Julia nightly; `continue-on-error`; not a required check).
+Checkout `Pkg.test()` is not the PkgEval sandbox. Before a General cut, run the recipe in [test/README.md](test/README.md#pkgeval). CI runs that job on **main** and a version increase (host Julia 1.12; test Julia is the julia-latest tarball; `continue-on-error`; not a required check).
 
 ```bash
 julia -e 'using Pkg; Pkg.Apps.add("Runic")'   # once
@@ -100,7 +100,7 @@ Workflows pass the version to `julia-actions/setup-julia`. The job name is that 
 | --- | --- | --- |
 | **1.13** | `Project.toml` julia floor. Pkg.test, Aqua, JETLS, Documenter, draw, E2E, Runic. Codecov `pkgtest` on **main push** only | yes |
 | **1.14-nightly** | `release-1.14`. Pkg.test, Aqua. `continue-on-error` | no |
-| **nightly** | Julia master. Same jobs as 1.14-nightly. `continue-on-error` | no |
+| **nightly** | Published `julia-latest` tarball. It follows master and can lag a `VERSION` bump. Same jobs as 1.14-nightly. `continue-on-error` | no |
 
 **1.13** runs on ordinary PRs (heavy gate). Ubuntu **1.14-nightly** and **nightly** run on **main**, **CI weekly**, and a `Project.toml` version increase ([`.github/version-cut.sh`](.github/version-cut.sh)), not ordinary PRs. macOS and WSL2 for both channels run on **CI weekly** only.
 
