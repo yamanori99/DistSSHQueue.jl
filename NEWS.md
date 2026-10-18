@@ -13,6 +13,9 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 - Declining `up default` will exit 1.
 - `status` will not show a `:running` row whose `kit.pid` is dead as running.
   The stored row stays `:running` until `serve` writes it.
+- `cancel` of a `:running` job will send SIGINT before SIGTERM, once
+  DistSSHRun's `interrupt_grace` defaults to a positive value. Until then
+  `cancel` does not send SIGINT.
 
 - The first `julia -m DistSSHQueue` compiles the subcommand it runs, not
   every subcommand. Commands, flags, and exit codes are unchanged.
