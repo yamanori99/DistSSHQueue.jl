@@ -9,7 +9,9 @@ doubles. This does not fail CI.
 
 ## Flagged
 
-No sample grew past the watch line.
+- 1.14-nightly: package precompile 0.98s -> 1.84s
+- 1.14-nightly: status method 342.0 ms -> 703.5 ms: Tuple{DistSSHQueue.var"##show_status#192", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(D...
+- 1.14-nightly: status method new -> 3803.2 ms: Tuple{DistSSHQueue.var"#_entry_forward##0#_entry_forward##1"{DistSSHQueue.var"#_argv##0#_argv##1"{ty...
 
 ## 1.13
 
@@ -67,16 +69,17 @@ Latest `status` methods:
 
 ## 1.14-nightly
 
-| date | commit | version | os | arch | src files | code lines | full s | pkg s | using s | help s | status s |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-10-18 | 2ad75fb | 0.9.6 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6144 | 4.42 | 0.98 | 0.24 | 4.2 | 4.33 |
+| date | commit | version | os | arch | src files | code lines | full s | pkg s | using s | help s | status s | submit s | watch s | cancel s |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-10-18 | 2ad75fb | 0.9.6 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6144 | 4.42 | 0.98 | 0.24 | 4.2 | 4.33 |  |  |  |
+| 2026-10-18 | de4ef6e | 0.9.6 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6181 | 6.96 | 1.84 | 0.33 | 0.71 | 1.82 | 2.12 | 1.76 | 1.93 |
 
 ```mermaid
 xychart-beta
     title "1.14-nightly help"
-    x-axis ["1018"]
+    x-axis ["1018", "1018"]
     y-axis "seconds" 0 --> 6
-    bar [4.2]
+    line [4.2, 0.71]
 ```
 
 
@@ -84,23 +87,23 @@ Latest `help` methods:
 
 | method | now ms | previous ms |
 | --- | ---: | ---: |
-| `Tuple{typeof(DistSSHQueue.main), Array{String, 1}}` | 9878.4 |  |
-| `Tuple{typeof(Core.kwcall), NamedTuple{(:topic,), Tuple{Nothing}}, typeof(DistSSHQueue.prin...` | 35.0 |  |
-| `Tuple{typeof(Distributed.flush_gc_msgs)}` | 14.4 |  |
-| `Tuple{typeof(Base.should_use_main_entrypoint)}` | 10.8 |  |
-| `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 9.5 |  |
-| `Tuple{typeof(Base.getproperty), NamedTuple{(:quiet, :progress, :verbose, :yes, :hosts_file...` | 7.8 |  |
-| `Tuple{typeof(DistSSHRun.DistSSHBase.format_placement_token), Symbol, String, Nothing}` | 7.6 |  |
-| `Tuple{typeof(Base.getproperty), Pair{String, Int64}, Symbol}` | 5.9 |  |
-| `Tuple{typeof(Base.getproperty), Base.MappingRF{DistSSHRun.var"#77#78", typeof(Base.max)}, ...` | 5.5 |  |
-| `Tuple{typeof(Base.getproperty), Base.Generator{Tuple{String, String, String}, DistSSHRun.v...` | 5.3 |  |
+| `Tuple{typeof(DistSSHQueue.main), Array{String, 1}}` | 418.1 | 9878.4 |
+| `Tuple{typeof(Core.kwcall), NamedTuple{(:topic,), Tuple{Nothing}}, typeof(DistSSHQueue.prin...` | 46.9 | 35.0 |
+| `Tuple{typeof(Distributed.flush_gc_msgs)}` | 20.0 | 14.4 |
+| `Tuple{typeof(Base.should_use_main_entrypoint)}` | 16.5 | 10.8 |
+| `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 13.1 | 9.5 |
+| `Tuple{typeof(Base.string), Char}` | 6.3 | 5.0 |
+| `Tuple{typeof(Base.tail), NTuple{15, String}}` | 4.9 |  |
+| `Tuple{typeof(Base._cshp), Int64, Tuple{Bool}, Tuple{}, Tuple{Int64}}` | 4.2 |  |
+| `Tuple{typeof(Base.tail), NTuple{14, String}}` | 4.2 |  |
+| `Tuple{typeof(Core.kwcall), NamedTuple{(:topic,), Tuple{Nothing}}, typeof(DistSSHQueue.prin...` | 4.2 | 4.8 |
 
 ```mermaid
 xychart-beta
     title "1.14-nightly status"
-    x-axis ["1018"]
+    x-axis ["1018", "1018"]
     y-axis "seconds" 0 --> 6
-    bar [4.33]
+    line [4.33, 1.82]
 ```
 
 
@@ -108,14 +111,86 @@ Latest `status` methods:
 
 | method | now ms | previous ms |
 | --- | ---: | ---: |
-| `Tuple{typeof(DistSSHQueue.main), Array{String, 1}}` | 3791.2 |  |
-| `Tuple{DistSSHQueue.var"##show_status#192", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool...` | 342.0 |  |
-| `Tuple{typeof(Distributed.flush_gc_msgs)}` | 17.1 |  |
-| `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 11.2 |  |
-| `Tuple{typeof(Core.kwcall), NamedTuple{(:quiet, :tail, :verbose), Tuple{Bool, Nothing, Bool...` | 10.9 |  |
-| `Tuple{typeof(Base._array_for), Core.TypeEgal{DistSSHQueue.Job}, Array{Any, 1}, Base.HasSha...` | 6.7 |  |
-| `Tuple{Core.TypeEgal{Base.LinearIndices{N, R} where R<:Tuple{Vararg{Base.AbstractUnitRange{...` | 4.0 |  |
-| `Tuple{typeof(Base.should_use_main_entrypoint)}` | 2.5 |  |
-| `Tuple{Base.var"##187#188", Vararg{Any, 4}}` | 2.3 |  |
-| `Tuple{typeof(DistSSHRun.DistSSHBase.format_placement_token), Symbol, String, Nothing}` | 1.6 |  |
+| `Tuple{DistSSHQueue.var"#_entry_forward##0#_entry_forward##1"{DistSSHQueue.var"#_argv##0#_a...` | 3803.2 |  |
+| `Tuple{DistSSHQueue.var"##show_status#192", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool...` | 703.5 | 342.0 |
+| `Tuple{typeof(DistSSHQueue.main), Array{String, 1}}` | 205.9 | 3791.2 |
+| `Tuple{typeof(Distributed.flush_gc_msgs)}` | 20.3 | 17.1 |
+| `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 13.4 | 11.2 |
+| `Tuple{typeof(Core.kwcall), NamedTuple{(:quiet, :tail, :verbose), Tuple{Bool, Nothing, Bool...` | 10.3 | 10.9 |
+| `Tuple{typeof(Base.getproperty), NamedTuple{(:quiet, :progress, :verbose, :yes, :hosts_file...` | 9.0 | 1.2 |
+| `Tuple{typeof(Base.map), Base.var"#append!##0#append!##1"{String}, NTuple{10, String}}` | 7.6 |  |
+| `Tuple{typeof(Base._array_for), Core.TypeEgal{DistSSHQueue.Job}, Array{Any, 1}, Base.HasSha...` | 6.5 | 6.7 |
+| `Tuple{typeof(DistSSHQueue._q_cell), String, Int64}` | 4.6 |  |
+
+```mermaid
+xychart-beta
+    title "1.14-nightly submit"
+    x-axis ["1018"]
+    y-axis "seconds" 0 --> 3
+    bar [2.12]
+```
+
+
+Latest `submit` methods:
+
+| method | now ms | previous ms |
+| --- | ---: | ---: |
+| `Tuple{DistSSHQueue.var"#_entry_forward##0#_entry_forward##1"{DistSSHQueue.var"#_argv##0#_a...` | 4490.4 |  |
+| `Tuple{typeof(Core.kwcall), NamedTuple{(:kind, :quiet, :verbosity), Tuple{Symbol, Bool, Str...` | 442.4 |  |
+| `Tuple{typeof(DistSSHQueue.main), Array{String, 1}}` | 187.4 |  |
+| `Tuple{typeof(Core.kwcall), NamedTuple{(:kind,), Tuple{Symbol}}, typeof(DistSSHQueue.submit...` | 85.9 |  |
+| `Tuple{typeof(DistSSHQueue.script_arg), String, String}` | 72.5 |  |
+| `Tuple{typeof(DistSSHQueue.reject_worker_root_collision!), Array{DistSSHQueue.Job, 1}, Stri...` | 60.9 |  |
+| `Tuple{typeof(DistSSHQueue.parse_host_cap), String}` | 40.4 |  |
+| `Tuple{typeof(Distributed.flush_gc_msgs)}` | 20.1 |  |
+| `Tuple{typeof(Core.kwcall), NamedTuple{(:kind,), Tuple{Symbol}}, typeof(DistSSHQueue.submit...` | 20.1 |  |
+| `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 13.3 |  |
+
+```mermaid
+xychart-beta
+    title "1.14-nightly watch"
+    x-axis ["1018"]
+    y-axis "seconds" 0 --> 3
+    bar [1.76]
+```
+
+
+Latest `watch` methods:
+
+| method | now ms | previous ms |
+| --- | ---: | ---: |
+| `Tuple{DistSSHQueue.var"#_entry_forward##0#_entry_forward##1"{DistSSHQueue.var"#_argv##0#_a...` | 3651.0 |  |
+| `Tuple{DistSSHQueue.var"##watch!#196", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, No...` | 726.6 |  |
+| `Tuple{typeof(DistSSHQueue.main), Array{String, 1}}` | 187.6 |  |
+| `Tuple{typeof(Distributed.flush_gc_msgs)}` | 20.2 |  |
+| `Tuple{typeof(Core.kwcall), NamedTuple{(:interval, :ticks, :quiet, :tail, :verbose), Tuple{...` | 14.3 |  |
+| `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 13.5 |  |
+| `Tuple{Core.TypeEgal{NamedTuple{(:verb, :default_interval), T} where T<:Tuple}, Tuple{Strin...` | 7.5 |  |
+| `Tuple{Base.var"##187#188", Vararg{Any, 4}}` | 3.4 |  |
+| `Tuple{typeof(Base.should_use_main_entrypoint)}` | 3.1 |  |
+| `Tuple{typeof(Base._array_for), Core.TypeEgal{DistSSHQueue.Job}, Array{Any, 1}, Base.HasSha...` | 1.9 |  |
+
+```mermaid
+xychart-beta
+    title "1.14-nightly cancel"
+    x-axis ["1018"]
+    y-axis "seconds" 0 --> 3
+    bar [1.93]
+```
+
+
+Latest `cancel` methods:
+
+| method | now ms | previous ms |
+| --- | ---: | ---: |
+| `Tuple{DistSSHQueue.var"#_entry_forward##0#_entry_forward##1"{DistSSHQueue.var"#_argv##0#_a...` | 4479.4 |  |
+| `Tuple{typeof(DistSSHQueue.main), Array{String, 1}}` | 196.0 |  |
+| `Tuple{typeof(DistSSHQueue._job_row), Base.Dict{String, Any}, String}` | 167.8 |  |
+| `Tuple{typeof(DistSSHQueue._row_dt), String, String}` | 70.3 |  |
+| `Tuple{Core.TypeEgal{Base.Dict{String, Any}}, Base.Generator{Base.Dict{String, Any}, DistSS...` | 25.7 |  |
+| `Tuple{typeof(Distributed.flush_gc_msgs)}` | 20.3 |  |
+| `Tuple{typeof(Core.kwcall), NamedTuple{(:id, :kind, :script, :hosts, :state, :queued_at, :s...` | 19.1 |  |
+| `Tuple{Core.TypeEgal{Base.Dict{String, Any}}, Pair{String, String}, Pair{String, String}, P...` | 13.5 |  |
+| `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 13.3 |  |
+| `Tuple{typeof(Base.iterate), Base.Dict{String, Any}}` | 11.9 |  |
 
