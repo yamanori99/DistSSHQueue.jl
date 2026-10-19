@@ -2362,13 +2362,10 @@ end
         "DistSSHQueue 0.0.1 (DistSSHKit 0.8.1)";
         local_ver = v"0.6.0",
     )
-    if msg === nothing
-        @test false
-    else
-        @test occursin("0.0.1", msg.head)
-        @test occursin("0.6.0", msg.head)
-        @test msg.kit == "0.8.1"
-    end
+    @test msg !== nothing
+    @test occursin("0.0.1", msg.head)
+    @test occursin("0.6.0", msg.head)
+    @test msg.kit == "0.8.1"
     @test DistSSHQueue.queue_version_skew_warning(
         "DistSSHQueue 0.6.0";
         local_ver = v"0.6.0",
@@ -2377,12 +2374,9 @@ end
         "DistSSHQueue 0.0.1\nDistSSHRun 0.1.5";
         local_ver = v"0.6.0",
     )
-    if two === nothing
-        @test false
-    else
-        @test two.kit == "0.1.5"
-        @test two.kit_name == "DistSSHRun"
-    end
+    @test two !== nothing
+    @test two.kit == "0.1.5"
+    @test two.kit_name == "DistSSHRun"
     @test DistSSHQueue.queue_version_skew_warning(
         "DistSSHQueue $(pkgversion(DistSSHQueue))\nDistSSHRun 0.1.5",
     ) === nothing
@@ -2392,21 +2386,15 @@ end
     plist = DistSSHQueue.serve_command_from_unit(
         DistSSHQueue.launch_agent_plist("/opt/a&b", "/opt/my env"),
     )
-    if plist === nothing
-        @test false
-    else
-        @test plist.julia == "/opt/a&b"
-        @test plist.project == "/opt/my env"
-    end
+    @test plist !== nothing
+    @test plist.julia == "/opt/a&b"
+    @test plist.project == "/opt/my env"
     unit = DistSSHQueue.serve_command_from_unit(
         DistSSHQueue.systemd_user_unit("/opt/it's julia", "/opt/env"),
     )
-    if unit === nothing
-        @test false
-    else
-        @test unit.julia == "/opt/it's julia"
-        @test unit.project == "/opt/env"
-    end
+    @test unit !== nothing
+    @test unit.julia == "/opt/it's julia"
+    @test unit.project == "/opt/env"
     @test DistSSHQueue.serve_command_from_unit("ExecStart=/usr/bin/julia serve\n") === nothing
     mktempdir() do home::String
         @test DistSSHQueue.enabled_serve_command(; home = home) === nothing
@@ -2421,12 +2409,9 @@ end
         end
         DistSSHQueue.write_serve_unit(path, body)
         spec = DistSSHQueue.enabled_serve_command(; home = home)
-        if spec === nothing
-            @test false
-        else
-            @test spec.julia == "/opt/julia"
-            @test spec.project == "/opt/env"
-        end
+        @test spec !== nothing
+        @test spec.julia == "/opt/julia"
+        @test spec.project == "/opt/env"
     end
     qh = sprint(io -> DistSSHQueue.print_queue_usage(io; topic = "qhost"))
     @test occursin("Would remove, then --confirm-path", qh)
