@@ -9,8 +9,7 @@ doubles. This does not fail CI.
 
 ## Flagged
 
-- 1.13: status method new -> 836.0 ms: Tuple{DistSSHQueue.var"##show_status#195", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(D...
-- 1.13: watch method new -> 864.3 ms: Tuple{DistSSHQueue.var"##watch!#199", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, Nothing, Boo...
+No sample grew past the watch line.
 
 ## 1.13
 
@@ -19,6 +18,7 @@ doubles. This does not fail CI.
 | 2026-10-18 | 2ad75fb | 0.9.6 | 1.13.2 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6144 | 8.35 | 1.74 | 0.32 | 14.66 | 15.43 |  |  |  |
 | 2026-10-18 | de4ef6e | 0.9.6 | 1.13.2 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6181 | 9.24 | 2.28 | 0.36 | 1.15 | 6.52 | 7.38 | 6.55 | 6.92 |
 | 2026-10-19 | 860266c | 0.9.6 | 1.13.2 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 7.76 | 1.93 | 0.32 | 1.02 | 5.62 | 6.47 | 5.64 | 5.88 |
+| 2026-10-19 | fbd948c | 0.9.7 | 1.13.2 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 8.81 | 2.16 | 0.34 | 1.08 | 6.25 | 7.08 | 6.2 | 6.45 |
 
 ```mermaid
 ---
@@ -33,9 +33,9 @@ config:
 ---
 xychart-beta
     title "1.13 help"
-    x-axis ["10-18 2ad75fb", "10-18 de4ef6e", "10-19 860266c"]
+    x-axis ["10-18 2ad75fb", "10-18 de4ef6e", "10-19 860266c", "10-19 v0.9.7"]
     y-axis "seconds" 0 --> 18
-    line [14.66, 1.15, 1.02]
+    line [14.66, 1.15, 1.02, 1.08]
 ```
 
 
@@ -43,15 +43,15 @@ Latest `help` methods:
 
 | method | now ms | previous ms |
 | --- | ---: | ---: |
-| `Tuple{typeof(DistSSHQueue.main), Array{String, 1}}` | 457.5 | 536.3 |
-| `Tuple{typeof(Core.kwcall), NamedTuple{(:topic,), Tuple{Nothing}}, typeof(DistSSHQueue.prin...` | 49.9 | 57.2 |
-| `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 17.4 | 20.2 |
-| `Tuple{typeof(Base.should_use_main_entrypoint)}` | 12.8 | 11.8 |
-| `Tuple{typeof(Core.kwcall), NamedTuple{(:topic,), Tuple{Nothing}}, typeof(DistSSHQueue.prin...` | 4.2 | 5.1 |
-| `Tuple{typeof(Base.getproperty), Base.Set{String}, Symbol}` | 3.5 | 4.1 |
-| `Tuple{typeof(Base.something), Nothing, Symbol}` | 3.5 | 3.3 |
-| `Tuple{typeof(Base.getproperty), Base.GenericCondition{Base.ReentrantLock}, Symbol}` | 3.4 | 3.6 |
-| `Tuple{typeof(Base._cshp), Int64, Tuple{Bool}, Tuple{}, Tuple{Int64}}` | 3.2 | 3.8 |
+| `Tuple{typeof(DistSSHQueue.main), Array{String, 1}}` | 492.6 | 457.5 |
+| `Tuple{typeof(Core.kwcall), NamedTuple{(:topic,), Tuple{Nothing}}, typeof(DistSSHQueue.prin...` | 51.4 | 49.9 |
+| `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 17.3 | 17.4 |
+| `Tuple{typeof(Base.should_use_main_entrypoint)}` | 11.4 | 12.8 |
+| `Tuple{typeof(Core.kwcall), NamedTuple{(:topic,), Tuple{Nothing}}, typeof(DistSSHQueue.prin...` | 3.8 | 4.2 |
+| `Tuple{typeof(Base.getproperty), Base.Set{String}, Symbol}` | 3.4 | 3.5 |
+| `Tuple{typeof(Base.something), Nothing, Symbol}` | 3.4 | 3.5 |
+| `Tuple{typeof(Base.getproperty), Base.GenericCondition{Base.ReentrantLock}, Symbol}` | 3.2 | 3.4 |
+| `Tuple{typeof(Base._cshp), Int64, Tuple{Bool}, Tuple{}, Tuple{Int64}}` | 3.0 | 3.2 |
 
 ```mermaid
 ---
@@ -66,9 +66,9 @@ config:
 ---
 xychart-beta
     title "1.13 status"
-    x-axis ["10-18 2ad75fb", "10-18 de4ef6e", "10-19 860266c"]
+    x-axis ["10-18 2ad75fb", "10-18 de4ef6e", "10-19 860266c", "10-19 v0.9.7"]
     y-axis "seconds" 0 --> 19
-    line [15.43, 6.52, 5.62]
+    line [15.43, 6.52, 5.62, 6.25]
 ```
 
 
@@ -76,16 +76,16 @@ Latest `status` methods:
 
 | method | now ms | previous ms |
 | --- | ---: | ---: |
-| `Tuple{DistSSHQueue.var"#_entry_forward##0#_entry_forward##1"{DistSSHQueue.var"#_argv##0#_a...` | 3811.1 | 4424.5 |
-| `Tuple{DistSSHQueue.var"##show_status#195", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool...` | 836.0 |  |
-| `Tuple{typeof(DistSSHQueue.main), Array{String, 1}}` | 465.4 | 519.6 |
-| `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 17.7 | 21.1 |
-| `Tuple{typeof(Core.kwcall), NamedTuple{(:quiet, :tail, :verbose), Tuple{Bool, Nothing, Bool...` | 13.0 | 14.2 |
-| `Tuple{typeof(Base.should_use_main_entrypoint)}` | 12.7 | 11.6 |
-| `Tuple{typeof(Base._array_for), Type{DistSSHQueue.Job}, Array{Any, 1}, Base.HasShape{1}}` | 6.3 | 7.7 |
-| `Tuple{typeof(Base.getproperty), NamedTuple{(:quiet, :progress, :verbose, :yes, :hosts_file...` | 5.5 | 5.4 |
-| `Tuple{Dates.var"##34#35", Vararg{Any, 5}}` | 4.5 | 5.0 |
-| `Tuple{typeof(Base.map), Base.var"#append!##0#append!##1"{String}, NTuple{10, String}}` | 4.3 | 4.7 |
+| `Tuple{DistSSHQueue.var"#_entry_forward##0#_entry_forward##1"{DistSSHQueue.var"#_argv##0#_a...` | 4303.4 | 3811.1 |
+| `Tuple{DistSSHQueue.var"##show_status#195", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool...` | 906.6 | 836.0 |
+| `Tuple{typeof(DistSSHQueue.main), Array{String, 1}}` | 500.5 | 465.4 |
+| `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 18.0 | 17.7 |
+| `Tuple{typeof(Core.kwcall), NamedTuple{(:quiet, :tail, :verbose), Tuple{Bool, Nothing, Bool...` | 13.5 | 13.0 |
+| `Tuple{typeof(Base.should_use_main_entrypoint)}` | 11.4 | 12.7 |
+| `Tuple{typeof(Base._array_for), Type{DistSSHQueue.Job}, Array{Any, 1}, Base.HasShape{1}}` | 7.0 | 6.3 |
+| `Tuple{typeof(Base.getproperty), NamedTuple{(:quiet, :progress, :verbose, :yes, :hosts_file...` | 5.3 | 5.5 |
+| `Tuple{typeof(Base.map), Base.var"#append!##0#append!##1"{String}, NTuple{10, String}}` | 4.8 | 4.3 |
+| `Tuple{Dates.var"##34#35", Vararg{Any, 5}}` | 4.7 | 4.5 |
 
 ```mermaid
 ---
@@ -100,9 +100,9 @@ config:
 ---
 xychart-beta
     title "1.13 submit"
-    x-axis ["10-18 de4ef6e", "10-19 860266c"]
+    x-axis ["10-18 de4ef6e", "10-19 860266c", "10-19 v0.9.7"]
     y-axis "seconds" 0 --> 9
-    line [7.38, 6.47]
+    line [7.38, 6.47, 7.08]
 ```
 
 
@@ -110,16 +110,16 @@ Latest `submit` methods:
 
 | method | now ms | previous ms |
 | --- | ---: | ---: |
-| `Tuple{DistSSHQueue.var"#_entry_forward##0#_entry_forward##1"{DistSSHQueue.var"#_argv##0#_a...` | 4545.9 | 5261.4 |
-| `Tuple{typeof(Core.kwcall), NamedTuple{(:kind, :quiet, :verbosity), Tuple{Symbol, Bool, Str...` | 508.2 | 577.6 |
-| `Tuple{typeof(DistSSHQueue.main), Array{String, 1}}` | 456.5 | 523.5 |
-| `Tuple{typeof(Core.kwcall), NamedTuple{(:kind,), Tuple{Symbol}}, typeof(DistSSHQueue.submit...` | 103.6 | 116.0 |
-| `Tuple{typeof(DistSSHQueue.script_arg), String, String}` | 82.3 | 96.4 |
-| `Tuple{typeof(DistSSHQueue.reject_worker_root_collision!), Array{DistSSHQueue.Job, 1}, Stri...` | 59.4 | 64.3 |
-| `Tuple{typeof(DistSSHQueue.parse_host_cap), String}` | 44.5 | 51.8 |
-| `Tuple{typeof(Core.kwcall), NamedTuple{(:kind,), Tuple{Symbol}}, typeof(DistSSHQueue.submit...` | 21.0 | 23.8 |
-| `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 17.5 | 19.4 |
-| `Tuple{typeof(Core.kwcall), NamedTuple{(:indent, :sorted, :by, :inline_tables), Tuple{Int64...` | 13.9 | 16.9 |
+| `Tuple{DistSSHQueue.var"#_entry_forward##0#_entry_forward##1"{DistSSHQueue.var"#_argv##0#_a...` | 5070.2 | 4545.9 |
+| `Tuple{typeof(Core.kwcall), NamedTuple{(:kind, :quiet, :verbosity), Tuple{Symbol, Bool, Str...` | 545.6 | 508.2 |
+| `Tuple{typeof(DistSSHQueue.main), Array{String, 1}}` | 504.5 | 456.5 |
+| `Tuple{typeof(Core.kwcall), NamedTuple{(:kind,), Tuple{Symbol}}, typeof(DistSSHQueue.submit...` | 109.2 | 103.6 |
+| `Tuple{typeof(DistSSHQueue.script_arg), String, String}` | 88.5 | 82.3 |
+| `Tuple{typeof(DistSSHQueue.reject_worker_root_collision!), Array{DistSSHQueue.Job, 1}, Stri...` | 60.6 | 59.4 |
+| `Tuple{typeof(DistSSHQueue.parse_host_cap), String}` | 50.4 | 44.5 |
+| `Tuple{typeof(Core.kwcall), NamedTuple{(:kind,), Tuple{Symbol}}, typeof(DistSSHQueue.submit...` | 22.4 | 21.0 |
+| `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 17.7 | 17.5 |
+| `Tuple{typeof(Core.kwcall), NamedTuple{(:indent, :sorted, :by, :inline_tables), Tuple{Int64...` | 14.8 | 13.9 |
 
 ```mermaid
 ---
@@ -134,9 +134,9 @@ config:
 ---
 xychart-beta
     title "1.13 watch"
-    x-axis ["10-18 de4ef6e", "10-19 860266c"]
+    x-axis ["10-18 de4ef6e", "10-19 860266c", "10-19 v0.9.7"]
     y-axis "seconds" 0 --> 8
-    line [6.55, 5.64]
+    line [6.55, 5.64, 6.2]
 ```
 
 
@@ -144,16 +144,16 @@ Latest `watch` methods:
 
 | method | now ms | previous ms |
 | --- | ---: | ---: |
-| `Tuple{DistSSHQueue.var"#_entry_forward##0#_entry_forward##1"{DistSSHQueue.var"#_argv##0#_a...` | 3785.7 | 4415.9 |
-| `Tuple{DistSSHQueue.var"##watch!#199", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, No...` | 864.3 |  |
-| `Tuple{typeof(DistSSHQueue.main), Array{String, 1}}` | 457.7 | 541.3 |
-| `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 17.4 | 19.5 |
-| `Tuple{typeof(Core.kwcall), NamedTuple{(:interval, :ticks, :quiet, :tail, :verbose), Tuple{...` | 16.1 | 18.1 |
-| `Tuple{typeof(Base.should_use_main_entrypoint)}` | 12.4 | 13.5 |
-| `Tuple{typeof(Base._array_for), Type{DistSSHQueue.Job}, Array{Any, 1}, Base.HasShape{1}}` | 6.3 | 7.6 |
-| `Tuple{typeof(Base.getproperty), NamedTuple{(:quiet, :progress, :verbose, :yes, :hosts_file...` | 5.4 | 5.5 |
-| `Tuple{Dates.var"##34#35", Vararg{Any, 5}}` | 4.5 | 4.9 |
-| `Tuple{typeof(Core.kwcall), NamedTuple{(:read, :write, :append, :truncate), Tuple{Bool, Boo...` | 4.1 |  |
+| `Tuple{DistSSHQueue.var"#_entry_forward##0#_entry_forward##1"{DistSSHQueue.var"#_argv##0#_a...` | 4127.5 | 3785.7 |
+| `Tuple{DistSSHQueue.var"##watch!#199", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, No...` | 949.0 | 864.3 |
+| `Tuple{typeof(DistSSHQueue.main), Array{String, 1}}` | 494.6 | 457.7 |
+| `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 19.3 | 17.4 |
+| `Tuple{typeof(Core.kwcall), NamedTuple{(:interval, :ticks, :quiet, :tail, :verbose), Tuple{...` | 17.0 | 16.1 |
+| `Tuple{typeof(Base.should_use_main_entrypoint)}` | 11.4 | 12.4 |
+| `Tuple{typeof(Base._array_for), Type{DistSSHQueue.Job}, Array{Any, 1}, Base.HasShape{1}}` | 7.5 | 6.3 |
+| `Tuple{typeof(Base.getproperty), NamedTuple{(:quiet, :progress, :verbose, :yes, :hosts_file...` | 5.3 | 5.4 |
+| `Tuple{typeof(Base.map), Base.var"#append!##0#append!##1"{String}, NTuple{10, String}}` | 4.6 | 4.0 |
+| `Tuple{Dates.var"##34#35", Vararg{Any, 5}}` | 4.5 | 4.5 |
 
 ```mermaid
 ---
@@ -168,9 +168,9 @@ config:
 ---
 xychart-beta
     title "1.13 cancel"
-    x-axis ["10-18 de4ef6e", "10-19 860266c"]
+    x-axis ["10-18 de4ef6e", "10-19 860266c", "10-19 v0.9.7"]
     y-axis "seconds" 0 --> 9
-    line [6.92, 5.88]
+    line [6.92, 5.88, 6.45]
 ```
 
 
@@ -178,16 +178,16 @@ Latest `cancel` methods:
 
 | method | now ms | previous ms |
 | --- | ---: | ---: |
-| `Tuple{DistSSHQueue.var"#_entry_forward##0#_entry_forward##1"{DistSSHQueue.var"#_argv##0#_a...` | 4622.3 | 5472.3 |
-| `Tuple{typeof(DistSSHQueue.main), Array{String, 1}}` | 452.3 | 528.3 |
-| `Tuple{typeof(DistSSHQueue._row_dt), String, String}` | 76.2 | 90.6 |
-| `Tuple{typeof(DistSSHQueue._job_row), Base.Dict{String, Any}, String}` | 51.6 | 62.6 |
-| `Tuple{Type{Base.Dict{String, Any}}, Base.Generator{Base.Dict{String, Any}, DistSSHQueue.va...` | 27.3 | 31.0 |
-| `Tuple{typeof(Core.kwcall), NamedTuple{(:id, :kind, :script, :hosts, :state, :queued_at, :s...` | 21.0 | 24.1 |
-| `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 17.7 | 20.9 |
-| `Tuple{typeof(Core.kwcall), NamedTuple{(:indent, :sorted, :by, :inline_tables), Tuple{Int64...` | 13.9 | 17.7 |
-| `Tuple{typeof(Base.should_use_main_entrypoint)}` | 12.4 | 11.7 |
-| `Tuple{typeof(Base.iterate), Base.Dict{String, Any}}` | 10.2 | 12.2 |
+| `Tuple{DistSSHQueue.var"#_entry_forward##0#_entry_forward##1"{DistSSHQueue.var"#_argv##0#_a...` | 5087.1 | 4622.3 |
+| `Tuple{typeof(DistSSHQueue.main), Array{String, 1}}` | 507.5 | 452.3 |
+| `Tuple{typeof(DistSSHQueue._row_dt), String, String}` | 87.1 | 76.2 |
+| `Tuple{typeof(DistSSHQueue._job_row), Base.Dict{String, Any}, String}` | 57.5 | 51.6 |
+| `Tuple{Type{Base.Dict{String, Any}}, Base.Generator{Base.Dict{String, Any}, DistSSHQueue.va...` | 29.2 | 27.3 |
+| `Tuple{typeof(Core.kwcall), NamedTuple{(:id, :kind, :script, :hosts, :state, :queued_at, :s...` | 22.6 | 21.0 |
+| `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 18.0 | 17.7 |
+| `Tuple{typeof(Core.kwcall), NamedTuple{(:indent, :sorted, :by, :inline_tables), Tuple{Int64...` | 15.4 | 13.9 |
+| `Tuple{typeof(Base.should_use_main_entrypoint)}` | 11.6 | 12.4 |
+| `Tuple{typeof(Base.iterate), Base.Dict{String, Any}}` | 11.1 | 10.2 |
 
 ## 1.14-nightly
 
