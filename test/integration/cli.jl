@@ -116,6 +116,39 @@ function stop_store_serve(store::AbstractString)
     return nothing
 end
 
+# On Julia 1.13, a SIGINT in the first few tenths of a second after `serve`
+# starts can land in Distributed's `start_gc_msgs_task` instead of the main
+# task. Signal after the loop has run a few intervals.
+const SIGINT_SETTLE_S = 1.5
+
+function spawn_to_file(cmd::Cmd, env::AbstractDict, path::AbstractString)::Base.Process
+    return run(pipeline(addenv(cmd, env...); stdout = path, stderr = devnull); wait = false)
+end
+
+function wait_output(path::AbstractString, proc::Base.Process, needle::AbstractString; seconds::Real = 60)::Bool
+    deadline = time() + seconds
+    while time() < deadline && process_running(proc)
+        isfile(path) && occursin(needle, read(path, String)) && return true
+        sleep(0.05)
+    end
+    return false
+end
+
+function sigint_stopped(proc::Base.Process; seconds::Real = 20)::Bool
+    kill(proc, Base.SIGINT)
+    deadline = time() + seconds
+    while process_running(proc) && time() < deadline
+        sleep(0.05)
+    end
+    return !process_running(proc)
+end
+
+function reap_child(proc::Base.Process)
+    process_running(proc) && kill(proc, Base.SIGTERM)
+    wait(proc)
+    return nothing
+end
+
 function write_fake_ssh(path::AbstractString, log::AbstractString)
     mkpath(dirname(path))
     write(
@@ -378,6 +411,43 @@ end
             end
             @test !isfile(leftover)
             @test !isdir(data)
+        end
+    end
+
+    @testset "SIGINT stops serve" begin
+        mktempdir() do d
+            base, _, store, _ = cli_env(d)
+            env = merge(base, Dict("DISTSSHQUEUE_NO_AUTOSERVE" => "1"))
+            logf = joinpath(d, "serve.out")
+            pidpath = DistSSHQueue.store_pid_path(store)
+            proc = spawn_to_file(qcli(["serve", "--interval", "0.2"]), env, logf)
+            try
+                @test wait_output(logf, proc, "Ctrl-C stops serve")
+                @test isfile(pidpath)
+                sleep(SIGINT_SETTLE_S)
+                @test sigint_stopped(proc)
+                @test proc.exitcode == 0
+                @test !isfile(pidpath)
+            finally
+                reap_child(proc)
+            end
+        end
+    end
+
+    @testset "SIGINT stops watch" begin
+        mktempdir() do d
+            store = joinpath(d, "jobs.toml")
+            logf = joinpath(d, "watch.out")
+            env = Dict("DISTSSHQUEUE_STORE" => store, "DISTSSHQUEUE_CONFIG" => joinpath(d, "no.toml"))
+            proc = spawn_to_file(qcli(["watch", "--interval", "0.2"]), env, logf)
+            try
+                @test wait_output(logf, proc, "serve")
+                sleep(SIGINT_SETTLE_S)
+                @test sigint_stopped(proc)
+                @test proc.exitcode == 0
+            finally
+                reap_child(proc)
+            end
         end
     end
 end

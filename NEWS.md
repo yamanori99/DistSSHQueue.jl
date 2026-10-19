@@ -5,6 +5,15 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- Requires DistSSHRun 0.1.10.
+- On Julia 1.14, Ctrl-C during `serve` or `watch` exits 0, and `serve`
+  removes its pidfile. It used to exit 1 with a `CancellationRequest`
+  stacktrace. Julia 1.13 already exited 0. On Julia 1.13, a Ctrl-C in the
+  first moments after `serve` starts can be lost, and `serve` keeps running.
+- The first `julia -m DistSSHQueue` compiles the subcommand it runs, not
+  every subcommand. That compile change does not change commands, flags, or
+  exit codes.
+
 ### Planned breaking (next minor)
 
 - `serve --interval <= 0` will be rejected.
@@ -16,9 +25,6 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 - `cancel` of a `:running` job will send SIGINT before SIGTERM, once
   DistSSHRun's `interrupt_grace` defaults to a positive value. Until then
   `cancel` does not send SIGINT.
-
-- The first `julia -m DistSSHQueue` compiles the subcommand it runs, not
-  every subcommand. Commands, flags, and exit codes are unchanged.
 
 ## 0.9.6
 

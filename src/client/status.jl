@@ -221,7 +221,7 @@ function watch!(
             sleep(interval)
         end
     catch e
-        e isa InterruptException || rethrow()
+        is_sigint(e) || rethrow()
     end
     return 0
 end

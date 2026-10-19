@@ -1016,7 +1016,7 @@ function serve!(q::Queue; interval::Real = 0.2)
     spin = if draw
         # SIGINT must hit the serve loop, not this sleep (else one Ctrl-C
         # only kills the spinner and a second is needed to exit).
-        @async disable_sigint() do
+        @async shield_sigint() do
             i = 1
             frames = DistSSHRun.SPINNER_FRAMES
             while !done[]
@@ -1030,7 +1030,7 @@ function serve!(q::Queue; interval::Real = 0.2)
         nothing
     end
     owns() = store isa String ? (serve_pid(store) == getpid()) : true
-    gone = false
+    gone = Ref(false)
     # Skip the dir-lock + TOML parse of `step!` while the store is unchanged: an
     # idle serve otherwise churns mkdir/rmdir + parse every `interval`. Any
     # client enqueue or our own persist bumps the mtime, so nothing is missed.
@@ -1038,7 +1038,7 @@ function serve!(q::Queue; interval::Real = 0.2)
     try
         while true
             if !owns()
-                gone = true
+                gone[] = true
                 break
             end
             if store isa String
@@ -1055,19 +1055,21 @@ function serve!(q::Queue; interval::Real = 0.2)
             sleep(interval)
         end
     catch e
-        e isa InterruptException || rethrow()
+        is_sigint(e) || rethrow()
         return nothing
     finally
         done[] = true
-        _join_serve_spin!(spin)
-        if draw
-            print(io, "\r\e[K")
-            flush(io)
-        end
-        if gone
-            print_serve_gone(label; io = io)
-        elseif store isa String
-            remove_pid_file_if!(store, getpid())
+        without_cancel() do
+            _join_serve_spin!(spin)
+            if draw
+                print(io, "\r\e[K")
+                flush(io)
+            end
+            if gone[]
+                print_serve_gone(label; io = io)
+            elseif store isa String
+                remove_pid_file_if!(store, getpid())
+            end
         end
     end
     return nothing
@@ -1083,12 +1085,11 @@ function serve(; store::AbstractString = default_store_path(), interval::Real = 
     return serve!(Queue(; store = store, runner = runner); interval = interval)
 end
 
-_is_interrupt(::InterruptException) = true
 function _is_interrupt(e::TaskFailedException)
     t = e.task
     return istaskfailed(t) && _is_interrupt(t.exception)
 end
-_is_interrupt(::Any) = false
+_is_interrupt(e) = is_sigint(e)
 
 """Wait out the TTY spinner. Ctrl-C also hits that task's `sleep`; do not surface it."""
 function _join_serve_spin!(spin)
