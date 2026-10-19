@@ -17,6 +17,10 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
   DistSSHRun's `interrupt_grace` defaults to a positive value. Until then
   `cancel` does not send SIGINT.
 
+- Requires DistSSHRun 0.1.10.
+- Ctrl-C during `serve` or `watch` stops that command and exits 0.
+  `serve` removes its pidfile. `julia -m` used to exit before this catch.
+  On Julia 1.14 the catch also accepts `CancellationRequest`.
 - The first `julia -m DistSSHQueue` compiles the subcommand it runs, not
   every subcommand. Commands, flags, and exit codes are unchanged.
 

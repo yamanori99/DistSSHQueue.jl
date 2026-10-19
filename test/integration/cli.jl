@@ -380,4 +380,79 @@ end
             @test !isdir(data)
         end
     end
+
+    # `julia -m` exits on SIGINT until the command turns that off. Wait until
+    # the command is inside that region, then signal only that process.
+    function wait_store_pid(store::AbstractString; seconds::Real = 60)
+        path = DistSSHQueue.store_pid_path(store)
+        deadline = time() + seconds
+        while time() < deadline
+            isfile(path) && return path
+            sleep(0.05)
+        end
+        error("pidfile missing: $path")
+    end
+
+    function wait_output(path::AbstractString, proc; seconds::Real = 60)::Bool
+        deadline = time() + seconds
+        while time() < deadline && process_running(proc)
+            filesize(path) > 0 && return true
+            sleep(0.05)
+        end
+        return false
+    end
+
+    function sigint_stopped(proc; seconds::Real = 20)::Bool
+        kill(proc, Base.SIGINT)
+        deadline = time() + seconds
+        while process_running(proc) && time() < deadline
+            sleep(0.05)
+        end
+        return !process_running(proc)
+    end
+
+    @testset "SIGINT stops serve" begin
+        mktempdir() do d
+            base, _, store, _ = cli_env(d)
+            env = merge(base, Dict("DISTSSHQUEUE_NO_AUTOSERVE" => "1"))
+            proc = run(addenv(qcli(["serve", "--interval", "0.2"]), env...); wait = false)
+            pidpath = ""
+            try
+                pidpath = wait_store_pid(store)
+                sleep(0.4)
+                stopped = sigint_stopped(proc)
+                @test stopped
+                @test proc.exitcode == 0
+                @test !isfile(pidpath)
+            finally
+                process_running(proc) && kill(proc, Base.SIGTERM)
+                wait(proc)
+            end
+        end
+    end
+
+    @testset "SIGINT stops watch" begin
+        mktempdir() do d
+            store = joinpath(d, "jobs.toml")
+            logf = joinpath(d, "watch.out")
+            env = Dict("DISTSSHQUEUE_STORE" => store, "DISTSSHQUEUE_CONFIG" => joinpath(d, "no.toml"))
+            io = open(logf, "w")
+            proc = run(
+                pipeline(addenv(qcli(["watch", "--interval", "0.2"]), env...); stdout = io, stderr = devnull);
+                wait = false,
+            )
+            try
+                @test wait_output(logf, proc)
+                # First line is printed before `sleep`. Wait so SIGINT hits that sleep.
+                sleep(0.5)
+                stopped = sigint_stopped(proc)
+                @test stopped
+                @test proc.exitcode == 0
+            finally
+                process_running(proc) && kill(proc, Base.SIGTERM)
+                wait(proc)
+                close(io)
+            end
+        end
+    end
 end

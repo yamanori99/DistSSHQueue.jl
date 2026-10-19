@@ -201,29 +201,31 @@ function watch!(
     ticks === nothing || ticks >= 1 || throw(ArgumentError("watch: $WATCH_TICKS_ENV must be >= 1"))
     n = 0
     prev = Ref("")
-    try
-        while true
-            n += 1
-            rows = isfile(store) ? read_jobs(store) : Job[]
-            _warn_dead_kit_pid!(rows)
-            shown, hidden = _tail_jobs(rows, tail)
-            if quiet || io isa Base.TTY
-                _watch_redraw!(io, prev) do buf
-                    print_watch_frame(
-                        store, shown; io = buf, qhost = qhost, quiet = quiet,
-                        hidden = hidden, verbose = verbose,
-                    )
+    return _with_sigint_exceptions() do
+        try
+            while true
+                n += 1
+                rows = isfile(store) ? read_jobs(store) : Job[]
+                _warn_dead_kit_pid!(rows)
+                shown, hidden = _tail_jobs(rows, tail)
+                if quiet || io isa Base.TTY
+                    _watch_redraw!(io, prev) do buf
+                        print_watch_frame(
+                            store, shown; io = buf, qhost = qhost, quiet = quiet,
+                            hidden = hidden, verbose = verbose,
+                        )
+                    end
+                else
+                    print_watch_compact(store, shown; io = io)
                 end
-            else
-                print_watch_compact(store, shown; io = io)
+                ticks !== nothing && n >= ticks && break
+                sleep(interval)
             end
-            ticks !== nothing && n >= ticks && break
-            sleep(interval)
+        catch e
+            is_sigint(e) || rethrow()
         end
-    catch e
-        e isa InterruptException || rethrow()
+        return Cint(0)
     end
-    return 0
 end
 
 function watch_cli(args::Vector{String})::Cint
