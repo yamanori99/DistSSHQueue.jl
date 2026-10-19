@@ -35,7 +35,29 @@ xychart-beta
     title "1.13 help"
     x-axis ["10-18 2ad75fb", "10-18 de4ef6e", "10-19 860266c", "10-19 v0.9.7"]
     y-axis "seconds" 0 --> 18
-    line [14.66, 1.15, 1.02, 1.08]
+        line "help" [14.66, 1.15, 1.02, 1.08]
+```
+
+
+```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    xyChart:
+      plotColorPalette: "#1f4e79, #b85c38, #2d6a4f, #6b4c9a"
+  xyChart:
+    xAxis:
+      labelRotation: 45
+---
+xychart-beta
+    title "1.13 status submit watch cancel"
+    x-axis ["10-18 2ad75fb", "10-18 de4ef6e", "10-19 860266c", "10-19 v0.9.7"]
+    y-axis "seconds" 0 --> 19
+        line "status" [15.43, 6.52, 5.62, 6.25]
+        line "submit" [null, 7.38, 6.47, 7.08]
+        line "watch" [null, 6.55, 5.64, 6.2]
+        line "cancel" [null, 6.92, 5.88, 6.45]
 ```
 
 
@@ -53,25 +75,6 @@ Latest `help` methods:
 | `Tuple{typeof(Base.getproperty), Base.GenericCondition{Base.ReentrantLock}, Symbol}` | 3.2 | 3.4 |
 | `Tuple{typeof(Base._cshp), Int64, Tuple{Bool}, Tuple{}, Tuple{Int64}}` | 3.0 | 3.2 |
 
-```mermaid
----
-config:
-  theme: base
-  themeVariables:
-    xyChart:
-      plotColorPalette: "#1f4e79"
-  xyChart:
-    xAxis:
-      labelRotation: 45
----
-xychart-beta
-    title "1.13 status"
-    x-axis ["10-18 2ad75fb", "10-18 de4ef6e", "10-19 860266c", "10-19 v0.9.7"]
-    y-axis "seconds" 0 --> 19
-    line [15.43, 6.52, 5.62, 6.25]
-```
-
-
 Latest `status` methods:
 
 | method | now ms | previous ms |
@@ -86,25 +89,6 @@ Latest `status` methods:
 | `Tuple{typeof(Base.getproperty), NamedTuple{(:quiet, :progress, :verbose, :yes, :hosts_file...` | 5.3 | 5.5 |
 | `Tuple{typeof(Base.map), Base.var"#append!##0#append!##1"{String}, NTuple{10, String}}` | 4.8 | 4.3 |
 | `Tuple{Dates.var"##34#35", Vararg{Any, 5}}` | 4.7 | 4.5 |
-
-```mermaid
----
-config:
-  theme: base
-  themeVariables:
-    xyChart:
-      plotColorPalette: "#1f4e79"
-  xyChart:
-    xAxis:
-      labelRotation: 45
----
-xychart-beta
-    title "1.13 submit"
-    x-axis ["10-18 de4ef6e", "10-19 860266c", "10-19 v0.9.7"]
-    y-axis "seconds" 0 --> 9
-    line [7.38, 6.47, 7.08]
-```
-
 
 Latest `submit` methods:
 
@@ -121,25 +105,6 @@ Latest `submit` methods:
 | `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 17.7 | 17.5 |
 | `Tuple{typeof(Core.kwcall), NamedTuple{(:indent, :sorted, :by, :inline_tables), Tuple{Int64...` | 14.8 | 13.9 |
 
-```mermaid
----
-config:
-  theme: base
-  themeVariables:
-    xyChart:
-      plotColorPalette: "#1f4e79"
-  xyChart:
-    xAxis:
-      labelRotation: 45
----
-xychart-beta
-    title "1.13 watch"
-    x-axis ["10-18 de4ef6e", "10-19 860266c", "10-19 v0.9.7"]
-    y-axis "seconds" 0 --> 8
-    line [6.55, 5.64, 6.2]
-```
-
-
 Latest `watch` methods:
 
 | method | now ms | previous ms |
@@ -154,25 +119,6 @@ Latest `watch` methods:
 | `Tuple{typeof(Base.getproperty), NamedTuple{(:quiet, :progress, :verbose, :yes, :hosts_file...` | 5.3 | 5.4 |
 | `Tuple{typeof(Base.map), Base.var"#append!##0#append!##1"{String}, NTuple{10, String}}` | 4.6 | 4.0 |
 | `Tuple{Dates.var"##34#35", Vararg{Any, 5}}` | 4.5 | 4.5 |
-
-```mermaid
----
-config:
-  theme: base
-  themeVariables:
-    xyChart:
-      plotColorPalette: "#1f4e79"
-  xyChart:
-    xAxis:
-      labelRotation: 45
----
-xychart-beta
-    title "1.13 cancel"
-    x-axis ["10-18 de4ef6e", "10-19 860266c", "10-19 v0.9.7"]
-    y-axis "seconds" 0 --> 9
-    line [6.92, 5.88, 6.45]
-```
-
 
 Latest `cancel` methods:
 
@@ -204,16 +150,20 @@ config:
   theme: base
   themeVariables:
     xyChart:
-      plotColorPalette: "#1f4e79"
+      plotColorPalette: "#1f4e79, #b85c38, #2d6a4f, #6b4c9a, #8a5a2b"
   xyChart:
     xAxis:
       labelRotation: 45
 ---
 xychart-beta
-    title "1.14-nightly 1.14-DEV.3787 help"
+    title "1.14-nightly 1.14-DEV.3787"
     x-axis ["10-18 1.14-DEV.3787", "10-18 de4ef6e", "10-19 860266c", "10-19 v0.9.7"]
     y-axis "seconds" 0 --> 6
-    line [4.2, 0.71, 0.62, 0.64]
+        line "help" [4.2, 0.71, 0.62, 0.64]
+        line "status" [4.33, 1.82, 1.44, 1.63]
+        line "submit" [null, 2.12, 1.67, 1.58]
+        line "watch" [null, 1.76, 1.47, 1.4]
+        line "cancel" [null, 1.93, 1.51, 1.52]
 ```
 
 
@@ -232,25 +182,6 @@ Latest `help` methods:
 | `Tuple{typeof(Base.tail), NTuple{14, String}}` | 4.2 | 3.9 |
 | `Tuple{typeof(Base._cshp), Int64, Tuple{Bool}, Tuple{}, Tuple{Int64}}` | 4.1 | 3.9 |
 
-```mermaid
----
-config:
-  theme: base
-  themeVariables:
-    xyChart:
-      plotColorPalette: "#1f4e79"
-  xyChart:
-    xAxis:
-      labelRotation: 45
----
-xychart-beta
-    title "1.14-nightly 1.14-DEV.3787 status"
-    x-axis ["10-18 1.14-DEV.3787", "10-18 de4ef6e", "10-19 860266c", "10-19 v0.9.7"]
-    y-axis "seconds" 0 --> 6
-    line [4.33, 1.82, 1.44, 1.63]
-```
-
-
 Latest `status` methods:
 
 | method | now ms | previous ms |
@@ -265,25 +196,6 @@ Latest `status` methods:
 | `Tuple{typeof(Base.map), Base.var"#append!##0#append!##1"{String}, NTuple{10, String}}` | 7.0 | 6.4 |
 | `Tuple{typeof(Base._array_for), Core.TypeEgal{DistSSHQueue.Job}, Array{Any, 1}, Base.HasSha...` | 6.7 | 6.2 |
 | `Tuple{typeof(DistSSHQueue._q_cell), String, Int64}` | 5.1 | 5.0 |
-
-```mermaid
----
-config:
-  theme: base
-  themeVariables:
-    xyChart:
-      plotColorPalette: "#1f4e79"
-  xyChart:
-    xAxis:
-      labelRotation: 45
----
-xychart-beta
-    title "1.14-nightly 1.14-DEV.3787 submit"
-    x-axis ["10-18 1.14-DEV.3787", "10-19 860266c", "10-19 v0.9.7"]
-    y-axis "seconds" 0 --> 3
-    line [2.12, 1.67, 1.58]
-```
-
 
 Latest `submit` methods:
 
@@ -300,25 +212,6 @@ Latest `submit` methods:
 | `Tuple{typeof(Core.kwcall), NamedTuple{(:kind,), Tuple{Symbol}}, typeof(DistSSHQueue.submit...` | 17.0 | 17.1 |
 | `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 10.5 | 11.6 |
 
-```mermaid
----
-config:
-  theme: base
-  themeVariables:
-    xyChart:
-      plotColorPalette: "#1f4e79"
-  xyChart:
-    xAxis:
-      labelRotation: 45
----
-xychart-beta
-    title "1.14-nightly 1.14-DEV.3787 watch"
-    x-axis ["10-18 1.14-DEV.3787", "10-19 860266c", "10-19 v0.9.7"]
-    y-axis "seconds" 0 --> 3
-    line [1.76, 1.47, 1.4]
-```
-
-
 Latest `watch` methods:
 
 | method | now ms | previous ms |
@@ -333,25 +226,6 @@ Latest `watch` methods:
 | `Tuple{typeof(Base.should_use_main_entrypoint)}` | 2.9 | 3.0 |
 | `Tuple{Base.var"##187#188", Vararg{Any, 4}}` | 2.9 | 2.9 |
 | `Tuple{typeof(Base._array_for), Core.TypeEgal{DistSSHQueue.Job}, Array{Any, 1}, Base.HasSha...` | 1.7 | 1.8 |
-
-```mermaid
----
-config:
-  theme: base
-  themeVariables:
-    xyChart:
-      plotColorPalette: "#1f4e79"
-  xyChart:
-    xAxis:
-      labelRotation: 45
----
-xychart-beta
-    title "1.14-nightly 1.14-DEV.3787 cancel"
-    x-axis ["10-18 1.14-DEV.3787", "10-19 860266c", "10-19 v0.9.7"]
-    y-axis "seconds" 0 --> 3
-    line [1.93, 1.51, 1.52]
-```
-
 
 Latest `cancel` methods:
 
@@ -382,16 +256,20 @@ config:
   theme: base
   themeVariables:
     xyChart:
-      plotColorPalette: "#1f4e79"
+      plotColorPalette: "#1f4e79, #b85c38, #2d6a4f, #6b4c9a, #8a5a2b"
   xyChart:
     xAxis:
       labelRotation: 45
 ---
 xychart-beta
-    title "nightly 1.15-DEV.18 help"
+    title "nightly 1.15-DEV.18"
     x-axis ["10-18 1.14-DEV.3787", "10-19 julia 1.15-DEV.18", "10-19 v0.9.7"]
-    y-axis "seconds" 0 --> 1
-    line [0.77, 0.77, 0.77]
+    y-axis "seconds" 0 --> 3
+        line "help" [0.77, 0.77, 0.77]
+        line "status" [2.0, 2.05, 2.03]
+        line "submit" [2.24, 2.3, 2.34]
+        line "watch" [1.95, 2.03, 2.01]
+        line "cancel" [2.14, 2.13, 2.16]
 ```
 
 
@@ -410,25 +288,6 @@ Latest `help` methods:
 | `Tuple{typeof(Base._cshp), Int64, Tuple{Bool}, Tuple{}, Tuple{Int64}}` | 4.0 | 3.9 |
 | `Tuple{typeof(Base.tail), NTuple{14, String}}` | 4.0 | 4.0 |
 
-```mermaid
----
-config:
-  theme: base
-  themeVariables:
-    xyChart:
-      plotColorPalette: "#1f4e79"
-  xyChart:
-    xAxis:
-      labelRotation: 45
----
-xychart-beta
-    title "nightly 1.15-DEV.18 status"
-    x-axis ["10-18 1.14-DEV.3787", "10-19 julia 1.15-DEV.18", "10-19 v0.9.7"]
-    y-axis "seconds" 0 --> 3
-    line [2.0, 2.05, 2.03]
-```
-
-
 Latest `status` methods:
 
 | method | now ms | previous ms |
@@ -443,25 +302,6 @@ Latest `status` methods:
 | `Tuple{typeof(Base._array_for), Core.TypeEgal{DistSSHQueue.Job}, Array{Any, 1}, Base.HasSha...` | 7.3 | 7.0 |
 | `Tuple{typeof(Base.map), Base.var"#append!##0#append!##1"{String}, NTuple{10, String}}` | 7.0 | 7.1 |
 | `Tuple{typeof(DistSSHQueue._q_cell), String, Int64}` | 5.1 | 5.1 |
-
-```mermaid
----
-config:
-  theme: base
-  themeVariables:
-    xyChart:
-      plotColorPalette: "#1f4e79"
-  xyChart:
-    xAxis:
-      labelRotation: 45
----
-xychart-beta
-    title "nightly 1.15-DEV.18 submit"
-    x-axis ["10-18 1.14-DEV.3787", "10-19 julia 1.15-DEV.18", "10-19 v0.9.7"]
-    y-axis "seconds" 0 --> 3
-    line [2.24, 2.3, 2.34]
-```
-
 
 Latest `submit` methods:
 
@@ -478,25 +318,6 @@ Latest `submit` methods:
 | `Tuple{typeof(Core.kwcall), NamedTuple{(:kind,), Tuple{Symbol}}, typeof(DistSSHQueue.submit...` | 22.0 | 21.1 |
 | `Tuple{Distributed.var"#start_gc_msgs_task##0#start_gc_msgs_task##1"}` | 15.1 | 14.0 |
 
-```mermaid
----
-config:
-  theme: base
-  themeVariables:
-    xyChart:
-      plotColorPalette: "#1f4e79"
-  xyChart:
-    xAxis:
-      labelRotation: 45
----
-xychart-beta
-    title "nightly 1.15-DEV.18 watch"
-    x-axis ["10-18 1.14-DEV.3787", "10-19 julia 1.15-DEV.18", "10-19 v0.9.7"]
-    y-axis "seconds" 0 --> 3
-    line [1.95, 2.03, 2.01]
-```
-
-
 Latest `watch` methods:
 
 | method | now ms | previous ms |
@@ -511,25 +332,6 @@ Latest `watch` methods:
 | `Tuple{Base.var"##187#188", Vararg{Any, 4}}` | 3.8 | 3.8 |
 | `Tuple{typeof(Base.should_use_main_entrypoint)}` | 2.9 | 2.9 |
 | `Tuple{typeof(Base._array_for), Core.TypeEgal{DistSSHQueue.Job}, Array{Any, 1}, Base.HasSha...` | 1.9 | 1.9 |
-
-```mermaid
----
-config:
-  theme: base
-  themeVariables:
-    xyChart:
-      plotColorPalette: "#1f4e79"
-  xyChart:
-    xAxis:
-      labelRotation: 45
----
-xychart-beta
-    title "nightly 1.15-DEV.18 cancel"
-    x-axis ["10-18 1.14-DEV.3787", "10-19 julia 1.15-DEV.18", "10-19 v0.9.7"]
-    y-axis "seconds" 0 --> 3
-    line [2.14, 2.13, 2.16]
-```
-
 
 Latest `cancel` methods:
 
