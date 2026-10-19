@@ -972,44 +972,40 @@ end
                         enabled = true
                         spec = DistSSHQueue.enabled_serve_command(; home = e2e_home)
                         @test spec !== nothing
-                        if spec === nothing
-                            @test false
-                        else
-                            @test spec.project == DistSSHQueue.canonical_local_path(qenv)
-                            @test spec.project != DistSSHQueue.canonical_local_path(test_project)
-                            @test spec.julia == DistSSHQueue.canonical_local_path(E2E_JULIA)
-                            tag = get(ENV, "DISTSSHQUEUE_SERVE_TAG", "")
-                            @test !isempty(tag)
-                            code, _, err = capture_cli(
-                                addenv(
-                                    qcmd(["submit", "go", "parent:1", "--output-dir", outdir, script]),
-                                    env...,
-                                ),
-                            )
-                            @test code == 0
-                            @test !occursin("Error:", err)
-                            proj_arg = "--project=$(spec.project)"
-                            needle = "DISTSSHQUEUE_SERVE_TAG=$tag"
-                            seen = false
-                            for _ in 1:40
-                                text = try
-                                    read(`ps axeww`, String)
-                                catch
-                                    ""
-                                end
-                                for line in eachsplit(text, '\n')
-                                    occursin(needle, line) || continue
-                                    occursin(proj_arg, line) || continue
-                                    occursin("-m DistSSHQueue serve", line) || continue
-                                    occursin(spec.julia, line) || continue
-                                    seen = true
-                                    break
-                                end
-                                seen && break
-                                sleep(0.25)
+                        @test spec.project == DistSSHQueue.canonical_local_path(qenv)
+                        @test spec.project != DistSSHQueue.canonical_local_path(test_project)
+                        @test spec.julia == DistSSHQueue.canonical_local_path(E2E_JULIA)
+                        tag = get(ENV, "DISTSSHQUEUE_SERVE_TAG", "")
+                        @test !isempty(tag)
+                        code, _, err = capture_cli(
+                            addenv(
+                                qcmd(["submit", "go", "parent:1", "--output-dir", outdir, script]),
+                                env...,
+                            ),
+                        )
+                        @test code == 0
+                        @test !occursin("Error:", err)
+                        proj_arg = "--project=$(spec.project)"
+                        needle = "DISTSSHQUEUE_SERVE_TAG=$tag"
+                        seen = false
+                        for _ in 1:40
+                            text = try
+                                read(`ps axeww`, String)
+                            catch
+                                ""
                             end
-                            @test seen
+                            for line in eachsplit(text, '\n')
+                                occursin(needle, line) || continue
+                                occursin(proj_arg, line) || continue
+                                occursin("-m DistSSHQueue serve", line) || continue
+                                occursin(spec.julia, line) || continue
+                                seen = true
+                                break
+                            end
+                            seen && break
+                            sleep(0.25)
                         end
+                        @test seen
                     finally
                         DistSSHQueue.stop_serve!(store)
                         DistSSHQueue.reap_serve_tag!(get(ENV, "DISTSSHQUEUE_SERVE_TAG", ""))
