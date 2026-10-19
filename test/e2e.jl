@@ -179,18 +179,6 @@ function require_remote_demos!()
     return nothing
 end
 
-# Poll until `id` is terminal. Does not start a later queued job once `id` is done.
-function drive_until_terminal!(q, id; tries = GO_WAIT_TRIES, sleep_s = 0.2)
-    terminal = (:done, :failed, :cancelled)
-    for _ in 1:tries
-        st = job(q, id).state
-        st in terminal && return st
-        step!(q)
-        sleep(sleep_s)
-    end
-    return job(q, id).state
-end
-
 function enqueue_kit!(q, kind::Symbol, script::AbstractString, token::AbstractString; out::AbstractString, args::Vector{String})
     return submit!(
         q,

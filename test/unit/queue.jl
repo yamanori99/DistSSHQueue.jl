@@ -171,6 +171,23 @@ end
     @test started == [a, b]
 end
 
+@testset "drive_until_terminal! leaves the next row queued" begin
+    n = Ref(0)
+    hold = Base.Event()
+    q = Queue(;
+        runner = _ -> (n[] += 1; n[] == 1 ? nothing : wait(hold)),
+        allowed = ["child:host1"],
+    )
+    a = submit!(q, "a.jl", "child:host1:1")
+    b = submit!(q, "b.jl", "child:host1:1")
+    @test drive_until_terminal!(q, a; tries = 50, sleep_s = 0.01) === :done
+    @test job(q, b).state === :queued
+    @test step!(q) == 1
+    @test job(q, b).state === :running
+    notify(hold)
+    _wait_state(q, b, :done)
+end
+
 @testset "cancel queued; stub running without a script has no output_dir" begin
     q = Queue(; runner = _ -> sleep(0.05))
     a = submit!(q, "a.jl", "parent:2")
