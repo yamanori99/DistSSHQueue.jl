@@ -17,6 +17,8 @@ files=(
     src/DistSSHQueue.jl
     test/runtests.jl
     test/e2e.jl
+    bench/compile/report.jl
+    bench/compile/measure.jl
 )
 
 if ((${#files[@]} == 0)); then
