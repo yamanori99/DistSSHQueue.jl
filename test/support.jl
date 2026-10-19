@@ -72,3 +72,18 @@ function install_serve_reaper!()
     end
     return nothing
 end
+
+# Poll until `id` is terminal. `step!` runs only while that row is still
+# `:queued`. Calling `step!` while it is `:running` can read a just-finished
+# disk row and start the next queued job. The default `tries` is the e2e
+# `go` budget (`GO_WAIT_TRIES`).
+function drive_until_terminal!(q, id; tries::Integer = 600, sleep_s::Real = 0.2)
+    terminal = (:done, :failed, :cancelled)
+    for _ in 1:tries
+        st = job(q, id).state
+        st in terminal && return st
+        st === :queued && step!(q)
+        sleep(sleep_s)
+    end
+    return job(q, id).state
+end
