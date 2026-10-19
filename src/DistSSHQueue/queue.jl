@@ -1030,49 +1030,49 @@ function serve!(q::Queue; interval::Real = 0.2)
         nothing
     end
     owns() = store isa String ? (serve_pid(store) == getpid()) : true
-    gone = false
+    gone = Ref(false)
     # Skip the dir-lock + TOML parse of `step!` while the store is unchanged: an
     # idle serve otherwise churns mkdir/rmdir + parse every `interval`. Any
     # client enqueue or our own persist bumps the mtime, so nothing is missed.
     last_mtime = Ref(typemin(Float64))
-    return _with_sigint_exceptions() do
-        try
-            while true
-                if !owns()
-                    gone = true
-                    break
-                end
-                if store isa String
-                    m = _store_mtime(store)
-                    # Kit writes kit.pid / kit.result without touching the table.
-                    # Skip only when idle; a running row still needs step!.
-                    if m != last_mtime[] || _running_copy(q) !== nothing
-                        step!(q)
-                        last_mtime[] = _store_mtime(store)
-                    end
-                else
-                    step!(q)
-                end
-                sleep(interval)
+    try
+        while true
+            if !owns()
+                gone[] = true
+                break
             end
-        catch e
-            is_sigint(e) || rethrow()
-            return nothing
-        finally
-            done[] = true
+            if store isa String
+                m = _store_mtime(store)
+                # Kit writes kit.pid / kit.result without touching the table.
+                # Skip only when idle; a running row still needs step!.
+                if m != last_mtime[] || _running_copy(q) !== nothing
+                    step!(q)
+                    last_mtime[] = _store_mtime(store)
+                end
+            else
+                step!(q)
+            end
+            sleep(interval)
+        end
+    catch e
+        is_sigint(e) || rethrow()
+        return nothing
+    finally
+        done[] = true
+        without_cancel() do
             _join_serve_spin!(spin)
             if draw
                 print(io, "\r\e[K")
                 flush(io)
             end
-            if gone
+            if gone[]
                 print_serve_gone(label; io = io)
             elseif store isa String
                 remove_pid_file_if!(store, getpid())
             end
         end
-        return nothing
     end
+    return nothing
 end
 
 """
@@ -1090,16 +1090,6 @@ function _is_interrupt(e::TaskFailedException)
     return istaskfailed(t) && _is_interrupt(t.exception)
 end
 _is_interrupt(e) = is_sigint(e)
-
-"""CLI `julia -m` exits on SIGINT before a `catch`. Throw instead, then restore."""
-function _with_sigint_exceptions(f)
-    Base.exit_on_sigint(false)
-    try
-        return f()
-    finally
-        isinteractive() || Base.exit_on_sigint(true)
-    end
-end
 
 """Wait out the TTY spinner. Ctrl-C also hits that task's `sleep`; do not surface it."""
 function _join_serve_spin!(spin)

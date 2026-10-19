@@ -22,7 +22,7 @@ using DistSSHRun.DistSSHBase: PARENT_HOST_NAME, _ssh_host_args, _test_doubles_on
     cli_entry, cli_heading, cli_m, cli_m_project, cli_qhost, cli_qhost_heading,
     format_placement_token, get_remote_julia_version, is_sigint, julia_project_rel,
     parse_placement_token, remote_env_project_root, resolve_remote_julia,
-    resolve_remote_project_root, shield_sigint, with_cli_entry
+    resolve_remote_project_root, shield_sigint, with_cli_entry, without_cancel
 using DistSSHRun.DistSSHUp: juliaup_add_host!, juliaup_default_host!,
     juliaup_default_patch, juliaup_status_lines, juliaup_update_host!
 
