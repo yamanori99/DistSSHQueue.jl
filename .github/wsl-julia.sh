@@ -72,12 +72,9 @@ if [[ -f "$cache/julia.tgz" ]]; then
   tar -xzf "$cache/julia.tgz" -C "$HOME"
   restored=1
 fi
-# Compiled files store absolute source paths. SSH E2E packs this tarball as
-# root. ci cannot stat /root (EACCES), and Julia does not treat that as a
-# stale cache. The download depot stays; the compiled files do not.
-rm -rf "$HOME/.julia/compiled"
-# The SSH E2E job packs this tarball as root. An absolute julia symlink from
-# that home is not executable for ci.
+# A tarball packed in another home has an absolute julia symlink that does
+# not run here. Pkg.test and SSH E2E use different cache keys, so this depot
+# stays in ci's home and keeps the compiled files for that checkout.
 if [[ ! -x "$HOME/.juliaup/bin/julialauncher" && ! -x "$HOME/.juliaup/bin/juliaup" ]]; then
   install_julia
   restored=0
@@ -93,7 +90,7 @@ cd "$dest"
 "$@"
 distsshqueue_relink_julia
 if [[ -d "$HOME/.julia" ]]; then
-  tar --exclude='.julia/compiled' -czf "$cache/julia.tgz" -C "$HOME" .juliaup .julia
+  tar -czf "$cache/julia.tgz" -C "$HOME" .juliaup .julia
 else
   tar -czf "$cache/julia.tgz" -C "$HOME" .juliaup
 fi

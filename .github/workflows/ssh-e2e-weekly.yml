@@ -167,7 +167,8 @@ jobs:
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .ci-cache/wsl-julia
-          key: wsl-julia-1.13-${{ hashFiles('Project.toml', 'test/Project.toml') }}
+          # root's depot. Pkg.test uses wsl-julia-ci-1.13, so /root paths stay here.
+          key: wsl-julia-e2e-1.13-${{ hashFiles('Project.toml', 'test/Project.toml') }}
           # No restore-keys: a prefix hit would unpack an older Julia's julia.tgz.
       - name: GHCR token for WSL
         env:
@@ -233,7 +234,7 @@ jobs:
           ./testenv/docker-ssh/scripts/up.sh --e2e
           distsshqueue_relink_julia
           if [[ -d "$HOME/.julia" ]]; then
-            tar --exclude='.julia/compiled' -czf "$cache/julia.tgz" -C "$HOME" .juliaup .julia
+            tar -czf "$cache/julia.tgz" -C "$HOME" .juliaup .julia
           else
             tar -czf "$cache/julia.tgz" -C "$HOME" .juliaup
           fi

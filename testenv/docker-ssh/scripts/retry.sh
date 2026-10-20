@@ -42,12 +42,11 @@ distsshqueue_install_juliaup() {
   distsshqueue_relink_julia
 }
 
-# juliaup symlinks `julia` to an absolute `julialauncher` path. The WSL cache
-# is one tarball shared by root (SSH E2E) and user ci (Pkg.test). Restoring it
-# into the other home leaves a dangling symlink, and bash reports
+# juliaup symlinks `julia` to an absolute `julialauncher` path. Restoring a
+# tarball into another home leaves a dangling symlink, and bash reports
 # `julia: command not found`. Point `julia` at the launcher in this home.
-# Compiled files are not in that tarball: they record absolute source paths,
-# and ci cannot stat /root.
+# Pkg.test and SSH E2E keep separate tarballs, so each home keeps the
+# compiled files that point at its own checkout.
 distsshqueue_relink_julia() {
   local bin="$HOME/.juliaup/bin"
   local launcher=""
