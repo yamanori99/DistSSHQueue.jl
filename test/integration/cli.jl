@@ -20,7 +20,7 @@ function store_jobs(env)
     return DistSSHQueue.read_jobs(env["DISTSSHQUEUE_STORE"])
 end
 
-function wait_job(env, id, states; tries = 900, sleep_s = 0.2)
+function wait_job(env, id, states; tries = wait_tries(:child_reply, 0.2), sleep_s = 0.2)
     want = Set{Symbol}(states)
     sid = String(id)
     last = DistSSHQueue.Job[]
@@ -35,7 +35,7 @@ function wait_job(env, id, states; tries = 900, sleep_s = 0.2)
     error("timeout waiting for $sid in $want; last=$last")
 end
 
-function wait_kit_pid(path::AbstractString; tries = 300, sleep_s = 0.1)
+function wait_kit_pid(path::AbstractString; tries = wait_tries(:child_reply, 0.1), sleep_s = 0.1)
     for _ in 1:tries
         isfile(path) && return nothing
         sleep(sleep_s)
@@ -45,12 +45,13 @@ end
 
 # `read(cmd)` returns only when the child exits. A child that never exits
 # sits at 0% CPU until PkgEval's inactivity kill, with no test name. This
-# bounds that wait and names the command.
+# bounds that wait and names the command. `:child_reply` includes a cold
+# child still compiling, so a live process is not reported as a hang.
 function read_cli(
         args::AbstractVector{<:AbstractString},
         env::AbstractDict;
         label::AbstractString,
-        seconds::Real = 90,
+        seconds::Real = wait_s(:child_reply),
     )::String
     cmd = addenv(qcli(args), env...)
     out = IOBuffer()
@@ -125,7 +126,7 @@ function spawn_to_file(cmd::Cmd, env::AbstractDict, path::AbstractString)::Base.
     return run(pipeline(addenv(cmd, env...); stdout = path, stderr = devnull); wait = false)
 end
 
-function wait_output(path::AbstractString, proc::Base.Process, needle::AbstractString; seconds::Real = 60)::Bool
+function wait_output(path::AbstractString, proc::Base.Process, needle::AbstractString; seconds::Real = wait_s(:child_reply))::Bool
     deadline = time() + seconds
     while time() < deadline && process_running(proc)
         isfile(path) && occursin(needle, read(path, String)) && return true
@@ -134,7 +135,7 @@ function wait_output(path::AbstractString, proc::Base.Process, needle::AbstractS
     return false
 end
 
-function sigint_stopped(proc::Base.Process; seconds::Real = 20)::Bool
+function sigint_stopped(proc::Base.Process; seconds::Real = wait_s(:sigint_grace))::Bool
     kill(proc, Base.SIGINT)
     deadline = time() + seconds
     while process_running(proc) && time() < deadline
