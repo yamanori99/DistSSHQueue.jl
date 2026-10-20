@@ -1039,7 +1039,7 @@ end
             kill(p)
         catch
         end
-        killer = Timer(wait_s(:stop_grace)) do _
+        killer = Timer(wait_seconds(:stop_grace)) do _
             process_running(p) || return
             try
                 kill(p, Base.SIGKILL)
@@ -1070,7 +1070,7 @@ end
                 push!(procs, run(pipeline(cmd; stdout = devnull, stderr = err); wait = false))
             end
             lines = String[]
-            deadline = time() + wait_s(:child_reply)
+            deadline = time() + wait_seconds(:child_reply)
             while time() < deadline
                 lines = String[]
                 for i in 1:2

@@ -10,14 +10,14 @@ const WAIT_SECONDS = Dict{Symbol, Float64}(
     :e2e_stop => 10.0,
 )
 
-function wait_s(name::Symbol)::Float64
+function wait_seconds(name::Symbol)::Float64
     return DistSSHRun.DistSSHBase.wait_seconds(name, WAIT_SECONDS[name])
 end
 
 # Polls of `sleep_s` that fit in the named budget. A name with no finite
 # budget (`:until_exit`) is not a poll.
 function wait_tries(name::Symbol, sleep_s::Real)::Int
-    seconds = wait_s(name)
+    seconds = wait_seconds(name)
     isfinite(seconds) || throw(ArgumentError("$name has no finite budget"))
     return max(1, round(Int, seconds / Float64(sleep_s)))
 end

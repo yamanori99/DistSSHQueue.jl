@@ -51,7 +51,7 @@ function read_cli(
         args::AbstractVector{<:AbstractString},
         env::AbstractDict;
         label::AbstractString,
-        seconds::Real = wait_s(:child_reply),
+        seconds::Real = wait_seconds(:child_reply),
     )::String
     cmd = addenv(qcli(args), env...)
     out = IOBuffer()
@@ -126,7 +126,7 @@ function spawn_to_file(cmd::Cmd, env::AbstractDict, path::AbstractString)::Base.
     return run(pipeline(addenv(cmd, env...); stdout = path, stderr = devnull); wait = false)
 end
 
-function wait_output(path::AbstractString, proc::Base.Process, needle::AbstractString; seconds::Real = wait_s(:child_reply))::Bool
+function wait_output(path::AbstractString, proc::Base.Process, needle::AbstractString; seconds::Real = wait_seconds(:child_reply))::Bool
     deadline = time() + seconds
     while time() < deadline && process_running(proc)
         isfile(path) && occursin(needle, read(path, String)) && return true
@@ -135,7 +135,7 @@ function wait_output(path::AbstractString, proc::Base.Process, needle::AbstractS
     return false
 end
 
-function sigint_stopped(proc::Base.Process; seconds::Real = wait_s(:sigint_grace))::Bool
+function sigint_stopped(proc::Base.Process; seconds::Real = wait_seconds(:sigint_grace))::Bool
     kill(proc, Base.SIGINT)
     deadline = time() + seconds
     while process_running(proc) && time() < deadline

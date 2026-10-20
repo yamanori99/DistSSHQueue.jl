@@ -331,7 +331,7 @@ function stop_e2e_proc!(proc::Base.Process)
     catch
     end
     t0 = time()
-    while process_running(proc) && (time() - t0) < wait_s(:e2e_stop)
+    while process_running(proc) && (time() - t0) < wait_seconds(:e2e_stop)
         sleep(0.05)
     end
     if process_running(proc)
