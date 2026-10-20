@@ -5,6 +5,8 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- Requires DistSSHRun 0.1.12.
+
 ### Planned breaking (next minor)
 
 - `serve --interval <= 0` will be rejected.
