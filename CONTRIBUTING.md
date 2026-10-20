@@ -129,6 +129,10 @@ WSL2 Ubuntu 24.04: `Pkg.test` 1.13, same heavy gate, no coverage upload.
 macOS runs `enable --write-only` on LaunchAgent. Both are required.
 Documenter 1.13 is
 [`.github/workflows/Documentation.yml`](.github/workflows/Documentation.yml).
+A pull request that runs it also pushes a preview to `gh-pages` at
+`previews/PR<n>`. The commit status `documenter/deploy` links to
+`https://yamanori99.github.io/DistSSHQueue.jl/previews/PR<n>/`.
+That directory stays after the pull request closes.
 `Assets` (`draw SVG`) runs if `docs/src/assets/` or that workflow
 changed. Linux E2E (1.13) uses the same **path filter** as **main** push
 (`src/**`, `test/**`, `testenv/**` minus markdown under those trees,
