@@ -72,8 +72,9 @@ if [[ -f "$cache/julia.tgz" ]]; then
   tar -xzf "$cache/julia.tgz" -C "$HOME"
   restored=1
 fi
-# The SSH E2E job packs this tarball as root. An absolute julia symlink from
-# that home is not executable for ci.
+# A tarball packed in another home has an absolute julia symlink that does
+# not run here. Pkg.test and SSH E2E use different cache keys, so this depot
+# stays in ci's home and keeps the compiled files for that checkout.
 if [[ ! -x "$HOME/.juliaup/bin/julialauncher" && ! -x "$HOME/.juliaup/bin/juliaup" ]]; then
   install_julia
   restored=0
