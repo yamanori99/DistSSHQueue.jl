@@ -233,7 +233,7 @@ jobs:
           ./testenv/docker-ssh/scripts/up.sh --e2e
           distsshqueue_relink_julia
           if [[ -d "$HOME/.julia" ]]; then
-            tar -czf "$cache/julia.tgz" -C "$HOME" .juliaup .julia
+            tar --exclude='.julia/compiled' -czf "$cache/julia.tgz" -C "$HOME" .juliaup .julia
           else
             tar -czf "$cache/julia.tgz" -C "$HOME" .juliaup
           fi
