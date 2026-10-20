@@ -181,7 +181,7 @@ jobs:
           printf '%s' "$GHCR_ACTOR" > .ci-cache/ghcr.actor
       # wsl-bash does not inherit Actions env (set -u → unbound GITHUB_TOKEN).
       - name: docker-ssh up + SSH E2E in WSL2
-        shell: wsl-bash {0}
+        shell: wsl-bash -u root {0}
         run: |
           bash ./.github/wsl-apt.sh ca-certificates curl git rsync openssh-client openssh-server docker.io docker-compose-v2 iptables
           src="$(pwd)"
@@ -240,7 +240,7 @@ jobs:
           fi
       - name: Teardown workers
         if: always()
-        shell: wsl-bash {0}
+        shell: wsl-bash -u root {0}
         run: |
           dest="$HOME/DistSSHQueue.jl"
           if [[ -d "$dest" ]]; then
