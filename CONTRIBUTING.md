@@ -45,7 +45,7 @@ julia --project=. -e 'using Pkg; Pkg.test()'
 
 Run this on Julia **1.13** (and **1.14-nightly** or **nightly** if you have them). Layout: [test/README.md](test/README.md). When adding a file under `test/runtests.jl` or an inner SSH E2E `@testset`, bump `_RUNTEST_N` / `_E2E_N` so `[i/N]` stays honest.
 
-Checkout `Pkg.test()` is not the PkgEval sandbox. Before a General cut, run the recipe in [test/README.md](test/README.md#pkgeval). CI runs that job on **main** and a version increase (host Julia 1.12; test Julia is the julia-latest tarball; `continue-on-error`; not a required check).
+Checkout `Pkg.test()` is not the PkgEval sandbox. Before a General cut, run the recipe in [test/README.md](test/README.md#pkgeval). CI runs that job on **main** and a version increase (host Julia 1.13; test Julia is the julia-latest tarball; `continue-on-error`; not a required check).
 
 ```bash
 julia -e 'using Pkg; Pkg.Apps.add("Runic")'   # once
