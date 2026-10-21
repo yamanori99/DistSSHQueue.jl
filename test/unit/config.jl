@@ -1511,6 +1511,71 @@ end
     end
 end
 
+@testset "up runs each verb through the ssh test double" begin
+    mktempdir() do d::String
+        ssh = joinpath(d, "ssh.jl")
+        write(ssh, "println(\"     *  1.13     1.13.2+0\")\n")
+        env = ("DISTSSHKIT_TEST" => "1", "DISTSSHKIT_TEST_SSH" => ssh)
+        code, out, _ = withenv(env...) do
+            capture_stdio() do
+                DistSSHQueue._up_run_on_hosts(
+                    ["box"]; verb = "status", channel = "1.13", confirm = false,
+                )
+            end
+        end
+        @test code == 0
+        @test occursin("box:", out)
+        @test occursin("1.13", out)
+        write(ssh, "println(\"ok\")\n")
+        add_code, add_out, _ = withenv(env...) do
+            capture_stdio() do
+                DistSSHQueue._up_run_on_hosts(
+                    ["box"]; verb = "add", channel = "1.13", confirm = false,
+                )
+            end
+        end
+        @test add_code == 0
+        @test occursin("juliaup add 1.13", add_out)
+        def_code, def_out, _ = withenv(env...) do
+            capture_stdio() do
+                DistSSHQueue._up_run_on_hosts(
+                    ["box"]; verb = "default", channel = "1.13", confirm = false,
+                )
+            end
+        end
+        @test def_code == 0
+        @test occursin("juliaup default 1.13", def_out)
+        upd_code, upd_out, _ = withenv(env...) do
+            capture_stdio() do
+                DistSSHQueue._up_run_on_hosts(
+                    ["box"]; verb = "update", channel = nothing, confirm = false,
+                )
+            end
+        end
+        @test upd_code == 0
+        @test occursin("juliaup update", upd_out)
+        write(ssh, "println(stderr, \"juliaup add failed\")\nexit(1)\n")
+        bad, _, errb = withenv(env...) do
+            capture_stdio() do
+                DistSSHQueue._up_run_on_hosts(
+                    ["box"]; verb = "add", channel = "1.13", confirm = false,
+                )
+            end
+        end
+        @test bad == 1
+        @test occursin("box: juliaup add failed", errb)
+        unk, _, erru = withenv(env...) do
+            capture_stdio() do
+                DistSSHQueue._up_run_on_hosts(
+                    ["box"]; verb = "nope", channel = nothing, confirm = false,
+                )
+            end
+        end
+        @test unk == 1
+        @test occursin("unknown juliaup verb: nope", erru)
+    end
+end
+
 @testset "status warns once for a dead kit.pid and does not rewrite the store" begin
     mktempdir() do d::String
         store = joinpath(d, "jobs.toml")
