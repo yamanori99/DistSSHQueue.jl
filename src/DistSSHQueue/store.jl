@@ -176,11 +176,13 @@ function with_store_lock(f, path::String)
             rethrow()
         end
         try
-            write(_store_lock_pid_path(lockdir), string(getpid()))
+            # Drop any start key before the pid. The window is a pid with no
+            # key, which still counts as alive. The other order pairs a new
+            # pid with the previous key.
             key = _own_start_key()
-            if key === nothing
-                rm(_store_lock_start_path(lockdir); force = true)
-            else
+            rm(_store_lock_start_path(lockdir); force = true)
+            write(_store_lock_pid_path(lockdir), string(getpid()))
+            if key !== nothing
                 write(_store_lock_start_path(lockdir), key)
             end
         catch e
@@ -459,12 +461,13 @@ function write_pid_file(store::AbstractString)
     tmp = string(dest, ".tmp.", getpid(), ".", time_ns())
     try
         write(tmp, string(getpid()))
-        mv(tmp, dest; force = true)
         key = _own_start_key()
         sp = store_pid_start_path(store)
-        if key === nothing
-            rm(sp; force = true)
-        else
+        # Remove the previous key before the pid is replaced. After `mv` and
+        # before the new key is written, a reader sees a pid and no key.
+        rm(sp; force = true)
+        mv(tmp, dest; force = true)
+        if key !== nothing
             write(sp, key)
         end
     catch
