@@ -20,6 +20,42 @@ function remote_stage_root(id::AbstractString; home::AbstractString = "~")::Stri
     return string(h, "/.distsshqueue/stage/", id)
 end
 
+const _STAGE_UUID = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+
+function _regex_literal(s::AbstractString)::String
+    return replace(String(s), r"([.^$*+?()\[\]{}|\\])" => s"\\\1")
+end
+
+"""`<home>/.distsshqueue/stage/<uuid>`, or `nothing` when `id` is not that shape."""
+function orphan_stage_path(id::AbstractString; home::AbstractString = homedir())::Union{Nothing, String}
+    sid = String(id)
+    occursin(_STAGE_UUID, sid) || return nothing
+    root = abspath(String(home))
+    path = abspath(joinpath(root, ".distsshqueue", "stage", sid))
+    posix_root = replace(root, '\\' => '/')
+    posix = replace(path, '\\' => '/')
+    pat = Regex("^" * _regex_literal(posix_root) * "/\\.distsshqueue/stage/" * _regex_literal(sid) * "\$")
+    occursin(pat, posix) || return nothing
+    return path
+end
+
+"""Remove `stage/<id>` only when `submit!` did not write that job row."""
+function drop_unwritten_stage!(id::AbstractString, store::AbstractString; home::AbstractString = homedir())
+    sid = strip(String(id))
+    isempty(sid) && return nothing
+    written = try
+        any(j -> j.id == sid, read_jobs(store))
+    catch
+        return nothing
+    end
+    written && return nothing
+    path = orphan_stage_path(sid; home = home)
+    path === nothing && return nothing
+    isdir(path) || return nothing
+    rm(path; force = true, recursive = true)
+    return nothing
+end
+
 """Captured `ssh` + remote Julia `-e` stdout (not `maybe_remote` / `main`).
 
 `queue_env === nothing`: `--startup-file=no` only (homedir). Else hop `--project=`.

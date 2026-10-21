@@ -19,6 +19,56 @@ using DistSSHQueue
     @test ver === nothing || ver isa VersionNumber
 end
 
+@testset "unwritten stage is removed only at the stage uuid path" begin
+    id = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+    mktempdir() do home
+        stage = joinpath(home, ".distsshqueue", "stage", id)
+        mkpath(stage)
+        write(joinpath(stage, "keep.txt"), "x\n")
+        store = joinpath(home, ".distsshqueue", "jobs.toml")
+        withenv("HOME" => home) do
+            DistSSHQueue.drop_unwritten_stage!(id, store)
+        end
+        @test !ispath(stage)
+        mkpath(stage)
+        write(joinpath(stage, "keep.txt"), "x\n")
+        j = DistSSHQueue.Job(;
+            id = id, kind = :go, script = "a.jl", hosts = ["parent:1"],
+        )
+        DistSSHQueue.save_jobs(store, [j])
+        withenv("HOME" => home) do
+            DistSSHQueue.drop_unwritten_stage!(id, store)
+        end
+        @test isfile(joinpath(stage, "keep.txt"))
+        outside = joinpath(home, "not-stage")
+        mkpath(outside)
+        withenv("HOME" => home) do
+            DistSSHQueue.drop_unwritten_stage!("../not-stage", store)
+            DistSSHQueue.drop_unwritten_stage!("", store)
+        end
+        @test isdir(outside)
+        @test DistSSHQueue.orphan_stage_path(id; home = home) == abspath(stage)
+        @test DistSSHQueue.orphan_stage_path("../not-stage"; home = home) === nothing
+        script = joinpath(home, "S.jl")
+        write(script, "1\n")
+        mkpath(stage)
+        write(joinpath(stage, "keep.txt"), "x\n")
+        withenv("HOME" => home, DistSSHQueue.JOB_ID_ENV => id) do
+            @test_throws ArgumentError DistSSHQueue.submit_cli(
+                store, :go, script, ["parent:1"], Dict{String, Any}(),
+            )
+        end
+        @test isfile(joinpath(stage, "keep.txt"))
+        rm(store; force = true)
+        withenv("HOME" => home, DistSSHQueue.JOB_ID_ENV => id) do
+            @test_throws ArgumentError DistSSHQueue.submit_cli(
+                store, :go, script, ["parent:1"], Dict{String, Any}(),
+            )
+        end
+        @test !ispath(stage)
+    end
+end
+
 @testset "qhost stage path rewrite" begin
     mktempdir() do d
         proj = joinpath(d, "job")
