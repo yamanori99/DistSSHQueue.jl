@@ -41,8 +41,17 @@ using Test
         @test observe_progress!(quiet; cpu = 2.0, output = 1, now = 500.0) === :idle
     end
 
+    @testset "a compile after a long quiet stretch is not a hang" begin
+        watch = IdleWatch(300.0; now = 0.0)
+        @test observe_progress!(watch; cpu = 0.0, output = 0, now = 0.0) === :busy
+        @test observe_progress!(watch; cpu = 0.0, output = 0, now = 290.0) === :busy
+        for t in 291:400
+            @test observe_progress!(watch; cpu = Float64(t - 290), output = 0, now = Float64(t)) === :busy
+        end
+    end
+
     @testset "CPU time that stays still is a hang" begin
-        watch = IdleWatch(10.0; now = 0.0)
+        watch = IdleWatch(10; now = 0, min_window = 10)
         @test observe_progress!(watch; cpu = 5, output = 0, now = 0.0) === :busy
         @test observe_progress!(watch; cpu = 5, output = 0, now = 9.9) === :busy
         @test observe_progress!(watch; cpu = 5, output = 0, now = 10.0) === :idle

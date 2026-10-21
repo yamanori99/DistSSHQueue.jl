@@ -25,36 +25,42 @@ end
 # How often a child wait samples CPU time and output size.
 const CHILD_POLL_S = 0.2
 
-# A short poll can add one tick. The rate uses at least this much wall time,
-# so that tick is not progress. `IDLE_MIN_RATE` is CPU seconds per wall second.
+# A short poll can add one tick. The rate uses a fixed window of this much
+# wall time, so that tick is not progress. `IDLE_MIN_RATE` is CPU seconds per
+# wall second over that window, not over the whole quiet stretch.
 const IDLE_MIN_WINDOW_S = 10.0
 const IDLE_MIN_RATE = 0.05
 
 # One child wait. `seconds` is how long the child may stay under `min_rate`
-# with no output growth. The first CPU sample is a baseline, not progress.
-# `nothing` CPU for the whole wait is the wall clock; output does not extend
-# that wall. A full-CPU spin is not cut here.
+# with no output growth. CPU rate is judged on a fixed window of `min_window`.
+# A long quiet stretch does not raise that bar, so a compile that starts late
+# is still progress at the next window boundary. The first CPU sample in a
+# window is a baseline. Output growth moves `idle_since` only. `nothing` CPU
+# for the whole wait is the wall clock; output does not extend that wall. A
+# full-CPU spin is not cut here.
 mutable struct IdleWatch
     seconds::Float64
     min_window::Float64
     min_rate::Float64
     started::Float64
     idle_since::Float64
-    cpu_mark::Union{Nothing, Float64}
+    rate_t::Float64
+    rate_cpu::Union{Nothing, Float64}
     last_output::Int
 end
 
 function IdleWatch(
         seconds::Real;
-        now::Float64 = time(),
-        min_window::Float64 = IDLE_MIN_WINDOW_S,
-        min_rate::Float64 = IDLE_MIN_RATE,
+        now::Real = time(),
+        min_window::Real = IDLE_MIN_WINDOW_S,
+        min_rate::Real = IDLE_MIN_RATE,
     )
     t = Float64(now)
     return IdleWatch(
         Float64(seconds),
         Float64(min_window),
         Float64(min_rate),
+        t,
         t,
         t,
         nothing,
@@ -72,13 +78,9 @@ function observe_progress!(
         now::Float64,
     )::Symbol
     cpu_s = cpu === nothing ? nothing : Float64(cpu)
-    mark = w.cpu_mark
-    if mark === nothing && cpu_s === nothing
+    rate_cpu = w.rate_cpu
+    if rate_cpu === nothing && cpu_s === nothing
         return now - w.started >= w.seconds ? :wall : :busy
-    end
-    if cpu_s !== nothing && mark === nothing
-        mark = cpu_s
-        w.cpu_mark = cpu_s
     end
     out = Int(output)
     output_grew = out > w.last_output
@@ -86,15 +88,19 @@ function observe_progress!(
         w.last_output = out
     end
     cpu_progress = false
-    if cpu_s !== nothing && mark !== nothing
-        elapsed = max(now - w.idle_since, w.min_window)
-        cpu_progress = cpu_s - mark >= w.min_rate * elapsed
+    if cpu_s !== nothing
+        if rate_cpu === nothing
+            w.rate_t = now
+            w.rate_cpu = cpu_s
+        elseif now - w.rate_t >= w.min_window
+            elapsed = now - w.rate_t
+            cpu_progress = cpu_s - rate_cpu >= w.min_rate * elapsed
+            w.rate_t = now
+            w.rate_cpu = cpu_s
+        end
     end
     if cpu_progress || output_grew
         w.idle_since = now
-        if cpu_s !== nothing
-            w.cpu_mark = cpu_s
-        end
         return :busy
     end
     return now - w.idle_since >= w.seconds ? :idle : :busy
@@ -217,8 +223,10 @@ function process_cpu_seconds(proc::Base.Process)::Union{Nothing, Float64}
     return cpu_time_seconds(ticks)
 end
 
-# Sum of per-pid highs. A child that exits keeps its last sample, so the
-# total does not fall and the sibling can still show progress.
+# Per-pid highs in clock ticks (Linux) or centiseconds (macOS). The sum is
+# converted to seconds once, the same unit as `process_cpu_seconds`. A child
+# that exits keeps its last sample, so the total does not fall and the sibling
+# can still show progress.
 function monotonic_group_cpu!(
         last::Dict{Int, Int},
         procs::Vector{Base.Process},
