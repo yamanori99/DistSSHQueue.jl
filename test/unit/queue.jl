@@ -195,7 +195,10 @@ end
     @test cancel!(q, b)
     @test job(q, b).state === :cancelled
     @test step!(q) == 1
-    @test !cancel!(q, a)
+    @test cancel!(q, a)
+    @test job(q, a).state === :running
+    @test job(q, a).kwargs["cancel"] === true
+    @test step!(q) == 0
     _wait_state(q, a, :done)
 end
 
@@ -211,7 +214,10 @@ end
         @test j.state === :running
         @test j.result_path === nothing
         @test get(j.kwargs, "output_dir", nothing) === nothing
-        @test !cancel!(q, id)
+        @test cancel!(q, id)
+        @test job(q, id).state === :running
+        @test job(q, id).kwargs["cancel"] === true
+        @test DistSSHQueue._job_state_disp(job(q, id)) == "stopping"
         run = joinpath(d, ".distsshkit", "runs", "go", "hold_x")
         mkpath(run)
         DistSSHQueue._set_running_kit_meta!(q, id; run_dir = run)
@@ -222,6 +228,88 @@ end
         notify(ev)
         sleep(0.05)
         @test job(q, id).state === :cancelled
+    end
+end
+
+@testset "cancel during setup keeps the slot until load!" begin
+    mktempdir() do d
+        store = joinpath(d, "jobs.toml")
+        ev = Base.Event()
+        q = Queue(; store, runner = _ -> wait(ev))
+        a = submit!(q, "a.jl", "parent:1")
+        b = submit!(q, "b.jl", "parent:1")
+        @test step!(q) == 1
+        code = withenv(
+            "DISTSSHQUEUE_STORE" => store,
+            "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
+            "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
+        ) do
+            DistSSHQueue.cancel_cli([first(a, 8)])
+        end
+        @test code == 0
+        DistSSHQueue.reload_keep_live!(q)
+        @test job(q, a).state === :running
+        @test DistSSHQueue._job_cancel_flag(job(q, a))
+        @test step!(q) == 0
+        @test job(q, b).state === :queued
+        q2 = Queue(; store, runner = _ -> error("must not re-run"))
+        load!(q2)
+        @test job(q2, a).state === :cancelled
+        notify(ev)
+        _wait_state(q, a, :cancelled)
+    end
+    lost = DistSSHQueue.Job(;
+        kind = :go,
+        script = "a.jl",
+        hosts = ["parent:1"],
+        state = :running,
+        kwargs = Dict{String, Any}("cancel" => true),
+    )
+    DistSSHQueue.fail_stale_running!([lost])
+    @test lost.state === :cancelled
+    plain = DistSSHQueue.Job(;
+        kind = :go, script = "a.jl", hosts = ["parent:1"], state = :running,
+    )
+    DistSSHQueue.fail_stale_running!([plain])
+    @test plain.state === :failed
+    @test occursin("running job marked failed", something(plain.error, ""))
+end
+
+@testset "kit setup stops after the current step when cancel is set" begin
+    mktempdir() do d
+        write(joinpath(d, "Project.toml"), "[deps]\n")
+        script = joinpath(d, "s.jl")
+        write(script, "1\n")
+        j = DistSSHQueue.Job(;
+            kind = :go,
+            script = script,
+            hosts = ["child:w1:1"],
+            kwargs = Dict{String, Any}("project" => String(d)),
+        )
+        modes = Symbol[]
+        fake_setup!(_, mode::Symbol) = (push!(modes, mode); (; ok = true))
+        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+            @test_throws DistSSHQueue._JobCancelled DistSSHQueue._queue_kit_setup!(
+                j,
+                Returns(nothing);
+                kit_setup! = fake_setup!,
+                cancel_requested = Returns(true),
+            )
+        end
+        @test modes == [:rsync]
+        bare = DistSSHQueue.Job(;
+            kind = :go,
+            script = "a.jl",
+            hosts = ["parent:1"],
+            kwargs = Dict{String, Any}("project" => joinpath(d, "missing")),
+        )
+        @test_throws DistSSHQueue._JobCancelled DistSSHQueue.run_kit(
+            bare, Returns(nothing); cancel_requested = Returns(true),
+        )
+        _, help_out, _ = capture_stdio() do
+            DistSSHQueue.show_usage(; command = "cancel")
+        end
+        @test occursin("setup step runs to the end", help_out)
     end
 end
 
@@ -998,7 +1086,9 @@ end
         @test step!(q) == 1
         other = Queue(; store = p)
         @test cancel!(other, b)
-        @test !cancel!(other, a)
+        @test cancel!(other, a)
+        @test job(other, a).state === :running
+        @test DistSSHQueue._job_cancel_flag(job(other, a))
         @test job(other, b).state === :cancelled
         _wait_state(q, a, :done)
         @test step!(q) == 0
@@ -2095,6 +2185,15 @@ end
         ids = [j.id]
         t = DistSSHQueue._serve_live_text('⠙', j, ids)
         @test startswith(t, "  ⠙  running  $(first(j.id, 8))  go")
+        stopping = DistSSHQueue.Job(;
+            id = j.id,
+            kind = :go,
+            script = script,
+            hosts = ["parent:1"],
+            state = :running,
+            kwargs = Dict{String, Any}("project" => d, "cancel" => true),
+        )
+        @test startswith(DistSSHQueue._serve_live_text('⠙', stopping, ids), "  ⠙  stopping  $(first(j.id, 8))  go")
         @test !occursin(j.id, t)
         @test occursin("demos/pi_echo.jl", t) || occursin(joinpath("demos", "pi_echo.jl"), t)
         @test !occursin(d, t)
@@ -2112,7 +2211,8 @@ end
     DistSSHQueue.print_serve_idle_note(; io = buf2)
     note = String(take!(buf2))
     @test occursin("Ctrl-C stops serve", note)
-    @test occursin("DistSSHKit job already running is not killed", note)
+    @test occursin("A job still in setup fails", note)
+    @test occursin("A detached DistSSHKit job is not killed", note)
 end
 
 @testset "job id prefix and status paths relative to project" begin

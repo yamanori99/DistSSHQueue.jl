@@ -59,8 +59,9 @@ For everything else, see the
   cancels. No cap. The run does not start on a client; it starts
   on the queue host.
 - **serve** — FIFO process on the queue host. It starts the
-  job (`execute!(…; detached=true)`). Stopping it does not cancel a
-  job that is already running.
+  job (`execute!(…; detached=true)`). Stopping serve during setup
+  fails that job. After the job is detached, stopping serve leaves
+  it running.
 - **Workers** — where the script runs. Host tokens: `parent[:N]` on
   the queue host, `child:NAME[:N]` on SSH machines.
 

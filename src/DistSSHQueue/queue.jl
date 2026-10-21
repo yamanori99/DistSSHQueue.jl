@@ -298,6 +298,7 @@ function execute_kwargs(j::Job)
         k === :run_dir && continue
         k === :run_toml && continue
         k === :setup_logs && continue
+        k === :cancel && continue
         DistSSHRun.execute_detached_accepts(k; kind = j.kind) || continue
         push!(acc, k => v)
     end
@@ -384,8 +385,13 @@ function settle_lost_kit_child!(j::Job)
     art !== nothing && (j.result_path = art)
     capture_kit_run_toml!(j)
     if rec === nothing
-        j.state = :failed
-        j.error = "serve restarted; running job marked failed"
+        if _job_cancel_flag(j)
+            j.state = :cancelled
+            j.error = nothing
+        else
+            j.state = :failed
+            j.error = "serve restarted; running job marked failed"
+        end
         return j
     end
     try
@@ -413,9 +419,31 @@ function _job_still_running(q::Queue, id::AbstractString)::Bool
     return running[]
 end
 
-function run_kit(j::Job, on_spawn; on_phase = Returns(nothing), still_running = Returns(true))
-    _queue_kit_setup!(j, on_phase)
+"""Cancel flag on the row `serve` will persist. The runner holds a snapshot, so this re-reads disk the way [`_job_still_running`](@ref) does."""
+function _job_cancel_requested(q::Queue, id::AbstractString)::Bool
+    flag = Ref(false)
+    _with_store(q) do
+        lock(q.lock) do
+            reload_keep_live!(q)
+            i = _index_id(q.jobs, id)
+            flag[] = i !== nothing && _job_cancel_flag(q.jobs[i])
+            return nothing
+        end
+    end
+    return flag[]
+end
+
+struct _JobCancelled <: Exception end
+
+function _throw_if_cancelled(cancel_requested::Function)
+    cancel_requested() && throw(_JobCancelled())
+    return nothing
+end
+
+function run_kit(j::Job, on_spawn; on_phase = Returns(nothing), still_running = Returns(true), cancel_requested = Returns(false))
+    _queue_kit_setup!(j, on_phase; cancel_requested = cancel_requested)
     on_phase(nothing)
+    _throw_if_cancelled(cancel_requested)
     still_running() || return something(kit_output_dir(j), "")
     kp = DistSSHRun.execute!(
         j.kind,
@@ -430,6 +458,16 @@ function run_kit(j::Job, on_spawn; on_phase = Returns(nothing), still_running = 
         j.kwargs["run_dir"] = rd
     end
     on_spawn((; run_dir = rd, output_dir = kit_result_path(kp)))
+    if cancel_requested()
+        side = kit_run_dir(j)
+        if side !== nothing
+            try
+                DistSSHRun.terminate_run!(side; kind = j.kind)
+            catch
+            end
+        end
+        throw(_JobCancelled())
+    end
     result = wait(kp)
     require_kit_ok(result)
     return kit_result_path(j, result)
@@ -558,7 +596,7 @@ function copy_setup_logs!(j::Job, snap)
     return nothing
 end
 
-function _queue_kit_setup!(j::Job, on_phase; kit_setup! = DistSSHRun.setup!)
+function _queue_kit_setup!(j::Job, on_phase; kit_setup! = DistSSHRun.setup!, cancel_requested = Returns(false))
     _queue_env_on(NO_KIT_SETUP_ENV) && return nothing
     proj = get(j.kwargs, "project", nothing)
     proj isa AbstractString || (proj = job_project())
@@ -568,18 +606,23 @@ function _queue_kit_setup!(j::Job, on_phase; kit_setup! = DistSSHRun.setup!)
     if session === nothing
         on_phase("instantiate")
         _queue_local_instantiate!(String(proj))
+        _throw_if_cancelled(cancel_requested)
         return nothing
     end
     try
         on_phase("rsync")
         # Kit rsync refuses a nonempty remote. Later jobs still instantiate.
         kit_setup!(session, :rsync)
+        _throw_if_cancelled(cancel_requested)
         on_phase("instantiate")
         _queue_local_instantiate!(String(proj))
         _require_kit_setup_ok!(kit_setup!(session, :instantiate), "instantiate")
+        _throw_if_cancelled(cancel_requested)
         on_phase("check")
         _require_kit_setup_ok!(kit_setup!(session, :check), "check")
-    catch
+        _throw_if_cancelled(cancel_requested)
+    catch e
+        e isa _JobCancelled && rethrow()
         try
             _allocate_queue_leaf!(j)
         catch
@@ -660,6 +703,7 @@ function reload_keep_live!(q::Queue, store::String)
                 q.live_id = nothing
                 live = nothing
             else
+                _job_cancel_flag(d) && (live.kwargs[_CANCEL_KW] = true)
                 push!(out, live)
             end
         else
@@ -747,7 +791,10 @@ function submit!(q::Queue, script::AbstractString, hosts::AbstractVector{<:Abstr
     return _submit!(q, kind, script, hosts; kwargs...)
 end
 
-"""Cancel `:queued`, or `:running` via DistSSHKit `terminate_run!` when the Kit sidecar dir is known."""
+"""Cancel `:queued` now. A `:running` job with no Kit run dir stays `:running` and records a cancel flag, so the slot stays taken until setup stops. A known run dir is `terminate_run!` and `:cancelled`.
+
+A setup step (`rsync`, `instantiate`, `check`) runs to the end. The flag is read again before the next step and before `execute!`.
+"""
 function cancel!(q::Queue, id::AbstractString)::Bool
     action = _with_store(q) do
         lock(q.lock) do
@@ -763,7 +810,11 @@ function cancel!(q::Queue, id::AbstractString)::Bool
             end
             j.state === :running || return :no
             side = kit_sidecar_dir(j)
-            side === nothing && return :no
+            if side === nothing
+                j.kwargs[_CANCEL_KW] = true
+                _persist!(q)
+                return :stopping
+            end
             return (side, kit_output_dir(j), j.kind, j.id)
         end
     end
@@ -775,7 +826,7 @@ function cancel!(q::Queue, id::AbstractString)::Bool
         _finish!(q, running_id, :cancelled, nothing; result_path = path)
         return true
     end
-    return action === :queued
+    return action === :queued || action === :stopping
 end
 
 function _set_running_result_path!(q::Queue, id::AbstractString, path::AbstractString)
@@ -873,6 +924,7 @@ function _start!(q::Queue, j::Job)
                     snap, on_spawn;
                     on_phase = ph -> _set_job_phase!(q, id, ph),
                     still_running = () -> _job_still_running(q, id),
+                    cancel_requested = () -> _job_cancel_requested(q, id),
                 )
             else
                 runner(snap)
@@ -884,14 +936,21 @@ function _start!(q::Queue, j::Job)
             end
             _finish!(q, id, :done, nothing; result_path = path, snap = snap)
         catch e
-            _finish!(
-                q,
-                id,
-                :failed,
-                sprint(showerror, e);
-                result_path = kit_output_dir(snap),
-                snap = snap,
-            )
+            if e isa _JobCancelled
+                _finish!(
+                    q, id, :cancelled, nothing;
+                    result_path = kit_output_dir(snap), snap = snap,
+                )
+            else
+                _finish!(
+                    q,
+                    id,
+                    :failed,
+                    sprint(showerror, e);
+                    result_path = kit_output_dir(snap),
+                    snap = snap,
+                )
+            end
         end
     end
     return nothing
@@ -979,7 +1038,9 @@ function _serve_live_job(q::Queue)
     end
 end
 
-"""Load `store` (stale `:running` → `:failed`), then `step!` until interrupt. Ctrl-C stops serve, not Kit.
+"""Load `store` (stale `:running` → `:failed`, or `:cancelled` when a cancel flag is set), then `step!` until interrupt.
+
+Ctrl-C during setup fails that job. Ctrl-C after `execute!` has detached stops this process and leaves the Kit job running.
 
 A second `serve` on the same store prints `Already running` and returns.
 """
@@ -1080,7 +1141,7 @@ end
 """
     serve(; store=default_store_path(), interval=0.2) -> Nothing
 
-Run [`serve!`](@ref) on `store`. Ctrl-C stops this process, not a job that is already running.
+Run [`serve!`](@ref) on `store`. Ctrl-C during setup fails that job. After `execute!` has detached, Ctrl-C stops this process and leaves the Kit job running.
 The CLI rejects a non-finite `--interval`. `interval == 0` still runs and warns once; a negative finite value warns once, then `sleep` fails.
 """
 function serve(; store::AbstractString = default_store_path(), interval::Real = 0.2, runner::Function = run_kit)
