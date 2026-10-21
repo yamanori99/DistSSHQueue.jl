@@ -41,6 +41,18 @@ end
     )
 end
 
+@testset "fetch dest rejects . and .. elements" begin
+    mktempdir() do d
+        @test_throws ArgumentError DistSSHQueue.fetch_dest(d, "go", "..")
+        @test_throws ArgumentError DistSSHQueue.fetch_dest(d, "go", ".")
+        cd(d) do
+            @test_throws ArgumentError DistSSHQueue.fetch_dest_from_rel("go/..")
+            @test_throws ArgumentError DistSSHQueue.fetch_dest_from_rel("../go")
+            @test_throws ArgumentError DistSSHQueue.fetch_dest_from_rel("go/.")
+        end
+    end
+end
+
 @testset "fetch_source exact id and states" begin
     mktempdir() do d
         proj = joinpath(d, "job")

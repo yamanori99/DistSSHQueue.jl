@@ -51,9 +51,16 @@ function fetch_relpath(
     return rel
 end
 
+function _refuse_fetch_dot_part!(part::AbstractString)
+    p = String(part)
+    (p == "." || p == "..") && throw(ArgumentError("fetch: dest element $(repr(p)) is not allowed"))
+    return nothing
+end
+
 function fetch_dest(local_proj::AbstractString, kind::AbstractString, leaf::AbstractString)::String
     k = String(kind)
     k in ("go", "ride", "drive") || throw(ArgumentError("fetch: bad kind $(repr(k))"))
+    _refuse_fetch_dot_part!(String(leaf))
     dest = canonical_local_path(joinpath(local_proj, ".distsshqueue", k, String(leaf)))
     path_under_project(dest, local_proj) || throw(
         ArgumentError(
@@ -198,6 +205,9 @@ end
 function fetch_dest_from_rel(dest_rel::AbstractString)::String
     parts = split(posix_dir(dest_rel), '/'; keepempty = false)
     length(parts) == 2 || throw(ArgumentError("fetch: bad dest $(repr(dest_rel))"))
+    for part in parts
+        _refuse_fetch_dot_part!(String(part))
+    end
     return fetch_dest(job_project(), parts[1], parts[2])
 end
 
