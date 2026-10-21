@@ -320,6 +320,58 @@ function _stage_extra_paths(extra_files)::Vector{String}
     return out
 end
 
+const _RSYNC_SHELL_SPECIAL = r"[[:space:]'\"\\$`;&|<>()*?\[]"
+const _RSYNC_BRACE_EXPAND = r"\{[^}]*(,|\.\.)[^}]*\}"
+const _RSYNC_VER = Ref{Union{Nothing, VersionNumber}}(nothing)
+const _RSYNC_VER_READY = Ref(false)
+
+function _read_local_rsync_version()::Union{Nothing, VersionNumber}
+    text = try
+        read(Cmd(vcat(_rsync_bin(), "--version")), String)
+    catch
+        return nothing
+    end
+    m = match(r"version\s+v?([0-9]+\.[0-9]+\.[0-9]+)", text)
+    m === nothing && return nothing
+    cap = m.captures[1]
+    cap isa AbstractString || return nothing
+    return tryparse(VersionNumber, cap)
+end
+
+"""Local `rsync --version`, cached. `nothing` when it cannot be read."""
+function local_rsync_version()::Union{Nothing, VersionNumber}
+    _RSYNC_VER_READY[] && return _RSYNC_VER[]
+    _RSYNC_VER[] = _read_local_rsync_version()
+    _RSYNC_VER_READY[] = true
+    return _RSYNC_VER[]
+end
+
+"""Stop when this rsync is older than 3.2.4 and the remote `sh -c` would change `path`.
+
+Whitespace, quotes, `\\`, `\$`, a backtick, `;`, `&`, `|`, `<`, `>`, `(`, `)`,
+and the globs `*`, `?`, `[` are refused. `#`, `!`, and `{x}` without a comma
+or `..` stay: `#` does not start a comment in a word, and history expansion is
+off. `{a,b}` and `{a..b}` are refused because the remote shell expands them.
+rsync 3.2.4 protects arguments without
+`--protect-args`. Older rsync, including macOS 2.6.9, does not.
+`--protect-args` is not added: rsync before 3.0 does not know it, and the
+remote rsync must be 3.0 or newer too.
+"""
+function _refuse_unprotected_rsync_path!(
+        path::AbstractString;
+        version::Union{Nothing, VersionNumber} = local_rsync_version(),
+    )
+    version === nothing && return nothing
+    version >= v"3.2.4" && return nothing
+    s = String(path)
+    occursin(_RSYNC_SHELL_SPECIAL, s) || occursin(_RSYNC_BRACE_EXPAND, s) || return nothing
+    throw(
+        ArgumentError(
+            "rsync $(version) does not protect arguments, and the remote shell would change this path: $(path)",
+        )
+    )
+end
+
 function rsync_to_qhost!(
         host::AbstractString,
         local_root::AbstractString,
@@ -329,6 +381,10 @@ function rsync_to_qhost!(
     )
     src = canonical_local_path(local_root)
     isdir(src) || throw(ArgumentError("qhost submit: job project is not a directory: $(repr(src))"))
+    _refuse_unprotected_rsync_path!(remote_root)
+    for f in extra_files
+        _refuse_unprotected_rsync_path!(string(remote_root, "/", basename(String(f))))
+    end
     listed = stage_send_list(src)
     extras = _stage_extra_paths(extra_files)
     _ssh_mkdir!(host, remote_root)
@@ -388,6 +444,7 @@ function rsync_from_qhost!(
         progress::Bool = false,
     )
     remote = rstrip(replace(String(remote_abs), '\\' => '/'), '/')
+    _refuse_unprotected_rsync_path!(remote)
     dest = canonical_local_path(local_dest)
     mkpath(dest)
     src = string(host, ":", remote, "/")
@@ -413,6 +470,7 @@ function rsync_from_qhost_file!(
         progress::Bool = false,
     )
     remote = rstrip(replace(String(remote_abs), '\\' => '/'), '/')
+    _refuse_unprotected_rsync_path!(remote)
     dest = canonical_local_path(local_dest)
     mkpath(dirname(dest))
     src = string(host, ":", remote)

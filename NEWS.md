@@ -6,6 +6,10 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 ## Unreleased
 
 - Requires DistSSHRun 0.1.12.
+- A local rsync older than 3.2.4 stops when the remote path has whitespace,
+  a quote, `\`, `$`, a backtick, `;`, `&`, `|`, `<`, `>`, `(`, `)`, `*`,
+  `?`, or `[`, and when `{...}` contains a comma or `..`. A name such as
+  `run#1` or `x{y}` still copies. `--protect-args` is not added.
 - `fetch` refuses a dest element `.` or `..`.
 - A queue-host `submit` that throws before the job row is written removes
   `~/.distsshqueue/stage/<uuid>`. A row that was written keeps its stage,

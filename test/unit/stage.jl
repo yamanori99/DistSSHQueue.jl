@@ -2,6 +2,29 @@ using Test
 using DistSSHRun
 using DistSSHQueue
 
+@testset "old rsync refuses a remote path with shell characters" begin
+    plain = "/home/q/.distsshqueue/stage/aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+    spaced = "/home/q/my jobs/stage"
+    DistSSHQueue._refuse_unprotected_rsync_path!(spaced; version = v"3.2.4")
+    DistSSHQueue._refuse_unprotected_rsync_path!(plain; version = v"2.6.9")
+    DistSSHQueue._refuse_unprotected_rsync_path!("~/.distsshqueue/stage/job"; version = v"2.6.9")
+    for kept in ("results/run#1", "a!b", "x{y}", "file].txt")
+        DistSSHQueue._refuse_unprotected_rsync_path!(kept; version = v"2.6.9")
+    end
+    DistSSHQueue._refuse_unprotected_rsync_path!("x{a,b}"; version = v"3.2.4")
+    @test_throws ArgumentError DistSSHQueue._refuse_unprotected_rsync_path!(
+        spaced; version = v"2.6.9",
+    )
+    for bad in ("/tmp/a;rm", "x{a,b}", "x{a..b}", "dir/(a)", "dir/a*b", "dir/a[b")
+        @test_throws ArgumentError DistSSHQueue._refuse_unprotected_rsync_path!(
+            bad; version = v"2.6.9",
+        )
+    end
+    DistSSHQueue._refuse_unprotected_rsync_path!(spaced; version = nothing)
+    ver = DistSSHQueue.local_rsync_version()
+    @test ver === nothing || ver isa VersionNumber
+end
+
 @testset "unwritten stage is removed only at the stage uuid path" begin
     id = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
     mktempdir() do home
