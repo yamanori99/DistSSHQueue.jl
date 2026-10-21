@@ -344,6 +344,8 @@ function write_submit_ticket(
         stdout_text::AbstractString;
         script::Union{Nothing, AbstractString} = nothing,
         qhost::Union{Nothing, AbstractString} = nothing,
+        commit::Union{Nothing, AbstractString} = nothing,
+        dirty::Union{Nothing, AbstractString, Bool} = nothing,
     )::Union{Nothing, String}
     id = job_id_from_submit_stdout(stdout_text)
     id === nothing && return nothing
@@ -367,6 +369,13 @@ function write_submit_ticket(
     end
     if qhost !== nothing && !isempty(strip(String(qhost)))
         push!(lines, "qhost = $(repr(String(qhost)))")
+    end
+    if commit !== nothing && !isempty(strip(String(commit)))
+        push!(lines, "commit = $(repr(strip(String(commit))))")
+    end
+    if dirty !== nothing
+        flag = dirty === true || strip(String(dirty)) == "true"
+        push!(lines, "dirty = $(flag ? "true" : "false")")
     end
     write(dest, join(lines, '\n') * '\n')
     return dest

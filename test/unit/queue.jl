@@ -2861,3 +2861,78 @@ end
     )
     @test_throws ArgumentError DistSSHQueue.parse_cli_interval("watch", "nope")
 end
+
+function _submit_source_dict(raw)::AbstractDict
+    raw isa AbstractDict || error("source env missing")
+    return raw
+end
+
+@testset "submit source" begin
+    q = DistSSHQueue.Queue(; runner = _ -> nothing)
+    id = DistSSHQueue.submit!(
+        q, "g.jl", "parent:1";
+        source = Dict{String, Any}(
+            "commit" => "abc",
+            "dirty" => false,
+            "diff_sha256" => "e3b0",
+            "captured" => "submit:client",
+            "untracked" => 0,
+        ),
+    )
+    kw = DistSSHQueue.execute_kwargs(DistSSHQueue.job(q, id))
+    if DistSSHRun.execute_detached_accepts(:source; kind = :go)
+        @test kw.source["commit"] == "abc"
+        @test kw.source["dirty"] == false
+    else
+        @test !haskey(kw, :source)
+    end
+    plain = DistSSHQueue.submit!(q, "local.jl", "parent:1")
+    @test !haskey(DistSSHQueue.job(q, plain).kwargs, "source")
+    withenv(
+        "DISTSSHQUEUE_SOURCE_COMMIT" => "abc",
+        "DISTSSHQUEUE_SOURCE_DIRTY" => "true",
+        "DISTSSHQUEUE_SOURCE_DIFF_SHA256" => "e3b0",
+        "DISTSSHQUEUE_SOURCE_CAPTURED" => "submit:client",
+        "DISTSSHQUEUE_SOURCE_UNTRACKED" => "2",
+    ) do
+        built = _submit_source_dict(DistSSHQueue._source_from_queue_env())
+        @test built["commit"] == "abc"
+        @test built["dirty"] == true
+        @test built["diff_sha256"] == "e3b0"
+        @test built["captured"] == "submit:client"
+        @test built["untracked"] == 2
+    end
+    withenv("DISTSSHQUEUE_SOURCE_COMMIT" => nothing) do
+        @test DistSSHQueue._source_from_queue_env() === nothing
+    end
+    mktempdir() do tmp
+        store = joinpath(tmp, "jobs.toml")
+        cfg = joinpath(tmp, "config.toml")
+        script = joinpath(tmp, "job.jl")
+        write(script, "1\n")
+        write(cfg, "store = $(repr(store))\nhosts = [\"parent\"]\n")
+        withenv(
+            "DISTSSHQUEUE_CONFIG" => cfg,
+            "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
+            "DISTSSHQUEUE_SOURCE_COMMIT" => "abc",
+            "DISTSSHQUEUE_SOURCE_DIRTY" => "false",
+            "DISTSSHQUEUE_SOURCE_DIFF_SHA256" => "e3b0",
+            "DISTSSHQUEUE_SOURCE_CAPTURED" => "submit:client",
+            "DISTSSHQUEUE_SOURCE_UNTRACKED" => "0",
+        ) do
+            redirect_stdout(devnull) do
+                redirect_stderr(devnull) do
+                    @test DistSSHQueue.submit_cli(
+                        store, :go, script, ["parent:1"], Dict{String, Any}(),
+                    ) == 0
+                end
+            end
+            loaded = DistSSHQueue.Queue(; store = store)
+            DistSSHQueue.load!(loaded)
+            src = _submit_source_dict(only(loaded.jobs).kwargs["source"])
+            @test src["commit"] == "abc"
+            @test src["dirty"] == false
+            @test src["untracked"] == 0
+        end
+    end
+end

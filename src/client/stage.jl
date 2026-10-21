@@ -507,6 +507,69 @@ function stage_env_and_project(local_proj::AbstractString, remote_root::Abstract
     return (env_dir = env.env_dir, remote_proj = remote_proj)
 end
 
+const _QUEUE_GIT_DIFF_FLAGS = (
+    "-c",
+    "core.quotepath=off",
+    "diff",
+    "--no-ext-diff",
+    "--no-textconv",
+    "--no-color",
+    "--binary",
+    "HEAD",
+)
+
+function _queue_git_bytes(cmd::Cmd)::Union{Nothing, Vector{UInt8}}
+    out = IOBuffer()
+    ok = try
+        proc = run(pipeline(ignorestatus(cmd); stdout = out, stderr = devnull))
+        proc.exitcode == 0
+    catch
+        false
+    end
+    return ok ? take!(out) : nothing
+end
+
+function _queue_git_text(cmd::Cmd)::Union{Nothing, String}
+    raw = _queue_git_bytes(cmd)
+    raw === nothing && return nothing
+    return try
+        String(raw)
+    catch
+        nothing
+    end
+end
+
+"""Git snapshot of `project`, or an empty dict when git is missing or this is not a work tree.
+
+`diff_sha256` is present even when the diff is empty.
+"""
+function queue_source_env(project::AbstractString)::Dict{String, String}
+    git = Sys.which("git")
+    git === nothing && return Dict{String, String}()
+    root = String(project)
+    inside = _queue_git_text(`$git -C $root rev-parse --is-inside-work-tree`)
+    inside === nothing && return Dict{String, String}()
+    strip(inside) == "true" || return Dict{String, String}()
+    head = _queue_git_text(`$git -C $root rev-parse HEAD`)
+    head === nothing && return Dict{String, String}()
+    status = _queue_git_text(`$git -C $root status --porcelain=v1 --untracked-files=all`)
+    status === nothing && return Dict{String, String}()
+    diff = _queue_git_bytes(Cmd([git, "-C", root, _QUEUE_GIT_DIFF_FLAGS...]))
+    diff === nothing && return Dict{String, String}()
+    lines = split(strip(status), '\n'; keepempty = false)
+    untracked = 0
+    for line in lines
+        startswith(line, "??") && (untracked += 1)
+    end
+    return Dict{String, String}(
+        SOURCE_COMMIT_ENV => strip(head),
+        SOURCE_DIRTY_ENV => isempty(lines) ? "false" : "true",
+        SOURCE_DIFF_SHA256_ENV => SHA.bytes2hex(SHA.sha256(diff)),
+        SOURCE_CAPTURED_ENV => "submit:" * gethostname(),
+        SOURCE_UNTRACKED_ENV => string(untracked),
+    )
+end
+
 """Rsync the Manifest directory to `~/.distsshqueue/stage/<uuid>` on `host`.
 
 `DISTRIBUTED_PROJECT_ROOT` is the staged project directory, which is a
@@ -524,6 +587,7 @@ function stage_job_tree!(
     parsed.show_version && return (String[String(a) for a in payload], Dict{String, String}())
     local_script = script_arg(parsed.script_path, kit)
     local_proj = job_project()
+    source_env = queue_source_env(local_proj)
     key = new_job_id()
     remote_root = remote_stage_root(key; home = queue_host_homedir(host, rjulia))
     layout = stage_env_and_project(local_proj, remote_root)
@@ -544,5 +608,6 @@ function stage_job_tree!(
         "DISTRIBUTED_PROJECT_ROOT" => layout.remote_proj,
         JOB_ID_ENV => key,
     )
+    merge!(env, source_env)
     return staged, env
 end

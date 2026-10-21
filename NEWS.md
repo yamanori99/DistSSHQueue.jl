@@ -5,6 +5,7 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- `qhost:` submit records the client's commit and whether that tree had uncommitted changes, on the job and on the submit ticket.
 - Requires DistSSHRun 0.1.12.
 - A setup failure after `cancel` records the job as `:cancelled`. It used
   to be `:failed`. If the cancel flag cannot be read, the job is `:failed`.

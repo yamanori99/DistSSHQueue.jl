@@ -442,7 +442,14 @@ function _remote_submit_ticket(
             parsed.script_path !== nothing && (script = String(parsed.script_path))
         catch
         end
-        write_submit_ticket(job_project(), text; script = script, qhost = dest)
+        write_submit_ticket(
+            job_project(),
+            text;
+            script = script,
+            qhost = dest,
+            commit = get(extra, SOURCE_COMMIT_ENV, nothing),
+            dirty = get(extra, SOURCE_DIRTY_ENV, nothing),
+        )
     end
     return Cint(code)
 end
