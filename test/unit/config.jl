@@ -837,6 +837,38 @@ end
     end
 end
 
+@testset "a reused pid is not our serve or lock" begin
+    root = mktempdir()
+    store = joinpath(root, "queue.toml")
+    pid = DistSSHQueue.store_pid_path(store)
+    mkpath(dirname(pid))
+    proc = run(pipeline(`sleep 60`; stdout = devnull, stderr = devnull); wait = false)::Base.Process
+    try
+        spid = getpid(proc)
+        write(pid, string(spid))
+        @test DistSSHQueue.serve_pid(store) == spid
+        write(pid, string(spid, "\nnot-this-start\n"))
+        @test DistSSHQueue.serve_pid(store) === nothing
+        @test DistSSHQueue.stop_serve!(store) == false
+        @test !isfile(pid)
+        @test process_running(proc)
+    finally
+        kill(proc)
+        wait(proc)
+    end
+    write(pid, string(getpid(), "\nnot-our-start\n"))
+    @test DistSSHQueue.serve_pid(store) === nothing
+    @test DistSSHQueue.stop_serve!(store) == false
+    @test !isfile(pid)
+
+    lockdir = joinpath(root, "lock")
+    mkdir(lockdir)
+    write(joinpath(lockdir, "pid"), string(getpid(), "\nnot-our-start\n"))
+    @test DistSSHQueue._store_lock_stale(lockdir)
+    write(joinpath(lockdir, "pid"), string(getpid()))
+    @test !DistSSHQueue._store_lock_stale(lockdir)
+end
+
 @testset "stale store lock" begin
     mktempdir() do d
         store = joinpath(d, "jobs.toml")
@@ -853,7 +885,9 @@ end
         ran = Ref(false)
         DistSSHQueue.with_store_lock(store) do
             ran[] = true
-            @test read(joinpath(lockdir, "pid"), String) == string(getpid())
+            body = read(joinpath(lockdir, "pid"), String)
+            @test DistSSHQueue._parse_pid_text(body) ==
+                (pid = getpid(), start = DistSSHQueue._own_start_key())
         end
         @test ran[]
         @test !isdir(lockdir)
@@ -995,7 +1029,8 @@ end
         @test DistSSHQueue.claim_serve!(store) === nothing
         @test DistSSHQueue.serve_pid(store) == getpid()
         @test DistSSHQueue.claim_serve!(store) === nothing
-        @test strip(read(pid, String)) == string(getpid())
+        @test DistSSHQueue._parse_pid_text(read(pid, String)) ==
+            (pid = getpid(), start = DistSSHQueue._own_start_key())
         @test !any(n -> occursin(".tmp.", n), readdir(d))
     end
 end

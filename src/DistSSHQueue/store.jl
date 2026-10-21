@@ -18,7 +18,58 @@ function _missing_path_io(e)::Bool
     return e isa Base.IOError && (e.code == Base.UV_ENOENT || e.code == Base.UV_ENOTDIR)
 end
 
-function _read_lock_pid(lockdir::AbstractString)::Union{Nothing, Int}
+"""Pid file text: pid, then the OS start key when it can be read.
+
+A one-line file is the old shape. Callers still treat that pid as this
+process when it is alive, so an upgrade does not drop a running serve.
+"""
+function _pid_file_body(pid::Integer)::String
+    key = pid == getpid() ? _own_start_key() : DistSSHRun.kit_process_start_key(pid)
+    key === nothing && return string(Int(pid))
+    return string(Int(pid), "\n", key, "\n")
+end
+
+"""`(pid, start)` from a pid file. `start` is `nothing` on a one-line file."""
+function _parse_pid_text(raw::AbstractString)
+    s = strip(String(raw))
+    isempty(s) && return nothing
+    lines = split(s, '\n')
+    pid = tryparse(Int, strip(String(lines[1])))
+    pid === nothing && return nothing
+    start = nothing
+    if length(lines) >= 2
+        st = strip(String(lines[2]))
+        !isempty(st) && (start = String(st))
+    end
+    return (pid = Int(pid), start = start)
+end
+
+"""Start key of this process, read once. `serve!` polls the pid file every tick."""
+const _OWN_START = Ref{Union{Nothing, String}}(nothing)
+const _OWN_START_READY = Ref(false)
+
+function _own_start_key()::Union{Nothing, String}
+    _OWN_START_READY[] && return _OWN_START[]
+    _OWN_START[] = DistSSHRun.kit_process_start_key(getpid())
+    _OWN_START_READY[] = true
+    return _OWN_START[]
+end
+
+"""Alive, and the start key matches when the file has one.
+
+A one-line file stays on the old `process_alive` check. `EPERM` still counts
+as alive there. A second line that does not match, or cannot be read, is not
+this process, so a reused pid is not signaled and does not hold the lock.
+"""
+function _pid_record_running(rec)::Bool
+    process_alive(rec.pid) || return false
+    rec.start === nothing && return true
+    cur = rec.pid == getpid() ? _own_start_key() : DistSSHRun.kit_process_start_key(rec.pid)
+    cur === nothing && return false
+    return cur == rec.start
+end
+
+function _read_lock_record(lockdir::AbstractString)
     p = _store_lock_pid_path(lockdir)
     text = try
         read(p, String)
@@ -27,23 +78,30 @@ function _read_lock_pid(lockdir::AbstractString)::Union{Nothing, Int}
         _missing_path_io(e) && return nothing
         rethrow()
     end
-    return tryparse(Int, strip(text))
+    return _parse_pid_text(text)
+end
+
+function _read_lock_pid(lockdir::AbstractString)::Union{Nothing, Int}
+    rec = _read_lock_record(lockdir)
+    rec === nothing && return nothing
+    return rec.pid
 end
 
 """Whether a leftover lock directory can be taken.
 
-A live pid is never stale. A dead pid is stale. A lock with no pid is stale
-only after [`_STORE_LOCK_STALE_SEC`](@ref) seconds. The holder writes the pid
-just after `mkdir`, so a fresh directory is left alone.
+A live pid whose start key matches is never stale. A dead pid, or a live pid
+with a different start key, is stale. A lock with no pid is stale only after
+[`_STORE_LOCK_STALE_SEC`](@ref) seconds. The holder writes the pid just after
+`mkdir`, so a fresh directory is left alone.
 """
 function _store_lock_stale(lockdir::AbstractString; now::Float64 = time())::Bool
     # `stat` does not throw when the path is gone. It returns a zero `StatStruct`,
     # so one call is both the existence check and the mtime.
     st = stat(lockdir)
     isdir(st) || return false
-    pid = _read_lock_pid(lockdir)
-    if pid isa Int
-        return !process_alive(pid)
+    rec = _read_lock_record(lockdir)
+    if rec !== nothing
+        return !_pid_record_running(rec)
     end
     return now - st.mtime > _STORE_LOCK_STALE_SEC
 end
@@ -83,7 +141,7 @@ function with_store_lock(f, path::String)
             rethrow()
         end
         try
-            write(_store_lock_pid_path(lockdir), string(getpid()))
+            write(_store_lock_pid_path(lockdir), _pid_file_body(getpid()))
         catch e
             # ENOENT means this directory is already gone. `rm` could delete a
             # lock another process created in its place.
@@ -326,14 +384,18 @@ function _process_alive_fallback(pid::Integer)::Bool
     end
 end
 
-"""Live serve pid from the store pidfile, or `nothing`."""
+"""Live serve pid from the store pidfile, or `nothing`.
+
+A second line is the OS start key. A reused pid with a different key is
+`nothing`. A one-line file keeps the old alive-pid check.
+"""
 function serve_pid(store::AbstractString)::Union{Nothing, Int}
     p = store_pid_path(store)
     isfile(p) || return nothing
-    pid = tryparse(Int, strip(read(p, String)))
-    pid === nothing && return nothing
-    process_alive(pid) || return nothing
-    return pid
+    rec = _parse_pid_text(read(p, String))
+    rec === nothing && return nothing
+    _pid_record_running(rec) || return nothing
+    return rec.pid
 end
 
 """Is a `serve` for `store` already running (pidfile + live process)?"""
@@ -344,7 +406,7 @@ function write_pid_file(store::AbstractString)
     dest = store_pid_path(store)
     tmp = string(dest, ".tmp.", getpid(), ".", time_ns())
     try
-        write(tmp, string(getpid()))
+        write(tmp, _pid_file_body(getpid()))
         mv(tmp, dest; force = true)
     catch
         rm(tmp; force = true)
@@ -392,13 +454,19 @@ end
 
 remove_pid_file(store::AbstractString) = rm(store_pid_path(store); force = true)
 
-"""Remove the pidfile when it still names `pid`. Holds the store lock."""
-function remove_pid_file_if!(store::AbstractString, pid::Integer)::Bool
+"""Remove the pidfile when it still names `pid` and `start`.
+
+`start === nothing` matches a one-line file. A serve that rewrote the file
+during the wait is left alone. Holds the store lock.
+"""
+function remove_pid_file_if!(store::AbstractString, pid::Integer; start = nothing)::Bool
     return with_store_lock(store) do
         path = store_pid_path(store)
         isfile(path) || return false
-        cur = tryparse(Int, strip(read(path, String)))
-        cur == pid || return false
+        rec = _parse_pid_text(read(path, String))
+        rec === nothing && return false
+        rec.pid == pid || return false
+        rec.start == start || return false
         remove_pid_file(store)
         return true
     end
@@ -420,35 +488,47 @@ clear_stopped!(store::AbstractString) = rm(store_stop_path(store); force = true)
 
 """SIGTERM a serve recorded in the store pidfile. Does not kill this process.
 
-The pidfile is removed only when it still names that pid, and only under the
-store lock. A serve that claimed the file during the wait is left alone.
+The pidfile is removed only when it still names that pid and start key, and
+only under the store lock. A live pid with a different start key is not
+signaled. A serve that claimed the file during the wait is left alone.
 """
 function stop_serve!(store::AbstractString)::Bool
-    pid = with_store_lock(store) do
+    target = with_store_lock(store) do
         path = store_pid_path(store)
         isfile(path) || return nothing
-        parsed = tryparse(Int, strip(read(path, String)))
-        if parsed === nothing
+        rec = _parse_pid_text(read(path, String))
+        if rec === nothing
             remove_pid_file(store)
             return nothing
         end
-        return parsed
+        return rec
     end
-    pid === nothing && return false
-    pid == getpid() && return false
-    if process_alive(pid)
+    target === nothing && return false
+    # This process. A wrong start key is a reused number, not a serve to signal.
+    if target.pid == getpid()
+        if target.start === nothing || target.start == _own_start_key()
+            return false
+        end
+        remove_pid_file_if!(store, target.pid; start = target.start)
+        return false
+    end
+    if _pid_record_running(target)
         try
-            run(pipeline(`kill $pid`; stdout = devnull, stderr = devnull))
+            run(pipeline(`kill $(target.pid)`; stdout = devnull, stderr = devnull))
         catch
         end
         for _ in 1:40
-            process_alive(pid) || break
+            _pid_record_running(target) || break
             sleep(0.05)
         end
+    elseif process_alive(target.pid)
+        # Alive under a different start key. Do not signal that process.
+        remove_pid_file_if!(store, target.pid; start = target.start)
+        return false
     end
     # A replacement serve may have claimed the pidfile during the wait. The
     # targeted serve was still signaled, so report success; leave that file.
-    remove_pid_file_if!(store, pid)
+    remove_pid_file_if!(store, target.pid; start = target.start)
     return true
 end
 

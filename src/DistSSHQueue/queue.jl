@@ -999,7 +999,7 @@ function serve!(q::Queue; interval::Real = 0.2)
             load!(q)
         catch
             # `load!` is outside the serve `finally`. Drop only this process's pid.
-            remove_pid_file_if!(store, getpid())
+            remove_pid_file_if!(store, getpid(); start = _own_start_key())
             rethrow()
         end
     else
@@ -1068,7 +1068,7 @@ function serve!(q::Queue; interval::Real = 0.2)
             if gone[]
                 print_serve_gone(label; io = io)
             elseif store isa String
-                remove_pid_file_if!(store, getpid())
+                remove_pid_file_if!(store, getpid(); start = _own_start_key())
             end
         end
     end
