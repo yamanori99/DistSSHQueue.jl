@@ -183,7 +183,8 @@ end
 function with_store_lock(f, path::String)
     lockdir = string(path, ".lock")
     mkpath(dirname(path))
-    while true
+    held = false
+    while !held
         try
             mkdir(lockdir)
         catch e
@@ -207,6 +208,7 @@ function with_store_lock(f, path::String)
             if key !== nothing
                 write(_store_lock_start_path(lockdir), key)
             end
+            held = true
         catch e
             # ENOENT means this directory is already gone. `rm` could delete a
             # lock another process created in its place.
@@ -214,11 +216,11 @@ function with_store_lock(f, path::String)
             rm(lockdir; force = true, recursive = true)
             rethrow()
         end
-        try
-            return f()
-        finally
-            rm(lockdir; force = true, recursive = true)
-        end
+    end
+    try
+        return f()
+    finally
+        rm(lockdir; force = true, recursive = true)
     end
 end
 
