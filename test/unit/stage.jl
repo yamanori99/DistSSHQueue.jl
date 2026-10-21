@@ -445,3 +445,126 @@ end
     @test occursin("--progress", fetch_h)
     @test occursin("progress2", fetch_h)
 end
+
+@testset "kit_verb_and_args splits submit" begin
+    kit, args = DistSSHQueue.kit_verb_and_args("submit", ["go", "a.jl", "parent:1"])
+    @test kit == "go"
+    @test args == ["a.jl", "parent:1"]
+    kit2, args2 = DistSSHQueue.kit_verb_and_args("drive", ["job.jl"])
+    @test kit2 == "drive"
+    @test args2 == ["job.jl"]
+    @test_throws ArgumentError DistSSHQueue.kit_verb_and_args("submit", String[])
+    @test_throws ArgumentError DistSSHQueue.kit_verb_and_args("submit", ["nope"])
+end
+
+@testset "rsync pull records argv and caches 3.2.7" begin
+    mktempdir() do tmp::String
+        bin = joinpath(tmp, "bin")
+        mkpath(bin)
+        rsynclog = joinpath(tmp, "rsync.log")
+        write(
+            joinpath(bin, "rsync"),
+            """
+            #!/bin/sh
+            if [ "\$1" = "--version" ]; then
+              echo "rsync  version 3.2.7  protocol version 31"
+              exit 0
+            fi
+            printf '%s\\n' "\$@" >> "\$FAKE_RSYNC_LOG"
+            exit 0
+            """,
+        )
+        chmod(joinpath(bin, "rsync"), 0o755)
+        try
+            DistSSHQueue._RSYNC_VER_READY[] = false
+            withenv(
+                "PATH" => bin * ":" * get(ENV, "PATH", ""),
+                "FAKE_RSYNC_LOG" => rsynclog,
+            ) do
+                DistSSHQueue.rsync_from_qhost!("qh", "/remote/out", joinpath(tmp, "dest"))
+                DistSSHQueue.rsync_from_qhost_file!(
+                    "qh", "/remote/file.txt", joinpath(tmp, "file.txt"); progress = true,
+                )
+                DistSSHQueue.rsync_from_qhost!("qh", "/remote/a b", joinpath(tmp, "space"))
+                return nothing
+            end
+            @test DistSSHQueue.local_rsync_version() == v"3.2.7"
+        finally
+            DistSSHQueue._RSYNC_VER_READY[] = false
+        end
+        log = read(rsynclog, String)
+        @test occursin("qh:/remote/out/", log)
+        @test occursin("qh:/remote/file.txt\n", log)
+        @test occursin("--info=progress2", log)
+        @test occursin("qh:/remote/a b", log)
+    end
+end
+
+@testset "hop_print and stage_job_tree use ssh on PATH" begin
+    mktempdir() do tmp::String
+        bin = joinpath(tmp, "bin")
+        mkpath(bin)
+        rsynclog = joinpath(tmp, "rsync.log")
+        write(
+            joinpath(bin, "ssh"),
+            """
+            #!/bin/sh
+            echo /tmp/fakehome
+            exit 0
+            """,
+        )
+        write(
+            joinpath(bin, "rsync"),
+            """
+            #!/bin/sh
+            if [ "\$1" = "--version" ]; then
+              echo "rsync  version 3.2.7  protocol version 31"
+              exit 0
+            fi
+            printf '%s\\n' "\$@" >> "\$FAKE_RSYNC_LOG"
+            exit 0
+            """,
+        )
+        chmod(joinpath(bin, "ssh"), 0o755)
+        chmod(joinpath(bin, "rsync"), 0o755)
+        proj = joinpath(tmp, "job")
+        mkpath(proj)
+        write(joinpath(proj, "Project.toml"), "name = \"App\"\n")
+        write(joinpath(proj, "job.jl"), "1\n")
+        env = [
+            "PATH" => bin * ":" * get(ENV, "PATH", ""),
+            "FAKE_RSYNC_LOG" => rsynclog,
+            "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
+        ]
+        home = try
+            DistSSHQueue._RSYNC_VER_READY[] = false
+            withenv(env...) do
+                return DistSSHQueue.hop_print("qh", "/opt/julia", "print(homedir())")
+            end
+        finally
+            DistSSHQueue._RSYNC_VER_READY[] = false
+        end
+        @test home == "/tmp/fakehome"
+        staged = String[]
+        extra = Dict{String, String}()
+        try
+            DistSSHQueue._RSYNC_VER_READY[] = false
+            withenv(env...) do
+                cd(proj) do
+                    got, more = DistSSHQueue.stage_job_tree!(
+                        "qh", "/opt/julia", "submit", ["go", "job.jl"],
+                    )
+                    append!(staged, got)
+                    merge!(extra, more)
+                    return nothing
+                end
+            end
+        finally
+            DistSSHQueue._RSYNC_VER_READY[] = false
+        end
+        @test any(s -> startswith(s, "/tmp/fakehome/.distsshqueue/stage/"), staged)
+        @test startswith(extra["DISTRIBUTED_PROJECT_ROOT"], "/tmp/fakehome/.distsshqueue/stage/")
+        @test haskey(extra, DistSSHQueue.JOB_ID_ENV)
+        @test occursin("/tmp/fakehome/.distsshqueue/stage/", read(rsynclog, String))
+    end
+end
