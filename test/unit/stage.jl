@@ -49,6 +49,28 @@ using DistSSHQueue
             )
         end
         @test !ispath(stage)
+        mkpath(stage)
+        write(joinpath(stage, "keep.txt"), "x\n")
+        withenv("HOME" => home, DistSSHQueue.JOB_ID_ENV => id) do
+            @test_throws ArgumentError DistSSHQueue.submit_main(["pool:1", "go", script])
+        end
+        @test !ispath(stage)
+        mkpath(stage)
+        write(joinpath(stage, "keep.txt"), "x\n")
+        j = DistSSHQueue.Job(;
+            id = id, kind = :go, script = "a.jl", hosts = ["parent:1"],
+        )
+        DistSSHQueue.save_jobs(store, [j])
+        withenv("HOME" => home, DistSSHQueue.JOB_ID_ENV => id) do
+            @test_throws ArgumentError DistSSHQueue.submit_main(["go", joinpath(home, "missing.jl")])
+        end
+        @test isfile(joinpath(stage, "keep.txt"))
+        rm(store; force = true)
+        write(joinpath(home, ".distsshqueue", "config.toml"), "[\n")
+        withenv("HOME" => home, DistSSHQueue.JOB_ID_ENV => id) do
+            @test_throws ArgumentError DistSSHQueue.submit_main(["go", script])
+        end
+        @test !ispath(stage)
     end
 end
 

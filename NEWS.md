@@ -8,7 +8,8 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 - Requires DistSSHRun 0.1.12.
 - `fetch` refuses a dest element `.` or `..`.
 - A queue-host `submit` that throws before the job row is written removes
-  `~/.distsshqueue/stage/<uuid>`. A row that was written keeps its stage,
+  `~/.distsshqueue/stage/<uuid>`, including when `pool:N`, the script, or
+  the config fails before `submit!`. A row that was written keeps its stage,
   including when `serve` then fails to start.
 - macOS `stop` boots out the LaunchAgent, and a plist written by `enable`
   restarts serve only when the process fails. A plist already installed
