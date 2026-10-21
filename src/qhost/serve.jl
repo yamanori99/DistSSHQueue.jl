@@ -133,16 +133,26 @@ function serve_cli(args::Vector{String})::Cint
     return 0
 end
 
-"""Stop serve and latch it off. Keeps config / store / OS unit.
-`submit` will not auto-serve until an explicit `serve` clears the latch."""
-function stop_cli(args::Vector{String})::Cint
+"""Stop serve and latch it off. Keeps config, the store, and the unit file.
+
+The latch is written first, so a submit during this command cannot autoserve.
+On macOS, [`bootout_serve_unit!`](@ref) then unloads the LaunchAgent. A
+`KeepAlive` of `true` would otherwise restart serve. Exit 0 (`Already running`)
+does not restart once the plist uses `SuccessfulExit = false`. SIGTERM is not
+exit 0, so `stop` still boots the job out. The next login loads the plist again.
+`submit` will not auto-serve until an explicit `serve` clears the latch.
+
+`bootout!` defaults to [`bootout_serve_unit!`](@ref). Tests pass a fake.
+"""
+function stop_cli(args::Vector{String}; bootout! = bootout_serve_unit!)::Cint
     for a in args
         a in ("-h", "--help") && (show_usage(; command = "stop"); return 0)
         throw(ArgumentError("unknown stop option: $(a)"))
     end
     store = store_path()
-    was_running = stop_serve!(store)
     set_stopped!(store)
+    bootout!()
+    was_running = stop_serve!(store)
     print_serve_stopped(store, was_running)
     return 0
 end

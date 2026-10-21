@@ -15,6 +15,7 @@ using DistSSHQueue
 include(joinpath(@__DIR__, "support.jl"))
 get!(ENV, DistSSHQueue.LOCAL_QUEUE_ENV, "1")
 get!(ENV, DistSSHQueue.NO_KIT_SETUP_ENV, "1")
+get!(ENV, DistSSHQueue.NO_STOP_BOOTOUT_ENV, "1")
 install_serve_reaper!()
 
 const _RUNTEST_N = 8

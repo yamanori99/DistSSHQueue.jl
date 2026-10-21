@@ -130,7 +130,11 @@ end
     mktempdir() do d
         store = joinpath(d, "jobs.toml")
         write(store, "jobs = []\n")
-        withenv("DISTSSHQUEUE_STORE" => store, "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml")) do
+        withenv(
+            "DISTSSHQUEUE_STORE" => store,
+            "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
+            DistSSHQueue.NO_STOP_BOOTOUT_ENV => "1",
+        ) do
             code, out, _ = capture_stdio() do
                 DistSSHQueue.stop_cli(String[])
             end
@@ -138,6 +142,47 @@ end
             @test occursin("Stopped serve", out)
         end
         @test DistSSHQueue.serve_stopped(store)
+    end
+end
+
+@testset "stop latches before it boots out the LaunchAgent" begin
+    mktempdir() do d
+        store = joinpath(d, "jobs.toml")
+        write(store, "jobs = []\n")
+        latched = Ref(false)
+        withenv(
+            "DISTSSHQUEUE_STORE" => store,
+            "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
+        ) do
+            DistSSHQueue.stop_cli(
+                String[];
+                bootout! = () -> (latched[] = DistSSHQueue.serve_stopped(store)),
+            )
+        end
+        @test latched[]
+        @test DistSSHQueue.serve_stopped(store)
+    end
+end
+
+@testset "bootout_serve_unit! follows the plist and the test switch" begin
+    mktempdir() do home
+        called = Ref(0)
+        fake = () -> (called[] += 1)
+        withenv(DistSSHQueue.NO_STOP_BOOTOUT_ENV => "1") do
+            @test !DistSSHQueue.bootout_serve_unit!(; home = home, bootout! = fake)
+        end
+        @test called[] == 0
+        withenv(DistSSHQueue.NO_STOP_BOOTOUT_ENV => nothing) do
+            @test !DistSSHQueue.bootout_serve_unit!(; home = home, bootout! = fake)
+            if Sys.isapple()
+                mkpath(joinpath(home, "Library", "LaunchAgents"))
+                write(DistSSHQueue.launch_agent_path(; home = home), "plist")
+                @test DistSSHQueue.bootout_serve_unit!(; home = home, bootout! = fake)
+                @test called[] == 1
+            else
+                @test called[] == 0
+            end
+        end
     end
 end
 

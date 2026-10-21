@@ -7,6 +7,9 @@ const SYSTEMD_UNIT = "distsshqueue.serve.service"
 const LEGACY_SERVICE_LABEL = "org.distsshkitqueue.serve"
 const LEGACY_SYSTEMD_UNIT = "distsshkitqueue.serve.service"
 
+# Tests set this so `stop` does not `launchctl bootout` the machine's agent.
+const NO_STOP_BOOTOUT_ENV = "DISTSSHQUEUE_NO_STOP_BOOTOUT"
+
 function xml_escape(s::AbstractString)::String
     t = replace(String(s), "&" => "&amp;")
     t = replace(t, "<" => "&lt;")
@@ -53,7 +56,10 @@ function launch_agent_plist(julia::AbstractString, project::AbstractString)::Str
         <key>RunAtLoad</key>
         <true/>
         <key>KeepAlive</key>
-        <true/>
+        <dict>
+            <key>SuccessfulExit</key>
+            <false/>
+        </dict>
     </dict>
     </plist>
     """
@@ -164,6 +170,21 @@ function _launchctl_unload()
         end
     end
     return nothing
+end
+
+"""Boot out the macOS serve job so `KeepAlive` does not restart it.
+
+The plist stays. The next login loads it again (`RunAtLoad`). No-op when
+[`NO_STOP_BOOTOUT_ENV`](@ref) is set, on Linux, or when neither LaunchAgent
+file exists. `bootout!` is the launchctl call. Tests pass a fake.
+"""
+function bootout_serve_unit!(; home::AbstractString = homedir(), bootout! = _launchctl_unload)::Bool
+    _queue_env_on(NO_STOP_BOOTOUT_ENV) && return false
+    Sys.isapple() || return false
+    have = isfile(launch_agent_path(; home = home)) || isfile(legacy_launch_agent_path(; home = home))
+    have || return false
+    bootout!()
+    return true
 end
 
 function _systemd_enable()
