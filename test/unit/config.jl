@@ -999,9 +999,14 @@ end
         raw = withenv("LC_ALL" => "ja_JP.UTF-8", "TZ" => "Asia/Tokyo") do
             strip(read(`ps -o lstart= -p $(getpid())`, String))
         end
+        seen = Ref(("", ""))
         again = withenv("LC_ALL" => "ja_JP.UTF-8", "TZ" => "Asia/Tokyo") do
-            DistSSHQueue._process_start_key(getpid())
+            key = DistSSHQueue._process_start_key(getpid())
+            seen[] = (ENV["LC_ALL"], ENV["TZ"])
+            key
         end
+        @test seen[][1] == "ja_JP.UTF-8"
+        @test seen[][2] == "Asia/Tokyo"
         @test forced == again
         @test forced != raw
     end
