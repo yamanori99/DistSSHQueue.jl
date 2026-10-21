@@ -1,5 +1,7 @@
 """One table row. `hosts` are DistSSHKit placement tokens (`parent[:N]` / `child:NAME[:N]`).
-`kwargs` is an opaque bag for DistSSHRun `execute!` (`project` is the Kit project)."""
+`kwargs` is an opaque bag for DistSSHRun `execute!` (`project` is the Kit project).
+`cancel` true means a running job was asked to stop and is still in setup.
+"""
 mutable struct Job
     id::String
     kind::Symbol
@@ -23,6 +25,13 @@ new_job_id()::String = string(Base.UUID(rand(UInt128)))
 
 """Hop ENV: stage dir UUID must match `jobs.toml`."""
 const JOB_ID_ENV = "DISTSSHQUEUE_JOB_ID"
+
+"""Kwarg set while a `:running` job is waiting to stop. Not passed to `execute!`."""
+const _CANCEL_KW = "cancel"
+
+function _job_cancel_flag(j::Job)::Bool
+    return get(j.kwargs, _CANCEL_KW, nothing) === true
+end
 function Job(;
         id::AbstractString = new_job_id(),
         kind::Symbol,

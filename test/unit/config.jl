@@ -58,7 +58,18 @@ end
     mktempdir() do d
         store = joinpath(d, "jobs.toml")
         @test !DistSSHQueue.serve_alive(store)
+        write(DistSSHQueue.store_pid_path(store), "1")
+        write(DistSSHQueue.store_pid_start_path(store), "previous-start")
         DistSSHQueue.write_pid_file(store)
+        @test tryparse(Int, strip(read(DistSSHQueue.store_pid_path(store), String))) == getpid()
+        key = DistSSHQueue._own_start_key()
+        startp = DistSSHQueue.store_pid_start_path(store)
+        if key === nothing
+            @test !isfile(startp)
+        else
+            @test strip(read(startp, String)) == key
+            @test key != "previous-start"
+        end
         @test DistSSHQueue.serve_alive(store)
         DistSSHQueue.remove_pid_file(store)
         @test !DistSSHQueue.serve_alive(store)

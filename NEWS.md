@@ -14,6 +14,10 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
   delete anything. A file store is removed as that file only. `-y` and
   `DISTSSHKIT_YES` print `Would remove` before they delete. `.pid.start`
   is removed with the other store files.
+- `cancel` of a job that is still in setup returns 0 and leaves the row
+  `:running` until the current setup step ends. It used to return 1.
+  Stopping `serve` during setup fails that job. A Kit job that already
+  detached keeps running.
 
 ### Planned breaking (next minor)
 
