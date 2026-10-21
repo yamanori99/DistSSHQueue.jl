@@ -936,20 +936,41 @@ function _start!(q::Queue, j::Job)
             end
             _finish!(q, id, :done, nothing; result_path = path, snap = snap)
         catch e
-            if e isa _JobCancelled
+            requested = try
+                e isa _JobCancelled || _job_cancel_requested(q, id)
+            catch
+                false
+            end
+            if requested
                 _finish!(
                     q, id, :cancelled, nothing;
                     result_path = kit_output_dir(snap), snap = snap,
                 )
             else
-                _finish!(
-                    q,
-                    id,
-                    :failed,
-                    sprint(showerror, e);
-                    result_path = kit_output_dir(snap),
-                    snap = snap,
-                )
+                err = sprint(showerror, e)
+                try
+                    _finish!(
+                        q,
+                        id,
+                        :failed,
+                        err;
+                        result_path = kit_output_dir(snap),
+                        snap = snap,
+                    )
+                catch
+                    lock(q.lock) do
+                        i = _index_id(q.jobs, id)
+                        i === nothing && return nothing
+                        row = q.jobs[i]
+                        row.state === :running || return nothing
+                        row.state = :failed
+                        row.finished_at = now(UTC)
+                        row.error = queue_explain_error(err)
+                        delete!(row.kwargs, "phase")
+                        q.live_id == id && (q.live_id = nothing)
+                        return nothing
+                    end
+                end
             end
         end
     end

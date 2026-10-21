@@ -5,6 +5,8 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- A setup failure after `cancel` records the job as `:cancelled`. It used
+  to be `:failed`. If the cancel flag cannot be read, the job is `:failed`.
 - Requires DistSSHRun 0.1.12.
 - A local rsync older than 3.2.4 stops when the remote path has whitespace,
   a quote, `\`, `$`, a backtick, `;`, `&`, `|`, `<`, `>`, `(`, `)`, `*`,
