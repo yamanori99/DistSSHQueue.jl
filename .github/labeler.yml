@@ -36,6 +36,7 @@
           - "test/e2e.jl"
           - "test/runtests.jl"
           - "test/support.jl"
+          - "test/unit/idle.jl"
 
 "area:queue":
   - changed-files:

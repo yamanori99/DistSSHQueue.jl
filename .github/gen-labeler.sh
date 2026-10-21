@@ -86,6 +86,9 @@ EOF
       printf '          - "test/%s"\n' "$name"
     fi
   done
+  # Idle-watch unit test. It exercises test/support.jl, so it stays with the
+  # harness. Product tests under test/unit remain on area:queue or area:client.
+  printf '          - "test/unit/idle.jl"\n'
   shopt -u nullglob
 
   cat <<'EOF'

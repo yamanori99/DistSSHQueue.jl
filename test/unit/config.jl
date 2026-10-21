@@ -1069,18 +1069,32 @@ end
                 cmd = `$(Base.julia_cmd()) --startup-file=no --project=$proj -e $code $store $out $release`
                 push!(procs, run(pipeline(cmd; stdout = devnull, stderr = err); wait = false))
             end
+            # Both lines, both exits, or CPU under a few percent and no output
+            # growth for `:child_reply`. Unreadable CPU time is that long on
+            # the wall clock.
             lines = String[]
-            deadline = time() + wait_seconds(:child_reply)
-            while time() < deadline
+            watch = IdleWatch(wait_seconds(:child_reply))
+            seen = Dict{Int, Int}()
+            while true
                 lines = String[]
+                output = 0
                 for i in 1:2
                     out = joinpath(d, "out$i")
                     isfile(out) || continue
+                    output += filesize(out)
                     s = strip(read(out, String))
                     isempty(s) || push!(lines, s)
                 end
                 length(lines) == 2 && break
-                sleep(0.05)
+                any(process_running, procs) || break
+                mark = observe_progress!(
+                    watch;
+                    cpu = monotonic_group_cpu!(seen, procs),
+                    output,
+                    now = time(),
+                )
+                mark === :busy || break
+                sleep(CHILD_POLL_S)
             end
             touch(release)
             won_lines = filter(startswith("won "), lines)

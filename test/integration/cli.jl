@@ -44,9 +44,11 @@ function wait_kit_pid(path::AbstractString; tries = wait_tries(:child_reply, 0.1
 end
 
 # `read(cmd)` returns only when the child exits. A child that never exits
-# sits at 0% CPU until PkgEval's inactivity kill, with no test name. This
-# bounds that wait and names the command. `:child_reply` includes a cold
-# child still compiling, so a live process is not reported as a hang.
+# sits near 0% CPU until PkgEval's inactivity kill, with no test name. This
+# names that wait. `:child_reply` is how long the child may stay under a few
+# percent CPU with neither stdout nor stderr growing. A cold compile stays
+# above that. A full-CPU spin is left to PkgEval. Unreadable CPU time is a
+# wall clock of the same length, and output growth does not extend that wall.
 function read_cli(
         args::AbstractVector{<:AbstractString},
         env::AbstractDict;
@@ -57,33 +59,17 @@ function read_cli(
     out = IOBuffer()
     err = IOBuffer()
     proc = run(pipeline(cmd; stdout = out, stderr = err); wait = false)
-    timed_out = Ref(false)
-    arm = Timer(Float64(seconds)) do _
-        process_running(proc) || return
-        timed_out[] = true
-        try
-            kill(proc)
-        catch
-        end
-    end
-    kill_later = Timer(Float64(seconds) + 5) do _
-        timed_out[] || return
-        process_running(proc) || return
-        try
-            kill(proc, Base.SIGKILL)
-        catch
-        end
-    end
-    try
+    mark = wait_while_progressing(() -> out.size + err.size, proc; seconds)
+    timed_out = mark === :idle || mark === :wall
+    if timed_out
+        terminate_child!(proc)
+    else
         wait(proc)
-    finally
-        close(arm)
-        close(kill_later)
     end
     text = String(take!(out))
     etext = String(take!(err))
-    if timed_out[] || !success(proc)
-        why = timed_out[] ? "timed out" : "failed"
+    if timed_out || !success(proc)
+        why = timed_out ? "timed out ($(mark))" : "failed"
         error("$label $why (exit=$(proc.exitcode)): stdout=$(repr(text)) stderr=$(repr(etext))")
     end
     return text
@@ -127,12 +113,25 @@ function spawn_to_file(cmd::Cmd, env::AbstractDict, path::AbstractString)::Base.
 end
 
 function wait_output(path::AbstractString, proc::Base.Process, needle::AbstractString; seconds::Real = wait_seconds(:child_reply))::Bool
-    deadline = time() + seconds
-    while time() < deadline && process_running(proc)
-        isfile(path) && occursin(needle, read(path, String)) && return true
-        sleep(0.05)
+    function bytes()
+        isfile(path) || return 0
+        return filesize(path)
     end
-    return false
+    watch = IdleWatch(seconds)
+    while process_running(proc)
+        if isfile(path) && occursin(needle, read(path, String))
+            return true
+        end
+        mark = observe_progress!(
+            watch;
+            cpu = process_cpu_seconds(proc),
+            output = bytes(),
+            now = time(),
+        )
+        mark === :busy || return false
+        sleep(CHILD_POLL_S)
+    end
+    return isfile(path) && occursin(needle, read(path, String))
 end
 
 function sigint_stopped(proc::Base.Process; seconds::Real = wait_seconds(:sigint_grace))::Bool

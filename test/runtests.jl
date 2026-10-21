@@ -17,7 +17,7 @@ get!(ENV, DistSSHQueue.LOCAL_QUEUE_ENV, "1")
 get!(ENV, DistSSHQueue.NO_KIT_SETUP_ENV, "1")
 install_serve_reaper!()
 
-const _RUNTEST_N = 7
+const _RUNTEST_N = 8
 const _RUNTEST_I = Ref(0)
 function _runtest_announce(rel::AbstractString)
     _RUNTEST_I[] += 1
@@ -28,6 +28,8 @@ end
 
 @testset "DistSSHQueue" verbose = true begin
     @testset "unit" verbose = true begin
+        _runtest_announce("unit/idle.jl")
+        include(joinpath(@__DIR__, "unit", "idle.jl"))
         _runtest_announce("unit/queue.jl")
         include(joinpath(@__DIR__, "unit", "queue.jl"))
         _runtest_announce("unit/config.jl")

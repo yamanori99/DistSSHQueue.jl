@@ -22,6 +22,283 @@ function wait_tries(name::Symbol, sleep_s::Real)::Int
     return max(1, round(Int, seconds / Float64(sleep_s)))
 end
 
+# How often a child wait samples CPU time and output size.
+const CHILD_POLL_S = 0.2
+
+# A short poll can add one tick. The rate uses a fixed window of this much
+# wall time, so that tick is not progress. `IDLE_MIN_RATE` is CPU seconds per
+# wall second over that window, not over the whole quiet stretch.
+const IDLE_MIN_WINDOW_S = 10.0
+const IDLE_MIN_RATE = 0.05
+
+# One child wait. `seconds` is how long the child may stay under `min_rate`
+# with no output growth. CPU rate is judged on a fixed window of `min_window`.
+# A long quiet stretch does not raise that bar, so a compile that starts late
+# is still progress at the next window boundary. The first CPU sample in a
+# window is a baseline. Output growth moves `idle_since` only. `nothing` CPU
+# for the whole wait is the wall clock; output does not extend that wall. A
+# full-CPU spin is not cut here.
+mutable struct IdleWatch
+    seconds::Float64
+    min_window::Float64
+    min_rate::Float64
+    started::Float64
+    idle_since::Float64
+    rate_t::Float64
+    rate_cpu::Union{Nothing, Float64}
+    last_output::Int
+end
+
+function IdleWatch(
+        seconds::Real;
+        now::Real = time(),
+        min_window::Real = IDLE_MIN_WINDOW_S,
+        min_rate::Real = IDLE_MIN_RATE,
+    )
+    t = Float64(now)
+    return IdleWatch(
+        Float64(seconds),
+        Float64(min_window),
+        Float64(min_rate),
+        t,
+        t,
+        t,
+        nothing,
+        0,
+    )
+end
+
+# `:busy` keeps waiting. `:idle` means CPU time stayed under `min_rate` and
+# output did not grow. `:wall` means CPU time could not be read and the wall
+# clock ran out.
+function observe_progress!(
+        w::IdleWatch;
+        cpu::Union{Nothing, Real},
+        output::Integer,
+        now::Float64,
+    )::Symbol
+    cpu_s = cpu === nothing ? nothing : Float64(cpu)
+    rate_cpu = w.rate_cpu
+    if rate_cpu === nothing && cpu_s === nothing
+        return now - w.started >= w.seconds ? :wall : :busy
+    end
+    out = Int(output)
+    output_grew = out > w.last_output
+    if output_grew
+        w.last_output = out
+    end
+    cpu_progress = false
+    if cpu_s !== nothing
+        if rate_cpu === nothing
+            w.rate_t = now
+            w.rate_cpu = cpu_s
+        elseif now - w.rate_t >= w.min_window
+            elapsed = now - w.rate_t
+            cpu_progress = cpu_s - rate_cpu >= w.min_rate * elapsed
+            w.rate_t = now
+            w.rate_cpu = cpu_s
+        end
+    end
+    if cpu_progress || output_grew
+        w.idle_since = now
+        return :busy
+    end
+    return now - w.idle_since >= w.seconds ? :idle : :busy
+end
+
+# utime + stime from a Linux `/proc/<pid>/stat` line. `comm` may contain spaces.
+# This is the process itself, not a child it has spawned.
+function proc_stat_cpu_ticks(text::AbstractString)::Union{Nothing, Int}
+    close_at = findlast(==(')'), text)
+    close_at === nothing && return nothing
+    fields = split(chop(text[close_at:end]; head = 1, tail = 0))
+    length(fields) < 13 && return nothing
+    utime = tryparse(Int, fields[12])
+    stime = tryparse(Int, fields[13])
+    utime === nothing && return nothing
+    stime === nothing && return nothing
+    return utime + stime
+end
+
+# `ps -o time=` on macOS. Accepts `m:ss`, `m:ss.ss`, `h:mm:ss`, and `d-hh:mm:ss`.
+# The unit is centiseconds. The idle watch converts that to seconds.
+function ps_time_centiseconds(text::AbstractString)::Union{Nothing, Int}
+    s = strip(text)
+    isempty(s) && return nothing
+    days = 0
+    body = s
+    if occursin('-', s)
+        day_text, body = split(s, '-'; limit = 2)
+        parsed_days = tryparse(Int, day_text)
+        parsed_days === nothing && return nothing
+        days = parsed_days
+    end
+    parts = split(body, ':')
+    1 <= length(parts) <= 3 || return nothing
+    nums = Float64[]
+    for part in parts
+        n = tryparse(Float64, part)
+        n === nothing && return nothing
+        push!(nums, n)
+    end
+    while length(nums) < 3
+        pushfirst!(nums, 0.0)
+    end
+    hours, minutes, secs = nums
+    total = days * 86400 + hours * 3600 + minutes * 60 + secs
+    total < 0 && return nothing
+    return round(Int, total * 100)
+end
+
+function linux_cpu_ticks(pid::Integer)::Union{Nothing, Int}
+    path = "/proc/$(Int(pid))/stat"
+    isfile(path) || return nothing
+    text = try
+        read(path, String)
+    catch
+        return nothing
+    end
+    return proc_stat_cpu_ticks(text)
+end
+
+function apple_cpu_ticks(pid::Integer)::Union{Nothing, Int}
+    text = try
+        read(`ps -o time= -p $(Int(pid))`, String)
+    catch
+        return nothing
+    end
+    return ps_time_centiseconds(text)
+end
+
+function process_cpu_ticks(pid::Integer)::Union{Nothing, Int}
+    if Sys.islinux()
+        return linux_cpu_ticks(pid)
+    elseif Sys.isapple()
+        return apple_cpu_ticks(pid)
+    else
+        return nothing
+    end
+end
+
+function process_cpu_ticks(proc::Base.Process)::Union{Nothing, Int}
+    process_running(proc) || return nothing
+    pid = try
+        getpid(proc)
+    catch
+        return nothing
+    end
+    return process_cpu_ticks(pid)
+end
+
+const _CLK_TCK = Ref(0)
+
+function clock_ticks_per_second()::Int
+    _CLK_TCK[] > 0 && return _CLK_TCK[]
+    text = try
+        read(`getconf CLK_TCK`, String)
+    catch
+        _CLK_TCK[] = 100
+        return _CLK_TCK[]
+    end
+    n = tryparse(Int, strip(text))
+    _CLK_TCK[] = n === nothing || n <= 0 ? 100 : n
+    return _CLK_TCK[]
+end
+
+# Linux ticks are `CLK_TCK` per CPU second. macOS `ps` values are centiseconds.
+function cpu_time_seconds(ticks::Integer)::Float64
+    denom = Sys.islinux() ? Float64(clock_ticks_per_second()) : 100.0
+    return Float64(ticks) / denom
+end
+
+function process_cpu_seconds(pid::Integer)::Union{Nothing, Float64}
+    ticks = process_cpu_ticks(pid)
+    ticks === nothing && return nothing
+    return cpu_time_seconds(ticks)
+end
+
+function process_cpu_seconds(proc::Base.Process)::Union{Nothing, Float64}
+    ticks = process_cpu_ticks(proc)
+    ticks === nothing && return nothing
+    return cpu_time_seconds(ticks)
+end
+
+# Per-pid highs in clock ticks (Linux) or centiseconds (macOS). The sum is
+# converted to seconds once, the same unit as `process_cpu_seconds`. A child
+# that exits keeps its last sample, so the total does not fall and the sibling
+# can still show progress.
+function monotonic_group_cpu!(
+        last::Dict{Int, Int},
+        procs::Vector{Base.Process},
+    )::Union{Nothing, Float64}
+    for proc in procs
+        process_running(proc) || continue
+        pid = try
+            getpid(proc)
+        catch
+            return nothing
+        end
+        ticks = process_cpu_ticks(pid)
+        ticks === nothing && return nothing
+        prev = get(last, pid, 0)
+        if ticks > prev
+            last[pid] = ticks
+        end
+    end
+    return isempty(last) ? 0.0 : cpu_time_seconds(sum(values(last)))
+end
+
+# `:exited` when every process has exited. `:idle` or `:wall` when the watch says so.
+function wait_while_progressing(
+        output_bytes::Function,
+        procs::Vector{Base.Process};
+        seconds::Real,
+    )::Symbol
+    watch = IdleWatch(seconds)
+    seen = Dict{Int, Int}()
+    while any(process_running, procs)
+        mark = observe_progress!(
+            watch;
+            cpu = monotonic_group_cpu!(seen, procs),
+            output = output_bytes(),
+            now = time(),
+        )
+        mark === :busy || return mark
+        sleep(CHILD_POLL_S)
+    end
+    return :exited
+end
+
+function wait_while_progressing(
+        output_bytes::Function,
+        proc::Base.Process;
+        seconds::Real,
+    )::Symbol
+    return wait_while_progressing(output_bytes, Base.Process[proc]; seconds)
+end
+
+# SIGTERM, then SIGKILL after `:stop_grace` if the child is still running.
+function terminate_child!(proc::Base.Process)
+    if process_running(proc)
+        try
+            kill(proc)
+        catch
+        end
+        deadline = time() + wait_seconds(:stop_grace)
+        while process_running(proc) && time() < deadline
+            sleep(0.05)
+        end
+        if process_running(proc)
+            try
+                kill(proc, Base.SIGKILL)
+            catch
+            end
+        end
+    end
+    wait(proc)
+    return nothing
+end
+
 # Capture CLI stdio the way DistSSHKit tests do.
 #
 # `redirect_stdout` does not accept `IOBuffer`. Kit uses `mktemp`
