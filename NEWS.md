@@ -5,6 +5,10 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- `cancel` of a running job with no live `kit.pid` stays in the slot until
+  setup stops, even when `--output-dir` is set. It used to become
+  `:cancelled` at once. A live `kit.pid` is still stopped. The exit code
+  stays 0.
 - Requires DistSSHRun 0.1.12.
 - `fetch` refuses a dest element `.` or `..`.
 - A queue-host `submit` that throws before the job row is written removes
