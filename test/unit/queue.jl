@@ -2824,3 +2824,40 @@ end
     @test occursin("--queue-env", err)
     @test occursin("not --project", err)
 end
+
+@testset "peel_submit_pool keeps flags and rejects bare pool" begin
+    rest, n = DistSSHQueue.peel_submit_pool(["go", "--", "pool:8", "job.jl"])
+    @test n === nothing
+    @test rest == ["go", "--", "pool:8", "job.jl"]
+    rest2, n2 = DistSSHQueue.peel_submit_pool(["go", "--julia", "pool:8", "job.jl"])
+    @test n2 === nothing
+    @test rest2 == ["go", "--julia", "pool:8", "job.jl"]
+    @test_throws ArgumentError DistSSHQueue.peel_submit_pool(["pool", "go", "job.jl"])
+end
+
+@testset "peel_status_watch_interval reads interval and tail" begin
+    mode, interval, tail = DistSSHQueue.peel_status_watch_interval(
+        ["--interval", "1.5", "--tail", "full"]; verb = "watch", default_interval = 0.2,
+    )
+    @test mode === :run
+    @test interval == 1.5
+    @test tail === nothing
+    _, _, ntail = DistSSHQueue.peel_status_watch_interval(
+        ["--tail", "4"]; verb = "status", default_interval = nothing,
+    )
+    @test ntail == 4
+    help, _, _ = DistSSHQueue.peel_status_watch_interval(
+        ["-h"]; verb = "watch", default_interval = 0.2,
+    )
+    @test help === :help
+    @test_throws ArgumentError DistSSHQueue.peel_status_watch_interval(
+        ["--tail", "0"]; verb = "watch", default_interval = 0.2,
+    )
+    @test_throws ArgumentError DistSSHQueue.peel_status_watch_interval(
+        ["--tail", "nope"]; verb = "status", default_interval = nothing,
+    )
+    @test_throws ArgumentError DistSSHQueue.peel_status_watch_interval(
+        ["--interval"]; verb = "watch", default_interval = 0.2,
+    )
+    @test_throws ArgumentError DistSSHQueue.parse_cli_interval("watch", "nope")
+end
