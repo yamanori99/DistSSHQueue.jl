@@ -440,12 +440,20 @@ function _throw_if_cancelled(cancel_requested::Function)
     return nothing
 end
 
-function run_kit(j::Job, on_spawn; on_phase = Returns(nothing), still_running = Returns(true), cancel_requested = Returns(false))
+function run_kit(
+        j::Job,
+        on_spawn;
+        on_phase = Returns(nothing),
+        still_running = Returns(true),
+        cancel_requested = Returns(false),
+        execute = DistSSHRun.execute!,
+        terminate = DistSSHRun.terminate_run!,
+    )
     _queue_kit_setup!(j, on_phase; cancel_requested = cancel_requested)
     on_phase(nothing)
     _throw_if_cancelled(cancel_requested)
     still_running() || return something(kit_output_dir(j), "")
-    kp = DistSSHRun.execute!(
+    kp = execute(
         j.kind,
         j.script,
         j.hosts;
@@ -462,7 +470,7 @@ function run_kit(j::Job, on_spawn; on_phase = Returns(nothing), still_running = 
         side = kit_sidecar_dir(j)
         if side !== nothing
             try
-                DistSSHRun.terminate_run!(side; kind = j.kind)
+                terminate(side; kind = j.kind)
             catch
             end
         end
