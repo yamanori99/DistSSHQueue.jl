@@ -222,8 +222,16 @@ end
         mkpath(run)
         DistSSHQueue._set_running_kit_meta!(q, id; run_dir = run)
         @test DistSSHQueue.kit_run_dir(job(q, id)) == run
-        @test cancel!(q, id)
-        @test job(q, id).state === :cancelled
+        child = Base.run(`sleep 60`; wait = false)
+        write(joinpath(run, "kit.pid"), string(getpid(child)))
+        try
+            @test cancel!(q, id)
+            @test job(q, id).state === :cancelled
+            @test !process_running(child)
+        finally
+            process_running(child) && kill(child)
+            wait(child)
+        end
         @test job(q, id).result_path === nothing
         notify(ev)
         sleep(0.05)
@@ -328,8 +336,16 @@ end
         write(joinpath(run, "run.toml"), "output_dir = $(repr(art))\n")
         DistSSHQueue._set_running_kit_meta!(q, id; run_dir = run)
         @test DistSSHQueue.kit_artifact_from_sidecar(run) == art
-        @test cancel!(q, id)
-        @test job(q, id).result_path == art
+        child = Base.run(`sleep 60`; wait = false)
+        write(joinpath(run, "kit.pid"), string(getpid(child)))
+        try
+            @test cancel!(q, id)
+            @test job(q, id).result_path == art
+            @test !process_running(child)
+        finally
+            process_running(child) && kill(child)
+            wait(child)
+        end
         notify(ev)
         sleep(0.05)
     end
@@ -451,20 +467,49 @@ end
     end
 end
 
-@testset "cancel running via terminate_run! when output_dir is known" begin
+@testset "cancel during setup with output_dir keeps the slot" begin
     mktempdir() do d
         out = joinpath(d, "kit-out")
         mkpath(out)
         ev = Base.Event()
         q = Queue(; runner = _ -> wait(ev))
         id = submit!(q, "a.jl", "parent:1"; output_dir = out)
+        nxt = submit!(q, "b.jl", "parent:1")
         @test step!(q) == 1
         @test job(q, id).state === :running
+        @test DistSSHQueue.kit_run_dir(job(q, id)) === nothing
+        @test !DistSSHQueue.kit_child_alive(job(q, id))
         @test cancel!(q, id)
-        @test job(q, id).state === :cancelled
+        @test job(q, id).state === :running
+        @test job(q, id).kwargs["cancel"] === true
+        @test step!(q) == 0
+        @test job(q, nxt).state === :queued
         notify(ev)
-        sleep(0.05)
-        @test job(q, id).state === :cancelled
+        _wait_state(q, id, :done)
+    end
+end
+
+@testset "cancel stops a live kit.pid under output_dir" begin
+    mktempdir() do d
+        out = joinpath(d, "kit-out")
+        mkpath(out)
+        child = Base.run(`sleep 60`; wait = false)
+        write(joinpath(out, "kit.pid"), string(getpid(child)))
+        ev = Base.Event()
+        q = Queue(; runner = _ -> wait(ev))
+        try
+            id = submit!(q, "a.jl", "parent:1"; output_dir = out)
+            @test step!(q) == 1
+            @test DistSSHQueue.kit_run_dir(job(q, id)) === nothing
+            @test DistSSHQueue.kit_child_alive(job(q, id))
+            @test cancel!(q, id)
+            @test job(q, id).state === :cancelled
+            @test !process_running(child)
+        finally
+            process_running(child) && kill(child)
+            wait(child)
+            notify(ev)
+        end
     end
 end
 
@@ -523,8 +568,15 @@ end
         id = submit!(q, "a.jl", "parent:1"; output_dir = out)
         @test step!(q) == 1
         @test q.live_id == id
+        child = Base.run(`sleep 60`; wait = false)
+        write(joinpath(out, "kit.pid"), string(getpid(child)))
         client = Queue(; store, runner = _ -> error("client must not run"))
-        @test cancel!(client, id)
+        try
+            @test cancel!(client, id)
+        finally
+            process_running(child) && kill(child)
+            wait(child)
+        end
         @test job(client, id).state === :cancelled
         DistSSHQueue._finish!(q, id, :done, nothing; result_path = out)
         @test job(q, id).state === :cancelled

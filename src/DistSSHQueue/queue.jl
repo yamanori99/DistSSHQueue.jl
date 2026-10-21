@@ -459,7 +459,7 @@ function run_kit(j::Job, on_spawn; on_phase = Returns(nothing), still_running = 
     end
     on_spawn((; run_dir = rd, output_dir = kit_result_path(kp)))
     if cancel_requested()
-        side = kit_run_dir(j)
+        side = kit_sidecar_dir(j)
         if side !== nothing
             try
                 DistSSHRun.terminate_run!(side; kind = j.kind)
@@ -791,7 +791,7 @@ function submit!(q::Queue, script::AbstractString, hosts::AbstractVector{<:Abstr
     return _submit!(q, kind, script, hosts; kwargs...)
 end
 
-"""Cancel `:queued` now. A `:running` job with no Kit run dir stays `:running` and records a cancel flag, so the slot stays taken until setup stops. A known run dir is `terminate_run!` and `:cancelled`.
+"""Cancel `:queued` now. A `:running` job with no live `kit.pid` stays `:running` and records a cancel flag, so the slot stays taken until setup stops. A live `kit.pid` under the run dir or `output_dir` is `terminate_run!` and `:cancelled`.
 
 A setup step (`rsync`, `instantiate`, `check`) runs to the end. The flag is read again before the next step and before `execute!`.
 """
@@ -809,13 +809,15 @@ function cancel!(q::Queue, id::AbstractString)::Bool
                 return :queued
             end
             j.state === :running || return :no
-            side = kit_sidecar_dir(j)
-            if side === nothing
-                j.kwargs[_CANCEL_KW] = true
-                _persist!(q)
-                return :stopping
+            if kit_child_alive(j)
+                side = kit_sidecar_dir(j)
+                if side !== nothing
+                    return (side, kit_output_dir(j), j.kind, j.id)
+                end
             end
-            return (side, kit_output_dir(j), j.kind, j.id)
+            j.kwargs[_CANCEL_KW] = true
+            _persist!(q)
+            return :stopping
         end
     end
     if action isa Tuple{String, Union{Nothing, String}, Symbol, String}
