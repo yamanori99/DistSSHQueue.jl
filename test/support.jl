@@ -72,10 +72,12 @@ function observe_progress!(
         now::Float64,
     )::Symbol
     cpu_s = cpu === nothing ? nothing : Float64(cpu)
-    if w.cpu_mark === nothing && cpu_s === nothing
+    mark = w.cpu_mark
+    if mark === nothing && cpu_s === nothing
         return now - w.started >= w.seconds ? :wall : :busy
     end
-    if cpu_s !== nothing && w.cpu_mark === nothing
+    if cpu_s !== nothing && mark === nothing
+        mark = cpu_s
         w.cpu_mark = cpu_s
     end
     out = Int(output)
@@ -84,9 +86,9 @@ function observe_progress!(
         w.last_output = out
     end
     cpu_progress = false
-    if cpu_s !== nothing && w.cpu_mark !== nothing
+    if cpu_s !== nothing && mark !== nothing
         elapsed = max(now - w.idle_since, w.min_window)
-        cpu_progress = cpu_s - w.cpu_mark >= w.min_rate * elapsed
+        cpu_progress = cpu_s - mark >= w.min_rate * elapsed
     end
     if cpu_progress || output_grew
         w.idle_since = now
