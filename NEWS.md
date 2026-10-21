@@ -5,6 +5,9 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- A queue-host `submit` that throws before the job row is written removes
+  `~/.distsshqueue/stage/<uuid>`. A row that was written keeps its stage,
+  including when `serve` then fails to start.
 - Requires DistSSHRun 0.1.12.
 - macOS `stop` boots out the LaunchAgent, and a plist written by `enable`
   restarts serve only when the process fails. A plist already installed
