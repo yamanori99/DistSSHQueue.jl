@@ -5,6 +5,10 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- `cancel` of a running job with no live `kit.pid` stays in the slot until
+  setup stops, even when `--output-dir` is set. It used to become
+  `:cancelled` at once. A live `kit.pid` is still stopped. The exit code
+  stays 0.
 - Requires DistSSHRun 0.1.12.
 - A local rsync older than 3.2.4 stops when the remote path has whitespace,
   a quote, `\`, `$`, a backtick, `;`, `&`, `|`, `<`, `>`, `(`, `)`, `*`,
