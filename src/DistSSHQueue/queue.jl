@@ -1032,8 +1032,10 @@ function serve!(q::Queue; interval::Real = 0.2)
     owns() = store isa String ? (serve_pid(store) == getpid()) : true
     gone = Ref(false)
     # Skip the dir-lock + TOML parse of `step!` while the store is unchanged: an
-    # idle serve otherwise churns mkdir/rmdir + parse every `interval`. Any
-    # client enqueue or our own persist bumps the mtime, so nothing is missed.
+    # idle serve otherwise churns mkdir/rmdir + parse every `interval`.
+    # Remember the mtime from before `step!`. A client write while `step!`
+    # holds the lock is still newer on the next pass. Our own persist makes
+    # that pass run once more.
     last_mtime = Ref(typemin(Float64))
     try
         while true
@@ -1047,7 +1049,7 @@ function serve!(q::Queue; interval::Real = 0.2)
                 # Skip only when idle; a running row still needs step!.
                 if m != last_mtime[] || _running_copy(q) !== nothing
                     step!(q)
-                    last_mtime[] = _store_mtime(store)
+                    last_mtime[] = m
                 end
             else
                 step!(q)
