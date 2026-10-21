@@ -355,13 +355,19 @@ end
         @test_throws ArgumentError DistSSHQueue.check_fetch_dest(as_file, id; force = true)
         DistSSHQueue.write_fetch_marker!(dest, id)
         @test DistSSHQueue.check_fetch_dest(dest, id; force = true) === :copy
-        @test_throws ArgumentError DistSSHQueue.check_fetch_dest(dest, id2)
+        @test_throws ArgumentError(
+            "fetch: dest already has job $(first(id, 8)) (pass --force to add files there)",
+        ) DistSSHQueue.check_fetch_dest(dest, id2)
         DistSSHQueue.write_fetch_marker!(dest, id2)
-        @test_throws ArgumentError DistSSHQueue.check_fetch_dest(dest, id)
+        @test_throws ArgumentError(
+            "fetch: dest already has job $(first(id2, 8)) (pass --force to add files there)",
+        ) DistSSHQueue.check_fetch_dest(dest, id)
         other = joinpath(d, "occupied")
         mkpath(other)
         write(joinpath(other, "keep.txt"), "x\n")
-        @test_throws ArgumentError DistSSHQueue.check_fetch_dest(other, id)
+        @test_throws ArgumentError(
+            "fetch: dest is not empty (pass --force to add files there)",
+        ) DistSSHQueue.check_fetch_dest(other, id)
         @test DistSSHQueue.check_fetch_dest(other, id; force = true) === :copy
         fresh = joinpath(d, "fresh-dest")
         @test DistSSHQueue.fetch_dest_is_fresh(fresh)
