@@ -6,6 +6,10 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 ## Unreleased
 
 - Requires DistSSHRun 0.1.12.
+- macOS `stop` boots out the LaunchAgent, and a plist written by `enable`
+  restarts serve only when the process fails. A plist already installed
+  with `KeepAlive` true still restarts after `Already running` until
+  `enable` is run again.
 
 ### Planned breaking (next minor)
 

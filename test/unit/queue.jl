@@ -2266,7 +2266,8 @@ end
     @test occursin("DistSSHQueue", plist)
     @test occursin("serve", plist)
     @test occursin("<key>RunAtLoad</key>", plist)
-    @test occursin("<key>KeepAlive</key>", plist)
+    @test occursin("<key>KeepAlive</key>\n    <dict>\n        <key>SuccessfulExit</key>\n        <false/>\n    </dict>", plist)
+    @test !occursin("<key>KeepAlive</key>\n    <true/>", plist)
     unit = DistSSHQueue.systemd_user_unit("/usr/bin/julia", "/opt/Queue.jl")
     @test occursin("ExecStart=/usr/bin/julia --startup-file=no --project=/opt/Queue.jl -m DistSSHQueue serve", unit)
     @test DistSSHQueue.m_package("/opt/Queue.jl") == "DistSSHQueue"
