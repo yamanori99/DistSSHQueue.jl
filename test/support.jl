@@ -22,6 +22,211 @@ function wait_tries(name::Symbol, sleep_s::Real)::Int
     return max(1, round(Int, seconds / Float64(sleep_s)))
 end
 
+# How often a child wait samples CPU time and output size.
+const CHILD_POLL_S = 0.2
+
+# One child wait. `seconds` is how long CPU time and watched output may both
+# stay still. The first CPU sample is a baseline, not progress. `nothing` CPU
+# for the whole wait is the wall clock; output does not extend that wall.
+mutable struct IdleWatch
+    seconds::Float64
+    started::Float64
+    idle_since::Float64
+    last_cpu::Union{Nothing, Int}
+    last_output::Int
+end
+
+function IdleWatch(seconds::Real; now::Float64 = time())
+    t = Float64(now)
+    return IdleWatch(Float64(seconds), t, t, nothing, 0)
+end
+
+# `:busy` keeps waiting. `:idle` means a readable CPU time stopped growing.
+# `:wall` means CPU time could not be read and the wall clock ran out.
+function observe_progress!(
+        w::IdleWatch;
+        cpu::Union{Nothing, Int},
+        output::Integer,
+        now::Float64,
+    )::Symbol
+    if w.last_cpu === nothing && cpu === nothing
+        return now - w.started >= w.seconds ? :wall : :busy
+    end
+    progressed = false
+    if cpu !== nothing
+        if w.last_cpu === nothing
+            w.last_cpu = cpu
+        elseif cpu > w.last_cpu
+            progressed = true
+            w.last_cpu = cpu
+        end
+    end
+    out = Int(output)
+    if out > w.last_output
+        progressed = true
+        w.last_output = out
+    end
+    if progressed
+        w.idle_since = now
+        return :busy
+    end
+    return now - w.idle_since >= w.seconds ? :idle : :busy
+end
+
+# utime + stime from a Linux `/proc/<pid>/stat` line. `comm` may contain spaces.
+function proc_stat_cpu_ticks(text::AbstractString)::Union{Nothing, Int}
+    close_at = findlast(==(')'), text)
+    close_at === nothing && return nothing
+    fields = split(chop(text[close_at:end]; head = 1, tail = 0))
+    length(fields) < 13 && return nothing
+    utime = tryparse(Int, fields[12])
+    stime = tryparse(Int, fields[13])
+    utime === nothing && return nothing
+    stime === nothing && return nothing
+    return utime + stime
+end
+
+# `ps -o time=` on macOS. Accepts `m:ss`, `m:ss.ss`, `h:mm:ss`, and `d-hh:mm:ss`.
+# The unit is centiseconds so a sub-second bump still counts as progress.
+function ps_time_centiseconds(text::AbstractString)::Union{Nothing, Int}
+    s = strip(text)
+    isempty(s) && return nothing
+    days = 0
+    body = s
+    if occursin('-', s)
+        day_text, body = split(s, '-'; limit = 2)
+        parsed_days = tryparse(Int, day_text)
+        parsed_days === nothing && return nothing
+        days = parsed_days
+    end
+    parts = split(body, ':')
+    1 <= length(parts) <= 3 || return nothing
+    nums = Float64[]
+    for part in parts
+        n = tryparse(Float64, part)
+        n === nothing && return nothing
+        push!(nums, n)
+    end
+    while length(nums) < 3
+        pushfirst!(nums, 0.0)
+    end
+    hours, minutes, secs = nums
+    total = days * 86400 + hours * 3600 + minutes * 60 + secs
+    total < 0 && return nothing
+    return round(Int, total * 100)
+end
+
+function linux_cpu_ticks(pid::Integer)::Union{Nothing, Int}
+    path = "/proc/$(Int(pid))/stat"
+    isfile(path) || return nothing
+    text = try
+        read(path, String)
+    catch
+        return nothing
+    end
+    return proc_stat_cpu_ticks(text)
+end
+
+function apple_cpu_ticks(pid::Integer)::Union{Nothing, Int}
+    text = try
+        read(`ps -o time= -p $(Int(pid))`, String)
+    catch
+        return nothing
+    end
+    return ps_time_centiseconds(text)
+end
+
+function process_cpu_ticks(pid::Integer)::Union{Nothing, Int}
+    if Sys.islinux()
+        return linux_cpu_ticks(pid)
+    elseif Sys.isapple()
+        return apple_cpu_ticks(pid)
+    else
+        return nothing
+    end
+end
+
+function process_cpu_ticks(proc::Base.Process)::Union{Nothing, Int}
+    process_running(proc) || return nothing
+    pid = try
+        getpid(proc)
+    catch
+        return nothing
+    end
+    return process_cpu_ticks(pid)
+end
+
+# Sum of per-pid highs. A child that exits keeps its last sample, so the
+# total does not fall and the sibling can still show progress.
+function monotonic_group_cpu!(last::Dict{Int, Int}, procs)::Union{Nothing, Int}
+    for proc in procs
+        process_running(proc) || continue
+        pid = try
+            getpid(proc)
+        catch
+            return nothing
+        end
+        ticks = process_cpu_ticks(pid)
+        ticks === nothing && return nothing
+        prev = get(last, pid, 0)
+        if ticks > prev
+            last[pid] = ticks
+        end
+    end
+    return isempty(last) ? 0 : sum(values(last))
+end
+
+# `:exited` when every process has exited. `:idle` or `:wall` when the watch says so.
+function wait_while_progressing(
+        output_bytes::Function,
+        procs::Vector{Base.Process};
+        seconds::Real,
+    )::Symbol
+    watch = IdleWatch(seconds)
+    seen = Dict{Int, Int}()
+    while any(process_running, procs)
+        mark = observe_progress!(
+            watch;
+            cpu = monotonic_group_cpu!(seen, procs),
+            output = output_bytes(),
+            now = time(),
+        )
+        mark === :busy || return mark
+        sleep(CHILD_POLL_S)
+    end
+    return :exited
+end
+
+function wait_while_progressing(
+        output_bytes::Function,
+        proc::Base.Process;
+        seconds::Real,
+    )::Symbol
+    return wait_while_progressing(output_bytes, Base.Process[proc]; seconds)
+end
+
+# SIGTERM, then SIGKILL after `:stop_grace` if the child is still running.
+function terminate_child!(proc::Base.Process)
+    if process_running(proc)
+        try
+            kill(proc)
+        catch
+        end
+        deadline = time() + wait_seconds(:stop_grace)
+        while process_running(proc) && time() < deadline
+            sleep(0.05)
+        end
+        if process_running(proc)
+            try
+                kill(proc, Base.SIGKILL)
+            catch
+            end
+        end
+    end
+    wait(proc)
+    return nothing
+end
+
 # Capture CLI stdio the way DistSSHKit tests do.
 #
 # `redirect_stdout` does not accept `IOBuffer`. Kit uses `mktemp`
