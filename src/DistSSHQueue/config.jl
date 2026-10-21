@@ -150,26 +150,93 @@ function hosts_toml_line(allow::HostAllow)::String
     return "hosts = " * toml_string_array(items)
 end
 
-function _is_host_list_toml_line(row::String)::Bool
-    t = lstrip(row)
-    if !isempty(t) && t[1] == '#'
-        t = lstrip(SubString(t, nextind(t, firstindex(t))))
-    end
+"""`true` when `row` assigns `hosts` or `allowed`.
+
+`commented` selects a template line (`# hosts = ...`) instead of a real key.
+A real key wins in [`replace_or_insert_hosts_line`](@ref), so a leftover
+template comment is not turned into a second `hosts` key.
+"""
+function _host_list_assignment(row::AbstractString; commented::Bool)::Bool
+    t = lstrip(String(row))
+    hash = !isempty(t) && t[1] == '#'
+    commented == hash || return false
+    hash && (t = lstrip(chopprefix(t, "#")))
     for key in ("hosts", "allowed")
         startswith(t, key) || continue
         rest = lstrip(chopprefix(t, key))
-        startswith(rest, "=") && return true
+        return startswith(rest, "=")
     end
     return false
+end
+
+"""Net `[` minus `]` on one TOML line, ignoring strings and a `#` comment."""
+function _toml_bracket_delta(row::AbstractString)::Int
+    s = String(row)
+    i = firstindex(s)
+    depth = 0
+    while i <= lastindex(s)
+        c = s[i]
+        if c == '#'
+            break
+        elseif c == '"'
+            i = nextind(s, i)
+            while i <= lastindex(s)
+                if s[i] == '\\'
+                    i = nextind(s, i)
+                    i > lastindex(s) && break
+                    i = nextind(s, i)
+                    continue
+                end
+                if s[i] == '"'
+                    i = nextind(s, i)
+                    break
+                end
+                i = nextind(s, i)
+            end
+            continue
+        elseif c == '\''
+            i = nextind(s, i)
+            while i <= lastindex(s)
+                if s[i] == '\''
+                    i = nextind(s, i)
+                    break
+                end
+                i = nextind(s, i)
+            end
+            continue
+        elseif c == '['
+            depth += 1
+        elseif c == ']'
+            depth -= 1
+        end
+        i = nextind(s, i)
+    end
+    return depth
+end
+
+"""Lines of one `hosts` / `allowed` value, including a multi-line array."""
+function _host_assignment_span(rows::Vector{String}, idx::Int)::UnitRange{Int}
+    depth = _toml_bracket_delta(rows[idx])
+    last = idx
+    while depth > 0 && last < length(rows)
+        last += 1
+        depth += _toml_bracket_delta(rows[last])
+    end
+    return idx:last
 end
 
 function replace_or_insert_hosts_line(text::String, line::String)::String
     s = String(text)
     ln = String(line)
     rows = String[String(r) for r in split(s, '\n'; keepempty = true)]
-    idx = findfirst(_is_host_list_toml_line, rows)
+    idx = findfirst(r -> _host_list_assignment(r; commented = false), rows)
+    if idx === nothing
+        idx = findfirst(r -> _host_list_assignment(r; commented = true), rows)
+    end
     if idx isa Int
-        rows[idx] = ln
+        span = _host_assignment_span(rows, idx)
+        deleteat!(rows, span)
+        insert!(rows, first(span), ln)
         return join(rows, '\n')
     end
     env = findfirst(r -> startswith(lstrip(r), "[env]"), rows)
@@ -180,10 +247,27 @@ function replace_or_insert_hosts_line(text::String, line::String)::String
     return rstrip(s) * "\n" * ln * "\n"
 end
 
+"""Throw when `body` is not TOML or its `hosts` value is not `allow`."""
+function _require_written_hosts!(body::String, allow::HostAllow)
+    parsed = try
+        TOML.parse(body)
+    catch e
+        throw(ArgumentError("add-host refused to write config: $(sprint(showerror, e))"))
+    end
+    got = try
+        config_host_names(parsed)
+    catch e
+        throw(ArgumentError("add-host refused to write config: $(sprint(showerror, e))"))
+    end
+    got == allow || throw(ArgumentError("add-host refused to write config: hosts would not match"))
+    return nothing
+end
+
 function write_host_names!(path::AbstractString, allow::HostAllow)
     p = String(path)
     isfile(p) || write_config_template(p)
     body = replace_or_insert_hosts_line(read(p, String), hosts_toml_line(allow))
+    _require_written_hosts!(body, allow)
     tmp = string(p, ".tmp.", getpid(), ".", time_ns())
     try
         write(tmp, body)
