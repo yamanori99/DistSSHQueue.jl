@@ -54,14 +54,20 @@ using Test
     @testset "a compile that starts off a window boundary is not a hang" begin
         watch = IdleWatch(300.0; now = 0.0)
         compile_at = 286.0
+        bad = nothing
         i = 0
         while true
             t = i * CHILD_POLL_S
             t > 400.0 && break
             cpu = t <= compile_at ? 0.0 : t - compile_at
-            @test observe_progress!(watch; cpu = cpu, output = 0, now = t) === :busy
+            mark = observe_progress!(watch; cpu = cpu, output = 0, now = t)
+            if mark !== :busy
+                bad = (t, mark)
+                break
+            end
             i += 1
         end
+        @test bad === nothing
     end
 
     @testset "CPU time that stays still is a hang" begin
