@@ -2,6 +2,23 @@ using Test
 using DistSSHRun
 using DistSSHQueue
 
+@testset "old rsync refuses a remote path with shell characters" begin
+    plain = "/home/q/.distsshqueue/stage/aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+    spaced = "/home/q/my jobs/stage"
+    DistSSHQueue._refuse_unprotected_rsync_path!(spaced; version = v"3.2.4")
+    DistSSHQueue._refuse_unprotected_rsync_path!(plain; version = v"2.6.9")
+    DistSSHQueue._refuse_unprotected_rsync_path!("~/.distsshqueue/stage/job"; version = v"2.6.9")
+    @test_throws ArgumentError DistSSHQueue._refuse_unprotected_rsync_path!(
+        spaced; version = v"2.6.9",
+    )
+    @test_throws ArgumentError DistSSHQueue._refuse_unprotected_rsync_path!(
+        "/tmp/a;rm"; version = v"3.0.0",
+    )
+    DistSSHQueue._refuse_unprotected_rsync_path!(spaced; version = nothing)
+    ver = DistSSHQueue.local_rsync_version()
+    @test ver === nothing || ver isa VersionNumber
+end
+
 @testset "qhost stage path rewrite" begin
     mktempdir() do d
         proj = joinpath(d, "job")

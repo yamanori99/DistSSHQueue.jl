@@ -5,6 +5,8 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- A local rsync older than 3.2.4 stops when the remote path has a space or
+  a shell character. `--protect-args` is not added.
 - Requires DistSSHRun 0.1.12.
 - macOS `stop` boots out the LaunchAgent, and a plist written by `enable`
   restarts serve only when the process fails. A plist already installed
