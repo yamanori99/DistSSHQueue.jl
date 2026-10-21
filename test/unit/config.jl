@@ -476,6 +476,37 @@ end
     end
 end
 
+@testset "add-host replaces the live hosts span" begin
+    H = DistSSHQueue.HostAllow
+    line = "hosts = [\"parent\", \"child:host1\"]"
+    commented = "# hosts = [\"stale\"]\nhosts = [\"parent\"]\n"
+    out = DistSSHQueue.replace_or_insert_hosts_line(commented, line)
+    @test out == "# hosts = [\"stale\"]\n" * line * "\n"
+    @test count(r -> startswith(strip(r), "hosts ="), split(out, '\n')) == 1
+
+    multi = "hosts = [\n  \"parent\",\n]\n"
+    out = DistSSHQueue.replace_or_insert_hosts_line(multi, line)
+    @test out == line * "\n"
+    @test !occursin("  \"parent\"", out)
+
+    @test_throws ArgumentError DistSSHQueue._require_written_hosts!(
+        "hosts = [\n", H("parent" => nothing)
+    )
+
+    mktempdir() do d
+        cfg = joinpath(d, "config.toml")
+        write(cfg, multi)
+        DistSSHQueue.add_host_names!(cfg, ["child:host1"])
+        @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = cfg)) ==
+            H("parent" => nothing, "host1" => nothing)
+        @test !occursin("  \"parent\"", read(cfg, String))
+        write(cfg, "hosts = [\n")
+        before = read(cfg, String)
+        @test_throws ArgumentError DistSSHQueue.add_host_names!(cfg, ["parent"])
+        @test read(cfg, String) == before
+    end
+end
+
 @testset "invalid config is an error and host edits keep both names" begin
     mktempdir() do d::String
         cfg = joinpath(d, "config.toml")
