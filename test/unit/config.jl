@@ -1069,8 +1069,9 @@ end
                 cmd = `$(Base.julia_cmd()) --startup-file=no --project=$proj -e $code $store $out $release`
                 push!(procs, run(pipeline(cmd; stdout = devnull, stderr = err); wait = false))
             end
-            # Both lines, both exits, or no CPU and no output growth for
-            # `:child_reply`. Unreadable CPU time is that long on the wall clock.
+            # Both lines, both exits, or CPU under a few percent and no output
+            # growth for `:child_reply`. Unreadable CPU time is that long on
+            # the wall clock.
             lines = String[]
             watch = IdleWatch(wait_seconds(:child_reply))
             seen = Dict{Int, Int}()

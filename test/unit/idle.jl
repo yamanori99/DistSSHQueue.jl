@@ -1,17 +1,44 @@
 using Test
 
 @testset "child idle watch" begin
-    @testset "CPU time that keeps growing is not a hang" begin
-        watch = IdleWatch(10.0; now = 0.0)
-        @test observe_progress!(watch; cpu = 0, output = 0, now = 0.0) === :busy
-        for t in 1:25
-            @test observe_progress!(watch; cpu = t, output = 0, now = Float64(t)) === :busy
+    @testset "a compiling child is not a hang" begin
+        watch = IdleWatch(300.0; now = 0.0)
+        @test observe_progress!(watch; cpu = 0.0, output = 0, now = 0.0) === :busy
+        for t in 1:400
+            @test observe_progress!(watch; cpu = Float64(t), output = 0, now = Float64(t)) === :busy
         end
-        growing = IdleWatch(10.0; now = 0.0)
-        @test observe_progress!(growing; cpu = 4, output = 0, now = 0.0) === :busy
-        @test observe_progress!(growing; cpu = 4, output = 1, now = 10.0) === :busy
-        @test observe_progress!(growing; cpu = 4, output = 1, now = 19.9) === :busy
-        @test observe_progress!(growing; cpu = 4, output = 1, now = 20.0) === :idle
+    end
+
+    @testset "a polling child is a hang" begin
+        watch = IdleWatch(300.0; now = 0.0)
+        @test observe_progress!(watch; cpu = 0.0, output = 0, now = 0.0) === :busy
+        for i in 1:40
+            mark = observe_progress!(watch; cpu = 0.05 * i, output = 0, now = 7.5 * i)
+            @test mark === (i < 40 ? :busy : :idle)
+        end
+    end
+
+    @testset "one tick in a short sample is not progress" begin
+        watch = IdleWatch(300.0; now = 0.0)
+        @test observe_progress!(watch; cpu = 0.0, output = 0, now = 0.0) === :busy
+        @test observe_progress!(watch; cpu = 0.01, output = 0, now = 0.2) === :busy
+        @test observe_progress!(watch; cpu = 0.01, output = 0, now = 300.0) === :idle
+    end
+
+    @testset "output growth resets the idle window" begin
+        watch = IdleWatch(10.0; now = 0.0)
+        @test observe_progress!(watch; cpu = 4.0, output = 0, now = 0.0) === :busy
+        @test observe_progress!(watch; cpu = 4.0, output = 1, now = 10.0) === :busy
+        @test observe_progress!(watch; cpu = 4.0, output = 1, now = 19.9) === :busy
+        @test observe_progress!(watch; cpu = 4.0, output = 1, now = 20.0) === :idle
+        # A quiet child that already accumulated a little CPU must not look
+        # busy again just because output moved the window.
+        quiet = IdleWatch(300.0; now = 0.0)
+        @test observe_progress!(quiet; cpu = 0.0, output = 0, now = 0.0) === :busy
+        @test observe_progress!(quiet; cpu = 2.0, output = 0, now = 200.0) === :busy
+        @test observe_progress!(quiet; cpu = 2.0, output = 1, now = 200.0) === :busy
+        @test observe_progress!(quiet; cpu = 2.0, output = 1, now = 210.0) === :busy
+        @test observe_progress!(quiet; cpu = 2.0, output = 1, now = 500.0) === :idle
     end
 
     @testset "CPU time that stays still is a hang" begin
@@ -38,5 +65,6 @@ using Test
         @test ps_time_centiseconds("2-01:02:03") == (2 * 86400 + 3723) * 100
         @test ps_time_centiseconds("  ") === nothing
         @test ps_time_centiseconds("nope") === nothing
+        @test cpu_time_seconds(100) == (Sys.islinux() ? 100 / clock_ticks_per_second() : 1.0)
     end
 end

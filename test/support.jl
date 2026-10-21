@@ -25,55 +25,81 @@ end
 # How often a child wait samples CPU time and output size.
 const CHILD_POLL_S = 0.2
 
-# One child wait. `seconds` is how long CPU time and watched output may both
-# stay still. The first CPU sample is a baseline, not progress. `nothing` CPU
-# for the whole wait is the wall clock; output does not extend that wall.
+# A short poll can add one tick. The rate uses at least this much wall time,
+# so that tick is not progress. `IDLE_MIN_RATE` is CPU seconds per wall second.
+const IDLE_MIN_WINDOW_S = 10.0
+const IDLE_MIN_RATE = 0.05
+
+# One child wait. `seconds` is how long the child may stay under `min_rate`
+# with no output growth. The first CPU sample is a baseline, not progress.
+# `nothing` CPU for the whole wait is the wall clock; output does not extend
+# that wall. A full-CPU spin is not cut here.
 mutable struct IdleWatch
     seconds::Float64
+    min_window::Float64
+    min_rate::Float64
     started::Float64
     idle_since::Float64
-    last_cpu::Union{Nothing, Int}
+    cpu_mark::Union{Nothing, Float64}
     last_output::Int
 end
 
-function IdleWatch(seconds::Real; now::Float64 = time())
+function IdleWatch(
+        seconds::Real;
+        now::Float64 = time(),
+        min_window::Float64 = IDLE_MIN_WINDOW_S,
+        min_rate::Float64 = IDLE_MIN_RATE,
+    )
     t = Float64(now)
-    return IdleWatch(Float64(seconds), t, t, nothing, 0)
+    return IdleWatch(
+        Float64(seconds),
+        Float64(min_window),
+        Float64(min_rate),
+        t,
+        t,
+        nothing,
+        0,
+    )
 end
 
-# `:busy` keeps waiting. `:idle` means a readable CPU time stopped growing.
-# `:wall` means CPU time could not be read and the wall clock ran out.
+# `:busy` keeps waiting. `:idle` means CPU time stayed under `min_rate` and
+# output did not grow. `:wall` means CPU time could not be read and the wall
+# clock ran out.
 function observe_progress!(
         w::IdleWatch;
-        cpu::Union{Nothing, Int},
+        cpu::Union{Nothing, Real},
         output::Integer,
         now::Float64,
     )::Symbol
-    if w.last_cpu === nothing && cpu === nothing
+    cpu_s = cpu === nothing ? nothing : Float64(cpu)
+    if w.cpu_mark === nothing && cpu_s === nothing
         return now - w.started >= w.seconds ? :wall : :busy
     end
-    progressed = false
-    if cpu !== nothing
-        if w.last_cpu === nothing
-            w.last_cpu = cpu
-        elseif cpu > w.last_cpu
-            progressed = true
-            w.last_cpu = cpu
-        end
+    if cpu_s !== nothing && w.cpu_mark === nothing
+        w.cpu_mark = cpu_s
     end
     out = Int(output)
-    if out > w.last_output
-        progressed = true
+    output_grew = out > w.last_output
+    if output_grew
         w.last_output = out
     end
-    if progressed
+    cpu_progress = false
+    if cpu_s !== nothing && w.cpu_mark !== nothing
+        elapsed = max(now - w.idle_since, w.min_window)
+        cpu_progress = cpu_s - w.cpu_mark >= w.min_rate * elapsed
+    end
+    if cpu_progress || output_grew
         w.idle_since = now
+        if cpu_s !== nothing
+            w.cpu_mark = cpu_s
+        end
         return :busy
     end
     return now - w.idle_since >= w.seconds ? :idle : :busy
 end
 
 # utime + stime from a Linux `/proc/<pid>/stat` line. `comm` may contain spaces.
+# This is the process itself, not a child it has spawned.
 function proc_stat_cpu_ticks(text::AbstractString)::Union{Nothing, Int}
     close_at = findlast(==(')'), text)
     close_at === nothing && return nothing
@@ -87,7 +113,7 @@ function proc_stat_cpu_ticks(text::AbstractString)::Union{Nothing, Int}
 end
 
 # `ps -o time=` on macOS. Accepts `m:ss`, `m:ss.ss`, `h:mm:ss`, and `d-hh:mm:ss`.
-# The unit is centiseconds so a sub-second bump still counts as progress.
+# The unit is centiseconds. The idle watch converts that to seconds.
 function ps_time_centiseconds(text::AbstractString)::Union{Nothing, Int}
     s = strip(text)
     isempty(s) && return nothing
@@ -156,12 +182,45 @@ function process_cpu_ticks(proc::Base.Process)::Union{Nothing, Int}
     return process_cpu_ticks(pid)
 end
 
+const _CLK_TCK = Ref(0)
+
+function clock_ticks_per_second()::Int
+    _CLK_TCK[] > 0 && return _CLK_TCK[]
+    text = try
+        read(`getconf CLK_TCK`, String)
+    catch
+        _CLK_TCK[] = 100
+        return _CLK_TCK[]
+    end
+    n = tryparse(Int, strip(text))
+    _CLK_TCK[] = n === nothing || n <= 0 ? 100 : n
+    return _CLK_TCK[]
+end
+
+# Linux ticks are `CLK_TCK` per CPU second. macOS `ps` values are centiseconds.
+function cpu_time_seconds(ticks::Integer)::Float64
+    denom = Sys.islinux() ? Float64(clock_ticks_per_second()) : 100.0
+    return Float64(ticks) / denom
+end
+
+function process_cpu_seconds(pid::Integer)::Union{Nothing, Float64}
+    ticks = process_cpu_ticks(pid)
+    ticks === nothing && return nothing
+    return cpu_time_seconds(ticks)
+end
+
+function process_cpu_seconds(proc::Base.Process)::Union{Nothing, Float64}
+    ticks = process_cpu_ticks(proc)
+    ticks === nothing && return nothing
+    return cpu_time_seconds(ticks)
+end
+
 # Sum of per-pid highs. A child that exits keeps its last sample, so the
 # total does not fall and the sibling can still show progress.
 function monotonic_group_cpu!(
         last::Dict{Int, Int},
         procs::Vector{Base.Process},
-    )::Union{Nothing, Int}
+    )::Union{Nothing, Float64}
     for proc in procs
         process_running(proc) || continue
         pid = try
@@ -176,7 +235,7 @@ function monotonic_group_cpu!(
             last[pid] = ticks
         end
     end
-    return isempty(last) ? 0 : sum(values(last))
+    return isempty(last) ? 0.0 : cpu_time_seconds(sum(values(last)))
 end
 
 # `:exited` when every process has exited. `:idle` or `:wall` when the watch says so.

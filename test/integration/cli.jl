@@ -44,10 +44,11 @@ function wait_kit_pid(path::AbstractString; tries = wait_tries(:child_reply, 0.1
 end
 
 # `read(cmd)` returns only when the child exits. A child that never exits
-# sits at 0% CPU until PkgEval's inactivity kill, with no test name. This
-# names that wait. `:child_reply` is how long CPU time and both stdio
-# buffers may stay still. A cold compile uses CPU, so it is not a hang.
-# Unreadable CPU time falls back to the wall clock.
+# sits near 0% CPU until PkgEval's inactivity kill, with no test name. This
+# names that wait. `:child_reply` is how long the child may stay under a few
+# percent CPU with neither stdout nor stderr growing. A cold compile stays
+# above that. A full-CPU spin is left to PkgEval. Unreadable CPU time is a
+# wall clock of the same length, and output growth does not extend that wall.
 function read_cli(
         args::AbstractVector{<:AbstractString},
         env::AbstractDict;
@@ -123,7 +124,7 @@ function wait_output(path::AbstractString, proc::Base.Process, needle::AbstractS
         end
         mark = observe_progress!(
             watch;
-            cpu = process_cpu_ticks(proc),
+            cpu = process_cpu_seconds(proc),
             output = bytes(),
             now = time(),
         )
