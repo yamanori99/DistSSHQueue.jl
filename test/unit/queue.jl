@@ -3,6 +3,54 @@ using Dates
 using DistSSHRun
 using DistSSHQueue
 
+struct _KitOdd end
+Base.hasproperty(::_KitOdd, s::Symbol) = s === :ok
+Base.getproperty(::_KitOdd, ::Symbol) = throw(KeyError(:ok))
+
+function _cov_spawn_note!(j, p)
+    od = p.output_dir
+    od === nothing && return nothing
+    j.result_path = String(od)
+    return nothing
+end
+
+function _cov_hold_kit(; run_dir, output_dir)
+    proc = Base.run(`sleep 30`; wait = false)
+    kp = DistSSHRun.KitProcess(proc; kind = :go, run_dir = run_dir, output_dir = output_dir)
+    return proc::Base.Process, kp
+end
+
+function _cov_stop(proc::Base.Process)
+    process_running(proc) && kill(proc)
+    try
+        wait(proc)
+    catch
+    end
+    return nothing
+end
+
+function _cov_exec(armed, kp, kind, script, hosts; detached, job_id, kwargs...)
+    _ = (kind, script, hosts, detached, job_id, kwargs)
+    armed[] = true
+    return kp
+end
+
+function _cov_exec_done(kp, kind, script, hosts; detached, job_id, kwargs...)
+    _ = (kind, script, hosts, detached, job_id, kwargs)
+    return kp
+end
+
+function _cov_term(seen, side; kind)
+    _ = kind
+    seen[] = String(side)
+    return nothing
+end
+
+function _cov_term_unused(side; kind)
+    _ = (side, kind)
+    error("terminate must not run")
+end
+
 function _wait_state(q, id, st; tries = 200)
     for _ in 1:tries
         job(q, id).state === st && return nothing
@@ -319,6 +367,137 @@ end
         end
         @test occursin("setup step runs to the end", help_out)
     end
+end
+
+@testset "run_kit stops on the cancel flag right after execute!" begin
+    @test DistSSHRun.DistSSHBase.is_sigint(InterruptException())
+    mktempdir() do d
+        rundir = joinpath(d, "run")
+        outdir = joinpath(d, "out")
+        mkpath(rundir)
+        mkpath(outdir)
+        proc, kp = _cov_hold_kit(; run_dir = rundir, output_dir = outdir)
+        armed = Ref(false)
+        seen = Ref{Union{Nothing, String}}(nothing)
+        j = DistSSHQueue.Job(;
+            kind = :go, script = "a.jl", hosts = ["parent:1"],
+        )
+        try
+            @test_throws DistSSHQueue._JobCancelled DistSSHQueue.run_kit(
+                j,
+                p -> _cov_spawn_note!(j, p);
+                cancel_requested = () -> armed[],
+                execute = (args...; kwargs...) -> _cov_exec(armed, kp, args...; kwargs...),
+                terminate = (side; kind) -> _cov_term(seen, side; kind),
+            )
+        finally
+            _cov_stop(proc)
+        end
+        @test seen[] == rundir
+        @test !process_running(proc)
+    end
+    mktempdir() do d
+        outdir = joinpath(d, "out")
+        mkpath(outdir)
+        proc, kp = _cov_hold_kit(; run_dir = nothing, output_dir = outdir)
+        armed = Ref(false)
+        seen = Ref{Union{Nothing, String}}(nothing)
+        j = DistSSHQueue.Job(;
+            kind = :go, script = "a.jl", hosts = ["parent:1"],
+        )
+        try
+            @test_throws DistSSHQueue._JobCancelled DistSSHQueue.run_kit(
+                j,
+                p -> _cov_spawn_note!(j, p);
+                cancel_requested = () -> armed[],
+                execute = (args...; kwargs...) -> _cov_exec(armed, kp, args...; kwargs...),
+                terminate = (side; kind) -> _cov_term(seen, side; kind),
+            )
+        finally
+            _cov_stop(proc)
+        end
+        @test seen[] == outdir
+    end
+    mktempdir() do d
+        outdir = joinpath(d, "out")
+        mkpath(outdir)
+        proc = Base.run(`/usr/bin/true`; wait = false)::Base.Process
+        kp = DistSSHRun.KitProcess(proc; kind = :go, output_dir = outdir)
+        j = DistSSHQueue.Job(;
+            kind = :go, script = "a.jl", hosts = ["parent:1"],
+        )
+        out = DistSSHQueue.run_kit(
+            j,
+            p -> _cov_spawn_note!(j, p);
+            execute = (args...; kwargs...) -> _cov_exec_done(kp, args...; kwargs...),
+            terminate = _cov_term_unused,
+        )
+        @test out == outdir
+        @test !process_running(proc)
+    end
+end
+
+@testset "as_host_allow reads a dict of caps" begin
+    allow = DistSSHQueue.as_host_allow(
+        Dict("parent:2" => nothing, "child:box" => 3, "" => 9, "lab" => nothing),
+    )
+    @test allow["parent"] === nothing
+    @test allow["box"] == 3
+    @test allow["lab"] === nothing
+    @test !haskey(allow, "")
+    listed = DistSSHQueue.as_host_allow(["child:h:2"])
+    @test listed["h"] == 2
+    @test DistSSHQueue.as_host_allow(nothing) === nothing
+    @test_throws ArgumentError DistSSHQueue.as_host_allow(Dict("child:h" => 0))
+end
+
+@testset "kit_run_error_text and a failed kit.result" begin
+    ok = DistSSHRun.KitRunResult(true, :go, nothing, nothing, nothing, 0)
+    @test DistSSHQueue.kit_run_error_text(ok) == ""
+    bad = DistSSHRun.KitRunResult(false, :go, nothing, nothing, "go", 2)
+    @test occursin("exit 2", DistSSHQueue.kit_run_error_text(bad))
+    @test_throws KeyError DistSSHQueue.kit_run_error_text(_KitOdd())
+    mktempdir() do d
+        DistSSHRun._write_kit_result_file(
+            DistSSHRun.KitRunResult(false, :go, d, nothing, "go", 1),
+        )
+        j = DistSSHQueue.Job(;
+            kind = :go,
+            script = "a.jl",
+            hosts = ["parent:1"],
+            state = :running,
+            kwargs = Dict{String, Any}("run_dir" => d),
+        )
+        DistSSHQueue.settle_lost_kit_child!(j)
+        @test j.state === :failed
+        @test occursin("exit 1", something(j.error, ""))
+    end
+end
+
+@testset "serve! on a memory queue steps one job" begin
+    ran = Ref(0)
+    q = Queue(;
+        runner = function (_)
+            ran[] += 1
+            return nothing
+        end
+    )
+    id = submit!(q, "a.jl", "parent:1")
+    t = @async capture_stdio() do
+        DistSSHQueue.serve!(q; interval = 0.02)
+    end
+    for _ in 1:200
+        ran[] >= 1 && job(q, id).state === :done && break
+        sleep(0.02)
+    end
+    @test ran[] == 1
+    @test job(q, id).state === :done
+    schedule(t, InterruptException(); error = true)
+    try
+        wait(t)
+    catch
+    end
+    @test istaskdone(t)
 end
 
 @testset "cancel running records run.toml output_dir not runs/" begin
