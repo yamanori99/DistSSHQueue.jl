@@ -1,6 +1,7 @@
 using Test
 using DistSSHRun
 using DistSSHQueue
+using TOML
 
 @testset "config path and store resolution" begin
     mktempdir() do d
@@ -1555,5 +1556,66 @@ end
             DistSSHQueue.show_status(fresh)
         end
         @test !occursin("kit.pid is dead", quiet)
+    end
+end
+
+@testset "hosts brackets inside strings stay one line" begin
+    text = "hosts = [\"child:a]b\", 'child:c[d', \"x\\\"\"]\nstore = \"jobs.toml\"\n"
+    @test DistSSHQueue._toml_bracket_delta(split(text, '\n')[1]) == 0
+    out = DistSSHQueue.replace_or_insert_hosts_line(text, "hosts = [\"parent\"]")
+    parsed = TOML.parse(out)
+    @test parsed["hosts"] == ["parent"]
+    @test parsed["store"] == "jobs.toml"
+end
+
+@testset "warn_julia_major_minor compares major.minor" begin
+    buf = IOBuffer()
+    DistSSHQueue.warn_julia_major_minor(["parent:1"]; io = buf)
+    @test isempty(String(take!(buf)))
+    withenv("DISTSSHKIT_QUIET" => "1") do
+        DistSSHQueue.warn_julia_major_minor(["child:box:1"]; io = buf)
+        return nothing
+    end
+    @test isempty(String(take!(buf)))
+    mktempdir() do d::String
+        bin = joinpath(d, "bin")
+        mkpath(bin)
+        sshbin = joinpath(bin, "ssh")
+        write(sshbin, "#!/bin/sh\necho \"julia version 1.10.0\"\nexit 0\n")
+        chmod(sshbin, 0o755)
+        script = joinpath(d, "ssh.jl")
+        write(
+            script,
+            """
+            s = ARGS[end]
+            if s == "uname -s"
+                println("Darwin")
+            elseif occursin("--version", s)
+                println("julia version 1.10.0")
+            elseif occursin("test -x", s)
+                println("/opt/julia")
+            else
+                exit(1)
+            end
+            """,
+        )
+        try
+            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+            withenv(
+                "DISTSSHKIT_TEST" => "1",
+                "DISTSSHKIT_TEST_SSH" => script,
+                "PATH" => bin * ":" * get(ENV, "PATH", ""),
+                "DISTSSHKIT_QUIET" => nothing,
+            ) do
+                DistSSHQueue.warn_julia_major_minor(
+                    ["child:box:1", "child:box:2", "parent:1"]; io = buf,
+                )
+                return nothing
+            end
+            text = String(take!(buf))
+            @test count("box Julia 1.10 vs this process", text) == 1
+        finally
+            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+        end
     end
 end
