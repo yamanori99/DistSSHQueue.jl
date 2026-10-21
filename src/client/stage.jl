@@ -321,6 +321,7 @@ function _stage_extra_paths(extra_files)::Vector{String}
 end
 
 const _RSYNC_SHELL_SPECIAL = r"[[:space:]'\"\\$`;&|<>()*?\[]"
+const _RSYNC_BRACE_EXPAND = r"\{[^}]*(,|\.\.)[^}]*\}"
 const _RSYNC_VER = Ref{Union{Nothing, VersionNumber}}(nothing)
 const _RSYNC_VER_READY = Ref(false)
 
@@ -348,9 +349,10 @@ end
 """Stop when this rsync is older than 3.2.4 and the remote `sh -c` would change `path`.
 
 Whitespace, quotes, `\\`, `\$`, a backtick, `;`, `&`, `|`, `<`, `>`, `(`, `)`,
-and the globs `*`, `?`, `[` are refused. `#`, `!`, `{`, and `}` in a word stay:
-`#` does not start a comment there, history expansion is off, and `{x}` without
-a comma or `..` is not expanded. rsync 3.2.4 protects arguments without
+and the globs `*`, `?`, `[` are refused. `#`, `!`, and `{x}` without a comma
+or `..` stay: `#` does not start a comment in a word, and history expansion is
+off. `{a,b}` and `{a..b}` are refused because the remote shell expands them.
+rsync 3.2.4 protects arguments without
 `--protect-args`. Older rsync, including macOS 2.6.9, does not.
 `--protect-args` is not added: rsync before 3.0 does not know it, and the
 remote rsync must be 3.0 or newer too.
@@ -361,7 +363,8 @@ function _refuse_unprotected_rsync_path!(
     )
     version === nothing && return nothing
     version >= v"3.2.4" && return nothing
-    occursin(_RSYNC_SHELL_SPECIAL, String(path)) || return nothing
+    s = String(path)
+    occursin(_RSYNC_SHELL_SPECIAL, s) || occursin(_RSYNC_BRACE_EXPAND, s) || return nothing
     throw(
         ArgumentError(
             "rsync $(version) does not protect arguments, and the remote shell would change this path: $(path)",

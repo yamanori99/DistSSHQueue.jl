@@ -11,12 +11,15 @@ using DistSSHQueue
     for kept in ("results/run#1", "a!b", "x{y}", "file].txt")
         DistSSHQueue._refuse_unprotected_rsync_path!(kept; version = v"2.6.9")
     end
+    DistSSHQueue._refuse_unprotected_rsync_path!("x{a,b}"; version = v"3.2.4")
     @test_throws ArgumentError DistSSHQueue._refuse_unprotected_rsync_path!(
         spaced; version = v"2.6.9",
     )
-    @test_throws ArgumentError DistSSHQueue._refuse_unprotected_rsync_path!(
-        "/tmp/a;rm"; version = v"3.0.0",
-    )
+    for bad in ("/tmp/a;rm", "x{a,b}", "x{a..b}", "dir/(a)", "dir/a*b", "dir/a[b")
+        @test_throws ArgumentError DistSSHQueue._refuse_unprotected_rsync_path!(
+            bad; version = v"2.6.9",
+        )
+    end
     DistSSHQueue._refuse_unprotected_rsync_path!(spaced; version = nothing)
     ver = DistSSHQueue.local_rsync_version()
     @test ver === nothing || ver isa VersionNumber
