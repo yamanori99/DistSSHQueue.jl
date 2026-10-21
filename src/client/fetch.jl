@@ -442,11 +442,11 @@ function check_fetch_dest(
     marked = read_fetch_marker(dest)
     marked !== nothing && same_fetch_job(marked, id) && return :skip
     if marked === nothing
-        throw(ArgumentError("fetch: dest is not empty (pass --force to replace)"))
+        throw(ArgumentError("fetch: dest is not empty (pass --force to add files there)"))
     end
     throw(
         ArgumentError(
-            "fetch: dest already has job $(first(marked, 8)) (pass --force to replace)",
+            "fetch: dest already has job $(first(marked, 8)) (pass --force to add files there)",
         )
     )
 end
