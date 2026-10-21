@@ -560,6 +560,9 @@ function _queue_sha256_process(cmd::Cmd)::Union{Nothing, String}
 end
 
 """`(xy, path)` from `git status --porcelain=v1 -z`. A rename keeps the new path."""
+# Same rule as DistSSHRun `_git_source` / `git_source_snapshot`. porcelain v1 `-z` is
+# `XY new\\0old\\0` for a rename; keep the new path and skip the old one. Replace this
+# copy with `DistSSHRun.git_source_snapshot` after the release that publishes it.
 function _queue_git_status_records(raw::AbstractVector{UInt8})::Vector{Tuple{String, String}}
     parts = split(String(raw), '\0'; keepempty = false)
     out = Tuple{String, String}[]
@@ -571,10 +574,7 @@ function _queue_git_status_records(raw::AbstractVector{UInt8})::Vector{Tuple{Str
         xy = rec[1:2]
         path = rec[4:end]
         if xy[1] in ('R', 'C') || xy[2] in ('R', 'C')
-            if i <= length(parts)
-                path = String(parts[i])
-                i += 1
-            end
+            i <= length(parts) && (i += 1)
         end
         push!(out, (xy, path))
     end
@@ -593,7 +593,8 @@ end
 
 """Git snapshot of `project`, or an empty dict when git is missing or this is not a work tree.
 
-`diff_sha256` is present even when the diff is empty.
+`diff_sha256` is present even when the diff is empty. The records follow DistSSHRun
+`_git_source`. Call `DistSSHRun.git_source_snapshot` after the release that publishes it.
 """
 function queue_source_env(project::AbstractString)::Dict{String, String}
     git = Sys.which("git")

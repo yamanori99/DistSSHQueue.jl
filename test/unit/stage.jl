@@ -621,6 +621,8 @@ end
         @test kit_only[DistSSHQueue.SOURCE_UNTRACKED_ENV] == "0"
         arrow = DistSSHQueue._queue_git_status_records(Vector{UInt8}("?? file -> name\0"))
         @test arrow == [("??", "file -> name")]
+        renamed = DistSSHQueue._queue_git_status_records(Vector{UInt8}("R  new name\0old\0"))
+        @test renamed == [("R ", "new name")]
         withenv("PATH" => "/nonexistent-distsshqueue-path") do
             @test isempty(DistSSHQueue.queue_source_env(repo))
         end
