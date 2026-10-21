@@ -11,6 +11,10 @@ function _store_lock_pid_path(lockdir::AbstractString)::String
     return joinpath(lockdir, "pid")
 end
 
+function _store_lock_start_path(lockdir::AbstractString)::String
+    return joinpath(lockdir, "start")
+end
+
 function _missing_path_io(e)::Bool
     if e isa Base.SystemError
         return e.errnum == Base.Libc.ENOENT || e.errnum == Base.Libc.ENOTDIR
@@ -18,7 +22,82 @@ function _missing_path_io(e)::Bool
     return e isa Base.IOError && (e.code == Base.UV_ENOENT || e.code == Base.UV_ENOTDIR)
 end
 
-function _read_lock_pid(lockdir::AbstractString)::Union{Nothing, Int}
+"""`(pid, start)` from pid text. `start` is `nothing` when the text is only a pid.
+
+A second line is accepted so a file written before the start key moved to its
+own file still compares. New writes are one line. The pid line stays a single
+integer so an older DistSSHQueue can `tryparse` it.
+"""
+function _parse_pid_text(raw::AbstractString)
+    s = strip(String(raw))
+    isempty(s) && return nothing
+    lines = split(s, '\n')
+    pid = tryparse(Int, strip(String(lines[1])))
+    pid === nothing && return nothing
+    start = nothing
+    if length(lines) >= 2
+        st = strip(String(lines[2]))
+        !isempty(st) && (start = String(st))
+    end
+    return (pid = Int(pid), start = start)
+end
+
+"""Start key beside a pid. Blank text is `nothing`."""
+function _start_text(raw::AbstractString)::Union{Nothing, String}
+    s = strip(String(raw))
+    return isempty(s) ? nothing : s
+end
+
+"""Pid record. A sidecar start key wins over a second line in the pid text."""
+function _pid_record_from(pid_text::AbstractString, start_text::AbstractString)
+    rec = _parse_pid_text(pid_text)
+    rec === nothing && return nothing
+    side = _start_text(start_text)
+    side === nothing && return rec
+    return (pid = rec.pid, start = side)
+end
+
+"""OS start key. `LC_ALL=C` and `TZ=UTC0` so macOS `ps -o lstart=` does not
+follow the caller's locale or timezone. Linux reads `/proc` and ignores them.
+"""
+function _process_start_key(pid::Integer)::Union{Nothing, String}
+    return withenv("LC_ALL" => "C", "TZ" => "UTC0") do
+        DistSSHRun.kit_process_start_key(pid)
+    end
+end
+
+"""Start key of this process, read once. `serve!` polls the pid file every tick."""
+const _OWN_START = Ref{Union{Nothing, String}}(nothing)
+const _OWN_START_READY = Ref(false)
+
+function _own_start_key()::Union{Nothing, String}
+    _OWN_START_READY[] && return _OWN_START[]
+    _OWN_START[] = _process_start_key(getpid())
+    _OWN_START_READY[] = true
+    return _OWN_START[]
+end
+
+"""Start key for `pid`. This process uses the cached value."""
+function _start_key(pid::Integer)::Union{Nothing, String}
+    return pid == getpid() ? _own_start_key() : _process_start_key(pid)
+end
+
+"""Alive, and the start key matches when one was stored and can be read.
+
+No stored key keeps the old `process_alive` check. `EPERM` still counts as
+alive there. A stored key that cannot be read also counts as alive, so a
+failed `ps` does not drop a lock or a serve. A key that is read and differs
+is a reused pid.
+"""
+function _pid_record_running(rec; current::Function = _start_key)::Bool
+    process_alive(rec.pid) || return false
+    rec.start === nothing && return true
+    cur = current(rec.pid)
+    cur === nothing && return true
+    return cur == rec.start
+end
+
+function _read_lock_record(lockdir::AbstractString)
     p = _store_lock_pid_path(lockdir)
     text = try
         read(p, String)
@@ -27,23 +106,37 @@ function _read_lock_pid(lockdir::AbstractString)::Union{Nothing, Int}
         _missing_path_io(e) && return nothing
         rethrow()
     end
-    return tryparse(Int, strip(text))
+    start = try
+        read(_store_lock_start_path(lockdir), String)
+    catch e
+        _missing_path_io(e) && return _pid_record_from(text, "")
+        rethrow()
+    end
+    return _pid_record_from(text, start)
+end
+
+function _read_lock_pid(lockdir::AbstractString)::Union{Nothing, Int}
+    rec = _read_lock_record(lockdir)
+    rec === nothing && return nothing
+    return rec.pid
 end
 
 """Whether a leftover lock directory can be taken.
 
-A live pid is never stale. A dead pid is stale. A lock with no pid is stale
-only after [`_STORE_LOCK_STALE_SEC`](@ref) seconds. The holder writes the pid
-just after `mkdir`, so a fresh directory is left alone.
+A live pid is never stale when its start key matches or cannot be read. A
+dead pid, or a live pid whose start key was read and differs, is stale. A
+lock with no pid is stale only after [`_STORE_LOCK_STALE_SEC`](@ref) seconds.
+The holder writes the pid just after `mkdir`, so a fresh directory is left
+alone.
 """
 function _store_lock_stale(lockdir::AbstractString; now::Float64 = time())::Bool
     # `stat` does not throw when the path is gone. It returns a zero `StatStruct`,
     # so one call is both the existence check and the mtime.
     st = stat(lockdir)
     isdir(st) || return false
-    pid = _read_lock_pid(lockdir)
-    if pid isa Int
-        return !process_alive(pid)
+    rec = _read_lock_record(lockdir)
+    if rec !== nothing
+        return !_pid_record_running(rec)
     end
     return now - st.mtime > _STORE_LOCK_STALE_SEC
 end
@@ -84,6 +177,12 @@ function with_store_lock(f, path::String)
         end
         try
             write(_store_lock_pid_path(lockdir), string(getpid()))
+            key = _own_start_key()
+            if key === nothing
+                rm(_store_lock_start_path(lockdir); force = true)
+            else
+                write(_store_lock_start_path(lockdir), key)
+            end
         catch e
             # ENOENT means this directory is already gone. `rm` could delete a
             # lock another process created in its place.
@@ -295,6 +394,11 @@ end
 
 store_pid_path(store::AbstractString)::String = string(store, ".pid")
 
+"""Start key for [`store_pid_path`](@ref). Absent on a pidfile written by an
+older DistSSHQueue. The pid file itself stays one integer.
+"""
+store_pid_start_path(store::AbstractString)::String = string(store_pid_path(store), ".start")
+
 """Store file mtime (seconds), or `-1.0` when it does not exist yet.
 `serve!` uses this to skip re-locking / re-parsing an unchanged store."""
 _store_mtime(store::AbstractString)::Float64 = isfile(store) ? mtime(store) : -1.0
@@ -326,14 +430,24 @@ function _process_alive_fallback(pid::Integer)::Bool
     end
 end
 
-"""Live serve pid from the store pidfile, or `nothing`."""
-function serve_pid(store::AbstractString)::Union{Nothing, Int}
+"""Live serve pid from the store pidfile, or `nothing`.
+
+[`store_pid_start_path`](@ref) is the OS start key. A reused pid whose key
+was read and differs is `nothing`. A missing key, or a key that cannot be
+read, keeps the old alive-pid check.
+"""
+function _read_serve_record(store::AbstractString)
     p = store_pid_path(store)
     isfile(p) || return nothing
-    pid = tryparse(Int, strip(read(p, String)))
-    pid === nothing && return nothing
-    process_alive(pid) || return nothing
-    return pid
+    start = isfile(store_pid_start_path(store)) ? read(store_pid_start_path(store), String) : ""
+    return _pid_record_from(read(p, String), start)
+end
+
+function serve_pid(store::AbstractString)::Union{Nothing, Int}
+    rec = _read_serve_record(store)
+    rec === nothing && return nothing
+    _pid_record_running(rec) || return nothing
+    return rec.pid
 end
 
 """Is a `serve` for `store` already running (pidfile + live process)?"""
@@ -346,6 +460,13 @@ function write_pid_file(store::AbstractString)
     try
         write(tmp, string(getpid()))
         mv(tmp, dest; force = true)
+        key = _own_start_key()
+        sp = store_pid_start_path(store)
+        if key === nothing
+            rm(sp; force = true)
+        else
+            write(sp, key)
+        end
     catch
         rm(tmp; force = true)
         rethrow()
@@ -390,15 +511,25 @@ function record_test_serve_pid!(pid::Integer)
     return nothing
 end
 
-remove_pid_file(store::AbstractString) = rm(store_pid_path(store); force = true)
+function remove_pid_file(store::AbstractString)
+    rm(store_pid_path(store); force = true)
+    rm(store_pid_start_path(store); force = true)
+    return nothing
+end
 
-"""Remove the pidfile when it still names `pid`. Holds the store lock."""
-function remove_pid_file_if!(store::AbstractString, pid::Integer)::Bool
+"""Remove the pidfile when it still names `pid` and `start`.
+
+`start === nothing` matches a one-line file. A serve that rewrote the file
+during the wait is left alone. Holds the store lock.
+"""
+function remove_pid_file_if!(store::AbstractString, pid::Integer; start = nothing)::Bool
     return with_store_lock(store) do
         path = store_pid_path(store)
         isfile(path) || return false
-        cur = tryparse(Int, strip(read(path, String)))
-        cur == pid || return false
+        rec = _read_serve_record(store)
+        rec === nothing && return false
+        rec.pid == pid || return false
+        rec.start == start || return false
         remove_pid_file(store)
         return true
     end
@@ -420,35 +551,48 @@ clear_stopped!(store::AbstractString) = rm(store_stop_path(store); force = true)
 
 """SIGTERM a serve recorded in the store pidfile. Does not kill this process.
 
-The pidfile is removed only when it still names that pid, and only under the
-store lock. A serve that claimed the file during the wait is left alone.
+The pidfile is removed only when it still names that pid and start key, and
+only under the store lock. A live pid with a different start key is not
+signaled. A serve that claimed the file during the wait is left alone.
 """
 function stop_serve!(store::AbstractString)::Bool
-    pid = with_store_lock(store) do
+    target = with_store_lock(store) do
         path = store_pid_path(store)
         isfile(path) || return nothing
-        parsed = tryparse(Int, strip(read(path, String)))
-        if parsed === nothing
+        rec = _read_serve_record(store)
+        if rec === nothing
             remove_pid_file(store)
             return nothing
         end
-        return parsed
+        return rec
     end
-    pid === nothing && return false
-    pid == getpid() && return false
-    if process_alive(pid)
+    target === nothing && return false
+    # This process. A readable start key that differs is not removed by signaling.
+    if target.pid == getpid()
+        own = _own_start_key()
+        if target.start === nothing || own === nothing || target.start == own
+            return false
+        end
+        remove_pid_file_if!(store, target.pid; start = target.start)
+        return false
+    end
+    if _pid_record_running(target)
         try
-            run(pipeline(`kill $pid`; stdout = devnull, stderr = devnull))
+            run(pipeline(`kill $(target.pid)`; stdout = devnull, stderr = devnull))
         catch
         end
         for _ in 1:40
-            process_alive(pid) || break
+            _pid_record_running(target) || break
             sleep(0.05)
         end
+    elseif process_alive(target.pid)
+        # Alive under a different start key. Do not signal that process.
+        remove_pid_file_if!(store, target.pid; start = target.start)
+        return false
     end
     # A replacement serve may have claimed the pidfile during the wait. The
     # targeted serve was still signaled, so report success; leave that file.
-    remove_pid_file_if!(store, pid)
+    remove_pid_file_if!(store, target.pid; start = target.start)
     return true
 end
 
