@@ -101,8 +101,9 @@ const GO_N = ["--n", "64"]
 const DRIVE_N = ["--n", "3"]
 # `drive_until_terminal!` poll budget. `drive` (`--n 3`) stays `:running`
 # past 2 min on macos-15-intel Colima (E2E weekly after 0.6.0).
-const GO_WAIT_TRIES = 600
-const DRIVE_WAIT_TRIES = 1800
+# `:go_job` and `:drive_job` are that work, not one cold CLI compile.
+const GO_WAIT_TRIES = wait_tries(:go_job, 0.2)
+const DRIVE_WAIT_TRIES = wait_tries(:drive_job, 0.2)
 
 const SSH_ENV = Dict(
     "DISTSSHKIT_YES" => "1",
@@ -266,7 +267,7 @@ end
 # `:running` is persisted before Kit writes `kit.pid`. A second `serve`
 # `load_jobs` then marks that row lost and can run the next job. Wait until
 # the pid names a live process.
-function wait_store_kit_pid(store::AbstractString, id::AbstractString; tries = 600, sleep_s = 0.2)
+function wait_store_kit_pid(store::AbstractString, id::AbstractString; tries = GO_WAIT_TRIES, sleep_s = 0.2)
     sid = String(id)
     last = DistSSHQueue.Job[]
     for _ in 1:tries
@@ -300,6 +301,8 @@ function run_cli(cmd::Cmd)
     return run(pipeline(ignorestatus(cmd); stdout = devnull, stderr = devnull))
 end
 
+# `:until_exit`. SSH E2E waits until the child exits. The finite
+# `:child_reply` cap is the integration `read_cli`, not this one.
 function read_cli(cmd::Cmd)::String
     err = IOBuffer()
     try
@@ -328,7 +331,7 @@ function stop_e2e_proc!(proc::Base.Process)
     catch
     end
     t0 = time()
-    while process_running(proc) && (time() - t0) < 10
+    while process_running(proc) && (time() - t0) < wait_seconds(:e2e_stop)
         sleep(0.05)
     end
     if process_running(proc)
@@ -1217,7 +1220,7 @@ end
                         @test isfile(joinpath(stage, ".distsshqueue-backup"))
                         @test read(joinpath(stage, ".distsshqueue-backup"), String) == "keep\n"
                         @test !ispath(joinpath(stage, ".distsshqueue"))
-                        wait_store_job(qh_store, id1, (:done,); tries = 600)
+                        wait_store_job(qh_store, id1, (:done,); tries = GO_WAIT_TRIES)
                         listed = read_cli(addenv(qh(["status"]), client_env...))
                         @test status_shows_id(listed, id1)
                         @test occursin("done", listed)
@@ -1227,7 +1230,7 @@ end
 
                         id_f = read_cli(addenv(qh(["submit", "go", token, script, GO_N...]), client_env...))
                         @test !isempty(id_f)
-                        row_f = wait_store_job(qh_store, id_f, (:done,); tries = 600)
+                        row_f = wait_store_job(qh_store, id_f, (:done,); tries = GO_WAIT_TRIES)
                         @test row_f.state === :done
                         fetched = read_cli(addenv(qh(["fetch", id_f]), client_env...))
                         @test occursin(first(id_f, 8), fetched)
@@ -1258,13 +1261,13 @@ end
                         cancel_out = joinpath(JOB_PROJECT, "e2e_kit_out", "qhost_cancel")
                         isdir(cancel_out) && rm(cancel_out; recursive = true)
                         id2 = read_cli(addenv(qh(["submit", "go", "parent:1", "--output-dir", cancel_out, hold]), client_env...))
-                        wait_store_job(qh_store, id2, (:running,); tries = 600)
+                        wait_store_job(qh_store, id2, (:running,); tries = GO_WAIT_TRIES)
                         wait_store_kit_pid(qh_store, id2)
                         id3 = read_cli(addenv(qh(["submit", "go", token, script, GO_N...]), client_env...))
-                        wait_store_job(qh_store, id3, (:queued,); tries = 600)
+                        wait_store_job(qh_store, id3, (:queued,); tries = GO_WAIT_TRIES)
                         cancelled = read_cli(addenv(qh(["cancel", id3]), client_env...))
                         @test cancelled == id3
-                        wait_store_job(qh_store, id3, (:cancelled,); tries = 600)
+                        wait_store_job(qh_store, id3, (:cancelled,); tries = GO_WAIT_TRIES)
                         after = read_cli(addenv(qh(["status"]), client_env...))
                         @test status_shows_id(after, id2)
                         @test occursin("cancelled", after)

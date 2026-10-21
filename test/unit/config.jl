@@ -1039,7 +1039,7 @@ end
             kill(p)
         catch
         end
-        killer = Timer(5) do _
+        killer = Timer(wait_seconds(:stop_grace)) do _
             process_running(p) || return
             try
                 kill(p, Base.SIGKILL)
@@ -1065,11 +1065,12 @@ end
         try
             for i in 1:2
                 out = joinpath(d, "out$i")
+                err = joinpath(d, "err$i")
                 cmd = `$(Base.julia_cmd()) --startup-file=no --project=$proj -e $code $store $out $release`
-                push!(procs, run(pipeline(cmd; stdout = devnull, stderr = devnull); wait = false))
+                push!(procs, run(pipeline(cmd; stdout = devnull, stderr = err); wait = false))
             end
             lines = String[]
-            deadline = time() + 45
+            deadline = time() + wait_seconds(:child_reply)
             while time() < deadline
                 lines = String[]
                 for i in 1:2
@@ -1082,11 +1083,26 @@ end
                 sleep(0.05)
             end
             touch(release)
-            @test count(startswith("won "), lines) == 1
-            @test count(startswith("lost "), lines) == 1
-            won = parse(Int, split(first(filter(startswith("won "), lines)))[2])
-            lost = parse(Int, split(first(filter(startswith("lost "), lines)))[2])
-            @test lost == won
+            won_lines = filter(startswith("won "), lines)
+            lost_lines = filter(startswith("lost "), lines)
+            if length(won_lines) != 1 || length(lost_lines) != 1
+                for i in 1:2
+                    err = joinpath(d, "err$i")
+                    isfile(err) || continue
+                    text = read(err, String)
+                    isempty(strip(text)) && continue
+                    println(stderr, "──── claim_serve child $i ────")
+                    println(stderr, text)
+                    println(stderr, "──── end claim_serve child $i ────")
+                end
+            end
+            @test length(won_lines) == 1
+            @test length(lost_lines) == 1
+            if length(won_lines) == 1 && length(lost_lines) == 1
+                won = parse(Int, split(first(won_lines))[2])
+                lost = parse(Int, split(first(lost_lines))[2])
+                @test lost == won
+            end
         finally
             touch(release)
             for p in procs

@@ -1,3 +1,27 @@
+import DistSSHRun
+
+# Seconds live here. DistSSHBase resolves the name and any environment override.
+const WAIT_SECONDS = Dict{Symbol, Float64}(
+    :child_reply => 300.0,
+    :go_job => 120.0,
+    :drive_job => 360.0,
+    :stop_grace => 5.0,
+    :sigint_grace => 20.0,
+    :e2e_stop => 10.0,
+)
+
+function wait_seconds(name::Symbol)::Float64
+    return DistSSHRun.DistSSHBase.wait_seconds(name, WAIT_SECONDS[name])
+end
+
+# Polls of `sleep_s` that fit in the named budget. A name with no finite
+# budget (`:until_exit`) is not a poll.
+function wait_tries(name::Symbol, sleep_s::Real)::Int
+    seconds = wait_seconds(name)
+    isfinite(seconds) || throw(ArgumentError("$name has no finite budget"))
+    return max(1, round(Int, seconds / Float64(sleep_s)))
+end
+
 # Capture CLI stdio the way DistSSHKit tests do.
 #
 # `redirect_stdout` does not accept `IOBuffer`. Kit uses `mktemp`
@@ -76,8 +100,8 @@ end
 # Poll until `id` is terminal. `step!` runs only while that row is still
 # `:queued`. Calling `step!` while it is `:running` can read a just-finished
 # disk row and start the next queued job. The default `tries` is the e2e
-# `go` budget (`GO_WAIT_TRIES`).
-function drive_until_terminal!(q, id; tries::Integer = 600, sleep_s::Real = 0.2)
+# `:go_job` budget.
+function drive_until_terminal!(q, id; tries::Integer = wait_tries(:go_job, 0.2), sleep_s::Real = 0.2)
     terminal = (:done, :failed, :cancelled)
     for _ in 1:tries
         st = job(q, id).state
