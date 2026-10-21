@@ -5,12 +5,13 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- Requires DistSSHRun 0.1.12.
 - A local rsync older than 3.2.4 stops when the remote path has a space or
   a shell character. `--protect-args` is not added.
+- `fetch` refuses a dest element `.` or `..`.
 - A queue-host `submit` that throws before the job row is written removes
   `~/.distsshqueue/stage/<uuid>`. A row that was written keeps its stage,
   including when `serve` then fails to start.
-- Requires DistSSHRun 0.1.12.
 - macOS `stop` boots out the LaunchAgent, and a plist written by `enable`
   restarts serve only when the process fails. A plist already installed
   with `KeepAlive` true still restarts after `Already running` until
