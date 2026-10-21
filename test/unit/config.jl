@@ -847,25 +847,45 @@ end
         spid = getpid(proc)
         write(pid, string(spid))
         @test DistSSHQueue.serve_pid(store) == spid
-        write(pid, string(spid, "\nnot-this-start\n"))
+        write(DistSSHQueue.store_pid_start_path(store), "not-this-start")
+        @test tryparse(Int, strip(read(pid, String))) == spid
         @test DistSSHQueue.serve_pid(store) === nothing
         @test DistSSHQueue.stop_serve!(store) == false
         @test !isfile(pid)
+        @test !isfile(DistSSHQueue.store_pid_start_path(store))
         @test process_running(proc)
     finally
         kill(proc)
         wait(proc)
     end
-    write(pid, string(getpid(), "\nnot-our-start\n"))
+    write(pid, string(getpid()))
+    write(DistSSHQueue.store_pid_start_path(store), "not-our-start")
     @test DistSSHQueue.serve_pid(store) === nothing
     @test DistSSHQueue.stop_serve!(store) == false
     @test !isfile(pid)
 
+    ours = (pid = getpid(), start = "stored-key")
+    @test DistSSHQueue._pid_record_running(ours; current = _ -> nothing)
+    @test !DistSSHQueue._pid_record_running(ours; current = _ -> "other")
+    @test DistSSHQueue._pid_record_running(ours; current = _ -> "stored-key")
+    if Sys.isapple()
+        forced = DistSSHQueue._process_start_key(getpid())
+        raw = withenv("LC_ALL" => "ja_JP.UTF-8", "TZ" => "Asia/Tokyo") do
+            strip(read(`ps -o lstart= -p $(getpid())`, String))
+        end
+        again = withenv("LC_ALL" => "ja_JP.UTF-8", "TZ" => "Asia/Tokyo") do
+            DistSSHQueue._process_start_key(getpid())
+        end
+        @test forced == again
+        @test forced != raw
+    end
+
     lockdir = joinpath(root, "lock")
     mkdir(lockdir)
-    write(joinpath(lockdir, "pid"), string(getpid(), "\nnot-our-start\n"))
-    @test DistSSHQueue._store_lock_stale(lockdir)
     write(joinpath(lockdir, "pid"), string(getpid()))
+    write(joinpath(lockdir, "start"), "not-our-start")
+    @test DistSSHQueue._store_lock_stale(lockdir)
+    rm(joinpath(lockdir, "start"))
     @test !DistSSHQueue._store_lock_stale(lockdir)
 end
 
@@ -886,8 +906,14 @@ end
         DistSSHQueue.with_store_lock(store) do
             ran[] = true
             body = read(joinpath(lockdir, "pid"), String)
-            @test DistSSHQueue._parse_pid_text(body) ==
-                (pid = getpid(), start = DistSSHQueue._own_start_key())
+            @test tryparse(Int, strip(body)) == getpid()
+            key = DistSSHQueue._own_start_key()
+            startp = joinpath(lockdir, "start")
+            if key === nothing
+                @test !isfile(startp)
+            else
+                @test read(startp, String) == key
+            end
         end
         @test ran[]
         @test !isdir(lockdir)
@@ -1029,8 +1055,14 @@ end
         @test DistSSHQueue.claim_serve!(store) === nothing
         @test DistSSHQueue.serve_pid(store) == getpid()
         @test DistSSHQueue.claim_serve!(store) === nothing
-        @test DistSSHQueue._parse_pid_text(read(pid, String)) ==
-            (pid = getpid(), start = DistSSHQueue._own_start_key())
+        @test tryparse(Int, strip(read(pid, String))) == getpid()
+        key = DistSSHQueue._own_start_key()
+        startp = DistSSHQueue.store_pid_start_path(store)
+        if key === nothing
+            @test !isfile(startp)
+        else
+            @test read(startp, String) == key
+        end
         @test !any(n -> occursin(".tmp.", n), readdir(d))
     end
 end
