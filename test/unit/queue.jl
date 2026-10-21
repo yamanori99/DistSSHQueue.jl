@@ -588,6 +588,49 @@ end
     end
 end
 
+@testset "setup failure after cancel is cancelled" begin
+    mktempdir() do d
+        store = joinpath(d, "jobs.toml")
+        gate = Base.Event()
+        q = Queue(; store, runner = _ -> (wait(gate); error("rsync failed")))
+        id = submit!(q, "a.jl", "parent:1")
+        @test step!(q) == 1
+        @test cancel!(q, id)
+        @test DistSSHQueue._job_cancel_flag(job(q, id))
+        notify(gate)
+        _wait_state(q, id, :cancelled)
+        @test job(q, id).error === nothing
+    end
+end
+
+@testset "setup failure without cancel is failed" begin
+    mktempdir() do d
+        store = joinpath(d, "jobs.toml")
+        q = Queue(; store, runner = _ -> error("rsync failed"))
+        id = submit!(q, "a.jl", "parent:1")
+        @test step!(q) == 1
+        _wait_state(q, id, :failed)
+        @test occursin("rsync failed", something(job(q, id).error, ""))
+    end
+end
+
+@testset "unreadable cancel flag finishes failed" begin
+    mktempdir() do d
+        store = joinpath(d, "jobs.toml")
+        started = Base.Event()
+        gate = Base.Event()
+        q = Queue(; store, runner = _ -> (notify(started); wait(gate); error("rsync failed")))
+        id = submit!(q, "a.jl", "parent:1")
+        @test step!(q) == 1
+        wait(started)
+        @test cancel!(q, id)
+        write(store, "[\n")
+        notify(gate)
+        _wait_state(q, id, :failed)
+        @test job(q, id).state === :failed
+    end
+end
+
 @testset "kit throw does not stall" begin
     q = Queue(; runner = j -> basename(j.script) == "bad.jl" ? error("boom") : nothing)
     a = submit!(q, "bad.jl", "parent:1")
