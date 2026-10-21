@@ -177,11 +177,61 @@ end
             if Sys.isapple()
                 mkpath(joinpath(home, "Library", "LaunchAgents"))
                 write(DistSSHQueue.launch_agent_path(; home = home), "plist")
-                @test DistSSHQueue.bootout_serve_unit!(; home = home, bootout! = fake)
+                @test DistSSHQueue.bootout_serve_unit!(;
+                    home = home,
+                    store = DistSSHQueue.launch_agent_store_path(),
+                    bootout! = fake,
+                )
+                @test called[] == 1
+                @test !DistSSHQueue.bootout_serve_unit!(;
+                    home = home,
+                    store = joinpath(home, "other.toml"),
+                    bootout! = fake,
+                )
                 @test called[] == 1
             else
                 @test called[] == 0
             end
+        end
+    end
+end
+
+@testset "the LaunchAgent store ignores a shell override" begin
+    agent = DistSSHQueue.launch_agent_store_path()
+    other = joinpath(mktempdir(), "other.toml")
+    @test DistSSHQueue._launch_agent_serves(agent)
+    @test !DistSSHQueue._launch_agent_serves(other)
+    withenv(
+        "DISTSSHQUEUE_STORE" => other,
+        "DISTSSHQUEUE_CONFIG" => joinpath(dirname(other), "missing.toml"),
+    ) do
+        @test DistSSHQueue.store_path() == other
+        @test DistSSHQueue.launch_agent_store_path() == agent
+        @test !DistSSHQueue._launch_agent_serves(DistSSHQueue.store_path())
+    end
+    withenv("DISTSSHQUEUE_STORE" => agent) do
+        @test DistSSHQueue._launch_agent_serves(DistSSHQueue.store_path())
+    end
+    mktempdir() do d
+        home = joinpath(d, "home")
+        mkpath(joinpath(home, ".distsshqueue"))
+        from_env = joinpath(d, "from-env.toml")
+        from_key = joinpath(d, "from-key.toml")
+        write(
+            joinpath(home, ".distsshqueue", "config.toml"),
+            """
+            store = $(repr(from_key))
+
+            [env]
+            DISTSSHQUEUE_STORE = $(repr(from_env))
+            """,
+        )
+        withenv("HOME" => home, "DISTSSHQUEUE_STORE" => nothing, "DISTSSHQUEUE_CONFIG" => nothing) do
+            @test DistSSHQueue.launch_agent_store_path() == from_env
+        end
+        write(joinpath(home, ".distsshqueue", "config.toml"), "store = $(repr(from_key))\n")
+        withenv("HOME" => home, "DISTSSHQUEUE_STORE" => nothing, "DISTSSHQUEUE_CONFIG" => nothing) do
+            @test DistSSHQueue.launch_agent_store_path() == from_key
         end
     end
 end

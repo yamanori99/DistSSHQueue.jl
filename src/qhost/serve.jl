@@ -136,10 +136,12 @@ end
 """Stop serve and latch it off. Keeps config, the store, and the unit file.
 
 The latch is written first, so a submit during this command cannot autoserve.
-On macOS, [`bootout_serve_unit!`](@ref) then unloads the LaunchAgent. A
-`KeepAlive` of `true` would otherwise restart serve. Exit 0 (`Already running`)
-does not restart once the plist uses `SuccessfulExit = false`. SIGTERM is not
-exit 0, so `stop` still boots the job out. The next login loads the plist again.
+On macOS, [`bootout_serve_unit!`](@ref) then unloads the LaunchAgent when this
+store is the one that unit serves. Another `DISTSSHQUEUE_STORE` is latched and
+signaled, and the account job keeps running. A `KeepAlive` of `true` would
+otherwise restart serve. Exit 0 (`Already running`) does not restart once the
+plist uses `SuccessfulExit = false`. SIGTERM is not exit 0, so `stop` of the
+unit's store still boots the job out. The next login loads the plist again.
 `submit` will not auto-serve until an explicit `serve` clears the latch.
 
 `bootout!` defaults to [`bootout_serve_unit!`](@ref). Tests pass a fake.

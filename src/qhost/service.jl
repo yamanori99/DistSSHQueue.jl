@@ -172,17 +172,57 @@ function _launchctl_unload()
     return nothing
 end
 
+"""String from config `[env]`, or `nothing` when that key is absent or blank."""
+function _cfg_env_string(cfg::AbstractDict, key::AbstractString)::Union{Nothing, String}
+    env = get(cfg, "env", nothing)
+    env isa AbstractDict || return nothing
+    raw = get(env, String(key), nothing)
+    raw === nothing && return nothing
+    s = raw isa AbstractString ? String(raw) : string(raw)
+    return isempty(strip(s)) ? nothing : s
+end
+
+"""Store the LaunchAgent serves.
+
+`enable` writes `serve` with no store argument. The process starts without
+`DISTSSHQUEUE_STORE` or `DISTSSHQUEUE_CONFIG`, then `main` applies config
+`[env]`. A shell override on `stop` is a different store.
+"""
+function launch_agent_store_path()::String
+    return withenv("DISTSSHQUEUE_STORE" => nothing, "DISTSSHQUEUE_CONFIG" => nothing) do
+        cfg = load_config()
+        from_env = _cfg_env_string(cfg, "DISTSSHQUEUE_STORE")
+        from_env === nothing || return from_env
+        alt = _cfg_env_string(cfg, "DISTSSHQUEUE_CONFIG")
+        alt === nothing || (cfg = load_config(; path = alt))
+        st = config_store_path(cfg)
+        return st === nothing ? default_store_path() : st
+    end
+end
+
+"""`true` when `store` is the store the LaunchAgent process would serve."""
+function _launch_agent_serves(store::AbstractString)::Bool
+    return canonical_local_path(String(store)) == canonical_local_path(launch_agent_store_path())
+end
+
 """Boot out the macOS serve job so `KeepAlive` does not restart it.
 
 The plist stays. The next login loads it again (`RunAtLoad`). No-op when
-[`NO_STOP_BOOTOUT_ENV`](@ref) is set, on Linux, or when neither LaunchAgent
-file exists. `bootout!` is the launchctl call. Tests pass a fake.
+[`NO_STOP_BOOTOUT_ENV`](@ref) is set, on Linux, when neither LaunchAgent
+file exists, or when `store` is not the store that unit serves. A `stop`
+for another `DISTSSHQUEUE_STORE` must not unload the account job.
+`bootout!` is the launchctl call. Tests pass a fake.
 """
-function bootout_serve_unit!(; home::AbstractString = homedir(), bootout! = _launchctl_unload)::Bool
+function bootout_serve_unit!(;
+        home::AbstractString = homedir(),
+        store::AbstractString = store_path(),
+        bootout! = _launchctl_unload,
+    )::Bool
     _queue_env_on(NO_STOP_BOOTOUT_ENV) && return false
     Sys.isapple() || return false
     have = isfile(launch_agent_path(; home = home)) || isfile(legacy_launch_agent_path(; home = home))
     have || return false
+    _launch_agent_serves(store) || return false
     bootout!()
     return true
 end
