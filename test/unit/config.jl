@@ -1352,11 +1352,11 @@ end
             # Both lines, both exits, or CPU under a few percent and no output
             # growth for `:child_reply`. Unreadable CPU time is that long on
             # the wall clock.
-            lines = String[]
             watch = IdleWatch(wait_seconds(:child_reply))
             seen = Dict{Int, Int}()
+            lines = String[]
             while true
-                lines = String[]
+                empty!(lines)
                 output = 0
                 for i in 1:2
                     out = joinpath(d, "out$i")

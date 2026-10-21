@@ -559,10 +559,12 @@ function _queue_sha256_process(cmd::Cmd)::Union{Nothing, String}
     return SHA.bytes2hex(SHA.digest!(ctx))
 end
 
-"""`(xy, path)` from `git status --porcelain=v1 -z`. A rename keeps the new path."""
-# Same rule as DistSSHRun `_git_source` / `git_source_snapshot`. porcelain v1 `-z` is
-# `XY new\\0old\\0` for a rename; keep the new path and skip the old one. Replace this
-# copy with `DistSSHRun.git_source_snapshot` after the release that publishes it.
+# Same rule as DistSSHRun `_git_source` / `git_source_snapshot`. Replace this copy
+# with `DistSSHRun.git_source_snapshot` after the release that publishes it.
+"""`(xy, path)` from `git status --porcelain=v1 -z`.
+
+A rename or copy is `XY new\\0old\\0`. `path` is the new name. The old name is skipped.
+"""
 function _queue_git_status_records(raw::AbstractVector{UInt8})::Vector{Tuple{String, String}}
     parts = split(String(raw), '\0'; keepempty = false)
     out = Tuple{String, String}[]

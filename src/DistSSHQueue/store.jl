@@ -220,7 +220,6 @@ function with_store_lock(f, path::String)
             rm(lockdir; force = true, recursive = true)
         end
     end
-    return
 end
 
 function _dt(x)::Union{Nothing, DateTime}
