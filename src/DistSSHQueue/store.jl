@@ -57,12 +57,27 @@ function _pid_record_from(pid_text::AbstractString, start_text::AbstractString)
     return (pid = rec.pid, start = side)
 end
 
-"""OS start key. `LC_ALL=C` and `TZ=UTC0` so macOS `ps -o lstart=` does not
-follow the caller's locale or timezone. Linux reads `/proc` and ignores them.
+"""OS start key.
+
+macOS `ps -o lstart=` follows the process locale and timezone. That `ps` is
+started with `addenv` (`LC_ALL=C`, `TZ=UTC0`), so this process's `ENV` is
+unchanged and a job task cannot inherit those values. Linux reads `/proc`
+through `DistSSHRun.kit_process_start_key` and does not run `ps`. A `.start`
+written by the previous `withenv` call is the same `ps` text.
 """
 function _process_start_key(pid::Integer)::Union{Nothing, String}
-    return withenv("LC_ALL" => "C", "TZ" => "UTC0") do
-        DistSSHRun.kit_process_start_key(pid)
+    pid <= 0 && return nothing
+    Sys.isapple() && return _macos_ps_start_key(pid)
+    return DistSSHRun.kit_process_start_key(pid)
+end
+
+function _macos_ps_start_key(pid::Integer)::Union{Nothing, String}
+    try
+        cmd = addenv(`ps -o lstart= -p $(Int(pid))`, "LC_ALL" => "C", "TZ" => "UTC0")
+        s = strip(read(cmd, String))
+        return isempty(s) ? nothing : s
+    catch
+        return nothing
     end
 end
 
