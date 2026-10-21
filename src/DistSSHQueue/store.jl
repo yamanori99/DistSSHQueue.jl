@@ -156,7 +156,14 @@ function _store_lock_stale(lockdir::AbstractString; now::Float64 = time())::Bool
     return now - st.mtime > _STORE_LOCK_STALE_SEC
 end
 
-"""Move `lockdir` aside and delete it. `false` when another process took it."""
+"""Move a stale `lockdir` aside and delete it. `false` when another process took it.
+
+The stale check and the `mv` are not one step. A new holder can create the
+directory after the check and still be moved aside, so both that holder and
+this process can be inside the lock. The moved directory is not put back.
+This stays a directory lock, so it still excludes a DistSSHQueue 0.9.7
+process. `flock` would not.
+"""
 function _steal_store_lock(lockdir::AbstractString)::Bool
     _store_lock_stale(lockdir) || return false
     trash = string(lockdir, ".stale.", getpid(), ".", time_ns())

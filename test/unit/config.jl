@@ -781,7 +781,7 @@ end
             @test code_y == 0
             @test occursin("still deletes", err_y)
             @test occursin("0.10", err_y)
-            @test !occursin("Would remove", out_y)
+            @test occursin("Would remove", out_y)
             @test !isfile(store)
         end
         @test !ispath(data)
@@ -887,12 +887,13 @@ end
             "DISTSSHQUEUE_STORE" => nothing,
             "DISTSSHKIT_YES" => "true",
         ) do
-            code, _, err = capture_stdio() do
+            code, out, err = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "--write-only"])
             end
             @test code == 0
             @test occursin("still deletes", err)
             @test occursin("0.10", err)
+            @test occursin("Would remove", out)
             @test !ispath(data)
         end
     end
@@ -911,11 +912,12 @@ end
             "DISTSSHQUEUE_STORE" => nothing,
             "DISTSSHKIT_YES" => nothing,
         ) do
-            code, _, err = capture_stdio() do
+            code, out, err = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "--write-only"])
             end
             @test code == 0
             @test occursin("still deletes", err)
+            @test occursin("Would remove", out)
             @test !ispath(data)
         end
     end
@@ -958,6 +960,75 @@ end
         finally
             DistSSHQueue._forget_absent_config_env!()
         end
+        @test !ispath(data)
+    end
+end
+
+@testset "teardown refuses a directory store before it lists paths" begin
+    mktempdir() do home::String
+        data = joinpath(home, ".distsshqueue")
+        mkpath(data)
+        store = joinpath(home, "store-dir")
+        mkpath(store)
+        secret = joinpath(store, "secret.txt")
+        write(secret, "x\n")
+        write(joinpath(data, "config.toml"), "store = $(repr(store))\n")
+        withenv(
+            "DISTSSHQUEUE_CONFIG" => nothing,
+            "DISTSSHQUEUE_STORE" => nothing,
+            "DISTSSHKIT_YES" => nothing,
+        ) do
+            err = try
+                DistSSHQueue.teardown_main(["--home", home, "--write-only"])
+                nothing
+            catch e
+                e
+            end
+            @test err isa ArgumentError
+            @test occursin("store is a directory", err.msg)
+            @test isfile(secret)
+            @test isdir(data)
+            err_y = try
+                DistSSHQueue.teardown_main(["--home", home, "-y", "--write-only"])
+                nothing
+            catch e
+                e
+            end
+            @test err_y isa ArgumentError
+            @test isfile(secret)
+            @test isdir(data)
+        end
+    end
+end
+
+@testset "teardown removes .pid.start beside a store outside the data dir" begin
+    mktempdir() do home::String
+        data = joinpath(home, ".distsshqueue")
+        mkpath(data)
+        store = joinpath(home, "outside.toml")
+        write(store, "jobs = []\n")
+        startp = DistSSHQueue.store_pid_start_path(store)
+        write(startp, "old-start\n")
+        write(joinpath(data, "config.toml"), "store = $(repr(store))\n")
+        withenv(
+            "DISTSSHQUEUE_CONFIG" => nothing,
+            "DISTSSHQUEUE_STORE" => nothing,
+            "DISTSSHKIT_YES" => nothing,
+        ) do
+            listed = String[p for p in DistSSHQueue.teardown_targets(; home = home) if ispath(p)]
+            @test startp in listed
+            @test store in listed
+            confirm = String[]
+            for p in listed
+                push!(confirm, "--confirm-path", p)
+            end
+            code, _, _ = capture_stdio() do
+                DistSSHQueue.teardown_main(["--home", home, "--write-only", confirm...])
+            end
+            @test code == 0
+        end
+        @test !isfile(store)
+        @test !isfile(startp)
         @test !ispath(data)
     end
 end
