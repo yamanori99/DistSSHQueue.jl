@@ -662,7 +662,7 @@ function print_queue_host_usage(io::IO = stdout)
     print_help_lines(
         io,
         help_verb_line("teardown", "Stop serve and remove ~/.distsshqueue"),
-        help_verb_line("", "Would remove, then --confirm-path. Job trees stay."),
+        help_verb_line("", "Would remove, then --confirm-path. ~/.distsshqueue goes, including stage."),
     )
     print_help_blank(io)
     println(io, "Run <command> --help (or -h) for flags.")

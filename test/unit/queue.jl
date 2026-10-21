@@ -1100,7 +1100,7 @@ end
                 @test !occursin("julia --project=. -m DistSSHKit qhost setup", queue_h)
                 @test occursin("Danger", queue_h)
                 @test occursin(DistSSHQueue.help_verb_line("teardown", "Stop serve and remove ~/.distsshqueue"), queue_h)
-                @test occursin(DistSSHQueue.help_verb_line("", "Would remove, then --confirm-path. Job trees stay."), queue_h)
+                @test occursin(DistSSHQueue.help_verb_line("", "Would remove, then --confirm-path. ~/.distsshqueue goes, including stage."), queue_h)
                 @test occursin("size", queue_h)
                 @test occursin("plan", queue_h)
                 @test occursin("pool", queue_h)
