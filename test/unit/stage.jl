@@ -611,6 +611,16 @@ end
         @test only_new[DistSSHQueue.SOURCE_DIRTY_ENV] == "true"
         @test parse(Int, only_new[DistSSHQueue.SOURCE_UNTRACKED_ENV]) >= 1
         @test only_new[DistSSHQueue.SOURCE_DIFF_SHA256_ENV] == empty_diff
+        rm(joinpath(repo, "extra.txt"))
+        mkpath(joinpath(repo, ".distsshqueue", "tickets"))
+        write(joinpath(repo, ".distsshqueue", "tickets", "j"), "t\n")
+        mkpath(joinpath(repo, ".distsshkit"))
+        write(joinpath(repo, ".distsshkit", "provenance.toml"), "x\n")
+        kit_only = DistSSHQueue.queue_source_env(repo)
+        @test kit_only[DistSSHQueue.SOURCE_DIRTY_ENV] == "false"
+        @test kit_only[DistSSHQueue.SOURCE_UNTRACKED_ENV] == "0"
+        arrow = DistSSHQueue._queue_git_status_records(Vector{UInt8}("?? file -> name\0"))
+        @test arrow == [("??", "file -> name")]
         withenv("PATH" => "/nonexistent-distsshqueue-path") do
             @test isempty(DistSSHQueue.queue_source_env(repo))
         end

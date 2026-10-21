@@ -539,6 +539,58 @@ function _queue_git_text(cmd::Cmd)::Union{Nothing, String}
     end
 end
 
+"""SHA-256 of `cmd`'s stdout, read in chunks. `nothing` when the process fails."""
+function _queue_sha256_process(cmd::Cmd)::Union{Nothing, String}
+    ctx = SHA.SHA256_CTX()
+    local proc
+    try
+        proc = open(pipeline(ignorestatus(cmd); stderr = devnull); read = true)
+        while !eof(proc)
+            chunk = read(proc, 1 << 16)
+            isempty(chunk) && break
+            SHA.update!(ctx, chunk)
+        end
+        close(proc)
+        wait(proc)
+    catch
+        return nothing
+    end
+    proc.exitcode == 0 || return nothing
+    return SHA.bytes2hex(SHA.digest!(ctx))
+end
+
+"""`(xy, path)` from `git status --porcelain=v1 -z`. A rename keeps the new path."""
+function _queue_git_status_records(raw::AbstractVector{UInt8})::Vector{Tuple{String, String}}
+    parts = split(String(raw), '\0'; keepempty = false)
+    out = Tuple{String, String}[]
+    i = 1
+    while i <= length(parts)
+        rec = String(parts[i])
+        i += 1
+        ncodeunits(rec) < 3 && continue
+        xy = rec[1:2]
+        path = rec[4:end]
+        if xy[1] in ('R', 'C') || xy[2] in ('R', 'C')
+            if i <= length(parts)
+                path = String(parts[i])
+                i += 1
+            end
+        end
+        push!(out, (xy, path))
+    end
+    return out
+end
+
+"""Same rule as DistSSHRun provenance. These directories are not the caller's edits."""
+function _queue_git_status_is_kit(path::AbstractString)::Bool
+    for name in (".distsshkit", ".distsshqueue")
+        path == name && return true
+        startswith(path, name * "/") && return true
+        occursin("/" * name * "/", path) && return true
+    end
+    return false
+end
+
 """Git snapshot of `project`, or an empty dict when git is missing or this is not a work tree.
 
 `diff_sha256` is present even when the diff is empty.
@@ -552,19 +604,18 @@ function queue_source_env(project::AbstractString)::Dict{String, String}
     strip(inside) == "true" || return Dict{String, String}()
     head = _queue_git_text(`$git -C $root rev-parse HEAD`)
     head === nothing && return Dict{String, String}()
-    status = _queue_git_text(`$git -C $root status --porcelain=v1 --untracked-files=all`)
+    status = _queue_git_bytes(`$git -C $root status --porcelain=v1 -z --untracked-files=all`)
     status === nothing && return Dict{String, String}()
-    diff = _queue_git_bytes(Cmd([git, "-C", root, _QUEUE_GIT_DIFF_FLAGS...]))
-    diff === nothing && return Dict{String, String}()
-    lines = split(strip(status), '\n'; keepempty = false)
-    untracked = 0
-    for line in lines
-        startswith(line, "??") && (untracked += 1)
-    end
+    diff_sha = _queue_sha256_process(Cmd([git, "-C", root, _QUEUE_GIT_DIFF_FLAGS...]))
+    diff_sha === nothing && return Dict{String, String}()
+    records = Tuple{String, String}[
+        rec for rec in _queue_git_status_records(status) if !_queue_git_status_is_kit(rec[2])
+    ]
+    untracked = count(rec -> rec[1] == "??", records)
     return Dict{String, String}(
         SOURCE_COMMIT_ENV => strip(head),
-        SOURCE_DIRTY_ENV => isempty(lines) ? "false" : "true",
-        SOURCE_DIFF_SHA256_ENV => SHA.bytes2hex(SHA.sha256(diff)),
+        SOURCE_DIRTY_ENV => isempty(records) ? "false" : "true",
+        SOURCE_DIFF_SHA256_ENV => diff_sha,
         SOURCE_CAPTURED_ENV => "submit:" * gethostname(),
         SOURCE_UNTRACKED_ENV => string(untracked),
     )
