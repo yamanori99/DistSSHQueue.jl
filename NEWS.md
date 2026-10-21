@@ -10,6 +10,10 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
   restarts serve only when the process fails. A plist already installed
   with `KeepAlive` true still restarts after `Already running` until
   `enable` is run again.
+- `teardown` refuses a store path that is a directory and does not list or
+  delete anything. A file store is removed as that file only. `-y` and
+  `DISTSSHKIT_YES` print `Would remove` before they delete. `.pid.start`
+  is removed with the other store files.
 - `cancel` of a job that is still in setup returns 0 and leaves the row
   `:running` until the current setup step ends. It used to return 1.
   Stopping `serve` during setup fails that job. A Kit job that already

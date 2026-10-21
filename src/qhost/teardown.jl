@@ -32,7 +32,18 @@ function teardown_targets(;
     data = queue_data_dir(; home = home)
     legacy = joinpath(home, ".distsshkitqueue")
     wrap = wrapper_path(; bindir = bindir)
-    out = String[wrap, st, store_pid_path(st), store_stop_path(st), string(st, ".log"), string(st, ".lock"), config, data, legacy]
+    out = String[
+        wrap,
+        st,
+        store_pid_path(st),
+        store_pid_start_path(st),
+        store_stop_path(st),
+        string(st, ".log"),
+        string(st, ".lock"),
+        config,
+        data,
+        legacy,
+    ]
     if Sys.isapple()
         push!(out, launch_agent_path(; home = home))
         push!(out, legacy_launch_agent_path(; home = home))
@@ -50,6 +61,24 @@ function teardown_targets(;
     return uniq
 end
 
+function _print_would_remove(existing; io::IO = stdout)
+    print_help_section("Would remove"; io = io)
+    if isempty(existing)
+        print_help_lines(io, "  (nothing)")
+    else
+        for p in existing
+            print_help_lines(io, "  $(_confirm_path_quote(_q_short(p)))")
+        end
+    end
+    return nothing
+end
+
+"""A directory store is not a jobs file. Refuse before any path is listed or removed."""
+function _refuse_directory_store!(st::AbstractString)
+    isdir(st) || return nothing
+    throw(ArgumentError("teardown: store is a directory: $(st)"))
+end
+
 function teardown(;
         home::AbstractString = homedir(),
         bindir::AbstractString = default_bindir(; home = home),
@@ -58,6 +87,8 @@ function teardown(;
         apply::Bool = true,
         io::IO = stdout,
     )::Cint
+    st0 = teardown_store(; home = home, config = config)
+    _refuse_directory_store!(st0)
     targets = teardown_targets(; home = home, bindir = bindir, config = config)
     existing = String[p for p in targets if ispath(p)]
     _warn_teardown_symlinks!(existing)
@@ -66,14 +97,7 @@ function teardown(;
             print_help_lines(io, "  confirm_paths does not match the paths that would be removed.")
             return 1
         end
-        print_help_section("Would remove"; io = io)
-        if isempty(existing)
-            print_help_lines(io, "  (nothing)")
-        else
-            for p in existing
-                print_help_lines(io, "  $(_confirm_path_quote(_q_short(p)))")
-            end
-        end
+        _print_would_remove(existing; io = io)
         print_help_lines(io, "  Pass -y / --yes to delete.")
         print_help_lines(io, "  Pass --confirm-path for each quoted path above.")
         return 0
@@ -86,7 +110,15 @@ function teardown(;
     end
     wrap = wrapper_path(; bindir = bindir)
     ispath(wrap) && rm(wrap; force = true)
-    for extra in (st, store_pid_path(st), store_stop_path(st), string(st, ".log"), string(st, ".lock"))
+    # The store path is a file. `recursive` would remove a directory store.
+    ispath(st) && rm(st; force = true)
+    for extra in (
+            store_pid_path(st),
+            store_pid_start_path(st),
+            store_stop_path(st),
+            string(st, ".log"),
+            string(st, ".lock"),
+        )
         ispath(extra) && rm(extra; force = true, recursive = true)
     end
     ispath(config) && rm(config; force = true)
@@ -169,6 +201,8 @@ function teardown_main(args::Vector{String}; process_yes::Bool = teardown_yes())
     bd = bindir === nothing ? default_bindir(; home = home) : String(bindir)
     cfg = config === nothing ? config_path(; home = home) : String(config)
     apply_config_env!(load_config(; path = cfg))
+    st = teardown_store(; home = home, config = cfg)
+    _refuse_directory_store!(st)
     targets = teardown_targets(; home = home, bindir = bd, config = cfg)
     existing = String[p for p in targets if ispath(p)]
     granted = _teardown_granted(confirm_paths, existing)
@@ -182,6 +216,7 @@ function teardown_main(args::Vector{String}; process_yes::Bool = teardown_yes())
             stderr,
             "  -y / DISTSSHKIT_YES still deletes teardown. This stops in 0.10. Pass --confirm-path.",
         )
+        _print_would_remove(existing)
         return teardown(;
             home = home,
             bindir = bd,
