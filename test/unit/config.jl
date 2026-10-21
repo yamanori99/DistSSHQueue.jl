@@ -1,7 +1,6 @@
 using Test
 using DistSSHRun
 using DistSSHQueue
-using TOML
 
 @testset "config path and store resolution" begin
     mktempdir() do d
@@ -1563,7 +1562,7 @@ end
     text = "hosts = [\"child:a]b\", 'child:c[d', \"x\\\"\"]\nstore = \"jobs.toml\"\n"
     @test DistSSHQueue._toml_bracket_delta(split(text, '\n')[1]) == 0
     out = DistSSHQueue.replace_or_insert_hosts_line(text, "hosts = [\"parent\"]")
-    parsed = TOML.parse(out)
+    parsed = DistSSHQueue.TOML.parse(out)
     @test parsed["hosts"] == ["parent"]
     @test parsed["store"] == "jobs.toml"
 end
