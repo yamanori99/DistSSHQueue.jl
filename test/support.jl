@@ -158,7 +158,10 @@ end
 
 # Sum of per-pid highs. A child that exits keeps its last sample, so the
 # total does not fall and the sibling can still show progress.
-function monotonic_group_cpu!(last::Dict{Int, Int}, procs)::Union{Nothing, Int}
+function monotonic_group_cpu!(
+        last::Dict{Int, Int},
+        procs::Vector{Base.Process},
+    )::Union{Nothing, Int}
     for proc in procs
         process_running(proc) || continue
         pid = try
