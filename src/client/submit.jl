@@ -105,10 +105,15 @@ function submit_cli(store::AbstractString, kind::Symbol, script::AbstractString,
     q = Queue(; store = store, follow_config = true)
     nt = isempty(kw) ? NamedTuple() : (; (Symbol(k) => v for (k, v) in kw)...)
     forced = strip(get(ENV, JOB_ID_ENV, ""))
-    id = if isempty(forced)
-        submit!(q, String(script), String[String(x) for x in hosts]; kind = kind, nt...)
-    else
-        submit!(q, String(script), String[String(x) for x in hosts]; kind = kind, id = forced, nt...)
+    id = try
+        if isempty(forced)
+            submit!(q, String(script), String[String(x) for x in hosts]; kind = kind, nt...)
+        else
+            submit!(q, String(script), String[String(x) for x in hosts]; kind = kind, id = forced, nt...)
+        end
+    catch
+        drop_unwritten_stage!(forced, store)
+        rethrow()
     end
     println(id)
     if !_kit_env_on("DISTSSHKIT_QUIET")
