@@ -10,6 +10,10 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
   restarts serve only when the process fails. A plist already installed
   with `KeepAlive` true still restarts after `Already running` until
   `enable` is run again.
+- `cancel` of a job that is still in setup returns 0 and leaves the row
+  `:running` until the current setup step ends. It used to return 1.
+  Stopping `serve` during setup fails that job. A Kit job that already
+  detached keeps running.
 
 ### Planned breaking (next minor)
 

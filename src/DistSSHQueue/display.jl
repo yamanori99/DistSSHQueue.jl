@@ -227,6 +227,9 @@ function _job_phase_disp(j::Job)::String
 end
 
 function _job_state_disp(j::Job)::String
+    if j.state === :running && _job_cancel_flag(j)
+        return "stopping"
+    end
     if j.state === :running
         ph = _job_phase_disp(j)
         isempty(ph) || return ph
@@ -386,7 +389,13 @@ function print_jobs_table(
     )
     for (i, j) in enumerate(rows)
         i > 1 && println(io)
-        st_color = isempty(_job_phase_disp(j)) ? _q_state_color(j.state) : :cyan
+        st_color = if j.state === :running && _job_cancel_flag(j)
+            :yellow
+        elseif isempty(_job_phase_disp(j))
+            _q_state_color(j.state)
+        else
+            :cyan
+        end
         print_wrapped_row(
             io, [ids[i], states[i], kinds[i]], Int[w_id, w_st, w_k], scripts[i];
             cols = n, cell_colors = Union{Nothing, Symbol}[nothing, st_color, nothing],
@@ -723,7 +732,13 @@ function queue_command_help(verb::AbstractString)
         ),
     )
     v == "list-host" && return (("  list-host",), (h,))
-    v == "cancel" && return (("  cancel ID",), (h,))
+    v == "cancel" && return (
+        ("  cancel ID",),
+        (
+            ("", "A setup step runs to the end, then the job stops. A detached Kit job is stopped."),
+            h,
+        ),
+    )
     v == "fetch" && return (
         ("  fetch ID",), (
             ("--into PATH", "Dest directory (the leaf; may be outside the project)"),
@@ -860,7 +875,7 @@ end
 
 _serve_can_draw(io::IO)::Bool = io isa Base.TTY && !haskey(ENV, "NO_COLOR")
 
-const _SERVE_CTRLC = "Ctrl-C stops serve. A DistSSHKit job already running is not killed."
+const _SERVE_CTRLC = "Ctrl-C stops serve. A job still in setup fails. A detached DistSSHKit job is not killed."
 
 function _serve_live_text(
         frame::Char,
@@ -870,7 +885,11 @@ function _serve_live_text(
     )::String
     j === nothing && return _clip_cols("  $frame  idle", cols)
     sid = isempty(ids) ? first(j.id, min(_ID_PREFIX_MIN, length(j.id))) : _id_chrome(j.id, ids)
-    body = "  $frame  running  $sid  $(j.kind)  $(_job_script_disp(j))"
+    body = if j.state === :running && _job_cancel_flag(j)
+        "  $frame  stopping  $sid  $(j.kind)  $(_job_script_disp(j))"
+    else
+        "  $frame  running  $sid  $(j.kind)  $(_job_script_disp(j))"
+    end
     return _clip_cols(body, cols)
 end
 
@@ -898,7 +917,7 @@ function print_serve_gone(store::AbstractString; io::IO = stdout)
     print_help_lines(
         io,
         "  store  $(_q_short(store)) (pidfile gone; removed or taken over)",
-        "  A DistSSHKit job already running is not killed.",
+        "  A detached DistSSHKit job is not killed.",
     )
     return nothing
 end
