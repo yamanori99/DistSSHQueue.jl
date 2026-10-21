@@ -8,6 +8,9 @@ using DistSSHQueue
     DistSSHQueue._refuse_unprotected_rsync_path!(spaced; version = v"3.2.4")
     DistSSHQueue._refuse_unprotected_rsync_path!(plain; version = v"2.6.9")
     DistSSHQueue._refuse_unprotected_rsync_path!("~/.distsshqueue/stage/job"; version = v"2.6.9")
+    for kept in ("results/run#1", "a!b", "x{y}", "file].txt")
+        DistSSHQueue._refuse_unprotected_rsync_path!(kept; version = v"2.6.9")
+    end
     @test_throws ArgumentError DistSSHQueue._refuse_unprotected_rsync_path!(
         spaced; version = v"2.6.9",
     )

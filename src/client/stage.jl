@@ -320,7 +320,7 @@ function _stage_extra_paths(extra_files)::Vector{String}
     return out
 end
 
-const _RSYNC_SHELL_SPECIAL = r"[[:space:]'\"\\$`;&|<>*?\[\]{}()!#]"
+const _RSYNC_SHELL_SPECIAL = r"[[:space:]'\"\\$`;&|<>()*?\[]"
 const _RSYNC_VER = Ref{Union{Nothing, VersionNumber}}(nothing)
 const _RSYNC_VER_READY = Ref(false)
 
@@ -345,11 +345,15 @@ function local_rsync_version()::Union{Nothing, VersionNumber}
     return _RSYNC_VER[]
 end
 
-"""Stop when this rsync is older than 3.2.4 and `path` has a shell-special character.
+"""Stop when this rsync is older than 3.2.4 and the remote `sh -c` would change `path`.
 
-rsync 3.2.4 protects arguments without `--protect-args`. Older rsync, including
-macOS 2.6.9, does not. `--protect-args` is not added: rsync before 3.0 does not
-know it, and the remote rsync must be 3.0 or newer too.
+Whitespace, quotes, `\\`, `\$`, a backtick, `;`, `&`, `|`, `<`, `>`, `(`, `)`,
+and the globs `*`, `?`, `[` are refused. `#`, `!`, `{`, and `}` in a word stay:
+`#` does not start a comment there, history expansion is off, and `{x}` without
+a comma or `..` is not expanded. rsync 3.2.4 protects arguments without
+`--protect-args`. Older rsync, including macOS 2.6.9, does not.
+`--protect-args` is not added: rsync before 3.0 does not know it, and the
+remote rsync must be 3.0 or newer too.
 """
 function _refuse_unprotected_rsync_path!(
         path::AbstractString;
@@ -360,7 +364,7 @@ function _refuse_unprotected_rsync_path!(
     occursin(_RSYNC_SHELL_SPECIAL, String(path)) || return nothing
     throw(
         ArgumentError(
-            "rsync $(version) does not protect arguments, and the remote path has a space or a shell character: $(path)",
+            "rsync $(version) does not protect arguments, and the remote shell would change this path: $(path)",
         )
     )
 end
