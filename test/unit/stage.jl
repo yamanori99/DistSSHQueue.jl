@@ -565,6 +565,66 @@ end
         @test any(s -> startswith(s, "/tmp/fakehome/.distsshqueue/stage/"), staged)
         @test startswith(extra["DISTRIBUTED_PROJECT_ROOT"], "/tmp/fakehome/.distsshqueue/stage/")
         @test haskey(extra, DistSSHQueue.JOB_ID_ENV)
+        @test !haskey(extra, DistSSHQueue.SOURCE_COMMIT_ENV)
         @test occursin("/tmp/fakehome/.distsshqueue/stage/", read(rsynclog, String))
+    end
+end
+
+function _source_git!(dir::String)
+    run(pipeline(`git -C $dir init -q`; stdout = devnull, stderr = devnull))
+    run(pipeline(`git -C $dir config user.email "test@example.com"`; stdout = devnull, stderr = devnull))
+    run(pipeline(`git -C $dir config user.name "Test"`; stdout = devnull, stderr = devnull))
+    write(joinpath(dir, "f.txt"), "hi\n")
+    run(pipeline(`git -C $dir add -A`; stdout = devnull, stderr = devnull))
+    run(pipeline(`git -C $dir commit -q -m init`; stdout = devnull, stderr = devnull))
+    return nothing
+end
+
+@testset "qhost submit source env" begin
+    @test collect(DistSSHQueue._QUEUE_GIT_DIFF_FLAGS) == [
+        "-c", "core.quotepath=off",
+        "diff", "--no-ext-diff", "--no-textconv", "--no-color", "--binary", "HEAD",
+    ]
+    mktempdir() do tmp
+        @test isempty(DistSSHQueue.queue_source_env(tmp))
+    end
+    Sys.which("git") === nothing && return
+    mktempdir() do repo
+        write(joinpath(repo, "Project.toml"), "name = \"App\"\n")
+        _source_git!(repo)
+        clean = DistSSHQueue.queue_source_env(repo)
+        head = readchomp(`git -C $repo rev-parse HEAD`)
+        empty_diff = DistSSHQueue.SHA.bytes2hex(DistSSHQueue.SHA.sha256(UInt8[]))
+        @test clean[DistSSHQueue.SOURCE_COMMIT_ENV] == head
+        @test clean[DistSSHQueue.SOURCE_DIRTY_ENV] == "false"
+        @test clean[DistSSHQueue.SOURCE_DIFF_SHA256_ENV] == empty_diff
+        @test clean[DistSSHQueue.SOURCE_CAPTURED_ENV] == "submit:" * gethostname()
+        @test clean[DistSSHQueue.SOURCE_UNTRACKED_ENV] == "0"
+        write(joinpath(repo, "f.txt"), "changed\n")
+        dirty = DistSSHQueue.queue_source_env(repo)
+        @test dirty[DistSSHQueue.SOURCE_DIRTY_ENV] == "true"
+        @test dirty[DistSSHQueue.SOURCE_UNTRACKED_ENV] == "0"
+        @test dirty[DistSSHQueue.SOURCE_DIFF_SHA256_ENV] != empty_diff
+        write(joinpath(repo, "f.txt"), "hi\n")
+        write(joinpath(repo, "extra.txt"), "x\n")
+        only_new = DistSSHQueue.queue_source_env(repo)
+        @test only_new[DistSSHQueue.SOURCE_DIRTY_ENV] == "true"
+        @test parse(Int, only_new[DistSSHQueue.SOURCE_UNTRACKED_ENV]) >= 1
+        @test only_new[DistSSHQueue.SOURCE_DIFF_SHA256_ENV] == empty_diff
+        rm(joinpath(repo, "extra.txt"))
+        mkpath(joinpath(repo, ".distsshqueue", "tickets"))
+        write(joinpath(repo, ".distsshqueue", "tickets", "j"), "t\n")
+        mkpath(joinpath(repo, ".distsshkit"))
+        write(joinpath(repo, ".distsshkit", "provenance.toml"), "x\n")
+        kit_only = DistSSHQueue.queue_source_env(repo)
+        @test kit_only[DistSSHQueue.SOURCE_DIRTY_ENV] == "false"
+        @test kit_only[DistSSHQueue.SOURCE_UNTRACKED_ENV] == "0"
+        arrow = DistSSHQueue._queue_git_status_records(Vector{UInt8}("?? file -> name\0"))
+        @test arrow == [("??", "file -> name")]
+        renamed = DistSSHQueue._queue_git_status_records(Vector{UInt8}("R  new name\0old\0"))
+        @test renamed == [("R ", "new name")]
+        withenv("PATH" => "/nonexistent-distsshqueue-path") do
+            @test isempty(DistSSHQueue.queue_source_env(repo))
+        end
     end
 end

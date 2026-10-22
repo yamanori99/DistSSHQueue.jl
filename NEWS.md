@@ -5,6 +5,7 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- `qhost:` submit records the client's commit and whether that tree had uncommitted changes, on the job and on the submit ticket. `.distsshkit/` and `.distsshqueue/` are not counted as uncommitted changes. Recording that code version on `run.toml` needs the next DistSSHRun release.
 - Requires DistSSHRun 0.1.12.
 - A setup failure after `cancel` records the job as `:cancelled`. It used
   to be `:failed`. If the cancel flag cannot be read, the job is `:failed`.

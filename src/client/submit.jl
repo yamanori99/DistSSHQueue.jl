@@ -101,7 +101,30 @@ function expand_pool_submit_hosts(slots::Int)::Vector{String}
     return out
 end
 
+"""Job `source` dict from `DISTSSHQUEUE_SOURCE_*`, or `nothing` when commit is unset."""
+function _source_from_queue_env()::Union{Nothing, Dict{String, Any}}
+    haskey(ENV, SOURCE_COMMIT_ENV) || return nothing
+    out = Dict{String, Any}("commit" => String(ENV[SOURCE_COMMIT_ENV]))
+    if haskey(ENV, SOURCE_DIRTY_ENV)
+        out["dirty"] = ENV[SOURCE_DIRTY_ENV] == "true"
+    end
+    if haskey(ENV, SOURCE_DIFF_SHA256_ENV)
+        out["diff_sha256"] = String(ENV[SOURCE_DIFF_SHA256_ENV])
+    end
+    if haskey(ENV, SOURCE_CAPTURED_ENV)
+        out["captured"] = String(ENV[SOURCE_CAPTURED_ENV])
+    end
+    if haskey(ENV, SOURCE_UNTRACKED_ENV)
+        n = tryparse(Int, strip(ENV[SOURCE_UNTRACKED_ENV]))
+        n === nothing || (out["untracked"] = n)
+    end
+    return out
+end
+
 function submit_cli(store::AbstractString, kind::Symbol, script::AbstractString, hosts, kw::Dict{String, Any})
+    kw = Dict{String, Any}(String(k) => v for (k, v) in kw)
+    src = _source_from_queue_env()
+    src === nothing || (kw["source"] = src)
     q = Queue(; store = store, follow_config = true)
     nt = isempty(kw) ? NamedTuple() : (; (Symbol(k) => v for (k, v) in kw)...)
     forced = strip(get(ENV, JOB_ID_ENV, ""))

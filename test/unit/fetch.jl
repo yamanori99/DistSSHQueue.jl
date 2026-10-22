@@ -326,6 +326,12 @@ end
         @test occursin("id = ", body)
         @test occursin("S.jl", body)
         @test occursin("qhost = \"mini\"", body)
+        dest_c = DistSSHQueue.write_submit_ticket(
+            proj, id * "\n"; script = script, qhost = "mini", commit = "abc", dirty = "true",
+        )::String
+        body_c = read(dest_c, String)
+        @test occursin("commit = \"abc\"", body_c)
+        @test occursin("dirty = true", body_c)
         @test !occursin("/go/", dest)
         @test !occursin("/drive/", dest)
         id2 = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
