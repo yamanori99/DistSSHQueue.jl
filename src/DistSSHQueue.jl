@@ -17,7 +17,6 @@ using Pkg
 using TOML
 
 import DistSSHRun
-import SHA
 using DistSSHRun.DistSSHBase
 using DistSSHRun.DistSSHBase: PARENT_HOST_NAME, _ssh_host_args, _test_doubles_on,
     cli_entry, cli_heading, cli_m, cli_m_project, cli_qhost, cli_qhost_heading,

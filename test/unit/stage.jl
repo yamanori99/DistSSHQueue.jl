@@ -581,10 +581,6 @@ function _source_git!(dir::String)
 end
 
 @testset "qhost submit source env" begin
-    @test collect(DistSSHQueue._QUEUE_GIT_DIFF_FLAGS) == [
-        "-c", "core.quotepath=off",
-        "diff", "--no-ext-diff", "--no-textconv", "--no-color", "--binary", "HEAD",
-    ]
     mktempdir() do tmp
         @test isempty(DistSSHQueue.queue_source_env(tmp))
     end
@@ -594,23 +590,32 @@ end
         _source_git!(repo)
         clean = DistSSHQueue.queue_source_env(repo)
         head = readchomp(`git -C $repo rev-parse HEAD`)
-        empty_diff = DistSSHQueue.SHA.bytes2hex(DistSSHQueue.SHA.sha256(UInt8[]))
+        snap = DistSSHRun.git_source_snapshot(repo)
+        @test snap isa Dict
         @test clean[DistSSHQueue.SOURCE_COMMIT_ENV] == head
         @test clean[DistSSHQueue.SOURCE_DIRTY_ENV] == "false"
-        @test clean[DistSSHQueue.SOURCE_DIFF_SHA256_ENV] == empty_diff
+        if snap isa Dict
+            @test clean[DistSSHQueue.SOURCE_DIFF_SHA256_ENV] == snap["diff_sha256"]
+        end
+        @test startswith(clean[DistSSHQueue.SOURCE_CAPTURED_ENV], "submit:")
         @test clean[DistSSHQueue.SOURCE_CAPTURED_ENV] == "submit:" * gethostname()
         @test clean[DistSSHQueue.SOURCE_UNTRACKED_ENV] == "0"
         write(joinpath(repo, "f.txt"), "changed\n")
         dirty = DistSSHQueue.queue_source_env(repo)
+        dirty_snap = DistSSHRun.git_source_snapshot(repo)
+        @test dirty_snap isa Dict
         @test dirty[DistSSHQueue.SOURCE_DIRTY_ENV] == "true"
         @test dirty[DistSSHQueue.SOURCE_UNTRACKED_ENV] == "0"
-        @test dirty[DistSSHQueue.SOURCE_DIFF_SHA256_ENV] != empty_diff
+        if dirty_snap isa Dict
+            @test dirty[DistSSHQueue.SOURCE_DIFF_SHA256_ENV] == dirty_snap["diff_sha256"]
+        end
+        @test dirty[DistSSHQueue.SOURCE_DIFF_SHA256_ENV] != clean[DistSSHQueue.SOURCE_DIFF_SHA256_ENV]
         write(joinpath(repo, "f.txt"), "hi\n")
         write(joinpath(repo, "extra.txt"), "x\n")
         only_new = DistSSHQueue.queue_source_env(repo)
         @test only_new[DistSSHQueue.SOURCE_DIRTY_ENV] == "true"
         @test parse(Int, only_new[DistSSHQueue.SOURCE_UNTRACKED_ENV]) >= 1
-        @test only_new[DistSSHQueue.SOURCE_DIFF_SHA256_ENV] == empty_diff
+        @test only_new[DistSSHQueue.SOURCE_DIFF_SHA256_ENV] == clean[DistSSHQueue.SOURCE_DIFF_SHA256_ENV]
         rm(joinpath(repo, "extra.txt"))
         mkpath(joinpath(repo, ".distsshqueue", "tickets"))
         write(joinpath(repo, ".distsshqueue", "tickets", "j"), "t\n")
@@ -619,10 +624,10 @@ end
         kit_only = DistSSHQueue.queue_source_env(repo)
         @test kit_only[DistSSHQueue.SOURCE_DIRTY_ENV] == "false"
         @test kit_only[DistSSHQueue.SOURCE_UNTRACKED_ENV] == "0"
-        arrow = DistSSHQueue._queue_git_status_records(Vector{UInt8}("?? file -> name\0"))
-        @test arrow == [("??", "file -> name")]
-        renamed = DistSSHQueue._queue_git_status_records(Vector{UInt8}("R  new name\0old\0"))
-        @test renamed == [("R ", "new name")]
+        run(pipeline(`git -C $repo mv f.txt g.txt`; stdout = devnull, stderr = devnull))
+        moved = DistSSHQueue.queue_source_env(repo)
+        @test moved[DistSSHQueue.SOURCE_DIRTY_ENV] == "true"
+        @test moved[DistSSHQueue.SOURCE_UNTRACKED_ENV] == "0"
         withenv("PATH" => "/nonexistent-distsshqueue-path") do
             @test isempty(DistSSHQueue.queue_source_env(repo))
         end
