@@ -5,7 +5,7 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
-- `add-host` and `pool` compare a worker's Julia with the running serve, or with the Julia the next serve will start. They warn when major.minor, the patch, or the prerelease differs. A build-only difference does not warn. When serve's Julia is not known, they say so and do not compare. Both commands still exit 0.
+- `add-host` and `pool` compare a worker's Julia with the running serve, or with the next serve's Julia. They warn when major.minor, the patch, or the prerelease differs. A build-only difference does not warn. When serve's Julia is not known, they say so, do not compare, and say to start serve or enable so the next `add-host` or `pool` can compare. Both commands still exit 0.
 - `serve` writes the Julia version and the binary path beside the pid file. `remove_pid_file` and `teardown` delete that file with the other store files.
 - Files a `qhost:` submit put on the stage also reach `child:`, including names that `.gitignore` kept with `!`. `.git/` and `.distsshkit/` stay excluded. Nothing is deleted, and exit codes are unchanged.
 - `qhost:` submit records the client's commit and whether that tree had uncommitted changes, on the job and on the submit ticket. `.distsshkit/` and `.distsshqueue/` are not counted as uncommitted changes. That git record is `DistSSHRun.git_source_snapshot`. The job's `captured` value stays `submit:` plus the client hostname.

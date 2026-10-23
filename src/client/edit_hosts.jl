@@ -47,7 +47,7 @@ function _serve_julia_baseline(store::AbstractString, home::AbstractString)
     spec = enabled_serve_command(; home = home)
     if spec !== nothing
         ver = _bin_julia_version(spec.julia)
-        ver !== nothing && return (ver, "the Julia the next serve will start")
+        ver !== nothing && return (ver, "the next serve's Julia")
     end
     return (nothing, "serve's Julia is not known")
 end
@@ -94,13 +94,14 @@ end
 """Warn when a worker's Julia differs from serve.
 
 Silent when `DISTSSHKIT_QUIET` is set. An unreachable worker is skipped.
-The baseline is the running serve's Julia, then the Julia the next serve
-will start. When neither can be read, this says so and does not compare.
-A major.minor difference, a patch-only difference, and a prerelease-only
-difference warn. A build-only difference does not. `add-host` and `pool`
-still exit 0.
+The baseline is the running serve's Julia, then the next serve's Julia.
+When neither can be read, this says so and does not compare. No serve and
+no `enable` unit also says to start serve, or enable, so a later `add-host`
+or `pool` can compare. A major.minor difference, a patch-only difference,
+and a prerelease-only difference warn. A build-only difference does not.
+`add-host` and `pool` still exit 0.
 """
-function warn_julia_major_minor(
+function warn_worker_julia(
         tokens;
         io::IO = stdout,
         store::AbstractString = store_path(),
@@ -120,7 +121,16 @@ function warn_julia_major_minor(
     ver, note = _serve_julia_baseline(store, home)
     if ver === nothing
         println(io)
-        _print_cli_note(io, String(note), "Worker Julias were not compared.")
+        if note == "serve's Julia is not known"
+            _print_cli_note(
+                io,
+                String(note),
+                "Worker Julias were not compared.",
+                "Start serve, or enable, and the next add-host or pool will compare.",
+            )
+        else
+            _print_cli_note(io, String(note), "Worker Julias were not compared.")
+        end
         return nothing
     end
     first = true
@@ -180,7 +190,7 @@ function add_host_cli(args::Vector{String})::Cint
     add_host_names!(config_path(), names)
     print_list_host(config_host_names(load_config()))
     warn_child_submit_reach(names)
-    warn_julia_major_minor(names)
+    warn_worker_julia(names)
     return 0
 end
 
