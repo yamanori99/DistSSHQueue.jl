@@ -298,6 +298,7 @@ function execute_kwargs(j::Job)
         k === :run_dir && continue
         k === :run_toml && continue
         k === :setup_logs && continue
+        k === :warnings && continue
         k === :cancel && continue
         DistSSHRun.execute_detached_accepts(k; kind = j.kind) || continue
         push!(acc, k => v)

@@ -121,10 +121,80 @@ function _source_from_queue_env()::Union{Nothing, Dict{String, Any}}
     return out
 end
 
+const MANIFEST_ABSENT_MESSAGE =
+    "no Manifest.toml in the job tree; the queue host and each worker resolve packages on their own"
+const MANIFEST_ABSENT_HINT =
+    "commit Manifest.toml, or stop ignoring it. A later minor will refuse this submit."
+
+"""True when `Project.toml` `[deps]` names at least one package.
+
+A missing file, a TOML error, a missing `[deps]`, or an empty table is false.
+`[weakdeps]` and `[extras]` are not read. A false result does not fail submit.
+"""
+function _project_has_deps(project_dir::AbstractString)::Bool
+    path = joinpath(String(project_dir), "Project.toml")
+    isfile(path) || return false
+    raw = try
+        TOML.parsefile(path)
+    catch
+        return false
+    end
+    raw isa AbstractDict || return false
+    deps = get(raw, "deps", nothing)
+    return deps isa AbstractDict && !isempty(deps)
+end
+
+"""Job project whose `[deps]` need a Manifest, or `nothing` when submit should stay quiet.
+
+`resolve_pkg_env` follows a workspace member to the parent Manifest. A directory
+with no `Project.toml` also has `manifest === nothing`; that tree is not warned.
+`Base.active_manifest` picks a versioned Manifest with the Julia that runs submit.
+"""
+function _manifest_absent_project(kw::Dict{String, Any})::Union{Nothing, String}
+    raw = get(kw, "project", nothing)
+    proj = if raw isa AbstractString && !isempty(strip(String(raw)))
+        String(raw)
+    else
+        job_project()
+    end
+    env = resolve_pkg_env(proj)
+    isfile(joinpath(env.project_dir, "Project.toml")) || return nothing
+    _project_has_deps(env.project_dir) || return nothing
+    env.manifest === nothing || return nothing
+    return env.project_dir
+end
+
+function _record_manifest_absent!(kw::Dict{String, Any})
+    _manifest_absent_project(kw) === nothing && return nothing
+    entry = Dict{String, Any}(
+        "kind" => "manifest_absent",
+        "message" => MANIFEST_ABSENT_MESSAGE,
+    )
+    prev = get(kw, "warnings", nothing)
+    kw["warnings"] = prev isa AbstractVector ? Any[prev..., entry] : Any[entry]
+    return nothing
+end
+
+function _print_manifest_absent!(io::IO, kw::Dict{String, Any})
+    raw = get(kw, "warnings", nothing)
+    raw isa AbstractVector || return nothing
+    found = false
+    for w in raw
+        w isa AbstractDict || continue
+        get(w, "kind", "") == "manifest_absent" || continue
+        found = true
+        break
+    end
+    found || return nothing
+    _print_cli_note(io, MANIFEST_ABSENT_MESSAGE, MANIFEST_ABSENT_HINT)
+    return nothing
+end
+
 function submit_cli(store::AbstractString, kind::Symbol, script::AbstractString, hosts, kw::Dict{String, Any})
     kw = Dict{String, Any}(String(k) => v for (k, v) in kw)
     src = _source_from_queue_env()
     src === nothing || (kw["source"] = src)
+    _record_manifest_absent!(kw)
     q = Queue(; store = store, follow_config = true)
     nt = isempty(kw) ? NamedTuple() : (; (Symbol(k) => v for (k, v) in kw)...)
     forced = strip(get(ENV, JOB_ID_ENV, ""))
@@ -146,6 +216,7 @@ function submit_cli(store::AbstractString, kind::Symbol, script::AbstractString,
         else
             println(stderr, "queue: local ($(gethostname()))")
         end
+        _print_manifest_absent!(stderr, kw)
         nq = count(j -> j.state === :queued, q.jobs)
         nr = count(j -> j.state === :running, q.jobs)
         if nr > 0

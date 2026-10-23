@@ -5,6 +5,7 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- `submit` warns on stderr when the job tree has a `Project.toml` with dependencies and no `Manifest.toml`, and records that warning on the job. A tree with no `Project.toml`, or an empty `[deps]`, does not warn. The exit code stays 0. A versioned manifest such as `Manifest-v1.13.toml` is found with the Julia that runs `submit`. On `qhost:` that is the hop's Julia, which can differ from `serve`.
 - `add-host` and `pool` compare a worker's Julia with the running serve, or with the next serve's Julia. They warn when major.minor, the patch, or the prerelease differs. A build-only difference does not warn. When serve's Julia is not known, they say so, do not compare, and say to start serve or enable so the next `add-host` or `pool` can compare. Both commands still exit 0.
 - `serve` writes the Julia version and the binary path beside the pid file. `remove_pid_file` and `teardown` delete that file with the other store files.
 - Files a `qhost:` submit put on the stage also reach `child:`, including names that `.gitignore` kept with `!`. `.git/` and `.distsshkit/` stay excluded. Nothing is deleted, and exit codes are unchanged.
@@ -40,6 +41,7 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ### Planned breaking (next minor)
 
+- `submit` will refuse a job tree that has dependencies and no `Manifest.toml`.
 - `serve --interval <= 0` will be rejected.
 - `DISTSSHQUEUE_STORE` that starts with `~` will be rejected.
 - `teardown` will refuse a path that is a symlink.
