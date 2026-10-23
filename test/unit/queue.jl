@@ -7,6 +7,67 @@ struct _KitOdd end
 Base.hasproperty(::_KitOdd, s::Symbol) = s === :ok
 Base.getproperty(::_KitOdd, ::Symbol) = throw(KeyError(:ok))
 
+struct _KitSetupOk
+    modes::Vector{Symbol}
+end
+
+function (p::_KitSetupOk)(_, mode::Symbol; gitignore::Bool = true)
+    push!(p.modes, mode)
+    return (; ok = true, gitignore)
+end
+
+struct _KitSetupFail
+    bad::Symbol
+    throw_on_bad::Bool
+end
+
+function (p::_KitSetupFail)(_, mode::Symbol; gitignore::Bool = true)
+    mode === p.bad || return (; ok = true, gitignore)
+    p.throw_on_bad && error(mode === :rsync ? "rsync failed" : "failed")
+    return (; ok = false, gitignore)
+end
+
+struct _StageRsyncProbe
+    modes::Vector{Symbol}
+    gitignore::Vector{Bool}
+    manifest_at::Dict{Symbol, Bool}
+    manifest::String
+end
+
+function (p::_StageRsyncProbe)(_, mode::Symbol; gitignore::Bool = true)
+    push!(p.modes, mode)
+    if mode === :rsync
+        empty!(p.gitignore)
+        push!(p.gitignore, gitignore)
+    end
+    p.manifest_at[mode] = isfile(p.manifest)
+    return (; ok = true)
+end
+
+function _stage_rsync_setup!(proj::String)
+    script = joinpath(proj, "s.jl")
+    write(script, "1\n")
+    j = DistSSHQueue.Job(;
+        kind = :go,
+        script = script,
+        hosts = ["child:w1:1"],
+        kwargs = Dict{String, Any}("project" => proj),
+    )
+    manifest = joinpath(proj, "Manifest.toml")
+    modes = Symbol[]
+    gitignore = Bool[]
+    manifest_at = Dict{Symbol, Bool}()
+    phases = String[]
+    withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+        DistSSHQueue._queue_kit_setup!(
+            j,
+            ph -> ph isa AbstractString && push!(phases, String(ph));
+            kit_setup! = _StageRsyncProbe(modes, gitignore, manifest_at, manifest),
+        )
+    end
+    return (; modes, phases, gitignore = only(gitignore), manifest_at)
+end
+
 function _cov_spawn_note!(j, p)
     od = p.output_dir
     od === nothing && return nothing
@@ -343,12 +404,11 @@ end
             kwargs = Dict{String, Any}("project" => String(d)),
         )
         modes = Symbol[]
-        fake_setup!(_, mode::Symbol) = (push!(modes, mode); (; ok = true))
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             @test_throws DistSSHQueue._JobCancelled DistSSHQueue._queue_kit_setup!(
                 j,
                 Returns(nothing);
-                kit_setup! = fake_setup!,
+                kit_setup! = _KitSetupOk(modes),
                 cancel_requested = Returns(true),
             )
         end
@@ -895,17 +955,37 @@ end
             kwargs = Dict{String, Any}("project" => String(d)),
         )
         modes = Symbol[]
-        fake_setup!(_, mode::Symbol) = (push!(modes, mode); (; ok = true))
         phases = String[]
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             DistSSHQueue._queue_kit_setup!(
                 j,
                 ph -> ph isa AbstractString && push!(phases, String(ph));
-                kit_setup! = fake_setup!,
+                kit_setup! = _KitSetupOk(modes),
             )
         end
         @test modes == [:rsync, :instantiate, :check]
         @test phases == ["rsync", "instantiate", "check"]
+    end
+end
+
+@testset "stage rsync skips gitignore and stays before instantiate" begin
+    mktempdir() do d
+        stage = joinpath(d, ".distsshqueue", "stage", "11111111-1111-4111-8111-111111111111")
+        mkpath(stage)
+        write(joinpath(stage, "Project.toml"), "[deps]\n")
+        got = _stage_rsync_setup!(stage)
+        @test got.gitignore === false
+        @test got.modes == [:rsync, :instantiate, :check]
+        @test got.phases == ["rsync", "instantiate", "check"]
+        @test got.manifest_at[:rsync] === false
+        @test got.manifest_at[:instantiate] === true
+    end
+    mktempdir() do d
+        write(joinpath(d, "Project.toml"), "[deps]\n")
+        got = _stage_rsync_setup!(d)
+        @test got.gitignore === true
+        @test got.modes == [:rsync, :instantiate, :check]
+        @test got.phases == ["rsync", "instantiate", "check"]
     end
 end
 
@@ -926,10 +1006,9 @@ end
         DistSSHQueue._allocate_queue_leaf!(j)
         leaf = DistSSHQueue.kit_output_dir(j)::String
         @test leaf isa String
-        fake_setup!(_, mode::Symbol) = mode === :instantiate ? (; ok = false) : (; ok = true)
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
-                j, Returns(nothing); kit_setup! = fake_setup!,
+                j, Returns(nothing); kit_setup! = _KitSetupFail(:instantiate, false),
             )
         end
         @test !isfile(joinpath(leaf, "setup_failure.log"))
@@ -959,10 +1038,9 @@ end
         DistSSHQueue._allocate_queue_leaf!(j)
         leaf = DistSSHQueue.kit_output_dir(j)::String
         @test leaf isa String
-        fake_setup!(_, mode::Symbol) = mode === :rsync ? error("rsync failed") : (; ok = true)
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
-                j, Returns(nothing); kit_setup! = fake_setup!,
+                j, Returns(nothing); kit_setup! = _KitSetupFail(:rsync, true),
             )
         end
         @test !isfile(joinpath(leaf, "setup_failure.log"))
@@ -988,11 +1066,10 @@ end
         leaf = DistSSHQueue.kit_output_dir(j)
         @test leaf !== nothing
         chmod(logdir, 0o000)
-        fake_setup!(_, mode::Symbol) = mode === :instantiate ? (; ok = false) : (; ok = true)
         thrown = try
             withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
                 @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
-                    j, Returns(nothing); kit_setup! = fake_setup!,
+                    j, Returns(nothing); kit_setup! = _KitSetupFail(:instantiate, false),
                 )
             end
         finally
@@ -1018,10 +1095,9 @@ end
             hosts = ["child:w1:1"],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
-        fake_setup!(_, mode::Symbol) = mode === :instantiate ? (; ok = false) : (; ok = true)
         thrown = withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
-                j, Returns(nothing); kit_setup! = fake_setup!,
+                j, Returns(nothing); kit_setup! = _KitSetupFail(:instantiate, false),
             )
         end
         @test occursin("setup! instantiate failed", thrown.value.msg)
