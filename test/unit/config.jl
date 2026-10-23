@@ -70,8 +70,12 @@ end
             @test strip(read(startp, String)) == key
             @test key != "previous-start"
         end
+        juliap = DistSSHQueue.store_pid_julia_path(store)
+        lines = split(read(juliap, String), '\n'; keepempty = false)
+        @test lines == [string(VERSION), Base.julia_cmd().exec[1]]
         @test DistSSHQueue.serve_alive(store)
         DistSSHQueue.remove_pid_file(store)
+        @test !isfile(juliap)
         @test !DistSSHQueue.serve_alive(store)
         write(DistSSHQueue.store_pid_path(store), "999999999")
         @test !DistSSHQueue.serve_alive(store)
@@ -1001,14 +1005,16 @@ end
     end
 end
 
-@testset "teardown removes .pid.start beside a store outside the data dir" begin
+@testset "teardown removes .pid.start and .pid.julia beside a store outside the data dir" begin
     mktempdir() do home::String
         data = joinpath(home, ".distsshqueue")
         mkpath(data)
         store = joinpath(home, "outside.toml")
         write(store, "jobs = []\n")
         startp = DistSSHQueue.store_pid_start_path(store)
+        juliap = DistSSHQueue.store_pid_julia_path(store)
         write(startp, "old-start\n")
+        write(juliap, "1.13.2\n/usr/bin/julia\n")
         write(joinpath(data, "config.toml"), "store = $(repr(store))\n")
         withenv(
             "DISTSSHQUEUE_CONFIG" => nothing,
@@ -1017,6 +1023,7 @@ end
         ) do
             listed = String[p for p in DistSSHQueue.teardown_targets(; home = home) if ispath(p)]
             @test startp in listed
+            @test juliap in listed
             @test store in listed
             confirm = String[]
             for p in listed
@@ -1029,6 +1036,7 @@ end
         end
         @test !isfile(store)
         @test !isfile(startp)
+        @test !isfile(juliap)
         @test !ispath(data)
     end
 end

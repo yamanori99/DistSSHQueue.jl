@@ -5,6 +5,7 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- `serve` writes the Julia version and the binary path beside the pid file. `remove_pid_file` and `teardown` delete that file with the other store files.
 - `qhost:` submit records the client's commit and whether that tree had uncommitted changes, on the job and on the submit ticket. `.distsshkit/` and `.distsshqueue/` are not counted as uncommitted changes. That git record is `DistSSHRun.git_source_snapshot`. The job's `captured` value stays `submit:` plus the client hostname.
 - Requires DistSSHRun 0.1.13.
 - A setup failure after `cancel` records the job as `:cancelled`. It used

@@ -37,6 +37,7 @@ function teardown_targets(;
         st,
         store_pid_path(st),
         store_pid_start_path(st),
+        store_pid_julia_path(st),
         store_stop_path(st),
         string(st, ".log"),
         string(st, ".lock"),
@@ -115,6 +116,7 @@ function teardown(;
     for extra in (
             store_pid_path(st),
             store_pid_start_path(st),
+            store_pid_julia_path(st),
             store_stop_path(st),
             string(st, ".log"),
             string(st, ".lock"),
