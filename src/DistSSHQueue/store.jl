@@ -424,6 +424,13 @@ older DistSSHQueue. The pid file itself stays one integer.
 """
 store_pid_start_path(store::AbstractString)::String = string(store_pid_path(store), ".start")
 
+"""Julia that wrote [`store_pid_path`](@ref).
+
+Two lines: `string(VERSION)`, then `Base.julia_cmd().exec[1]`. Absent on a
+pidfile written by an older DistSSHQueue.
+"""
+store_pid_julia_path(store::AbstractString)::String = string(store_pid_path(store), ".julia")
+
 """Store file mtime (seconds), or `-1.0` when it does not exist yet.
 `serve!` uses this to skip re-locking / re-parsing an unchanged store."""
 _store_mtime(store::AbstractString)::Float64 = isfile(store) ? mtime(store) : -1.0
@@ -486,10 +493,13 @@ function write_pid_file(store::AbstractString)
         write(tmp, string(getpid()))
         key = _own_start_key()
         sp = store_pid_start_path(store)
+        jp = store_pid_julia_path(store)
         # Remove the previous key before the pid is replaced. After `mv` and
         # before the new key is written, a reader sees a pid and no key.
         rm(sp; force = true)
+        rm(jp; force = true)
         mv(tmp, dest; force = true)
+        write(jp, string(VERSION, "\n", Base.julia_cmd().exec[1], "\n"))
         if key !== nothing
             write(sp, key)
         end
@@ -540,6 +550,7 @@ end
 function remove_pid_file(store::AbstractString)
     rm(store_pid_path(store); force = true)
     rm(store_pid_start_path(store); force = true)
+    rm(store_pid_julia_path(store); force = true)
     return nothing
 end
 
