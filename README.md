@@ -139,7 +139,8 @@ The stage excludes `.git/`, `.distsshkit/`, and `.distsshqueue/`.
 Inside a git work tree the file list matches `setup --rsync`
 (negation, and a `.gitignore` above the project). Outside one, rsync
 still applies each directory's `.gitignore`. A name such as
-`.distsshqueue-backup` is sent. Details:
+`.distsshqueue-backup` is sent. Files that `qhost:` put on that stage
+reach `child:` as well, except `.git/` and `.distsshkit/`. Details:
 [Artifacts and paths](https://yamanori99.github.io/DistSSHKit.jl/stable/queue/artifacts/).
 
 #### Client

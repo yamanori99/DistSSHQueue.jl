@@ -620,7 +620,7 @@ function _queue_kit_setup!(j::Job, on_phase; kit_setup! = DistSSHRun.setup!, can
     try
         on_phase("rsync")
         # Kit rsync refuses a nonempty remote. Later jobs still instantiate.
-        kit_setup!(session, :rsync)
+        kit_setup!(session, :rsync; gitignore = !is_qhost_stage_project(String(proj)))
         _throw_if_cancelled(cancel_requested)
         on_phase("instantiate")
         _queue_local_instantiate!(String(proj))
