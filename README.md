@@ -11,7 +11,17 @@ doubles. This does not fail CI.
 
 ## Flagged
 
-- nightly: julia 1.15.0-DEV.71 -> 1.15.0-DEV.84
+- 1.13: host changed Ubuntu 24.04.5 LTS x86_64 -> Ubuntu 26.04.1 LTS x86_64
+- 1.13: status method new -> 958.1 ms: Tuple{DistSSHQueue.var"##show_status#216", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(D...
+- 1.13: watch method new -> 928.4 ms: Tuple{DistSSHQueue.var"##watch!#220", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, Nothing, Boo...
+- 1.14-nightly: host changed Ubuntu 24.04.5 LTS x86_64 -> Ubuntu 26.04.1 LTS x86_64
+- 1.14-nightly: status method new -> 760.2 ms: Tuple{DistSSHQueue.var"##show_status#216", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(D...
+- 1.14-nightly: watch method new -> 812.1 ms: Tuple{DistSSHQueue.var"##watch!#220", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, Nothing, Boo...
+- nightly: host changed Ubuntu 24.04.5 LTS x86_64 -> Ubuntu 26.04.1 LTS x86_64
+- nightly: julia 1.15.0-DEV.84 -> 1.15.0-DEV.101
+- nightly: package precompile 1.35s -> 2.21s
+- nightly: status method new -> 812.0 ms: Tuple{DistSSHQueue.var"##show_status#216", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(D...
+- nightly: watch method new -> 845.4 ms: Tuple{DistSSHQueue.var"##watch!#220", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, Nothing, Boo...
 
 ## 1.13
 
@@ -26,6 +36,7 @@ doubles. This does not fail CI.
 | 2026-10-21 | 7c2c5df | 0.9.7 | 1.13.2 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6735 | 8.5 | 2.14 | 0.33 | 1.08 | 6.06 | 7.16 | 6.09 | 6.37 |
 | 2026-10-22 | ff6d630 | 0.9.7 | 1.13.2 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6891 | 7.86 | 2.0 | 0.31 | 1.04 | 5.91 | 6.9 | 5.88 | 6.14 |
 | 2026-10-22 | 6ae9bed | 0.9.7 | 1.13.2 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6891 | 9.17 | 2.32 | 0.34 | 1.14 | 6.64 | 7.64 | 6.36 | 6.8 |
+| 2026-10-23 | 33f99d4 | 0.9.8 | 1.13.2 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7112 | 8.85 | 2.24 | 0.35 | 1.14 | 6.5 | 7.68 | 6.42 | 6.73 |
 
 ## 1.14-nightly
 
@@ -40,6 +51,7 @@ doubles. This does not fail CI.
 | 2026-10-22 | 7c2c5df | 0.9.7 | 1.14.0-alpha1 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6735 | 6.2 | 1.67 | 0.28 | 0.62 | 1.6 | 1.83 | 1.59 | 1.71 |
 | 2026-10-22 | ff6d630 | 0.9.7 | 1.14.0-alpha1 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6891 | 8.62 | 2.33 | 0.39 | 0.88 | 2.36 | 2.63 | 2.27 | 2.42 |
 | 2026-10-22 | 6ae9bed | 0.9.7 | 1.14.0-alpha1 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6891 | 7.78 | 2.06 | 0.34 | 0.75 | 2.03 | 2.3 | 2.0 | 2.13 |
+| 2026-10-23 | 33f99d4 | 0.9.8 | 1.14.0-alpha1 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7112 | 8.4 | 2.21 | 0.37 | 0.82 | 2.22 | 2.49 | 2.17 | 2.36 |
 
 ## nightly
 
@@ -53,4 +65,5 @@ doubles. This does not fail CI.
 | 2026-10-22 | 7c2c5df | 0.9.7 | 1.15.0-DEV.71 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6735 | 8.61 | 2.28 | 0.36 | 0.83 | 2.21 | 2.43 | 2.16 | 2.26 |
 | 2026-10-22 | ff6d630 | 0.9.7 | 1.15.0-DEV.71 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6891 | 5.49 | 1.49 | 0.27 | 0.59 | 1.52 | 1.81 | 1.54 | 1.64 |
 | 2026-10-23 | 6ae9bed | 0.9.7 | 1.15.0-DEV.84 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6891 | 4.92 | 1.35 | 0.2 | 0.5 | 1.34 | 1.55 | 1.4 | 1.47 |
+| 2026-10-23 | 33f99d4 | 0.9.8 | 1.15.0-DEV.101 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7112 | 8.45 | 2.21 | 0.31 | 0.76 | 2.18 | 2.53 | 2.14 | 2.27 |
 
