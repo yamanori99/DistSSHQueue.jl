@@ -3012,3 +3012,93 @@ end
         end
     end
 end
+
+function _submit_manifest_tree(dir::AbstractString, kind::Symbol)
+    proj = joinpath(dir, "job")
+    mkpath(proj)
+    if kind === :deps
+        write(
+            joinpath(proj, "Project.toml"),
+            "name = \"Job\"\n[deps]\nExample = \"7876af07-990d-54b4-ab0e-df70d8e5d1c6\"\n",
+        )
+    elseif kind === :empty_deps
+        write(joinpath(proj, "Project.toml"), "name = \"Job\"\n[deps]\n")
+    elseif kind === :manifest
+        write(
+            joinpath(proj, "Project.toml"),
+            "name = \"Job\"\n[deps]\nExample = \"7876af07-990d-54b4-ab0e-df70d8e5d1c6\"\n",
+        )
+        write(joinpath(proj, "Manifest.toml"), "# lock\n")
+    end
+    store = joinpath(dir, "jobs.toml")
+    cfg = joinpath(dir, "config.toml")
+    script = joinpath(dir, "job.jl")
+    write(script, "1\n")
+    write(cfg, "store = $(repr(store))\nhosts = [\"parent\"]\n")
+    stdout, stderr, code = mktemp() do _, out_io
+        mktemp() do _, err_io
+            status = withenv("DISTSSHQUEUE_CONFIG" => cfg, "DISTSSHQUEUE_NO_AUTOSERVE" => "1") do
+                redirect_stdout(out_io) do
+                    redirect_stderr(err_io) do
+                        DistSSHQueue.submit_cli(
+                            store, :go, script, ["parent:1"],
+                            Dict{String, Any}("project" => proj),
+                        )
+                    end
+                end
+            end
+            flush(out_io)
+            flush(err_io)
+            seekstart(out_io)
+            seekstart(err_io)
+            return read(out_io, String), read(err_io, String), status
+        end
+    end
+    loaded = DistSSHQueue.Queue(; store = store)
+    DistSSHQueue.load!(loaded)
+    return (; code, stdout, stderr, job = only(loaded.jobs))
+end
+
+@testset "submit warns when dependencies have no Manifest" begin
+    mktempdir() do dir
+        got = _submit_manifest_tree(dir, :deps)
+        @test got.code == 0
+        lines = split(chomp(got.stdout), '\n'; keepempty = false)
+        @test length(lines) == 1
+        @test lines[1] == got.job.id
+        @test occursin("no Manifest.toml", got.stderr)
+        @test occursin("A later minor will refuse", got.stderr)
+        @test occursin("Queued", got.stderr)
+        warnings = got.job.kwargs["warnings"]
+        @test length(warnings) == 1
+        @test warnings[1]["kind"] == "manifest_absent"
+        @test occursin("no Manifest.toml", warnings[1]["message"])
+        @test !haskey(DistSSHQueue.execute_kwargs(got.job), :warnings)
+    end
+    mktempdir() do dir
+        got = _submit_manifest_tree(dir, :manifest)
+        @test got.code == 0
+        @test !occursin("no Manifest.toml", got.stderr)
+        @test !haskey(got.job.kwargs, "warnings")
+    end
+    mktempdir() do dir
+        got = _submit_manifest_tree(dir, :none)
+        @test got.code == 0
+        @test !occursin("no Manifest.toml", got.stderr)
+        @test !haskey(got.job.kwargs, "warnings")
+    end
+    mktempdir() do dir
+        got = _submit_manifest_tree(dir, :empty_deps)
+        @test got.code == 0
+        @test !occursin("no Manifest.toml", got.stderr)
+        @test !haskey(got.job.kwargs, "warnings")
+    end
+    mktempdir() do dir
+        got = withenv("DISTSSHKIT_QUIET" => "1") do
+            _submit_manifest_tree(dir, :deps)
+        end
+        @test got.code == 0
+        @test !occursin("no Manifest.toml", got.stderr)
+        @test got.job.kwargs["warnings"][1]["kind"] == "manifest_absent"
+    end
+end
