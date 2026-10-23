@@ -1,4 +1,4 @@
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 
 LABEL org.opencontainers.image.source="https://github.com/yamanori99/DistSSHQueue.jl"
 LABEL org.opencontainers.image.documentation="https://github.com/yamanori99/DistSSHQueue.jl/blob/main/testenv/docker-ssh/README.md"

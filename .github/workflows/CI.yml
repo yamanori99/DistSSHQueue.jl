@@ -323,7 +323,7 @@ jobs:
           files: ${{ steps.files.outputs.list }}
 
   ssh-e2e:
-    name: ubuntu-latest → ubuntu-24.04
+    name: ubuntu-latest → ubuntu-26.04
     needs: detect
     if: needs.detect.outputs.e2e == 'true'
     runs-on: ubuntu-latest
