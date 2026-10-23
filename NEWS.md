@@ -5,6 +5,21 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+### Planned breaking (next minor)
+
+- `submit` will refuse a job tree that has dependencies and no `Manifest.toml`.
+- `serve --interval <= 0` will be rejected.
+- `DISTSSHQUEUE_STORE` that starts with `~` will be rejected.
+- `teardown` will refuse a path that is a symlink.
+- Declining `up default` will exit 1.
+- `status` will not show a `:running` row whose `kit.pid` is dead as running.
+  The stored row stays `:running` until `serve` writes it.
+- `cancel` of a `:running` job will send SIGINT before SIGTERM, once
+  DistSSHRun's `interrupt_grace` defaults to a positive value. Until then
+  `cancel` does not send SIGINT.
+
+## 0.9.8
+
 - The job records the warnings `setup --check` printed on the queue host, as soon as that check returns. `status` marks those jobs with `!` while they are still running.
 - `fetch` over `qhost:` prints the job's setup warnings and its code version on stderr. A line before the warnings says the setup ran on the queue host. A `fetch` run directly on the queue host prints neither. The path on stdout does not change.
 - `submit` warns on stderr when the job tree has a `Project.toml` with dependencies and no `Manifest.toml`, and records that warning on the job. A tree with no `Project.toml`, or an empty `[deps]`, does not warn. The exit code stays 0. A versioned manifest such as `Manifest-v1.13.toml` is found with the Julia that runs `submit`. On `qhost:` that is the hop's Julia, which can differ from `serve`.
@@ -12,7 +27,7 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 - `serve` writes the Julia version and the binary path beside the pid file. `remove_pid_file` and `teardown` delete that file with the other store files.
 - Files a `qhost:` submit put on the stage also reach `child:`, including names that `.gitignore` kept with `!`. `.git/` and `.distsshkit/` stay excluded. Nothing is deleted, and exit codes are unchanged.
 - `qhost:` submit records the client's commit and whether that tree had uncommitted changes, on the job and on the submit ticket. `.distsshkit/` and `.distsshqueue/` are not counted as uncommitted changes. That git record is `DistSSHRun.git_source_snapshot`. The job's `captured` value stays `submit:` plus the client hostname.
-- Requires DistSSHRun 0.1.13.
+- Requires DistSSHRun 0.1.14.
 - A setup failure after `cancel` records the job as `:cancelled`. It used
   to be `:failed`. If the cancel flag cannot be read, the job is `:failed`.
 - `cancel` of a running job with no live `kit.pid` stays in the slot until
@@ -40,19 +55,6 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
   `:running` until the current setup step ends. It used to return 1.
   Stopping `serve` during setup fails that job. A Kit job that already
   detached keeps running.
-
-### Planned breaking (next minor)
-
-- `submit` will refuse a job tree that has dependencies and no `Manifest.toml`.
-- `serve --interval <= 0` will be rejected.
-- `DISTSSHQUEUE_STORE` that starts with `~` will be rejected.
-- `teardown` will refuse a path that is a symlink.
-- Declining `up default` will exit 1.
-- `status` will not show a `:running` row whose `kit.pid` is dead as running.
-  The stored row stays `:running` until `serve` writes it.
-- `cancel` of a `:running` job will send SIGINT before SIGTERM, once
-  DistSSHRun's `interrupt_grace` defaults to a positive value. Until then
-  `cancel` does not send SIGINT.
 
 ## 0.9.7
 
