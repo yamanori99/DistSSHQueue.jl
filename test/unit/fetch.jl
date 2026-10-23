@@ -86,7 +86,7 @@ end
         notify(hold)
         _wait_fetch_state(q2, running, :done)
         line = DistSSHQueue.fetch_source(running; store = store)
-        st, path, src_id, dest_rel, extras = DistSSHQueue.parse_fetch_source(line)
+        st, path, src_id, dest_rel, extras, _ = DistSSHQueue.parse_fetch_source(line)
         @test st === :done
         @test path == leaf[]
         @test src_id == running
@@ -97,7 +97,7 @@ end
         @test_throws ArgumentError DistSSHQueue.require_fetchable_leaf(running, custom)
         pref = first(running, 8)
         @test DistSSHQueue.fetch_source(pref; store = store) == line
-        st2, path2, old_id, dest2, extras2 = DistSSHQueue.parse_fetch_source(
+        st2, path2, old_id, dest2, extras2, _ = DistSSHQueue.parse_fetch_source(
             string(:done, '\t', path),
         )
         @test st2 === :done
@@ -112,7 +112,7 @@ end
         @test step!(q3) == 1
         _wait_fetch_state(q3, stray_id[], :done)
         stray_line = DistSSHQueue.fetch_source(stray_id[]; store = stray_store)
-        st_s, path_s, _, _, _ = DistSSHQueue.parse_fetch_source(stray_line)
+        st_s, path_s, _, _, _, _ = DistSSHQueue.parse_fetch_source(stray_line)
         @test st_s === :done
         @test path_s == "/tmp/go/S_" * first(stray_id[], 8)
     end
@@ -165,7 +165,7 @@ end
         )
         DistSSHQueue.save_jobs(store, [j])
         line = DistSSHQueue.fetch_source(id; store = store)
-        _, path, _, dest, _ = DistSSHQueue.parse_fetch_source(line)
+        _, path, _, dest, _, _ = DistSSHQueue.parse_fetch_source(line)
         @test path == art
         @test dest == "go/S_aaaaaaaa"
     end
@@ -191,7 +191,7 @@ end
         )
         DistSSHQueue.save_jobs(store, [j])
         line = DistSSHQueue.fetch_source(id; store = store)
-        _, path, _, _, extras = DistSSHQueue.parse_fetch_source(line)
+        _, path, _, _, extras, _ = DistSSHQueue.parse_fetch_source(line)
         @test path == DistSSHQueue.FETCH_NO_PRIMARY
         @test path != "-"
         @test extras == ["f:" * setup]
@@ -204,7 +204,7 @@ end
             result_path = "-",
         )
         DistSSHQueue.save_jobs(store, [dash])
-        _, dash_path, _, _, _ = DistSSHQueue.parse_fetch_source(
+        _, dash_path, _, _, _, _ = DistSSHQueue.parse_fetch_source(
             DistSSHQueue.fetch_source(dash.id; store = store),
         )
         @test dash_path == "-"
@@ -236,7 +236,7 @@ end
         DistSSHQueue.save_jobs(store, [j])
         rm(art; recursive = true)
         line = DistSSHQueue.fetch_source(id; store = store)
-        _, path, _, _, extras = DistSSHQueue.parse_fetch_source(line)
+        _, path, _, _, extras, _ = DistSSHQueue.parse_fetch_source(line)
         @test path == DistSSHQueue.FETCH_NO_PRIMARY
         @test extras == ["f:" * setup]
     end
@@ -485,12 +485,126 @@ end
         extras3 = DistSSHQueue.fetch_extra_paths(j)
         @test cold in extras3
         @test "/" ∉ extras3
-        st, path, _, dest, got = DistSSHQueue.parse_fetch_source(
+        st, path, _, dest, got, _ = DistSSHQueue.parse_fetch_source(
             string(:done, '\t', art, '\t', "aaaaaaaa-1111-4000-8000-000000000001", '\t', "go/S_aaaaaaaa", '\t', join(specs, DistSSHQueue.FETCH_EXTRA_SEP)),
         )
         @test st === :done
         @test path == art
         @test dest == "go/S_aaaaaaaa"
         @test got == specs
+    end
+end
+
+@testset "fetch source carries warnings and the code version" begin
+    mktempdir() do d
+        art = joinpath(d, "leaf")
+        mkpath(art)
+        store = joinpath(d, "jobs.toml")
+        id = "dddddddd-1111-4000-8000-000000000004"
+        DistSSHQueue.save_jobs(
+            store,
+            [
+                DistSSHQueue.Job(;
+                    id = id,
+                    kind = :go,
+                    script = "s.jl",
+                    hosts = ["parent:1"],
+                    state = :done,
+                    result_path = art,
+                    kwargs = Dict{String, Any}(
+                        "warnings" => Any[
+                            Dict(
+                                "host" => "",
+                                "kind" => "manifest_absent",
+                                "message" => "no Manifest.toml\nin the job",
+                            ),
+                            Dict(
+                                "host" => "box",
+                                "kind" => "julia_patch",
+                                "message" => "Julia patch version differs",
+                            ),
+                        ],
+                        "source" => Dict{String, Any}(
+                            "commit" => "1a2b3c4ffff",
+                            "dirty" => true,
+                        ),
+                    ),
+                ),
+            ],
+        )
+        line = DistSSHQueue.fetch_source(id; store = store)
+        parts = split(line, '\t'; keepempty = false)
+        @test length(parts) == 6
+        @test parts[5] == string(DistSSHQueue.FETCH_EXTRA_SEP)
+        @test isempty(split(parts[5], DistSSHQueue.FETCH_EXTRA_SEP; keepempty = false))
+        @test occursin("no Manifest.toml in the job", parts[6])
+        @test !occursin('\n', parts[6])
+        @test occursin("commit 1a2b3c4 (uncommitted changes)", parts[6])
+        st, path, _, _, extras, notes = DistSSHQueue.parse_fetch_source(line)
+        @test st === :done
+        @test path == art
+        @test extras == String[]
+        @test occursin("Julia patch version differs", notes)
+        five = string(:done, '\t', art, '\t', id, '\t', "go/leaf", '\t', "f:/tmp/a")
+        parsed5 = DistSSHQueue.parse_fetch_source(five)
+        @test parsed5[5] == ["f:/tmp/a"]
+        @test parsed5[6] == ""
+        parsed6 = DistSSHQueue.parse_fetch_source(line)
+        @test parsed6[6] == notes
+        out_io_path, err_text, code_line = mktemp() do _, out_io
+            mktemp() do _, err_io
+                code = withenv("DISTSSHQUEUE_STORE" => store, "DISTSSHKIT_QUIET" => nothing) do
+                    redirect_stdout(out_io) do
+                        redirect_stderr(err_io) do
+                            DistSSHQueue.fetch_cli(nothing, nothing, nothing, [id])
+                        end
+                    end
+                end
+                flush(out_io)
+                flush(err_io)
+                seekstart(out_io)
+                seekstart(err_io)
+                return read(out_io, String), read(err_io, String), code
+            end
+        end
+        @test code_line == 0
+        @test split(chomp(out_io_path), '\n'; keepempty = false) == [art]
+        @test !occursin("setup on the queue host", err_text)
+        shown = mktemp() do _, err_io
+            redirect_stderr(err_io) do
+                DistSSHQueue._print_fetch_notes(notes)
+            end
+            flush(err_io)
+            seekstart(err_io)
+            return read(err_io, String)
+        end
+        at(needle) = something(findfirst(needle, shown), 0:0).start
+        code_at = at("code  commit 1a2b3c4 (uncommitted changes)")
+        head_at = at("setup on the queue host:")
+        man_at = at("! no Manifest.toml in the job")
+        box_at = at("! box: Julia patch version differs")
+        @test 0 < code_at < head_at < man_at < box_at
+        quiet = mktemp() do _, err_io
+            withenv("DISTSSHKIT_QUIET" => "1") do
+                redirect_stderr(err_io) do
+                    DistSSHQueue._print_fetch_notes(notes)
+                end
+            end
+            flush(err_io)
+            seekstart(err_io)
+            return read(err_io, String)
+        end
+        @test !occursin("setup on the queue host", quiet)
+        @test !occursin("commit 1a2b3c4", quiet)
+        code_only = mktemp() do _, err_io
+            redirect_stderr(err_io) do
+                DistSSHQueue._print_fetch_notes("commit 1a2b3c4")
+            end
+            flush(err_io)
+            seekstart(err_io)
+            return read(err_io, String)
+        end
+        @test occursin("code  commit 1a2b3c4", code_only)
+        @test !occursin("setup on the queue host", code_only)
     end
 end

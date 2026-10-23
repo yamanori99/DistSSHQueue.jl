@@ -27,6 +27,18 @@ function (p::_KitSetupFail)(_, mode::Symbol; gitignore::Bool = true)
     return (; ok = false, gitignore)
 end
 
+const _SetupNote = @NamedTuple{host::String, kind::Symbol, message::String}
+
+struct _KitSetupWarn
+    ok::Bool
+    warnings::Vector{_SetupNote}
+end
+
+function (p::_KitSetupWarn)(_, mode::Symbol; gitignore::Bool = true)
+    mode === :check || return (; ok = true, gitignore)
+    return (; ok = p.ok, gitignore, warnings = p.warnings)
+end
+
 struct _StageRsyncProbe
     modes::Vector{Symbol}
     gitignore::Vector{Bool}
@@ -1045,6 +1057,79 @@ end
         end
         @test !isfile(joinpath(leaf, "setup_failure.log"))
         @test any(p -> occursin("setup_rsync.log", String(p)), j.kwargs["setup_logs"])
+    end
+end
+
+function _running_setup_job(dir::AbstractString)
+    proj = joinpath(dir, "proj")
+    mkpath(proj)
+    store = joinpath(dir, "jobs.toml")
+    script = joinpath(dir, "s.jl")
+    write(script, "1\n")
+    q = Queue(; store = store, runner = _ -> nothing)
+    id = submit!(q, script, "child:box:1"; project = String(proj))
+    lock(q.lock) do
+        i = DistSSHQueue._index_id(q.jobs, id)
+        row = q.jobs[i]
+        row.state = :running
+        row.kwargs["warnings"] = Any[
+            Dict{String, Any}(
+                "kind" => "manifest_absent",
+                "message" => "no Manifest.toml",
+            ),
+        ]
+        return nothing
+    end
+    DistSSHQueue._persist!(q)
+    return q, id, job(q, id), store
+end
+
+@testset "setup warnings are stored before the job finishes" begin
+    mktempdir() do d
+        q, id, snap, store = _running_setup_job(d)
+        note = (host = "box", kind = :julia_patch, message = "Julia patch version differs")
+        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+            DistSSHQueue._queue_kit_setup!(
+                snap, Returns(nothing);
+                kit_setup! = _KitSetupWarn(true, [note]),
+                on_warnings = entries -> DistSSHQueue._persist_job_warnings!(q, id, entries),
+            )
+        end
+        row = only(DistSSHQueue.read_jobs(store))
+        @test row.state === :running
+        kinds = [w["kind"] for w in row.kwargs["warnings"]]
+        @test kinds == ["manifest_absent", "julia_patch"]
+        @test row.kwargs["warnings"][2]["host"] == "box"
+        listed = sprint(io -> DistSSHQueue.print_jobs_table([row]; io = io))
+        @test occursin(" !", listed)
+        @test occursin("setup warnings", listed)
+        quiet = sprint(io -> DistSSHQueue.print_jobs_table([row]; io = io, quiet = true))
+        @test occursin(" !", quiet)
+        @test !occursin("setup warnings", quiet)
+    end
+    mktempdir() do d
+        q, id, snap, store = _running_setup_job(d)
+        note = (host = "box", kind = :git_dirty, message = "Git has uncommitted changes")
+        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+            @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
+                snap, Returns(nothing);
+                kit_setup! = _KitSetupWarn(false, [note]),
+                on_warnings = entries -> DistSSHQueue._persist_job_warnings!(q, id, entries),
+            )
+        end
+        row = only(DistSSHQueue.read_jobs(store))
+        @test row.state === :running
+        @test row.kwargs["warnings"][2]["kind"] == "git_dirty"
+    end
+    mktempdir() do d
+        _, _, snap, _ = _running_setup_job(d)
+        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+            DistSSHQueue._queue_kit_setup!(
+                snap, Returns(nothing); kit_setup! = _KitSetupOk(Symbol[]),
+            )
+        end
+        @test length(snap.kwargs["warnings"]) == 1
+        @test snap.kwargs["warnings"][1]["kind"] == "manifest_absent"
     end
 end
 

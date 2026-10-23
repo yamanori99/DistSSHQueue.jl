@@ -5,6 +5,8 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- The job records the warnings `setup --check` printed on the queue host, as soon as that check returns. `status` marks those jobs with `!` while they are still running.
+- `fetch` over `qhost:` prints the job's setup warnings and its code version on stderr. A line before the warnings says the setup ran on the queue host. A `fetch` run directly on the queue host prints neither. The path on stdout does not change.
 - `submit` warns on stderr when the job tree has a `Project.toml` with dependencies and no `Manifest.toml`, and records that warning on the job. A tree with no `Project.toml`, or an empty `[deps]`, does not warn. The exit code stays 0. A versioned manifest such as `Manifest-v1.13.toml` is found with the Julia that runs `submit`. On `qhost:` that is the hop's Julia, which can differ from `serve`.
 - `add-host` and `pool` compare a worker's Julia with the running serve, or with the next serve's Julia. They warn when major.minor, the patch, or the prerelease differs. A build-only difference does not warn. When serve's Julia is not known, they say so, do not compare, and say to start serve or enable so the next `add-host` or `pool` can compare. Both commands still exit 0.
 - `serve` writes the Julia version and the binary path beside the pid file. `remove_pid_file` and `teardown` delete that file with the other store files.

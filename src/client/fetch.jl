@@ -1,6 +1,7 @@
 # Client `fetch <id>`: inverse of stage. Copy one finished Kit leaf onto this job tree.
 const FETCH_SOURCE_SEP = '\t'
 const FETCH_EXTRA_SEP = '\x1e'
+const FETCH_NOTE_SEP = '\x1f'
 const FETCH_NO_PRIMARY = "urn:distsshqueue:no-primary"
 const FETCH_READY = (:done, :failed, :cancelled)
 
@@ -262,8 +263,88 @@ function fetch_source(id::AbstractString; store::AbstractString = store_path()):
         j.state, FETCH_SOURCE_SEP, p, FETCH_SOURCE_SEP, j.id,
         FETCH_SOURCE_SEP, default_fetch_dest_rel(j),
     )
-    isempty(extras) && return line
-    return string(line, FETCH_SOURCE_SEP, join(extras, FETCH_EXTRA_SEP))
+    note = _fetch_note_field(j)
+    if isempty(note)
+        isempty(extras) && return line
+        return string(line, FETCH_SOURCE_SEP, join(extras, FETCH_EXTRA_SEP))
+    end
+    # An empty extras field would be dropped by `split(..., keepempty=false)`,
+    # and the note would be read as extras. A lone separator stays an empty list.
+    extra_field = isempty(extras) ? string(FETCH_EXTRA_SEP) : join(extras, FETCH_EXTRA_SEP)
+    return string(line, FETCH_SOURCE_SEP, extra_field, FETCH_SOURCE_SEP, note)
+end
+
+function _fetch_note_sanitize(text::AbstractString)::String
+    return replace(
+        String(text),
+        FETCH_SOURCE_SEP => ' ',
+        FETCH_EXTRA_SEP => ' ',
+        FETCH_NOTE_SEP => ' ',
+        '\n' => ' ',
+        '\r' => ' ',
+    )
+end
+
+"""Warnings, then the client's commit summary. Empty when the job has neither."""
+function _fetch_note_field(j::Job)::String
+    parts = String[]
+    raw = get(j.kwargs, "warnings", nothing)
+    if raw isa AbstractVector
+        for w in raw
+            w isa AbstractDict || continue
+            msg = get(w, "message", nothing)
+            msg isa AbstractString || continue
+            host = get(w, "host", "")
+            host = host isa AbstractString ? _fetch_note_sanitize(host) : ""
+            body = _fetch_note_sanitize(msg)
+            push!(parts, isempty(host) ? body : string(host, FETCH_NOTE_SEP, body))
+        end
+    end
+    src = get(j.kwargs, "source", nothing)
+    if src isa AbstractDict
+        commit = get(src, "commit", nothing)
+        if commit isa AbstractString && !isempty(strip(commit))
+            short = first(String(commit), min(7, length(String(commit))))
+            line = "commit " * short
+            dirty = get(src, "dirty", nothing)
+            (dirty === true || dirty == "true") && (line *= " (uncommitted changes)")
+            push!(parts, _fetch_note_sanitize(line))
+        end
+    end
+    return join(parts, FETCH_EXTRA_SEP)
+end
+
+function _print_fetch_notes(notes::AbstractString)
+    _queue_env_on("DISTSSHKIT_QUIET") && return nothing
+    isempty(notes) && return nothing
+    code = String[]
+    warns = Tuple{String, String}[]
+    for part in split(notes, FETCH_EXTRA_SEP; keepempty = false)
+        if startswith(part, "commit ")
+            push!(code, String(part))
+            continue
+        end
+        host, msg = if occursin(FETCH_NOTE_SEP, part)
+            h, m = split(part, FETCH_NOTE_SEP; limit = 2)
+            String(h), String(m)
+        else
+            "", String(part)
+        end
+        push!(warns, (host, msg))
+    end
+    for line in code
+        println(stderr, "  code  ", line)
+    end
+    isempty(warns) && return nothing
+    println(stderr, "  setup on the queue host:")
+    for (host, msg) in warns
+        if isempty(host)
+            println(stderr, "  ! ", msg)
+        else
+            println(stderr, "  ! ", host, ": ", msg)
+        end
+    end
+    return nothing
 end
 
 """`state`, abs-path, optional UUID, dest `kind/leaf`, optional extra specs (old hosts omit later fields)."""
@@ -274,7 +355,7 @@ function parse_fetch_source(line::AbstractString)
     st = Symbol(parts[1])
     path = String(parts[2])
     isempty(path) && throw(ArgumentError("fetch: bad source line"))
-    length(parts) == 2 && return st, path, nothing, nothing, String[]
+    length(parts) == 2 && return st, path, nothing, nothing, String[], ""
     id = String(parts[3])
     isempty(id) && throw(ArgumentError("fetch: bad source line"))
     dest_rel = length(parts) >= 4 ? String(parts[4]) : nothing
@@ -283,7 +364,8 @@ function parse_fetch_source(line::AbstractString)
     if length(parts) >= 5
         extras = String[String(x) for x in split(parts[5], FETCH_EXTRA_SEP; keepempty = false)]
     end
-    return st, path, id, dest_rel, extras
+    notes = length(parts) >= 6 ? String(parts[6]) : ""
+    return st, path, id, dest_rel, extras, notes
 end
 
 """Client-only marker after `qhost:` submit. Not a Kit leaf (`go/` / `drive/`)."""
@@ -540,7 +622,7 @@ function fetch_cli(
         )
     )
     if hop === nothing
-        st, src, _, _, _ = parse_fetch_source(fetch_source(id))
+        st, src, _, _, _, _ = parse_fetch_source(fetch_source(id))
         st in FETCH_READY || throw(ArgumentError("job $(repr(id)) is $(st)"))
         println(src)
         return 0
@@ -551,7 +633,7 @@ function fetch_cli(
         )
     )
     expr = fetch_source_expr(id)
-    st, path, parsed_id, dest_rel, extras = parse_fetch_source(hop_print(hop, spec, expr; queue_env = qe))
+    st, path, parsed_id, dest_rel, extras, notes = parse_fetch_source(hop_print(hop, spec, expr; queue_env = qe))
     st in FETCH_READY || throw(ArgumentError("job $(repr(id)) is $(st)"))
     job_id = something(parsed_id, id)
     qroot = path == FETCH_NO_PRIMARY ? "." : dirname(dirname(posix_dir(path)))
@@ -559,6 +641,7 @@ function fetch_cli(
     if check_fetch_dest(out, job_id; force = force) === :skip
         write_fetch_marker!(out, job_id)
         !_queue_env_on("DISTSSHKIT_QUIET") && println(stderr, "already fetched (use --force to replace)")
+        _print_fetch_notes(notes)
         println(out)
         return 0
     end
@@ -576,6 +659,7 @@ function fetch_cli(
         write_fetch_marker!(out, job_id)
         return nothing
     end
+    _print_fetch_notes(notes)
     println(out)
     return 0
 end
