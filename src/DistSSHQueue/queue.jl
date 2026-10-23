@@ -447,10 +447,11 @@ function run_kit(
         on_phase = Returns(nothing),
         still_running = Returns(true),
         cancel_requested = Returns(false),
+        on_warnings = Returns(nothing),
         execute = DistSSHRun.execute!,
         terminate = DistSSHRun.terminate_run!,
     )
-    _queue_kit_setup!(j, on_phase; cancel_requested = cancel_requested)
+    _queue_kit_setup!(j, on_phase; cancel_requested = cancel_requested, on_warnings = on_warnings)
     on_phase(nothing)
     _throw_if_cancelled(cancel_requested)
     still_running() || return something(kit_output_dir(j), "")
@@ -596,6 +597,52 @@ function _record_kit_setup_logs!(j::Job, proj::AbstractString)
     return nothing
 end
 
+"""Dicts `jobs.toml` can store, from a `:check` result. Empty when it has no `warnings`."""
+function _setup_warning_dicts(result)::Vector{Dict{String, Any}}
+    hasproperty(result, :warnings) || return Dict{String, Any}[]
+    raw = getproperty(result, :warnings)
+    raw isa AbstractVector || return Dict{String, Any}[]
+    out = Dict{String, Any}[]
+    for w in raw
+        hasproperty(w, :host) || continue
+        hasproperty(w, :kind) || continue
+        hasproperty(w, :message) || continue
+        push!(
+            out,
+            Dict{String, Any}(
+                "host" => String(getproperty(w, :host)),
+                "kind" => String(getproperty(w, :kind)),
+                "message" => String(getproperty(w, :message)),
+            ),
+        )
+    end
+    return out
+end
+
+"""Append `entries` to `kwargs["warnings"]`. Does not drop warnings already on the job."""
+function _append_warning_dicts!(j::Job, entries)
+    isempty(entries) && return nothing
+    prev = get(j.kwargs, "warnings", nothing)
+    j.kwargs["warnings"] = prev isa AbstractVector ? Any[prev..., entries...] : Any[entries...]
+    return nothing
+end
+
+"""Write setup warnings onto the persisted row. Same lock path as [`_set_job_phase!`](@ref)."""
+function _persist_job_warnings!(q::Queue, id::AbstractString, entries)
+    isempty(entries) && return nothing
+    _with_store(q) do
+        lock(q.lock) do
+            reload_keep_live!(q)
+            i = _index_id(q.jobs, id)
+            i === nothing && return nothing
+            _append_warning_dicts!(q.jobs[i], entries)
+            _persist!(q)
+            return nothing
+        end
+    end
+    return nothing
+end
+
 """Copy `setup_logs` from the runner snapshot onto the persisted row."""
 function copy_setup_logs!(j::Job, snap)
     snap isa Job || return nothing
@@ -605,7 +652,13 @@ function copy_setup_logs!(j::Job, snap)
     return nothing
 end
 
-function _queue_kit_setup!(j::Job, on_phase; kit_setup! = DistSSHRun.setup!, cancel_requested = Returns(false))
+function _queue_kit_setup!(
+        j::Job,
+        on_phase;
+        kit_setup! = DistSSHRun.setup!,
+        cancel_requested = Returns(false),
+        on_warnings = Returns(nothing),
+    )
     _queue_env_on(NO_KIT_SETUP_ENV) && return nothing
     proj = get(j.kwargs, "project", nothing)
     proj isa AbstractString || (proj = job_project())
@@ -628,7 +681,11 @@ function _queue_kit_setup!(j::Job, on_phase; kit_setup! = DistSSHRun.setup!, can
         _require_kit_setup_ok!(kit_setup!(session, :instantiate), "instantiate")
         _throw_if_cancelled(cancel_requested)
         on_phase("check")
-        _require_kit_setup_ok!(kit_setup!(session, :check), "check")
+        checked = kit_setup!(session, :check)
+        added = _setup_warning_dicts(checked)
+        _append_warning_dicts!(j, added)
+        on_warnings(added)
+        _require_kit_setup_ok!(checked, "check")
         _throw_if_cancelled(cancel_requested)
     catch e
         e isa _JobCancelled && rethrow()
@@ -936,6 +993,7 @@ function _start!(q::Queue, j::Job)
                     on_phase = ph -> _set_job_phase!(q, id, ph),
                     still_running = () -> _job_still_running(q, id),
                     cancel_requested = () -> _job_cancel_requested(q, id),
+                    on_warnings = entries -> _persist_job_warnings!(q, id, entries),
                 )
             else
                 runner(snap)

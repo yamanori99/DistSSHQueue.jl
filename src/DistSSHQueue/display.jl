@@ -226,15 +226,21 @@ function _job_phase_disp(j::Job)::String
     return s
 end
 
+function _job_has_warnings(j::Job)::Bool
+    raw = get(j.kwargs, "warnings", nothing)
+    return raw isa AbstractVector && !isempty(raw)
+end
+
 function _job_state_disp(j::Job)::String
-    if j.state === :running && _job_cancel_flag(j)
-        return "stopping"
-    end
-    if j.state === :running
+    base = if j.state === :running && _job_cancel_flag(j)
+        "stopping"
+    elseif j.state === :running
         ph = _job_phase_disp(j)
-        isempty(ph) || return ph
+        isempty(ph) ? String(j.state) : ph
+    else
+        String(j.state)
     end
-    return String(j.state)
+    return _job_has_warnings(j) ? string(base, " !") : base
 end
 
 function _job_result_disp(j::Job; verbose::Bool = false)::String
@@ -420,6 +426,10 @@ function print_jobs_table(
             io, "  ", "($hidden older jobs hidden; --tail full)";
             cols = n, prefix_color = :light_black,
         )
+    end
+    if !quiet && any(_job_has_warnings, rows)
+        print_help_blank(io)
+        print_wrapped_tail(io, "  ", "! setup warnings; fetch shows them"; cols = n)
     end
     return nothing
 end
