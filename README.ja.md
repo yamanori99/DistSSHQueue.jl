@@ -50,6 +50,8 @@ julia> import Pkg; Pkg.add("DistSSHQueue")
 
 ## 使用方法
 
+`julia -m DistSSHQueue help submit` は submit のページを開き、`help client` はクライアントのコマンドを開く。
+
 ### 基本用語
 
 - **キューホスト** — `~/.distsshqueue` を持ち、`serve` を動かす常時起動の

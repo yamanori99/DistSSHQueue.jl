@@ -569,8 +569,40 @@ function print_queue_usage(
     isempty(t) && return print_queue_root_usage(io)
     t == "client" && return print_queue_client_usage(io)
     t in ("qhost", "queue", "queue-host") && return print_queue_host_usage(io)
-    throw(ArgumentError("unknown help topic: $(t) (client / qhost)"))
+    throw(ArgumentError("unknown help topic: $(t) (client / qhost / queue / queue-host)"))
 end
+
+# Flat Client rows on the root page. Same text as DistSSHKit's root Client
+# table. Not exported. DistSSHKit calls `DistSSHQueue.CLIENT_COMMAND_LINES`.
+const CLIENT_COMMAND_LINES = (
+    help_verb_line("submit", "Enqueue go / ride / drive"),
+    help_verb_line("status", "Snapshot of the store"),
+    help_verb_line("watch", "Live status"),
+    help_verb_line("cancel", "Drop queued or stop running"),
+    help_verb_line("fetch", "Copy a finished leaf"),
+    help_verb_line("list-host", "Inventory"),
+    help_verb_line("stop", "Stop serve, keep files"),
+    help_verb_line("teardown", "Stop serve and remove ~/.distsshqueue"),
+    help_verb_line("qhost:HOST", "SSH that client command to the queue host"),
+)
+
+# Flat Queue host rows on the root page. Same text as DistSSHKit's root
+# Queue host table. Not exported. DistSSHKit calls
+# `DistSSHQueue.QUEUE_HOST_COMMAND_LINES`.
+const QUEUE_HOST_COMMAND_LINES = (
+    help_verb_line("qhost setup", "Write config.toml if missing"),
+    help_verb_line("qhost up", "juliaup verbs on config hosts"),
+    help_verb_line("qhost add-host", "Add host tokens"),
+    help_verb_line("qhost remove-host", "Drop host tokens"),
+    help_verb_line("qhost serve", "Run serve in this terminal"),
+    help_verb_line("qhost stop", "Stop serve, keep files"),
+    help_verb_line("qhost enable", "Start serve after reboot"),
+    help_verb_line("qhost disable", "Remove that OS registration"),
+    help_verb_line("qhost teardown", "Stop serve and remove ~/.distsshqueue"),
+    help_verb_line("qhost size", "Estimate worker counts on the queue host"),
+    help_verb_line("qhost plan", "Inspect a script on the queue host"),
+    help_verb_line("qhost pool", "Cluster cores and RAM on the queue host"),
+)
 
 function print_queue_root_usage(io::IO = stdout)
     print_help_chrome(string(cli_entry()); io = io)
@@ -590,19 +622,25 @@ function print_queue_root_usage(io::IO = stdout)
         help_verb_line("Queue host", "$(cli_m()) $(cli_qhost())…"),
     )
     print_help_blank(io)
+    print_help_section("Client"; io = io)
+    print_help_lines(io, CLIENT_COMMAND_LINES...)
+    print_help_blank(io)
+    print_help_section("Queue host"; io = io)
+    print_help_lines(io, QUEUE_HOST_COMMAND_LINES...)
+    print_help_blank(io)
     print_help_section("Help"; io = io)
     print_help_lines(
         io,
-        "  --help client",
-        "  --help qhost",
+        "  help client",
+        "  help qhost",
     )
     print_help_blank(io)
-    println(io, "Run <command> --help (or -h) for flags.")
+    println(io, "help <command> for flags.")
     return nothing
 end
 
 function print_queue_client_usage(io::IO = stdout)
-    print_help_chrome(cli_heading("--help client"); io = io)
+    print_help_chrome(cli_heading("help client"); io = io)
     print_help_section("Jobs"; io = io)
     print_help_lines(
         io,
@@ -636,12 +674,12 @@ function print_queue_client_usage(io::IO = stdout)
         "  $(cli_m_project()) --help",
     )
     print_help_blank(io)
-    println(io, "Run <command> --help (or -h) for flags.")
+    println(io, "help <command> for flags.")
     return nothing
 end
 
 function print_queue_host_usage(io::IO = stdout)
-    print_help_chrome(cli_heading("--help qhost"); io = io)
+    print_help_chrome(cli_heading("help qhost"); io = io)
     print_help_section("Setup"; io = io)
     print_help_lines(
         io,
@@ -684,7 +722,7 @@ function print_queue_host_usage(io::IO = stdout)
         help_verb_line("", "Would remove, then --confirm-path. ~/.distsshqueue goes, including stage."),
     )
     print_help_blank(io)
-    println(io, "Run <command> --help (or -h) for flags.")
+    println(io, "help <command> for flags.")
     return nothing
 end
 
@@ -760,7 +798,10 @@ function queue_command_help(verb::AbstractString)
     v == "submit" && return (
         (
             "  submit go|ride|drive …",
-            "  submit go --help for DistSSHKit flags (same for ride / drive).",
+            help_verb_line("go", "Run an as-is complete job"),
+            help_verb_line("ride", "Experimental auto-split of map / filter"),
+            help_verb_line("drive", "Distributed workers + collect"),
+            "  help submit go for DistSSHKit flags (same for ride / drive).",
         ), (h,),
     )
     v == "add-host" && return (("  $(cli_m()) $(cli_qhost())add-host [parent] [child:NAME...]",), (h,))
