@@ -207,12 +207,31 @@ function _reject_subcommand(sub::AbstractString)::Cint
     return 1
 end
 
+"""`help <verb> …` becomes `<verb> --help …`. Topics stay on the topic pages.
+
+`help submit go` becomes `submit go --help`, so `submit_kind` prints the Kit
+flags. `command_help_argv` still only looks at `-h` / `--help`.
+"""
+function _help_command_argv(after::Vector{String})::Vector{String}
+    if length(after) < 2 || !(after[1] in ("help", "-h", "--help"))
+        return after
+    end
+    verb = String(after[2])
+    verb in QUEUE_COMMAND_HELP || return after
+    rest = String[String(a) for a in after[3:end]]
+    if verb == "submit" && !isempty(rest) && rest[1] in ("go", "ride", "drive")
+        return String[verb, rest[1], "--help", rest[2:end]...]
+    end
+    return String[verb, "--help", rest...]
+end
+
 function _main(args::Vector{String})::Cint
     # teardown YES is the process value. Config `[env]` is applied below.
     process_yes = teardown_yes()
     try
         apply_config_env!(load_config())
         qhost, gjulia, gqenv, after, explicit = extract_remote_opts(args)
+        after = _help_command_argv(after)
         if isempty(after) || after[1] in ("-h", "--help", "help")
             topic = length(after) >= 2 ? String(after[2]) : nothing
             print_queue_usage(; topic = topic)
