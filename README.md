@@ -12,17 +12,7 @@ table starts open.
 
 ## Flagged
 
-- 1.13: host changed Ubuntu 24.04.5 LTS x86_64 -> Ubuntu 26.04.1 LTS x86_64
-- 1.13: status method new -> 749.4 ms: Tuple{DistSSHQueue.var"##show_status#216", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(D...
-- 1.13: watch method new -> 750.5 ms: Tuple{DistSSHQueue.var"##watch!#220", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, Nothing, Boo...
-- 1.14-nightly: host changed Ubuntu 24.04.5 LTS x86_64 -> Ubuntu 26.04.1 LTS x86_64
-- 1.14-nightly: status method new -> 789.2 ms: Tuple{DistSSHQueue.var"##show_status#216", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(D...
-- 1.14-nightly: watch method new -> 857.0 ms: Tuple{DistSSHQueue.var"##watch!#220", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, Nothing, Boo...
-- nightly: host changed Ubuntu 24.04.5 LTS x86_64 -> Ubuntu 26.04.1 LTS x86_64
-- nightly: julia 1.15.0-DEV.84 -> 1.15.0-DEV.104
-- nightly: package precompile 1.35s -> 2.19s
-- nightly: status method new -> 754.3 ms: Tuple{DistSSHQueue.var"##show_status#216", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(D...
-- nightly: watch method new -> 831.5 ms: Tuple{DistSSHQueue.var"##watch!#220", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, Nothing, Boo...
+- nightly: julia 1.15.0-DEV.104 -> 1.15.0-DEV.126
 
 <details open>
 <summary>1.13</summary>
@@ -39,6 +29,7 @@ table starts open.
 | 2026-10-22 | ff6d630 | 0.9.7 | 1.13.2 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6891 | 7.86 | 2.0 | 0.31 | 1.04 | 5.91 | 6.9 | 5.88 | 6.14 |
 | 2026-10-22 | 6ae9bed | 0.9.7 | 1.13.2 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6891 | 9.17 | 2.32 | 0.34 | 1.14 | 6.64 | 7.64 | 6.36 | 6.8 |
 | 2026-10-23 | 33f99d4 | 0.9.8 | 1.13.2 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7112 | 7.15 | 1.81 | 0.3 | 0.93 | 5.15 | 6.11 | 5.19 | 5.23 |
+| 2026-10-24 | a7ddadc | 0.9.8 | 1.13.2 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7168 | 9.44 | 2.37 | 0.35 | 1.2 | 6.61 | 7.84 | 6.7 | 6.74 |
 
 </details>
 
@@ -57,6 +48,7 @@ table starts open.
 | 2026-10-22 | ff6d630 | 0.9.7 | 1.14.0-alpha1 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6891 | 8.62 | 2.33 | 0.39 | 0.88 | 2.36 | 2.63 | 2.27 | 2.42 |
 | 2026-10-22 | 6ae9bed | 0.9.7 | 1.14.0-alpha1 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6891 | 7.78 | 2.06 | 0.34 | 0.75 | 2.03 | 2.3 | 2.0 | 2.13 |
 | 2026-10-23 | 33f99d4 | 0.9.8 | 1.14.0-alpha1 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7112 | 8.53 | 2.21 | 0.37 | 0.84 | 2.36 | 2.61 | 2.32 | 2.35 |
+| 2026-10-24 | a7ddadc | 0.9.8 | 1.14.0-alpha1 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7168 | 8.37 | 2.2 | 0.36 | 0.81 | 2.18 | 2.57 | 2.2 | 2.28 |
 
 </details>
 
@@ -74,6 +66,7 @@ table starts open.
 | 2026-10-22 | ff6d630 | 0.9.7 | 1.15.0-DEV.71 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6891 | 5.49 | 1.49 | 0.27 | 0.59 | 1.52 | 1.81 | 1.54 | 1.64 |
 | 2026-10-23 | 6ae9bed | 0.9.7 | 1.15.0-DEV.84 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6891 | 4.92 | 1.35 | 0.2 | 0.5 | 1.34 | 1.55 | 1.4 | 1.47 |
 | 2026-10-23 | 33f99d4 | 0.9.8 | 1.15.0-DEV.104 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7112 | 8.37 | 2.19 | 0.31 | 0.76 | 2.15 | 2.48 | 2.12 | 2.25 |
+| 2026-10-24 | a7ddadc | 0.9.8 | 1.15.0-DEV.126 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7168 | 5.41 | 1.42 | 0.21 | 0.57 | 1.51 | 1.74 | 1.42 | 1.47 |
 
 </details>
 
