@@ -1573,8 +1573,18 @@ end
                 @test occursin("DistSSHQueue $(qv)\nDistSSHRun $(kv)", help)
                 @test !occursin("DistSSHQueue $(qv)", client_h)
                 @test occursin("Usage", help)
-                @test occursin("  --help client", help)
-                @test occursin("  --help qhost", help)
+                @test occursin("  help client", help)
+                @test occursin("  help qhost", help)
+                @test !occursin("--help client", help)
+                @test !occursin("--help qhost", help)
+                @test length(DistSSHQueue.CLIENT_COMMAND_LINES) == 9
+                @test length(DistSSHQueue.QUEUE_HOST_COMMAND_LINES) == 12
+                for line in DistSSHQueue.CLIENT_COMMAND_LINES
+                    @test occursin(line, help)
+                end
+                for line in DistSSHQueue.QUEUE_HOST_COMMAND_LINES
+                    @test occursin(line, help)
+                end
                 @test occursin("Client / qhost", help)
                 @test occursin("job --project=.", help)
                 @test occursin("qhost:HOST is SSH to the queue", help)
@@ -1588,9 +1598,13 @@ end
                 @test occursin("~/.distsshqueue/env", help)
                 @test occursin("julia --project=. -m DistSSHKit [qhost:HOST]", help)
                 @test occursin(DistSSHQueue.help_verb_line("Queue host", "julia -m DistSSHKit qhost …"), help)
-                @test occursin("<command> --help", help)
+                @test occursin("help <command> for flags.", help)
+                @test !occursin("Run <command> --help", help)
                 @test !occursin("the hop", help)
                 @test !occursin("laptop", help)
+                @test occursin("DistSSHKit help client", client_h)
+                @test occursin("help <command> for flags.", client_h)
+                @test !occursin("--help client", client_h)
                 @test occursin("Jobs", client_h)
                 @test occursin("Hosts", client_h)
                 @test occursin("list-host", client_h)
@@ -1614,6 +1628,9 @@ end
                 @test !occursin("Replay:", client_h)
                 @test !occursin("qhost:HOST go parent SCRIPT", client_h)
                 @test !occursin("qhost:HOST drive parent", client_h)
+                @test occursin("DistSSHKit help qhost", queue_h)
+                @test occursin("help <command> for flags.", queue_h)
+                @test !occursin("--help qhost", queue_h)
                 @test occursin("Setup", queue_h)
                 @test occursin("Serve", queue_h)
                 @test occursin("add-host", queue_h)
@@ -1631,18 +1648,53 @@ end
                 @test occursin("pool", queue_h)
                 @test !occursin("teardown -y", queue_h)
                 @test_throws ArgumentError DistSSHQueue.print_queue_usage(IOBuffer(); topic = "nope")
+                topic_err = try
+                    DistSSHQueue.print_queue_usage(IOBuffer(); topic = "nope")
+                    nothing
+                catch e
+                    e
+                end
+                @test topic_err isa ArgumentError
+                @test occursin("client / qhost / queue / queue-host", topic_err.msg)
                 code_topic, out_topic, _ = capture_stdio() do
                     DistSSHQueue.main(["-h", "client"])
                 end
                 @test code_topic == 0
                 @test occursin("submit drive parent:4", out_topic)
+                @test occursin("DistSSHQueue help client", out_topic)
+                code_help_client, out_help_client, _ = capture_stdio() do
+                    DistSSHQueue.main(["help", "client"])
+                end
+                @test code_help_client == 0
+                @test out_help_client == out_topic
                 code_topic2, out_topic2, _ = capture_stdio() do
                     DistSSHQueue.main(["--help", "qhost"])
                 end
                 @test code_topic2 == 0
                 @test occursin("add-host", out_topic2)
+                @test occursin("DistSSHQueue help qhost", out_topic2)
                 @test occursin("julia -m DistSSHQueue up", out_topic2)
                 @test !occursin("qhost up", out_topic2)
+                code_help_qhost, out_help_qhost, _ = capture_stdio() do
+                    DistSSHQueue.main(["help", "qhost"])
+                end
+                @test code_help_qhost == 0
+                @test out_help_qhost == out_topic2
+                for topic in ("queue", "queue-host")
+                    code_alias_topic, out_alias_topic, _ = capture_stdio() do
+                        DistSSHQueue.main(["help", topic])
+                    end
+                    @test code_alias_topic == 0
+                    @test out_alias_topic == out_topic2
+                end
+                code_bad_topic, _, err_bad_topic = capture_stdio() do
+                    DistSSHQueue.main(["help", "nope"])
+                end
+                @test code_bad_topic == 1
+                @test occursin(
+                    "unknown help topic: nope (client / qhost / queue / queue-host)",
+                    err_bad_topic,
+                )
                 setup_h = sprint(DistSSHQueue.print_setup_usage)
                 @test occursin("--force", setup_h)
                 @test !occursin("--juliaup", setup_h)
@@ -1686,8 +1738,34 @@ end
                 end
                 @test code_sub_h == 0
                 @test occursin("submit go|ride|drive", out_sub_h)
-                @test occursin("submit go --help", out_sub_h)
+                @test occursin("help submit go", out_sub_h)
+                @test !occursin("submit go --help", out_sub_h)
+                @test occursin(DistSSHQueue.help_verb_line("go", "Run an as-is complete job"), out_sub_h)
+                @test occursin(DistSSHQueue.help_verb_line("ride", "Experimental auto-split of map / filter"), out_sub_h)
+                @test occursin(DistSSHQueue.help_verb_line("drive", "Distributed workers + collect"), out_sub_h)
+                @test occursin("--help / -h", out_sub_h)
                 @test !occursin("add-host", out_sub_h)
+                code_help_sub, out_help_sub, err_help_sub = capture_stdio() do
+                    DistSSHQueue.main(["help", "submit"])
+                end
+                @test code_help_sub == 0
+                @test out_help_sub == out_sub_h
+                @test isempty(err_help_sub)
+                code_flag_sub, out_flag_sub, _ = capture_stdio() do
+                    DistSSHQueue.main(["--help", "submit"])
+                end
+                @test code_flag_sub == 0
+                @test out_flag_sub == out_sub_h
+                code_need, _, err_need = capture_stdio() do
+                    DistSSHQueue.main(["submit"])
+                end
+                @test code_need == 1
+                @test occursin("need `go`, `ride`, or `drive`", err_need)
+                code_word_help, _, err_word_help = capture_stdio() do
+                    DistSSHQueue.main(["status", "help"])
+                end
+                @test code_word_help == 1
+                @test occursin("unknown status option: help", err_word_help)
                 td_h = sprint(DistSSHQueue.print_teardown_usage)
                 @test occursin("--confirm-path PATH", td_h)
                 @test occursin("Still deletes. Removed in 0.10", td_h)
@@ -1700,6 +1778,27 @@ end
                 @test occursin("parent:N", out_sh)
                 @test occursin("DistSSHKit", out_sh)
                 @test occursin("not a Kit slot", out_sh)
+                code_help_go, out_help_go, err_help_go = capture_stdio() do
+                    DistSSHQueue.main(["help", "submit", "go"])
+                end
+                @test code_help_go == 0
+                @test out_help_go == out_sh
+                @test isempty(err_help_go)
+                code_ride_h, out_ride_h, _ = capture_stdio() do
+                    DistSSHQueue.main(["submit", "ride", "--help"])
+                end
+                code_help_ride, out_help_ride, _ = capture_stdio() do
+                    DistSSHQueue.main(["help", "submit", "ride"])
+                end
+                @test code_ride_h == 0
+                @test code_help_ride == 0
+                @test out_help_ride == out_ride_h
+                code_hop_help, out_hop_help, err_hop_help = capture_stdio() do
+                    DistSSHQueue.main(["qhost:no-such-host", "help", "submit"])
+                end
+                @test code_hop_help == 0
+                @test out_hop_help == out_sub_h
+                @test isempty(err_hop_help)
                 @test !occursin("Notes", help)
                 @test !occursin("[--size]", help)
                 @test !occursin("qhost:HOST add-host", help)

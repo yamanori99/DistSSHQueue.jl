@@ -5,6 +5,13 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- `help submit` opens the same page as `submit --help`. `help submit go`
+  opens the Kit flags for `go` (same for `ride` and `drive`). `help client`,
+  `help qhost`, `help queue`, and `help queue-host` stay topic pages. An
+  unknown topic names those four words. The root page lists the Client and
+  Queue host commands. The submit page lists `go`, `ride`, and `drive`.
+  `-h` and `--help` stay.
+
 ### Planned breaking (next minor)
 
 - `submit` will refuse a job tree that has dependencies and no `Manifest.toml`.

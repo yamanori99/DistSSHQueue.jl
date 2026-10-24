@@ -50,6 +50,8 @@ For everything else, see the
 
 ## Usage
 
+`julia -m DistSSHQueue help submit` opens the submit page, and `help client` opens the client commands.
+
 ### Basic terms
 
 - **Queue host** — the always-on **macOS or Linux** box that holds
