@@ -7,7 +7,8 @@ Precompile time, load time, CLI wall time, `src/**/*.jl` size, and the host
 against the previous sample on the same Julia slot, the host OS or arch
 changes, the Julia version changes, package precompile grows by 1.5x and 0.5s, a command wall grows
 by 1.5x and 1s, or a method of at least 200 ms is new in the top 20 or
-doubles. This does not fail CI.
+doubles. This does not fail CI. Each slot's table folds. The 1.13
+table starts open.
 
 ## Flagged
 
@@ -23,7 +24,8 @@ doubles. This does not fail CI.
 - nightly: status method new -> 754.3 ms: Tuple{DistSSHQueue.var"##show_status#216", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(D...
 - nightly: watch method new -> 831.5 ms: Tuple{DistSSHQueue.var"##watch!#220", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, Nothing, Boo...
 
-## 1.13
+<details open>
+<summary>1.13</summary>
 
 | date | commit | version | julia | os | arch | src files | code lines | full s | pkg s | using s | help s | status s | submit s | watch s | cancel s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -38,7 +40,10 @@ doubles. This does not fail CI.
 | 2026-10-22 | 6ae9bed | 0.9.7 | 1.13.2 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6891 | 9.17 | 2.32 | 0.34 | 1.14 | 6.64 | 7.64 | 6.36 | 6.8 |
 | 2026-10-23 | 33f99d4 | 0.9.8 | 1.13.2 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7112 | 7.15 | 1.81 | 0.3 | 0.93 | 5.15 | 6.11 | 5.19 | 5.23 |
 
-## 1.14-nightly
+</details>
+
+<details>
+<summary>1.14-nightly</summary>
 
 | date | commit | version | julia | os | arch | src files | code lines | full s | pkg s | using s | help s | status s | submit s | watch s | cancel s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -53,7 +58,10 @@ doubles. This does not fail CI.
 | 2026-10-22 | 6ae9bed | 0.9.7 | 1.14.0-alpha1 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6891 | 7.78 | 2.06 | 0.34 | 0.75 | 2.03 | 2.3 | 2.0 | 2.13 |
 | 2026-10-23 | 33f99d4 | 0.9.8 | 1.14.0-alpha1 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7112 | 8.53 | 2.21 | 0.37 | 0.84 | 2.36 | 2.61 | 2.32 | 2.35 |
 
-## nightly
+</details>
+
+<details>
+<summary>nightly</summary>
 
 | date | commit | version | julia | os | arch | src files | code lines | full s | pkg s | using s | help s | status s | submit s | watch s | cancel s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -66,4 +74,6 @@ doubles. This does not fail CI.
 | 2026-10-22 | ff6d630 | 0.9.7 | 1.15.0-DEV.71 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6891 | 5.49 | 1.49 | 0.27 | 0.59 | 1.52 | 1.81 | 1.54 | 1.64 |
 | 2026-10-23 | 6ae9bed | 0.9.7 | 1.15.0-DEV.84 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6891 | 4.92 | 1.35 | 0.2 | 0.5 | 1.34 | 1.55 | 1.4 | 1.47 |
 | 2026-10-23 | 33f99d4 | 0.9.8 | 1.15.0-DEV.104 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7112 | 8.37 | 2.19 | 0.31 | 0.76 | 2.15 | 2.48 | 2.12 | 2.25 |
+
+</details>
 
