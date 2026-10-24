@@ -11,9 +11,16 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 - `serve --interval <= 0` will be rejected.
 - `DISTSSHQUEUE_STORE` that starts with `~` will be rejected.
 - `teardown` will refuse a path that is a symlink.
+- `-y`, `--yes`, and `DISTSSHKIT_YES` will stop authorizing `teardown`.
+  Without `--confirm-path`, `-y` will exit 1. A `teardown` that was not
+  asked to delete still prints `Would remove` and exits 0. `up default`
+  still honors `DISTSSHKIT_YES`.
 - Declining `up default` will exit 1.
 - `status` will not show a `:running` row whose `kit.pid` is dead as running.
   The stored row stays `:running` until `serve` writes it.
+- A `jobs` value that is not a list will be rejected on read. 0.9.x leaves
+  the file on disk. `status` warns once. A write already stops with `Error:`
+  and does not replace the file.
 - `cancel` of a `:running` job will send SIGINT before SIGTERM, once
   DistSSHRun's `interrupt_grace` defaults to a positive value. Until then
   `cancel` does not send SIGINT.
