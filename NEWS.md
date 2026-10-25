@@ -5,6 +5,10 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- An argv made only of `help`, `-h`, and `--help` prints the root page on
+  stdout and exits 0. That includes `help --help`. `help bogus` still exits 1
+  and names `bogus`. `help submit --help` is still the submit page.
+  `help qhost --help` is still the qhost page.
 - `help submit` opens the same page as `submit --help`. `help submit go`
   opens the Kit flags for `go` (same for `ride` and `drive`). `help client`,
   `help qhost`, `help queue`, and `help queue-host` stay topic pages. An

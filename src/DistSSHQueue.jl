@@ -231,6 +231,12 @@ function _main(args::Vector{String})::Cint
     try
         apply_config_env!(load_config())
         qhost, gjulia, gqenv, after, explicit = extract_remote_opts(args)
+        # `help`, `-h`, and `--help`, in any number and order, are the root page.
+        # `help submit --help` is not: `submit` is a command, so the rewrite below still runs.
+        if !isempty(args) && all(in(("help", "-h", "--help")), args)
+            print_queue_usage()
+            return 0
+        end
         after = _help_command_argv(after)
         if isempty(after) || after[1] in ("-h", "--help", "help")
             topic = length(after) >= 2 ? String(after[2]) : nothing
