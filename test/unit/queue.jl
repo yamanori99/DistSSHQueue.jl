@@ -1991,6 +1991,113 @@ end
     end
 end
 
+# Same stream and entry as `_main`: stdout, and no color while stdout is not a TTY.
+function _help_root_page()
+    buf = IOBuffer()
+    redirect_stdout(devnull) do
+        DistSSHQueue.with_cli_entry(:DistSSHQueue) do
+            DistSSHQueue.print_queue_usage(buf)
+        end
+    end
+    return String(take!(buf))
+end
+
+function _help_topic_page(topic::AbstractString)
+    buf = IOBuffer()
+    redirect_stdout(devnull) do
+        DistSSHQueue.with_cli_entry(:DistSSHQueue) do
+            DistSSHQueue.print_queue_usage(buf; topic = topic)
+        end
+    end
+    return String(take!(buf))
+end
+
+function _help_command_page(verb::AbstractString)
+    buf = IOBuffer()
+    redirect_stdout(devnull) do
+        DistSSHQueue.with_cli_entry(:DistSSHQueue) do
+            DistSSHQueue.print_queue_command_usage(buf, verb)
+        end
+    end
+    return String(take!(buf))
+end
+
+function _help_topic_error(topic::AbstractString)
+    msg = try
+        DistSSHQueue.print_queue_usage(IOBuffer(); topic = topic)
+        error("topic printed")
+    catch e
+        e isa ArgumentError || rethrow()
+        e.msg
+    end
+    _, _, err = capture_stdio() do
+        DistSSHRun.print_cli_error(msg)
+        return 1
+    end
+    return err
+end
+
+@testset "help-only argv is the root page" begin
+    mktempdir() do d
+        withenv(
+            "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
+            "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
+        ) do
+            page = _help_root_page()
+            for line in DistSSHQueue.CLIENT_COMMAND_LINES
+                @test occursin(line, page)
+            end
+            for line in DistSSHQueue.QUEUE_HOST_COMMAND_LINES
+                @test occursin(line, page)
+            end
+            for args in (
+                    ["help"],
+                    ["-h"],
+                    ["--help"],
+                    ["help", "--help"],
+                    ["help", "-h"],
+                    ["help", "help"],
+                    ["--help", "help"],
+                    ["-h", "--help"],
+                    ["--help", "-h", "help"],
+                )
+                code, out, err = capture_stdio() do
+                    DistSSHQueue.main(args)
+                end
+                @test code == 0
+                @test out == page
+                @test err == ""
+            end
+            code_bogus, out_bogus, err_bogus = capture_stdio() do
+                DistSSHQueue.main(["help", "bogus"])
+            end
+            @test code_bogus == 1
+            @test out_bogus == ""
+            @test err_bogus == _help_topic_error("bogus")
+            code_sub, out_sub, err_sub = capture_stdio() do
+                DistSSHQueue.main(["help", "submit", "--help"])
+            end
+            code_direct, out_direct, err_direct = capture_stdio() do
+                DistSSHQueue.main(["submit", "--help"])
+            end
+            @test (code_sub, out_sub, err_sub) == (code_direct, out_direct, err_direct)
+            @test code_sub == 0
+            @test out_sub == _help_command_page("submit")
+            @test err_sub == ""
+            code_qh, out_qh, err_qh = capture_stdio() do
+                DistSSHQueue.main(["help", "qhost", "--help"])
+            end
+            code_topic, out_topic, err_topic = capture_stdio() do
+                DistSSHQueue.main(["help", "qhost"])
+            end
+            @test (code_qh, out_qh, err_qh) == (code_topic, out_topic, err_topic)
+            @test code_qh == 0
+            @test out_qh == _help_topic_page("qhost")
+            @test err_qh == ""
+        end
+    end
+end
+
 @testset "CLI submit respects config allowed" begin
     mktempdir() do d
         p = joinpath(d, "jobs.toml")
