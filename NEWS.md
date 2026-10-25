@@ -5,17 +5,6 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
-- An argv made only of `help`, `-h`, and `--help` prints the root page on
-  stdout and exits 0. That includes `help --help`. `help bogus` still exits 1
-  and names `bogus`. `help submit --help` is still the submit page.
-  `help qhost --help` is still the qhost page.
-- `help submit` opens the same page as `submit --help`. `help submit go`
-  opens the Kit flags for `go` (same for `ride` and `drive`). `help client`,
-  `help qhost`, `help queue`, and `help queue-host` stay topic pages. An
-  unknown topic names those four words. The root page lists the Client and
-  Queue host commands. The submit page lists `go`, `ride`, and `drive`.
-  `-h` and `--help` stay.
-
 ### Planned breaking (next minor)
 
 - `submit` will refuse a job tree that has dependencies and no `Manifest.toml`.
@@ -35,6 +24,19 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 - `cancel` of a `:running` job will send SIGINT before SIGTERM, once
   DistSSHRun's `interrupt_grace` defaults to a positive value. Until then
   `cancel` does not send SIGINT.
+
+## 0.9.9
+
+- An argv made only of `help`, `-h`, and `--help` prints the root page on
+  stdout and exits 0. That includes `help --help`. `help bogus` still exits 1
+  and names `bogus`. `help submit --help` is still the submit page.
+  `help qhost --help` is still the qhost page.
+- `help submit` opens the same page as `submit --help`. `help submit go`
+  opens the Kit flags for `go` (same for `ride` and `drive`). `help client`,
+  `help qhost`, `help queue`, and `help queue-host` stay topic pages. An
+  unknown topic names those four words. The root page lists the Client and
+  Queue host commands. The submit page lists `go`, `ride`, and `drive`.
+  `-h` and `--help` stay.
 
 ## 0.9.8
 
