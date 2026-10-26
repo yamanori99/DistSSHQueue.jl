@@ -58,7 +58,9 @@ function read_cli(
     cmd = addenv(qcli(args), env...)
     out = IOBuffer()
     err = IOBuffer()
-    proc = run(pipeline(cmd; stdout = out, stderr = err); wait = false)
+    # `pipeline` builds a `CmdRedirect`. Inference then includes `Vector{Process}`.
+    # A `Cmd` with stdio arguments stays a `Process`, which this child is.
+    proc = run(cmd, devnull, out, err; wait = false)
     mark = wait_while_progressing(() -> out.size + err.size, proc; seconds)
     timed_out = mark === :idle || mark === :wall
     if timed_out
