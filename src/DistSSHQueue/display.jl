@@ -572,8 +572,11 @@ function print_queue_usage(
     throw(ArgumentError("unknown help topic: $(t) (client / qhost / queue / queue-host)"))
 end
 
-# Flat Client rows on the root page. Same text as DistSSHKit's root Client
-# table. Not exported. DistSSHKit calls `DistSSHQueue.CLIENT_COMMAND_LINES`.
+"""Client rows on the root help page.
+
+Public, not exported. The promise is this binding. The strings are help
+text. DistSSHKit prints these lines.
+"""
 const CLIENT_COMMAND_LINES = (
     help_verb_line("submit", "Enqueue go / ride / drive"),
     help_verb_line("status", "Snapshot of the store"),
@@ -585,10 +588,13 @@ const CLIENT_COMMAND_LINES = (
     help_verb_line("teardown", "Stop serve and remove ~/.distsshqueue"),
     help_verb_line("qhost:HOST", "SSH that client command to the queue host"),
 )
+public CLIENT_COMMAND_LINES
 
-# Flat Queue host rows on the root page. Same text as DistSSHKit's root
-# Queue host table. Not exported. DistSSHKit calls
-# `DistSSHQueue.QUEUE_HOST_COMMAND_LINES`.
+"""Queue host rows on the root help page.
+
+Public, not exported. The promise is this binding. The strings are help
+text. DistSSHKit prints these lines.
+"""
 const QUEUE_HOST_COMMAND_LINES = (
     help_verb_line("qhost setup", "Write config.toml if missing"),
     help_verb_line("qhost up", "juliaup verbs on config hosts"),
@@ -603,6 +609,7 @@ const QUEUE_HOST_COMMAND_LINES = (
     help_verb_line("qhost plan", "Inspect a script on the queue host"),
     help_verb_line("qhost pool", "Cluster cores and RAM on the queue host"),
 )
+public QUEUE_HOST_COMMAND_LINES
 
 function print_queue_root_usage(io::IO = stdout)
     print_help_chrome(string(cli_entry()); io = io)
