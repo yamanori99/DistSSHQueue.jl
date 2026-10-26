@@ -16,8 +16,13 @@ mutable struct Job
     kwargs::Dict{String, Any}
 end
 
-"""DistSSHRun `execute!` kinds this package can enqueue. `KIT_EXECUTE_KINDS` is Queue's constant. Inspect verbs (`size` / `plan` / `pool`) are not this list."""
+"""DistSSHRun `execute!` kinds this package can enqueue.
+
+Public, not exported. The promise is this binding. Inspect verbs
+(`size` / `plan` / `pool`) are not this list.
+"""
 const KIT_EXECUTE_KINDS = (:go, :drive, :ride)
+public KIT_EXECUTE_KINDS
 
 is_kit_execute_kind(k::Symbol)::Bool = k === :go || k === :drive || k === :ride
 

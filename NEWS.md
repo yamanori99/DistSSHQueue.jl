@@ -5,6 +5,10 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- `CLIENT_COMMAND_LINES`, `QUEUE_HOST_COMMAND_LINES`, and `KIT_EXECUTE_KINDS`
+  are public and not exported. The promise is the binding. The help-line
+  strings stay help text.
+
 ### Planned breaking (next minor)
 
 - `submit` will refuse a job tree that has dependencies and no `Manifest.toml`.
