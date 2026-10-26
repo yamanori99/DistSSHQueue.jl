@@ -369,11 +369,12 @@ jobs:
         run: ./testenv/docker-ssh/scripts/down.sh || true
 
   # Downstream main, with this checkout developed into its test project.
+  # The job name includes `@main` because `ref` below is `main`.
   # Red is correct when this PR needs a downstream change that is not on main
   # yet, or when this version leaves the downstream compat and resolution
   # fails (for example a 0.2 bump).
   downstream:
-    name: Downstream (${{ matrix.pkg }}, 1.13)
+    name: Downstream (${{ matrix.pkg }}@main, 1.13)
     needs: detect
     if: needs.detect.outputs.heavy == 'true'
     runs-on: ubuntu-latest
