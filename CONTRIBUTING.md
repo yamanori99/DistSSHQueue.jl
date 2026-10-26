@@ -188,6 +188,7 @@ Required to merge (ruleset `main` uses these names). **1.14-nightly** and **nigh
 - `Gitleaks`
 - `ubuntu-latest → ubuntu-26.04`
 - `PR label`
+- `NEWS section`
 
 | When | Workflow | What |
 | --- | --- | --- |
@@ -347,9 +348,11 @@ Colors match DistSSHKit: type is "what", area is "where". Do not give each `area
 
 | `when:*` | Use |
 | --- | --- |
-| `when:current` | Broken daily path or CLI that lies; same 0.4 contract |
-| `when:next` | Same contract: chrome, copy, colors |
-| `when:later` | Later cut: daemon, inventory, cwd, ids |
+| `when:current` | Bug on the ordinary path or lying CLI; patch promptly |
+| `when:next` | Non-breaking (opt-in, docs, CI); ships when needed or after 2 weeks |
+| `when:later` | Breaking milestone batch, or waits on upstream (e.g. julia-next) |
+
+An issue on the open breaking milestone (`X.Y.0`, no due date) gets `when:later`.
 
 ## Language
 

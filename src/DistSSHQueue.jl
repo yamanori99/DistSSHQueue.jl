@@ -225,6 +225,33 @@ function _help_command_argv(after::Vector{String})::Vector{String}
     return String[verb, "--help", rest...]
 end
 
+"""True when `submit` argv is a help page, including `pool:N` and `go --help`.
+
+A parse error stays false. `_main` then reports a missing queue target
+first, the same way a bad `submit` does today. `--version` is not help.
+"""
+function _submit_requests_help(rest::Vector{String})::Bool
+    local peeled
+    try
+        peeled, _ = peel_submit_pool(rest)
+    catch e
+        e isa ArgumentError || rethrow()
+        return false
+    end
+    isempty(peeled) && return false
+    head = String(peeled[1])
+    head in ("-h", "--help") && return true
+    kind = Symbol(head)
+    is_kit_execute_kind(kind) || return false
+    parsed = try
+        kit_parse_args(kind, String[String(a) for a in peeled[2:end]])
+    catch e
+        e isa ArgumentError || rethrow()
+        return false
+    end
+    return parsed.help
+end
+
 function _main(args::Vector{String})::Cint
     # teardown YES is the process value. Config `[env]` is applied below.
     process_yes = teardown_yes()
@@ -253,6 +280,12 @@ function _main(args::Vector{String})::Cint
         if command_help_argv(sub, rest)
             print_queue_command_usage(stdout, sub)
             return 0
+        end
+        # Kind help is the page `submit_kind` prints, before the queue
+        # target check and before a `qhost:` hop. Other `submit` argv
+        # still needs a target. `--version` is not this path.
+        if sub == "submit" && _submit_requests_help(rest)
+            return submit_main(rest)
         end
         reject_qhost_on_local(sub, explicit ? qhost : nothing)
         require_queue_target!(sub; explicit = explicit)

@@ -9,6 +9,12 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
   of only `help`, `-h`, and `--help` prints the root page on stdout and
   exits 0. `qhost:HOST help --help` is that page. `qhost:HOST help bogus`
   still exits 1.
+- `submit go --help`, `submit ride --help`, and `submit drive --help` print
+  that page on stdout and exit 0 without `~/.distsshqueue/config.toml`.
+  `help submit go` is the same page. `pool:N` in front of the kind, or in
+  front of `--help`, does too. `qhost:HOST submit go --help` stays on this
+  machine and does not open SSH. `submit go` with no script still exits 1
+  and asks for setup. `submit go --version` still needs a queue target.
 
 ### Planned breaking (next minor)
 
