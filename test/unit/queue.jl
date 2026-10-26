@@ -2098,6 +2098,74 @@ end
     end
 end
 
+@testset "submit kind help does not need a queue target" begin
+    mktempdir() do d
+        home = joinpath(d, "home")
+        mkpath(home)
+        withenv(
+            "HOME" => home,
+            DistSSHQueue.LOCAL_QUEUE_ENV => nothing,
+            "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
+            "DISTSSHQUEUE_HOST" => nothing,
+            "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
+        ) do
+            @test !DistSSHQueue.queue_host_machine()
+            @test !DistSSHQueue.local_queue_exempt()
+            code_go, out_go, err_go = capture_stdio() do
+                DistSSHQueue.main(["submit", "go", "--help"])
+            end
+            @test code_go == 0
+            @test err_go == ""
+            @test occursin("not a Kit slot", out_go)
+            for args in (
+                    ["submit", "go", "-h"],
+                    ["help", "submit", "go"],
+                    ["submit", "pool:2", "go", "--help"],
+                    ["qhost:no-such-host", "submit", "go", "--help"],
+                    ["qhost:no-such-host", "help", "submit", "go"],
+                )
+                code, out, err = capture_stdio() do
+                    DistSSHQueue.main(args)
+                end
+                @test code == 0
+                @test out == out_go
+                @test err == ""
+            end
+            for kind in ("ride", "drive")
+                code, out, err = capture_stdio() do
+                    DistSSHQueue.main(["submit", kind, "--help"])
+                end
+                @test code == 0
+                @test err == ""
+                @test occursin(kind, out)
+                @test out != out_go
+            end
+            code_page, out_page, err_page = capture_stdio() do
+                DistSSHQueue.main(["submit", "pool:2", "--help"])
+            end
+            @test code_page == 0
+            @test err_page == ""
+            @test out_page == _help_command_page("submit")
+            code_need, _, err_need = capture_stdio() do
+                DistSSHQueue.main(["submit", "go"])
+            end
+            @test code_need == 1
+            @test occursin("no config / store", err_need)
+            code_ver, _, err_ver = capture_stdio() do
+                DistSSHQueue.main(["submit", "go", "--version"])
+            end
+            @test code_ver == 1
+            @test occursin("no config / store", err_ver)
+            code_bad, _, err_bad = capture_stdio() do
+                DistSSHQueue.main(["submit", "go", "--not-a-flag"])
+            end
+            @test code_bad == 1
+            @test occursin("no config / store", err_bad)
+            @test !occursin("unknown", err_bad)
+        end
+    end
+end
+
 @testset "CLI submit respects config allowed" begin
     mktempdir() do d
         p = joinpath(d, "jobs.toml")
