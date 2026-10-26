@@ -5,20 +5,6 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
-- After a `qhost:HOST`, `--remote-julia`, or `--queue-env` prefix, an argv
-  of only `help`, `-h`, and `--help` prints the root page on stdout and
-  exits 0. `qhost:HOST help --help` is that page. `qhost:HOST help bogus`
-  still exits 1.
-- `CLIENT_COMMAND_LINES`, `QUEUE_HOST_COMMAND_LINES`, and `KIT_EXECUTE_KINDS`
-  are public and not exported. The promise is the binding. The help-line
-  strings stay help text.
-- `submit go --help`, `submit ride --help`, and `submit drive --help` print
-  that page on stdout and exit 0 without `~/.distsshqueue/config.toml`.
-  `help submit go` is the same page. `pool:N` in front of the kind, or in
-  front of `--help`, does too. `qhost:HOST submit go --help` stays on this
-  machine and does not open SSH. `submit go` with no script still exits 1
-  and asks for setup. `submit go --version` still needs a queue target.
-
 ### Planned breaking (next minor)
 
 - `submit` will refuse a job tree that has dependencies and no `Manifest.toml`.
@@ -38,6 +24,22 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 - `cancel` of a `:running` job will send SIGINT before SIGTERM, once
   DistSSHRun's `interrupt_grace` defaults to a positive value. Until then
   `cancel` does not send SIGINT.
+
+## 0.9.10
+
+- After a `qhost:HOST`, `--remote-julia`, or `--queue-env` prefix, an argv
+  of only `help`, `-h`, and `--help` prints the root page on stdout and
+  exits 0. `qhost:HOST help --help` is that page. `qhost:HOST help bogus`
+  still exits 1.
+- `CLIENT_COMMAND_LINES`, `QUEUE_HOST_COMMAND_LINES`, and `KIT_EXECUTE_KINDS`
+  are public and not exported. The promise is the binding. The help-line
+  strings stay help text.
+- `submit go --help`, `submit ride --help`, and `submit drive --help` print
+  that page on stdout and exit 0 without `~/.distsshqueue/config.toml`.
+  `help submit go` is the same page. `pool:N` in front of the kind, or in
+  front of `--help`, does too. `qhost:HOST submit go --help` stays on this
+  machine and does not open SSH. `submit go` with no script still exits 1
+  and asks for setup. `submit go --version` still needs a queue target.
 
 ## 0.9.9
 
