@@ -1579,6 +1579,12 @@ end
                 @test !occursin("--help qhost", help)
                 @test length(DistSSHQueue.CLIENT_COMMAND_LINES) == 9
                 @test length(DistSSHQueue.QUEUE_HOST_COMMAND_LINES) == 12
+                @test Base.ispublic(DistSSHQueue, :CLIENT_COMMAND_LINES)
+                @test Base.ispublic(DistSSHQueue, :QUEUE_HOST_COMMAND_LINES)
+                @test Base.ispublic(DistSSHQueue, :KIT_EXECUTE_KINDS)
+                @test !Base.isexported(DistSSHQueue, :CLIENT_COMMAND_LINES)
+                @test !Base.isexported(DistSSHQueue, :QUEUE_HOST_COMMAND_LINES)
+                @test !Base.isexported(DistSSHQueue, :KIT_EXECUTE_KINDS)
                 for line in DistSSHQueue.CLIENT_COMMAND_LINES
                     @test occursin(line, help)
                 end

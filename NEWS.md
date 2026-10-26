@@ -5,6 +5,9 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- `CLIENT_COMMAND_LINES`, `QUEUE_HOST_COMMAND_LINES`, and `KIT_EXECUTE_KINDS`
+  are public and not exported. The promise is the binding. The help-line
+  strings stay help text.
 - `submit go --help`, `submit ride --help`, and `submit drive --help` print
   that page on stdout and exit 0 without `~/.distsshqueue/config.toml`.
   `help submit go` is the same page. `pool:N` in front of the kind, or in
