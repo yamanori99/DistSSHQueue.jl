@@ -99,10 +99,10 @@ Workflows pass the version to `julia-actions/setup-julia`. The job name is that 
 | Version | Role | Required |
 | --- | --- | --- |
 | **1.13** | `Project.toml` julia floor. Pkg.test, Aqua, JETLS, Documenter, draw, E2E, Runic. Codecov `pkgtest` on **main push** only | yes |
-| **1.14-nightly** | `release-1.14`. Pkg.test, Aqua. `continue-on-error` | no |
+| **1.14-nightly** | `release-1.14`. Pkg.test, Aqua. Informational JETLS on the heavy gate. `continue-on-error` | no |
 | **nightly** | Published `julia-latest` tarball. It follows master and can lag a `VERSION` bump. Same jobs as 1.14-nightly. `continue-on-error` | no |
 
-**1.13** runs on ordinary PRs (heavy gate), on Ubuntu and macOS. WSL2 1.13 runs on a main push and CI weekly, not on a pull request. Ubuntu **1.14-nightly** and **nightly** run on **main**, **CI weekly**, and a `Project.toml` version increase ([`.github/version-cut.sh`](.github/version-cut.sh)), not ordinary PRs. macOS and WSL2 **1.14-nightly** and **nightly** run on **CI weekly** only.
+**1.13** runs on ordinary PRs (heavy gate), on Ubuntu and macOS. WSL2 1.13 runs on a main push and CI weekly, not on a pull request. Ubuntu **1.14-nightly** and **nightly** `Pkg.test` and Aqua run on **main**, **CI weekly**, and a `Project.toml` version increase ([`.github/version-cut.sh`](.github/version-cut.sh)), not ordinary PRs. Informational JETLS on **1.14-nightly** uses the same heavy gate as JETLS 1.13. macOS and WSL2 **1.14-nightly** and **nightly** run on **CI weekly** only.
 
 This package feels SSH hosts, Pkg, and lockfiles more than a compute-model
 library does. When Julia announces that it has stopped maintaining the
@@ -115,7 +115,7 @@ has only just shipped, as an automatic rule.
 
 When the floor moves, rename the **1.13** jobs to the new version in the same PR as `Project.toml`, the worker Dockerfile `--default-channel`, and the WSL `julia_channel`. Ruleset `main` uses those job names, so update the required checks with the rename.
 
-JETLS stays on a runtime it lists (today 1.12.2–1.13). Raise that job's version only after JETLS supports it. No JETLS on nightly.
+JETLS 2026-10-26 officially supports 1.12.2 through 1.14. The required job stays on 1.13. `JETLS (1.14-nightly, ubuntu-latest, x64)` is informational (`continue-on-error`) and is not a required check. No JETLS on nightly.
 
 When a new RC of the floor's minor lands, point **1.13** jobs at `~1.13.0-0` so setup-julia includes prereleases. When that minor GAs, drop the tilde. A new **major.minor** is a floor move, not a second stable job.
 
@@ -141,7 +141,7 @@ changed. Linux E2E (1.13) uses the same **path filter** as **main** push
 runs on a **version increase**, **E2E weekly** (`ssh-e2e-weekly.yml`; `CI.yml` has no
 `schedule`), and `workflow_dispatch`. **1.14-nightly** and **nightly** `Pkg.test` / Aqua
 on Ubuntu stay on **main**, **CI weekly**, and a version increase, not
-ordinary PRs. macOS and WSL2 nightly stay on **CI weekly** only. PkgEval stays on **main**
+ordinary PRs. Informational JETLS 1.14-nightly runs on the heavy gate. macOS and WSL2 nightly stay on **CI weekly** only. PkgEval stays on **main**
 and a version increase, not ordinary PRs. It is `continue-on-error` and not a required check.
 
 [Runic](https://github.com/fredrikekre/Runic.jl) is a separate light

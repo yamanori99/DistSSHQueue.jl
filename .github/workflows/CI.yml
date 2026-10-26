@@ -298,7 +298,9 @@ jobs:
         run: ./.github/aqua-check.sh
 
   # Literal names: skipped matrix jobs leave ${{ matrix.* }} unexpanded.
-  # JETLS stays on a runtime it lists (today 1.13). No nightly JETLS.
+  # JETLS 2026-10-26 officially supports 1.12.2 through 1.14.
+  # The required job stays on 1.13. 1.14-nightly is informational
+  # (continue-on-error) and is not a required check. No JETLS on nightly.
   jetls-1-13:
     name: JETLS (1.13, ubuntu-latest, x64)
     needs: detect
@@ -314,6 +316,30 @@ jobs:
       - uses: julia-actions/setup-julia@da908477b5db94c10ffce8cfea9f2b3b9d5db687 # v3.0.3
         with:
           version: "1.13"
+      - uses: julia-actions/cache@9353db09a0f2bbbdec6f41791918c75d37391b36 # v3.5.0
+        with:
+          cache-scratchspaces: false
+          delete-old-caches: false
+      - uses: ./.github/actions/jetls-check
+        with:
+          files: ${{ steps.files.outputs.list }}
+
+  jetls-1-14-nightly:
+    name: JETLS (1.14-nightly, ubuntu-latest, x64)
+    needs: detect
+    if: needs.detect.outputs.heavy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: files
+        run: echo "list=$(./.github/jetls-check.sh --print-files)" >> "$GITHUB_OUTPUT"
+      - uses: julia-actions/setup-julia@da908477b5db94c10ffce8cfea9f2b3b9d5db687 # v3.0.3
+        with:
+          version: "1.14-nightly"
       - uses: julia-actions/cache@9353db09a0f2bbbdec6f41791918c75d37391b36 # v3.5.0
         with:
           cache-scratchspaces: false
