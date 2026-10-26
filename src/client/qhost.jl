@@ -392,6 +392,31 @@ function maybe_remote(
     dest, spec = coalesce_remote(qhost, gjulia, host, rjulia)
     (explicit || rest_explicit) || return nothing
     dest === nothing && return nothing
+    # A local command returns above. A direct call would still infer rsync
+    # and ssh. `inferencebarrier` keeps that tree out of this method.
+    return Base.inferencebarrier(_maybe_remote_hop)(
+        dest,
+        spec,
+        sub,
+        payload,
+        queue_env,
+        qenv;
+        tty = tty,
+        label_qhost = label_qhost,
+    )::Cint
+end
+
+"""`qhost:` hop after `maybe_remote` has decided to leave this machine."""
+function _maybe_remote_hop(
+        dest::AbstractString,
+        spec::AbstractString,
+        sub::AbstractString,
+        payload::Vector{String},
+        queue_env::Union{Nothing, AbstractString},
+        qenv::Union{Nothing, AbstractString};
+        tty::Bool = false,
+        label_qhost::Bool = false,
+    )::Cint
     disp = label_qhost ? dest : nothing
     q = coalesce_queue_env(queue_env, qenv)
     warn_remote_queue_version!(dest, spec, q)

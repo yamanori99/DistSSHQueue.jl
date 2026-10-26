@@ -5,6 +5,11 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- The first local `status`, `submit`, `watch`, or `cancel` in a process
+  compiles less. A command without `qhost:` does not compile the SSH hop.
+  Flags, text, and exit codes stay the same. A `qhost:` hop still compiles
+  the first time that process runs one.
+
 ### Planned breaking (next minor)
 
 - `submit` will refuse a job tree that has dependencies and no `Manifest.toml`.
