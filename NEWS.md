@@ -5,6 +5,10 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- After a `qhost:HOST`, `--remote-julia`, or `--queue-env` prefix, an argv
+  of only `help`, `-h`, and `--help` prints the root page on stdout and
+  exits 0. `qhost:HOST help --help` is that page. `qhost:HOST help bogus`
+  still exits 1.
 - `CLIENT_COMMAND_LINES`, `QUEUE_HOST_COMMAND_LINES`, and `KIT_EXECUTE_KINDS`
   are public and not exported. The promise is the binding. The help-line
   strings stay help text.

@@ -258,9 +258,11 @@ function _main(args::Vector{String})::Cint
     try
         apply_config_env!(load_config())
         qhost, gjulia, gqenv, after, explicit = extract_remote_opts(args)
-        # `help`, `-h`, and `--help`, in any number and order, are the root page.
-        # `help submit --help` is not: `submit` is a command, so the rewrite below still runs.
-        if !isempty(args) && all(in(("help", "-h", "--help")), args)
+        # After hop tokens are peeled, an argv of only `help`, `-h`, and
+        # `--help` is the root page. `qhost:HOST help --help` is that page.
+        # `help submit --help` is not: `submit` is a command, so the rewrite
+        # below still runs.
+        if !isempty(after) && all(in(("help", "-h", "--help")), after)
             print_queue_usage()
             return 0
         end
