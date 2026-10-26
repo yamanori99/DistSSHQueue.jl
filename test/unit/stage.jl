@@ -286,7 +286,7 @@ end
             run(pipeline(`git -C $tmp config user.email test@example.com`; stdout = devnull, stderr = devnull))
             run(pipeline(`git -C $tmp config user.name Test`; stdout = devnull, stderr = devnull))
             run(pipeline(`git -C $tmp add -A`; stdout = devnull, stderr = devnull))
-            run(pipeline(`git -C $tmp commit -q -m init`; stdout = devnull, stderr = devnull))
+            run(pipeline(`git -C $tmp -c commit.gpgsign=false commit -q -m init`; stdout = devnull, stderr = devnull))
             text = mktemp() do _, io
                 listed = redirect_stdout(io) do
                     redirect_stderr(devnull) do
@@ -576,7 +576,7 @@ function _source_git!(dir::String)
     run(pipeline(`git -C $dir config user.name "Test"`; stdout = devnull, stderr = devnull))
     write(joinpath(dir, "f.txt"), "hi\n")
     run(pipeline(`git -C $dir add -A`; stdout = devnull, stderr = devnull))
-    run(pipeline(`git -C $dir commit -q -m init`; stdout = devnull, stderr = devnull))
+    run(pipeline(`git -C $dir -c commit.gpgsign=false commit -q -m init`; stdout = devnull, stderr = devnull))
     return nothing
 end
 
