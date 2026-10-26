@@ -12,29 +12,21 @@ table starts open.
 
 ## Flagged
 
-- 1.13: help wall 0.98s -> 2.59s
-- 1.13: help method 461.3 ms -> 2056.3 ms: Tuple{typeof(DistSSHQueue.main), Array{String, 1}}
-- 1.13: status method 463.9 ms -> 2052.3 ms: Tuple{typeof(DistSSHQueue.main), Array{String, 1}}
-- 1.13: submit method 465.7 ms -> 2153.4 ms: Tuple{typeof(DistSSHQueue.main), Array{String, 1}}
-- 1.13: watch method 457.6 ms -> 2150.1 ms: Tuple{typeof(DistSSHQueue.main), Array{String, 1}}
-- 1.13: cancel method 457.9 ms -> 2143.9 ms: Tuple{typeof(DistSSHQueue.main), Array{String, 1}}
-- 1.14-nightly: help method 511.6 ms -> 3040.9 ms: Tuple{typeof(DistSSHQueue.main), Array{String, 1}}
-- 1.14-nightly: status method 224.8 ms -> 1089.5 ms: Tuple{typeof(DistSSHQueue.main), Array{String, 1}}
-- 1.14-nightly: submit method 235.0 ms -> 1071.2 ms: Tuple{typeof(DistSSHQueue.main), Array{String, 1}}
-- 1.14-nightly: watch method 230.6 ms -> 1073.4 ms: Tuple{typeof(DistSSHQueue.main), Array{String, 1}}
-- 1.14-nightly: cancel method 347.6 ms -> 1078.7 ms: Tuple{typeof(DistSSHQueue.main), Array{String, 1}}
-- nightly: help method 515.1 ms -> 2424.8 ms: Tuple{typeof(DistSSHQueue.main), Array{String, 1}}
-- nightly: status method 230.2 ms -> 847.6 ms: Tuple{typeof(DistSSHQueue.main), Array{String, 1}}
-- nightly: submit method 252.3 ms -> 851.8 ms: Tuple{typeof(DistSSHQueue.main), Array{String, 1}}
-- nightly: watch method 234.9 ms -> 854.8 ms: Tuple{typeof(DistSSHQueue.main), Array{String, 1}}
-- nightly: cancel method 233.1 ms -> 883.5 ms: Tuple{typeof(DistSSHQueue.main), Array{String, 1}}
+- 1.13: julia 1.13.2 -> 1.13.3
+- 1.13: status method new -> 657.3 ms: Tuple{DistSSHQueue.var"##show_status#217", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(D...
+- 1.13: watch method new -> 691.0 ms: Tuple{DistSSHQueue.var"##watch!#221", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, Nothing, Boo...
+- 1.14-nightly: julia 1.14.0-alpha1.112 -> 1.14.0-alpha2
+- 1.14-nightly: status method new -> 752.0 ms: Tuple{DistSSHQueue.var"##show_status#217", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(D...
+- 1.14-nightly: watch method new -> 777.3 ms: Tuple{DistSSHQueue.var"##watch!#221", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, Nothing, Boo...
+- nightly: julia 1.15.0-DEV.132 -> 1.15.0-DEV.150
+- nightly: status method new -> 660.8 ms: Tuple{DistSSHQueue.var"##show_status#217", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(D...
+- nightly: watch method new -> 764.2 ms: Tuple{DistSSHQueue.var"##watch!#221", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, Nothing, Boo...
 
 <details open>
 <summary>1.13</summary>
 
 | date | commit | version | julia | os | arch | src files | code lines | full s | pkg s | using s | help s | status s | submit s | watch s | cancel s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-10-18 | de4ef6e | 0.9.6 | 1.13.2 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6181 | 9.24 | 2.28 | 0.36 | 1.15 | 6.52 | 7.38 | 6.55 | 6.92 |
 | 2026-10-19 | 860266c | 0.9.6 | 1.13.2 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 7.76 | 1.93 | 0.32 | 1.02 | 5.62 | 6.47 | 5.64 | 5.88 |
 | 2026-10-19 | fbd948c | 0.9.7 | 1.13.2 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 8.81 | 2.16 | 0.34 | 1.08 | 6.25 | 7.08 | 6.2 | 6.45 |
 | 2026-10-20 | 59adc28 | 0.9.7 | 1.13.2 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 7.72 | 1.92 | 0.31 | 1.0 | 5.63 | 6.4 | 5.6 | 5.82 |
@@ -46,6 +38,7 @@ table starts open.
 | 2026-10-24 | a7ddadc | 0.9.8 | 1.13.2 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7168 | 9.44 | 2.37 | 0.35 | 1.2 | 6.61 | 7.84 | 6.7 | 6.74 |
 | 2026-10-25 | f957764 | 0.9.9 | 1.13.2 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7174 | 7.06 | 1.8 | 0.29 | 0.98 | 5.23 | 6.22 | 5.2 | 5.38 |
 | 2026-10-26 | ebb72a5 | 0.9.10 | 1.13.2 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7216 | 5.78 | 1.47 | 0.23 | 2.59 | 5.09 | 5.21 | 5.23 | 5.32 |
+| 2026-10-26 | 045acf7 | 0.9.10 | 1.13.3 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7241 | 7.13 | 1.84 | 0.31 | 3.34 | 4.25 | 4.31 | 4.14 | 4.59 |
 
 </details>
 
@@ -54,7 +47,6 @@ table starts open.
 
 | date | commit | version | julia | os | arch | src files | code lines | full s | pkg s | using s | help s | status s | submit s | watch s | cancel s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-10-18 | de4ef6e | 0.9.6 | 1.14.0-DEV.3787 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6181 | 6.96 | 1.84 | 0.33 | 0.71 | 1.82 | 2.12 | 1.76 | 1.93 |
 | 2026-10-19 | 860266c | 0.9.6 | 1.14.0-DEV.3787 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 5.19 | 1.35 | 0.26 | 0.62 | 1.44 | 1.67 | 1.47 | 1.51 |
 | 2026-10-19 | fbd948c | 0.9.7 | 1.14.0-DEV.3787 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 5.3 | 1.42 | 0.33 | 0.64 | 1.63 | 1.58 | 1.4 | 1.52 |
 | 2026-10-20 | 59adc28 | 0.9.7 | 1.14.0-DEV.3787 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 5.6 | 1.48 | 0.28 | 0.68 | 1.59 | 1.74 | 1.4 | 1.63 |
@@ -66,6 +58,7 @@ table starts open.
 | 2026-10-24 | a7ddadc | 0.9.8 | 1.14.0-alpha1 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7168 | 8.37 | 2.2 | 0.36 | 0.81 | 2.18 | 2.57 | 2.2 | 2.28 |
 | 2026-10-25 | f957764 | 0.9.9 | 1.14.0-alpha1.112 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7174 | 8.29 | 2.16 | 0.31 | 0.74 | 2.12 | 2.37 | 2.1 | 2.19 |
 | 2026-10-26 | ebb72a5 | 0.9.10 | 1.14.0-alpha1.112 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7216 | 8.24 | 2.17 | 0.3 | 1.6 | 2.43 | 2.36 | 2.4 | 2.36 |
+| 2026-10-26 | 045acf7 | 0.9.10 | 1.14.0-alpha2 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7241 | 8.47 | 2.21 | 0.31 | 1.63 | 2.03 | 1.88 | 2.03 | 2.12 |
 
 </details>
 
@@ -74,7 +67,6 @@ table starts open.
 
 | date | commit | version | julia | os | arch | src files | code lines | full s | pkg s | using s | help s | status s | submit s | watch s | cancel s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-10-18 | de4ef6e | 0.9.6 | 1.14.0-DEV.3787 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6181 | 7.99 | 2.09 | 0.35 | 0.77 | 2.0 | 2.24 | 1.95 | 2.14 |
 | 2026-10-19 | 860266c | 0.9.6 | 1.15.0-DEV.18 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 8.26 | 2.12 | 0.35 | 0.77 | 2.05 | 2.3 | 2.03 | 2.13 |
 | 2026-10-19 | fbd948c | 0.9.7 | 1.15.0-DEV.18 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 8.16 | 2.1 | 0.36 | 0.77 | 2.03 | 2.34 | 2.01 | 2.16 |
 | 2026-10-20 | 59adc28 | 0.9.7 | 1.15.0-DEV.29 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 8.35 | 2.13 | 0.37 | 0.83 | 2.17 | 2.46 | 2.2 | 2.31 |
@@ -86,6 +78,7 @@ table starts open.
 | 2026-10-24 | a7ddadc | 0.9.8 | 1.15.0-DEV.126 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7168 | 5.41 | 1.42 | 0.21 | 0.57 | 1.51 | 1.74 | 1.42 | 1.47 |
 | 2026-10-25 | f957764 | 0.9.9 | 1.15.0-DEV.132 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7174 | 8.25 | 2.11 | 0.23 | 0.69 | 2.1 | 2.52 | 2.04 | 2.08 |
 | 2026-10-26 | ebb72a5 | 0.9.10 | 1.15.0-DEV.132 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7216 | 6.13 | 1.6 | 0.21 | 1.22 | 1.91 | 1.83 | 1.98 | 1.86 |
+| 2026-10-26 | 045acf7 | 0.9.10 | 1.15.0-DEV.150 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7241 | 8.11 | 2.1 | 0.23 | 1.57 | 1.87 | 1.75 | 1.85 | 1.92 |
 
 </details>
 
