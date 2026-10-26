@@ -264,7 +264,8 @@ function _require_written_hosts!(body::String, allow::HostAllow)
 end
 
 function write_host_names!(path::AbstractString, allow::HostAllow)
-    p = String(path)
+    # `String(::AbstractString)` infers as `Any`. The path on disk is a `String`.
+    p::String = String(path)
     isfile(p) || write_config_template(p)
     body = replace_or_insert_hosts_line(read(p, String), hosts_toml_line(allow))
     _require_written_hosts!(body, allow)

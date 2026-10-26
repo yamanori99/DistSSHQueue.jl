@@ -255,7 +255,9 @@ end
     mktempdir() do d
         store = joinpath(d, "jobs.toml")
         write(store, "jobs = []\n")
-        holder = run(pipeline(`sleep 30`; stdout = devnull, stderr = devnull); wait = false)
+        # `wait = false` already sends stdio to devnull. A `Cmd` stays a `Process`.
+        # `pipeline` would widen it to include `Vector{Process}`.
+        holder = run(`sleep 30`; wait = false)
         try
             write(DistSSHQueue.store_pid_path(store), string(getpid(holder)))
             q = DistSSHQueue.Queue(; store = store, runner = _ -> nothing)
