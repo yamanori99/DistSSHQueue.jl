@@ -162,12 +162,15 @@ rsync が各ディレクトリの `.gitignore` を使う。`.distsshqueue-backup
 `~/.distsshqueue` はキューを持つ。`qhost:` のジョブツリーは
 `stage/<uuid>/`。`parent` はこの stage をこのマシン上で使う。共有
 config では `DISTRIBUTED_REMOTE_PROJECT_ROOT` を設定しない。`child:`
-へのコピーは `~/stage/<uuid>` のまま分かれる。
+へのコピーは `~/stage/<uuid>` のまま分かれる。store はローカルディスク
+（APFS、ext4、WSL2 の Linux ファイルシステム）に置く。NFS と、`/mnt/c`
+のような WSL drvfs は store の場所にしない。
 
 ```text
 ~/.distsshqueue/
   config.toml
   jobs.toml             全行 (prune しない)
+  jobs.toml.flock       プロセス間ロック（残す）
   jobs.toml.log
   jobs.toml.pid         serve 中
   jobs.toml.stopped     stop 後、serve まで

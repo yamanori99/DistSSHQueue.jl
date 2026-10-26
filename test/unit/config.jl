@@ -1015,8 +1015,10 @@ end
         write(store, "jobs = []\n")
         startp = DistSSHQueue.store_pid_start_path(store)
         juliap = DistSSHQueue.store_pid_julia_path(store)
+        flockp = DistSSHQueue.store_flock_path(store)
         write(startp, "old-start\n")
         write(juliap, "1.13.2\n/usr/bin/julia\n")
+        write(flockp, "")
         write(joinpath(data, "config.toml"), "store = $(repr(store))\n")
         withenv(
             "DISTSSHQUEUE_CONFIG" => nothing,
@@ -1026,6 +1028,7 @@ end
             listed = String[p for p in DistSSHQueue.teardown_targets(; home = home) if ispath(p)]
             @test startp in listed
             @test juliap in listed
+            @test flockp in listed
             @test store in listed
             confirm = String[]
             for p in listed
@@ -1039,6 +1042,7 @@ end
         @test !isfile(store)
         @test !isfile(startp)
         @test !isfile(juliap)
+        @test !isfile(flockp)
         @test !ispath(data)
     end
 end
@@ -1140,6 +1144,131 @@ end
         end
         @test ran[]
         @test !isdir(lockdir)
+    end
+end
+
+@testset "store lock admits one holder" begin
+    # Fifteen trials, one test. A stale directory is the case where `mv`
+    # used to let a second process into the critical section. The fresh
+    # directory is the same check with nothing to steal. Each trial must
+    # record two enters and two leaves. A missing line is a failed child,
+    # not a pass. The 50ms sleep is the critical section, not a retry.
+    function hold_events(text::AbstractString)
+        events = Tuple{Int, Symbol}[]
+        for line in split(strip(String(text)), '\n'; keepempty = false)
+            parts = split(line)
+            length(parts) == 3 || return nothing
+            ts = tryparse(Int, String(parts[3]))
+            ts === nothing && return nothing
+            kind = String(parts[2]) == "enter" ? :enter : String(parts[2]) == "leave" ? :leave : nothing
+            kind === nothing && return nothing
+            push!(events, (ts, kind))
+        end
+        return events
+    end
+    function hold_once(kind::Symbol)::NamedTuple
+        d = mktempdir()
+        store = joinpath(d, "jobs.toml")
+        go = joinpath(d, "go")
+        lockdir = string(store, ".lock")
+        if kind === :dead
+            mkdir(lockdir)
+            write(joinpath(lockdir, "pid"), "999999999")
+            write(joinpath(lockdir, "start"), "not-a-start")
+        elseif kind === :oldempty
+            mkdir(lockdir)
+            run(`touch -t 202001010000 $lockdir`)
+        end
+        code = "using DistSSHQueue; touch(ARGS[2]); while !isfile(ARGS[3]); sleep(0.001); end; DistSSHQueue.with_store_lock(ARGS[1]) do; open(ARGS[4], \"w\") do io; println(io, getpid(), \" enter \", time_ns()); end; sleep(0.05); open(ARGS[4], \"a\") do io; println(io, getpid(), \" leave \", time_ns()); end; end"
+        proj = Base.active_project()
+        procs = Base.Process[]
+        logs = String[]
+        readies = String[]
+        err_paths = String[]
+        try
+            for i in 1:2
+                ready = joinpath(d, "ready$i")
+                log = joinpath(d, "log$i")
+                err = joinpath(d, "err$i")
+                push!(readies, ready)
+                push!(logs, log)
+                push!(err_paths, err)
+                cmd = `$(Base.julia_cmd()) --startup-file=no --project=$proj -e $code $store $ready $go $log`
+                push!(procs, run(pipeline(cmd; stdout = devnull, stderr = err); wait = false))
+            end
+            t0 = time()
+            while time() - t0 < 30 && !all(isfile, readies)
+                any(process_running, procs) || break
+                sleep(0.01)
+            end
+            touch(go)
+            t1 = time()
+            while time() - t1 < 20 && any(process_running, procs)
+                sleep(0.01)
+            end
+            events = Tuple{Int, Symbol}[]
+            parsed = true
+            for log in logs
+                isfile(log) || (parsed = false; break)
+                ev = hold_events(read(log, String))
+                if ev === nothing
+                    parsed = false
+                    break
+                end
+                append!(events, ev)
+            end
+            sort!(events; by = first)
+            enters = count(e -> e[2] === :enter, events)
+            leaves = count(e -> e[2] === :leave, events)
+            open_n = 0
+            maxopen = 0
+            for (_, evkind) in events
+                if evkind === :enter
+                    open_n += 1
+                    maxopen = max(maxopen, open_n)
+                else
+                    open_n = max(open_n - 1, 0)
+                end
+            end
+            errs = String[]
+            for err in err_paths
+                isfile(err) || continue
+                text = strip(read(err, String))
+                isempty(text) || push!(errs, text)
+            end
+            if !parsed || enters != 2 || leaves != 2 || maxopen >= 2 || !isempty(errs)
+                println(stderr, "store lock hold kind=$kind enters=$enters leaves=$leaves maxopen=$maxopen parsed=$parsed")
+                for text in errs
+                    println(stderr, text)
+                end
+            end
+            return (enters = enters, leaves = leaves, overlap = maxopen >= 2, parsed = parsed)
+        finally
+            touch(go)
+            for p in procs
+                process_running(p) || continue
+                try
+                    kill(p)
+                catch
+                end
+            end
+            for p in procs
+                try
+                    wait(p)
+                catch
+                end
+            end
+            rm(d; force = true, recursive = true)
+        end
+    end
+    for kind in (:dead, :oldempty, :fresh)
+        for _ in 1:15
+            got = hold_once(kind)
+            @test got.parsed
+            @test got.enters == 2
+            @test got.leaves == 2
+            @test !got.overlap
+        end
     end
 end
 
