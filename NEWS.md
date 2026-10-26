@@ -5,6 +5,11 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+- After a `qhost:HOST`, `--remote-julia`, or `--queue-env` prefix, an argv
+  of only `help`, `-h`, and `--help` prints the root page on stdout and
+  exits 0. `qhost:HOST help --help` is that page. `qhost:HOST help bogus`
+  still exits 1.
+
 ### Planned breaking (next minor)
 
 - `submit` will refuse a job tree that has dependencies and no `Manifest.toml`.

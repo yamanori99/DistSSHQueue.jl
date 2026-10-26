@@ -2060,6 +2060,12 @@ end
                     ["--help", "help"],
                     ["-h", "--help"],
                     ["--help", "-h", "help"],
+                    ["qhost:no-such-host", "help", "--help"],
+                    ["qhost:no-such-host", "-h", "--help"],
+                    ["qhost:no-such-host", "help", "help"],
+                    ["qhost:no-such-host", "--help"],
+                    ["--queue-env", "E", "help", "--help"],
+                    ["--remote-julia", "julia", "help", "--help"],
                 )
                 code, out, err = capture_stdio() do
                     DistSSHQueue.main(args)
@@ -2074,6 +2080,12 @@ end
             @test code_bogus == 1
             @test out_bogus == ""
             @test err_bogus == _help_topic_error("bogus")
+            code_hop_bogus, out_hop_bogus, err_hop_bogus = capture_stdio() do
+                DistSSHQueue.main(["qhost:no-such-host", "help", "bogus"])
+            end
+            @test code_hop_bogus == 1
+            @test out_hop_bogus == ""
+            @test err_hop_bogus == _help_topic_error("bogus")
             code_sub, out_sub, err_sub = capture_stdio() do
                 DistSSHQueue.main(["help", "submit", "--help"])
             end
