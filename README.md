@@ -165,12 +165,15 @@ reach `child:` as well, except `.git/` and `.distsshkit/`. Details:
 `~/.distsshqueue` holds the queue. Each `qhost:` job is a project
 under `stage/<uuid>/`. `parent` runs from that stage on this box. Leave
 `DISTRIBUTED_REMOTE_PROJECT_ROOT` unset in shared config so each
-`child:` copy stays `~/stage/<uuid>`.
+`child:` copy stays `~/stage/<uuid>`. The store is a local disk (APFS,
+ext4, or the WSL2 Linux filesystem). NFS and a WSL drvfs mount such as
+`/mnt/c` are not a store location.
 
 ```text
 ~/.distsshqueue/
   config.toml
   jobs.toml             every row (no prune)
+  jobs.toml.flock       cross-process lock (left in place)
   jobs.toml.log
   jobs.toml.pid         while serve is up
   jobs.toml.stopped     after stop, until serve

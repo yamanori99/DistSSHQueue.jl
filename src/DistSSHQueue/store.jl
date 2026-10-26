@@ -1,11 +1,27 @@
 using TOML
 
-"""Jobs file for a queue host: `~/.distsshqueue/jobs.toml` under `home`."""
+"""Jobs file for a queue host: `~/.distsshqueue/jobs.toml` under `home`.
+
+The store and its lock files are on a local disk: APFS, ext4, or the WSL2
+Linux filesystem. NFS, and a WSL drvfs mount such as `/mnt/c`, are not a
+store location. The cross-process lock is `flock` on the sibling file
+`jobs.toml.flock`.
+"""
 function default_store_path(; home::AbstractString = homedir())::String
     return joinpath(home, ".distsshqueue", "jobs.toml")
 end
 
 const _STORE_LOCK_STALE_SEC = 30.0
+
+# `flock` is per process on macOS, so two tasks in this process would both
+# succeed. The directory lock does not close the steal window either. This
+# gate covers tasks. The `flock` covers processes.
+const _STORE_PROC_LOCKS = Dict{String, ReentrantLock}()
+const _STORE_PROC_GATE = ReentrantLock()
+
+# `LOCK_EX` and `LOCK_UN` have these values on Linux and macOS.
+const _FLOCK_EX = Cint(2)
+const _FLOCK_UN = Cint(8)
 
 function _store_lock_pid_path(lockdir::AbstractString)::String
     return joinpath(lockdir, "pid")
@@ -158,11 +174,13 @@ end
 
 """Move a stale `lockdir` aside and delete it. `false` when another process took it.
 
-The stale check and the `mv` are not one step. A new holder can create the
-directory after the check and still be moved aside, so both that holder and
-this process can be inside the lock. The moved directory is not put back.
-This stays a directory lock, so it still excludes a DistSSHQueue 0.9.7
-process. `flock` would not.
+The stale check and the `mv` are not one step. A holder that created the
+directory after the check can still be moved aside. `with_store_lock` calls
+this only while it holds the per-path task lock and the `flock` on the
+sibling `store.flock`, so two current processes are not that pair. A
+DistSSHQueue 0.9.7 process does not take that `flock`. This stays a directory
+lock, so that process still waits on `mkdir`. The moved directory is not put
+back.
 """
 function _steal_store_lock(lockdir::AbstractString)::Bool
     _store_lock_stale(lockdir) || return false
@@ -180,7 +198,54 @@ function with_store_lock(f, path::AbstractString)
     return with_store_lock(f, String(path))
 end
 
+"""Sibling of `store` held with `flock` for one critical section.
+
+Not inside the directory lock. Left in place between critical sections so the
+next waiter opens the same file. `teardown` removes it with the store.
+"""
+store_flock_path(store::AbstractString)::String = string(store, ".flock")
+
+function _store_proc_lock(path::String)::ReentrantLock
+    return lock(_STORE_PROC_GATE) do
+        get!(_STORE_PROC_LOCKS, path) do
+            ReentrantLock()
+        end
+    end
+end
+
+"""Blocking `flock` on an open file. `EINTR` is retried. The fd stays open."""
+function _flock!(io::IOStream, op::Cint)
+    # `fd` is a `RawFD` primitive. `flock` takes that same descriptor.
+    raw = fd(io)
+    local err::Cint
+    while true
+        rc = ccall(:flock, Cint, (RawFD, Cint), raw, op)
+        rc == 0 && return nothing
+        err = Base.Libc.errno()
+        err == Base.Libc.EINTR || break
+    end
+    throw(Base.SystemError("flock", err))
+end
+
 function with_store_lock(f, path::String)
+    mkpath(dirname(path))
+    gate = _store_proc_lock(path)
+    return lock(gate) do
+        io = open(store_flock_path(path), "a+")
+        try
+            _flock!(io, _FLOCK_EX)
+            try
+                return _with_store_dir_lock(f, path)
+            finally
+                _flock!(io, _FLOCK_UN)
+            end
+        finally
+            close(io)
+        end
+    end
+end
+
+function _with_store_dir_lock(f, path::String)
     lockdir = string(path, ".lock")
     mkpath(dirname(path))
     held = false

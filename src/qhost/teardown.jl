@@ -41,6 +41,7 @@ function teardown_targets(;
         store_stop_path(st),
         string(st, ".log"),
         string(st, ".lock"),
+        store_flock_path(st),
         config,
         data,
         legacy,
@@ -120,6 +121,7 @@ function teardown(;
             store_stop_path(st),
             string(st, ".log"),
             string(st, ".lock"),
+            store_flock_path(st),
         )
         ispath(extra) && rm(extra; force = true, recursive = true)
     end
