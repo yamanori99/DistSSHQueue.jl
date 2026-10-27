@@ -5,19 +5,6 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
-- Two processes no longer both enter the store lock when a stale
-  `jobs.toml.lock` is taken. `jobs.toml.flock`, beside the store and outside
-  that directory, is held with `flock` for the critical section. Tasks in one
-  process take a separate lock. The directory lock remains, so a DistSSHQueue
-  0.9.7 process still waits on `mkdir`. The pid and its start key still only
-  tell a reused pid from the serve. `teardown` removes `jobs.toml.flock` with
-  the other store files. The store path is a local disk (APFS, ext4, or the
-  WSL2 Linux filesystem), not NFS and not a WSL drvfs mount.
-- The first local `status`, `submit`, `watch`, or `cancel` in a process
-  compiles less. A command without `qhost:` does not compile the SSH hop.
-  Flags, text, and exit codes stay the same. A `qhost:` hop still compiles
-  the first time that process runs one.
-
 ### Planned breaking (next minor)
 
 - `submit` will refuse a job tree that has dependencies and no `Manifest.toml`.
@@ -37,6 +24,21 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 - `cancel` of a `:running` job will send SIGINT before SIGTERM, once
   DistSSHRun's `interrupt_grace` defaults to a positive value. Until then
   `cancel` does not send SIGINT.
+
+## 0.9.11
+
+- Two processes no longer both enter the store lock when a stale
+  `jobs.toml.lock` is taken. `jobs.toml.flock`, beside the store and outside
+  that directory, is held with `flock` for the critical section. Tasks in one
+  process take a separate lock. The directory lock remains, so a DistSSHQueue
+  0.9.7 process still waits on `mkdir`. The pid and its start key still only
+  tell a reused pid from the serve. `teardown` removes `jobs.toml.flock` with
+  the other store files. The store path is a local disk (APFS, ext4, or the
+  WSL2 Linux filesystem), not NFS and not a WSL drvfs mount.
+- The first local `status`, `submit`, `watch`, or `cancel` in a process
+  compiles less. A command without `qhost:` does not compile the SSH hop.
+  Flags, text, and exit codes stay the same. A `qhost:` hop still compiles
+  the first time that process runs one.
 
 ## 0.9.10
 
