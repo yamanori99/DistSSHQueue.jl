@@ -167,6 +167,28 @@ const _E2E_DEMO_RELS = (
     "demos/ride/map_echo.jl",
 )
 
+"""True when `setup!` rejected a per-host `confirm_path` Dict.
+
+Registry DistSSHRun 0.1.16 types that keyword as one `String` for every
+host. A later `setup!` accepts the Dict and, with more than one host,
+rejects the String.
+"""
+function _string_only_confirm_path(err)::Bool
+    err isa TypeError || return false
+    return err.func === Symbol("keyword argument") && err.context === :confirm_path
+end
+
+"""`setup!(session, :delete)` with `confirm_path` equal to `REMOTE_ROOT`."""
+function setup_delete_e2e!(session)
+    plan = Dict(h => REMOTE_ROOT for h in session.hosts)
+    try
+        return setup!(session, :delete; confirm_path = plan)
+    catch err
+        _string_only_confirm_path(err) || rethrow()
+        return setup!(session, :delete; confirm_path = REMOTE_ROOT)
+    end
+end
+
 """Fail with the missing path when `setup!` did not deliver a demo."""
 function require_remote_demos!()
     for host in HOSTS
@@ -554,9 +576,15 @@ end
                 yes = true,
                 quiet = true,
             )
-            prep = setup!(session, :delete, :rsync, :instantiate)
+            # Multi-mode `setup!` rejects keyword arguments, so `:delete`
+            # takes `confirm_path` on its own call.
+            deleted = setup_delete_e2e!(session)
+            prep = setup!(session, :rsync, :instantiate)
+            @test deleted.ok
             @test prep.ok
+            @test length(deleted.hosts) == length(HOSTS)
             @test length(prep.hosts) == length(HOSTS)
+            @test all(h -> h.ok, deleted.hosts)
             @test all(h -> h.ok, prep.hosts)
             require_remote_demos!()
             # This tree lists DistSSHKit in [deps], so Kit 0.7.2 still uses
