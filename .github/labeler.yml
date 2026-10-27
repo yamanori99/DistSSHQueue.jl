@@ -12,6 +12,7 @@
           - "README.md"
           - "README.ja.md"
           - "NEWS.md"
+          - "changelog.d/**"
           - "CONTRIBUTING.md"
           - "SECURITY.md"
           - "AGENTS.md"
@@ -31,9 +32,9 @@
   - changed-files:
       - any-glob-to-any-file:
           - "testenv/**"
+          - "test/e2e.jl"
           - "test/Project.toml"
           - "test/README.md"
-          - "test/e2e.jl"
           - "test/runtests.jl"
           - "test/support.jl"
           - "test/unit/idle.jl"

@@ -1,6 +1,6 @@
-# On a version cut, NEWS.md's new section must match the bump.
+# On a version cut, changelog.d must already be collected into NEWS.md.
 # A patch must not contain a ### Breaking heading. A breaking bump must.
-# Pull requests that do not raise Project.toml version pass without reading NEWS.
+# Other pull requests need a changelog.d fragment when src, lib/**/src, or ext changes.
 name: Release NEWS
 
 on:
@@ -25,19 +25,26 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # news-collect --check walks commits between the base and the head.
+          fetch-depth: "0"
       - name: NEWS section matches the version bump
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
           PR: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           ./.github/version-cut.sh --self-test
           ./.github/release-news.sh --self-test
+          ./.github/news-collect.sh --self-test
+          ./.github/news-fragment.sh --self-test
           cut="$(./.github/version-cut.sh "$BASE" "$HEAD")"
-          if [ "$cut" != true ]; then
+          if [ "$cut" = true ]; then
+            ./.github/news-collect.sh --check "$BASE" "$HEAD"
+            ./.github/release-news.sh "$BASE" "$HEAD"
+          else
             echo "not a version cut"
-            exit 0
+            ./.github/news-fragment.sh "$BASE" "$HEAD"
           fi
-          ./.github/release-news.sh "$BASE" "$HEAD"

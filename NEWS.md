@@ -5,25 +5,28 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
 
 ## Unreleased
 
+Notes since the last release are files in `changelog.d/`.
+The version-cut PR copies them into this file.
+
 ### Planned breaking (next minor)
 
-- `submit` will refuse a job tree that has dependencies and no `Manifest.toml`.
+- `cancel` of a `:running` job will send SIGINT before SIGTERM, once
+  DistSSHRun's `interrupt_grace` defaults to a positive value. Until then
+  `cancel` does not send SIGINT.
+- A `jobs` value that is not a list will be rejected on read. 0.9.x leaves
+  the file on disk. `status` warns once. A write already stops with `Error:`
+  and does not replace the file.
 - `serve --interval <= 0` will be rejected.
+- `status` will not show a `:running` row whose `kit.pid` is dead as running.
+  The stored row stays `:running` until `serve` writes it.
 - `DISTSSHQUEUE_STORE` that starts with `~` will be rejected.
-- `teardown` will refuse a path that is a symlink.
+- `submit` will refuse a job tree that has dependencies and no `Manifest.toml`.
 - `-y`, `--yes`, and `DISTSSHKIT_YES` will stop authorizing `teardown`.
   Without `--confirm-path`, `-y` will exit 1. A `teardown` that was not
   asked to delete still prints `Would remove` and exits 0. `up default`
   still honors `DISTSSHKIT_YES`.
+- `teardown` will refuse a path that is a symlink.
 - Declining `up default` will exit 1.
-- `status` will not show a `:running` row whose `kit.pid` is dead as running.
-  The stored row stays `:running` until `serve` writes it.
-- A `jobs` value that is not a list will be rejected on read. 0.9.x leaves
-  the file on disk. `status` warns once. A write already stops with `Error:`
-  and does not replace the file.
-- `cancel` of a `:running` job will send SIGINT before SIGTERM, once
-  DistSSHRun's `interrupt_grace` defaults to a positive value. Until then
-  `cancel` does not send SIGINT.
 
 ## 0.9.11
 
