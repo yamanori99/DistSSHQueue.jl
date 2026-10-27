@@ -1,0 +1,878 @@
+slot = "1.14-nightly"
+commit = "3bfc569d7cb4eece19b19e2e224a016c4b5cdc2a"
+julia_commit = "22d5d63fa1"
+src_code_lines = 7300
+os_name = "Ubuntu 26.04.1 LTS"
+os = "Linux"
+precompile_full_sec = 4.849753448
+src_files = 24
+threads = 4
+src_lines = 7891
+precompile_pkg_sec = 1.317853968
+repo = "DistSSHQueue"
+version = "0.9.10"
+arch = "x86_64"
+time = "2026-10-27T01:02:35Z"
+src_bytes = 273100
+cpu = "AMD EPYC 9V45 96-Core Processor"
+julia = "1.14.0-alpha2"
+using_sec = 0.197504859
+
+[[commands]]
+count = 35
+name = "help"
+exit = 0
+walls_sec = [2.2329678535461426, 1.1006300449371338, 1.0315930843353271]
+missed = ["DistSSHQueue.#101#val", "DistSSHQueue.#102#val", "DistSSHQueue.#103#val", "DistSSHQueue.#104#val", "DistSSHQueue.#105#val", "DistSSHQueue.#106#val", "DistSSHQueue.#107#val", "DistSSHQueue.#108#val", "DistSSHQueue.#109#val", "DistSSHQueue.#110#val", "DistSSHQueue.#111#val", "DistSSHQueue.#112#val", "DistSSHQueue.#113#val", "DistSSHQueue.#114#val", "DistSSHQueue.#115#val", "DistSSHQueue.#116#val", "DistSSHQueue.#118#val", "DistSSHQueue.#119#val", "DistSSHQueue.#120#val", "DistSSHQueue.#121#val", "DistSSHQueue.#122#val", "DistSSHQueue.#123#val", "DistSSHQueue.#124#val", "DistSSHQueue.#125#val", "DistSSHQueue.#126#val", "DistSSHQueue.#127#val", "DistSSHQueue.#128#val", "DistSSHQueue.#129#val", "DistSSHQueue.#130#val", "DistSSHQueue.#131#val", "DistSSHQueue.#132#val", "DistSSHQueue.#141#val", "DistSSHQueue.#142#val", "DistSSHQueue.#145#val", "DistSSHQueue.#147#val", "DistSSHQueue.#148#val", "DistSSHQueue.#149#val", "DistSSHQueue.#156#val", "DistSSHQueue.#157#val", "DistSSHQueue.#158#val", "DistSSHQueue.#159#val", "DistSSHQueue.#160#val", "DistSSHQueue.#161#val", "DistSSHQueue.#162#val", "DistSSHQueue.#163#val", "DistSSHQueue.#164#val", "DistSSHQueue.#165#val", "DistSSHQueue.#166#val", "DistSSHQueue.#167#val", "DistSSHQueue.#168#val", "DistSSHQueue.#169#val", "DistSSHQueue.#170#val", "DistSSHQueue.#173#val", "DistSSHQueue.#174#val", "DistSSHQueue.#175#val", "DistSSHQueue.#176#val", "DistSSHQueue.#177#val", "DistSSHQueue.#178#val", "DistSSHQueue.#179#val", "DistSSHQueue.#18#val", "DistSSHQueue.#181#val", "DistSSHQueue.#182#val", "DistSSHQueue.#183#val", "DistSSHQueue.#184#val", "DistSSHQueue.#185#val", "DistSSHQueue.#186#val", "DistSSHQueue.#187#val", "DistSSHQueue.#188#val", "DistSSHQueue.#189#val", "DistSSHQueue.#19#val", "DistSSHQueue.#190#val", "DistSSHQueue.#191#val", "DistSSHQueue.#192#val", "DistSSHQueue.#193#val", "DistSSHQueue.#197#val", "DistSSHQueue.#198#val", "DistSSHQueue.#199#val", "DistSSHQueue.#20#val", "DistSSHQueue.#200#val", "DistSSHQueue.#201#val", "DistSSHQueue.#202#val", "DistSSHQueue.#203#val", "DistSSHQueue.#206#val", "DistSSHQueue.#208#val", "DistSSHQueue.#209#val", "DistSSHQueue.#21#val", "DistSSHQueue.#210#val", "DistSSHQueue.#211#val", "DistSSHQueue.#212#val", "DistSSHQueue.#213#val", "DistSSHQueue.#215#val", "DistSSHQueue.#216#val", "DistSSHQueue.#217#val", "DistSSHQueue.#218#val", "DistSSHQueue.#219#val", "DistSSHQueue.#22#val", "DistSSHQueue.#220#val", "DistSSHQueue.#221#val", "DistSSHQueue.#222#val", "DistSSHQueue.#229#val", "DistSSHQueue.#230#val", "DistSSHQueue.#231#val", "DistSSHQueue.#232#val", "DistSSHQueue.#235#val", "DistSSHQueue.#237#val", "DistSSHQueue.#238#val", "DistSSHQueue.#239#val", "DistSSHQueue.#24#val", "DistSSHQueue.#240#val", "DistSSHQueue.#241#val", "DistSSHQueue.#242#val", "DistSSHQueue.#243#val", "DistSSHQueue.#244#val", "DistSSHQueue.#245#val", "DistSSHQueue.#246#val", "DistSSHQueue.#247#val", "DistSSHQueue.#248#val", "DistSSHQueue.#249#val", "DistSSHQueue.#25#val", "DistSSHQueue.#250#val", "DistSSHQueue.#253#val", "DistSSHQueue.#254#val", "DistSSHQueue.#259#val", "DistSSHQueue.#260#val", "DistSSHQueue.#261#val", "DistSSHQueue.#27#val", "DistSSHQueue.#28#val", "DistSSHQueue.#29#val", "DistSSHQueue.#30#val", "DistSSHQueue.#32#val", "DistSSHQueue.#33#val", "DistSSHQueue.#34#val", "DistSSHQueue.#35#val", "DistSSHQueue.#36#val", "DistSSHQueue.#37#val", "DistSSHQueue.#38#val", "DistSSHQueue.#39#val", "DistSSHQueue.#40#val", "DistSSHQueue.#41#val", "DistSSHQueue.#42#val", "DistSSHQueue.#43#val", "DistSSHQueue.#44#val", "DistSSHQueue.#45#val", "DistSSHQueue.#46#val", "DistSSHQueue.#47#val", "DistSSHQueue.#48#val", "DistSSHQueue.#49#val", "DistSSHQueue.#50#val", "DistSSHQueue.#51#val", "DistSSHQueue.#52#val", "DistSSHQueue.#53#val", "DistSSHQueue.#54#val", "DistSSHQueue.#55#val", "DistSSHQueue.#56#val", "DistSSHQueue.#57#val", "DistSSHQueue.#58#val", "DistSSHQueue.#59#val", "DistSSHQueue.#60#val", "DistSSHQueue.#62#val", "DistSSHQueue.#63#val", "DistSSHQueue.#64#val", "DistSSHQueue.#65#val", "DistSSHQueue.#66#val", "DistSSHQueue.#67#val", "DistSSHQueue.#68#val", "DistSSHQueue.#70#val", "DistSSHQueue.#72#val", "DistSSHQueue.#73#val", "DistSSHQueue.#74#val", "DistSSHQueue.#75#val", "DistSSHQueue.#78#val", "DistSSHQueue.#80#val", "DistSSHQueue.#81#val", "DistSSHQueue.#82#val", "DistSSHQueue.#91#val", "DistSSHQueue.#92#val", "DistSSHQueue.#93#val", "DistSSHQueue.#96#val", "DistSSHQueue.#97#val", "DistSSHQueue.#98#val", "DistSSHQueue.#Job#1", "DistSSHQueue.#Queue#72", "DistSSHQueue.#_allocate_queue_leaf!#77", "DistSSHQueue.#_drop_unit_files#246", "DistSSHQueue.#_enable_disp#64", "DistSSHQueue.#_enable_unit_path#63", "DistSSHQueue.#_finish!#118", "DistSSHQueue.#_fit_leading_widths#44", "DistSSHQueue.#_forward#269", "DistSSHQueue.#_host_list_assignment#31", "DistSSHQueue.#_job_hosts_disp#43", "DistSSHQueue.#_job_result_disp#42", "DistSSHQueue.#_kit_setup_session#85", "DistSSHQueue.#_maybe_remote_hop#158", "DistSSHQueue.#_pid_record_running#3", "DistSSHQueue.#_print_cli_note#237", "DistSSHQueue.#_print_job_detail#45", "DistSSHQueue.#_print_would_remove#255", "DistSSHQueue.#_queue_command#272", "DistSSHQueue.#_queue_kit_setup!#91", "DistSSHQueue.#_refuse_unprotected_rsync_path!#196", "DistSSHQueue.#_remote_submit_ticket#159", "DistSSHQueue.#_serve_live_text#56", "DistSSHQueue.#_set_running_kit_meta!#111", "DistSSHQueue.#_ssh_disp#232", "DistSSHQueue.#_status_watch_cli#228", "DistSSHQueue.#_store_lock_stale#4", "DistSSHQueue.#_submit!#97", "DistSSHQueue.#_unique_prefixes#49", "DistSSHQueue.#_up_run_on_hosts#252", "DistSSHQueue.#_watch_paint!#222", "DistSSHQueue.#bootout_serve_unit!#248", "DistSSHQueue.#check_fetch_dest#214", "DistSSHQueue.#config_path#24", "DistSSHQueue.#default_bindir#249", "DistSSHQueue.#default_config_body#37", "DistSSHQueue.#default_config_path#22", "DistSSHQueue.#default_queue_env#20", "DistSSHQueue.#default_queue_env_dir#19", "DistSSHQueue.#default_store_path#2", "DistSSHQueue.#drop_unwritten_stage!#178", "DistSSHQueue.#enabled_serve_command#21", "DistSSHQueue.#fetch_cli#215", "DistSSHQueue.#fetch_dest_target#213", "DistSSHQueue.#fetch_relpath#201", "DistSSHQueue.#fetch_source#206", "DistSSHQueue.#hop_print#182", "DistSSHQueue.#job_project#75", "DistSSHQueue.#launch_agent_path#240", "DistSSHQueue.#legacy_launch_agent_path#242", "DistSSHQueue.#legacy_systemd_user_path#243", "DistSSHQueue.#load_config#25", "DistSSHQueue.#local_fetch_dest#212", "DistSSHQueue.#maybe_remote#157", "DistSSHQueue.#orphan_stage_path#177", "DistSSHQueue.#peel_status_watch_interval#219", "DistSSHQueue.#pool_sizing_assumption_line#234", "DistSSHQueue.#print_jobs_table#46", "DistSSHQueue.#print_list_host#233", "DistSSHQueue.#print_pool_inventory_notes!#235", "DistSSHQueue.#print_present#54", "DistSSHQueue.#print_queue_usage#50", "DistSSHQueue.#print_removed#53", "DistSSHQueue.#print_rsync_start#195", "DistSSHQueue.#print_serve_already#60", "DistSSHQueue.#print_serve_banner#55", "DistSSHQueue.#print_serve_gone#59", "DistSSHQueue.#print_serve_idle_note#58", "DistSSHQueue.#print_serve_live_line#57", "DistSSHQueue.#print_serve_started#61", "DistSSHQueue.#print_serve_stopped#62", "DistSSHQueue.#print_status_table#47", "DistSSHQueue.#print_watch_compact#65", "DistSSHQueue.#print_watch_frame#48", "DistSSHQueue.#print_wrapped_row#41", "DistSSHQueue.#print_wrapped_tail#40", "DistSSHQueue.#print_wrote#52", "DistSSHQueue.#queue_data_dir#23", "DistSSHQueue.#queue_version_skew_warning#153", "DistSSHQueue.#remote_dispatch#152", "DistSSHQueue.#remote_stage_root#176", "DistSSHQueue.#remove_pid_file_if!#14", "DistSSHQueue.#require_queue_target!#151", "DistSSHQueue.#resolve_fetch_job_id#210", "DistSSHQueue.#rsync_from_qhost!#198", "DistSSHQueue.#rsync_from_qhost_file!#199", "DistSSHQueue.#rsync_to_qhost!#197", "DistSSHQueue.#run_kit#82", "DistSSHQueue.#serve!#139", "DistSSHQueue.#serve#150", "DistSSHQueue.#service_install#244", "DistSSHQueue.#service_uninstall#245", "DistSSHQueue.#setup#251", "DistSSHQueue.#show_status#220", "DistSSHQueue.#show_usage#267", "DistSSHQueue.#stage_rsync_files_from_opts#193", "DistSSHQueue.#stage_rsync_push_opts#192", "DistSSHQueue.#status_watch_hop_tty#221", "DistSSHQueue.#stop_cli#266", "DistSSHQueue.#submit!#107", "DistSSHQueue.#submit!#108", "DistSSHQueue.#submit_hosts#166", "DistSSHQueue.#submit_kind#175", "DistSSHQueue.#submit_kit_bag#167", "DistSSHQueue.#systemd_user_path#241", "DistSSHQueue.#teardown#256", "DistSSHQueue.#teardown_main#262", "DistSSHQueue.#teardown_store#253", "DistSSHQueue.#teardown_targets#254", "DistSSHQueue.#warn_child_submit_reach#239", "DistSSHQueue.#warn_worker_julia#238", "DistSSHQueue.#watch!#224", "DistSSHQueue.#wrapper_path#250", "DistSSHQueue.#write_config_template#38", "DistSSHQueue.#write_submit_ticket#211", "DistSSHQueue._allocate_queue_leaf!", "DistSSHQueue._append_warning_dicts!", "DistSSHQueue._argv", "DistSSHQueue._bin_julia_version", "DistSSHQueue._break_run", "DistSSHQueue._cfg_env_string", "DistSSHQueue._clip_cols", "DistSSHQueue._config_env_skipped", "DistSSHQueue._confirm_path_quote", "DistSSHQueue._drop_unit_files", "DistSSHQueue._dt", "DistSSHQueue._enable_disp", "DistSSHQueue._enable_unit_path", "DistSSHQueue._entry_direct", "DistSSHQueue._entry_forward", "DistSSHQueue._fetch", "DistSSHQueue._fetch_note_field", "DistSSHQueue._fetch_note_sanitize", "DistSSHQueue._finish!", "DistSSHQueue._fit_leading_widths", "DistSSHQueue._flock!", "DistSSHQueue._forget_absent_config_env!", "DistSSHQueue._forward", "DistSSHQueue._help_command_argv", "DistSSHQueue._host_assignment_span", "DistSSHQueue._host_list_assignment", "DistSSHQueue._host_name_disp", "DistSSHQueue._host_token", "DistSSHQueue._human_span", "DistSSHQueue._id_chrome", "DistSSHQueue._index_id", "DistSSHQueue._index_state", "DistSSHQueue._is_interrupt", "DistSSHQueue._job_cancel_flag", "DistSSHQueue._job_cancel_requested", "DistSSHQueue._job_elapsed_disp", "DistSSHQueue._job_error_disp", "DistSSHQueue._job_has_warnings", "DistSSHQueue._job_hosts_disp", "DistSSHQueue._job_id8", "DistSSHQueue._job_phase_disp", "DistSSHQueue._job_project_disp", "DistSSHQueue._job_queued_disp", "DistSSHQueue._job_result_disp", "DistSSHQueue._job_row", "DistSSHQueue._job_script_disp", "DistSSHQueue._job_state_disp", "DistSSHQueue._job_still_running", "DistSSHQueue._job_wall_disp", "DistSSHQueue._jobs_store_bad_row", "DistSSHQueue._jobs_store_bad_toml", "DistSSHQueue._jobs_store_not_list", "DistSSHQueue._jobs_table", "DistSSHQueue._join_serve_spin!", "DistSSHQueue._julia_diff_kind", "DistSSHQueue._julia_diff_word", "DistSSHQueue._juliaup_default_disp", "DistSSHQueue._kit_env_on", "DistSSHQueue._kit_flag_takes_value", "DistSSHQueue._kit_setup_child_tokens", "DistSSHQueue._kit_setup_session", "DistSSHQueue._launch_agent_serves", "DistSSHQueue._launchctl_load", "DistSSHQueue._launchctl_unload", "DistSSHQueue._list_host_fit", "DistSSHQueue._live_running", "DistSSHQueue._load_from_store!", "DistSSHQueue._macos_ps_start_key", "DistSSHQueue._main", "DistSSHQueue._manifest_absent_project", "DistSSHQueue._maybe_remote_hop", "DistSSHQueue._missing_path_io", "DistSSHQueue._note_serve_interval!", "DistSSHQueue._own_start_key", "DistSSHQueue._padded_clip", "DistSSHQueue._parse_pid_text", "DistSSHQueue._payload", "DistSSHQueue._persist!", "DistSSHQueue._persist_job_warnings!", "DistSSHQueue._pid_julia_version", "DistSSHQueue._pid_record_from", "DistSSHQueue._pid_record_running", "DistSSHQueue._plist_program_args", "DistSSHQueue._positive_n", "DistSSHQueue._print_cli_note", "DistSSHQueue._print_fetch_notes", "DistSSHQueue._print_job_detail", "DistSSHQueue._print_manifest_absent!", "DistSSHQueue._print_would_remove", "DistSSHQueue._process_alive_fallback", "DistSSHQueue._process_start_key", "DistSSHQueue._project_has_deps", "DistSSHQueue._q_cell", "DistSSHQueue._q_short", "DistSSHQueue._q_state_color", "DistSSHQueue._qhost_disp", "DistSSHQueue._queue_command", "DistSSHQueue._queue_env_on", "DistSSHQueue._queue_kit_setup!", "DistSSHQueue._queue_local_instantiate!", "DistSSHQueue._queue_tables", "DistSSHQueue._read_local_rsync_version", "DistSSHQueue._read_lock_pid", "DistSSHQueue._read_lock_record", "DistSSHQueue._read_serve_record", "DistSSHQueue._record_kit_setup_logs!", "DistSSHQueue._record_manifest_absent!", "DistSSHQueue._refuse_directory_store!", "DistSSHQueue._refuse_fetch_dot_part!", "DistSSHQueue._refuse_unprotected_rsync_path!", "DistSSHQueue._regex_literal", "DistSSHQueue._reject_subcommand", "DistSSHQueue._rel_under", "DistSSHQueue._remote_julia_full", "DistSSHQueue._remote_submit_ticket", "DistSSHQueue._require_kit_setup_ok!", "DistSSHQueue._require_written_hosts!", "DistSSHQueue._resolve_id", "DistSSHQueue._row_dt", "DistSSHQueue._row_dt_text", "DistSSHQueue._row_string", "DistSSHQueue._row_text", "DistSSHQueue._rsync_bin", "DistSSHQueue._running", "DistSSHQueue._running_copy", "DistSSHQueue._serve_can_draw", "DistSSHQueue._serve_disp", "DistSSHQueue._serve_from_args", "DistSSHQueue._serve_julia_baseline", "DistSSHQueue._serve_live_job", "DistSSHQueue._serve_live_text", "DistSSHQueue._set_job_phase!", "DistSSHQueue._set_qhost", "DistSSHQueue._set_queue_env", "DistSSHQueue._set_running_kit_meta!", "DistSSHQueue._set_running_result_path!", "DistSSHQueue._set_status_watch_mode", "DistSSHQueue._setup_warning_dicts", "DistSSHQueue._source_from_queue_env", "DistSSHQueue._split_posix_words", "DistSSHQueue._ssh_disp", "DistSSHQueue._ssh_mkdir!", "DistSSHQueue._ssh_transport", "DistSSHQueue._stage_cleanup_store", "DistSSHQueue._stage_extra_paths", "DistSSHQueue._stage_rel_is_queue", "DistSSHQueue._stage_rsync_files_from!", "DistSSHQueue._start!", "DistSSHQueue._start_key", "DistSSHQueue._start_text", "DistSSHQueue._status_watch_cli", "DistSSHQueue._steal_store_lock", "DistSSHQueue._store_lock_pid_path", "DistSSHQueue._store_lock_stale", "DistSSHQueue._store_lock_start_path", "DistSSHQueue._store_mtime", "DistSSHQueue._store_path_disp", "DistSSHQueue._store_proc_lock", "DistSSHQueue._string_paths", "DistSSHQueue._submit!", "DistSSHQueue._submit_requests_help", "DistSSHQueue._systemd_disable", "DistSSHQueue._systemd_enable", "DistSSHQueue._systemd_reload", "DistSSHQueue._tail_jobs", "DistSSHQueue._teardown", "DistSSHQueue._teardown_confirm_set", "DistSSHQueue._teardown_granted", "DistSSHQueue._throw_if_cancelled", "DistSSHQueue._toml_bracket_delta", "DistSSHQueue._unique_prefixes", "DistSSHQueue._up_run_on_hosts", "DistSSHQueue._utc_to_local", "DistSSHQueue._warn_dead_kit_pid!", "DistSSHQueue._warn_jobs_not_list", "DistSSHQueue._warn_plan_once!", "DistSSHQueue._warn_teardown_symlinks!", "DistSSHQueue._warn_tilde_store!", "DistSSHQueue._watch_paint!", "DistSSHQueue._watch_redraw!", "DistSSHQueue._with_pkg_depots", "DistSSHQueue._with_store", "DistSSHQueue._with_store_dir_lock", "DistSSHQueue._wrap_words", "DistSSHQueue._write_span", "DistSSHQueue._xml_unescape", "DistSSHQueue._yes_from_config", "DistSSHQueue.add_host_cli", "DistSSHQueue.add_host_names!", "DistSSHQueue.adopt_running!", "DistSSHQueue.append_hop_forwarded_env!", "DistSSHQueue.apply_config_env!", "DistSSHQueue.as_host_allow", "DistSSHQueue.bootout_serve_unit!", "DistSSHQueue.cancel!", "DistSSHQueue.cancel_cli", "DistSSHQueue.capture_kit_run_toml!", "DistSSHQueue.check_fetch_dest", "DistSSHQueue.claim_serve!", "DistSSHQueue.clamp_pool_slots", "DistSSHQueue.clear_stopped!", "DistSSHQueue.cli_cols", "DistSSHQueue.coalesce_queue_env", "DistSSHQueue.coalesce_remote", "DistSSHQueue.command_help_argv", "DistSSHQueue.config_host_names", "DistSSHQueue.config_path", "DistSSHQueue.config_store_path", "DistSSHQueue.copy_setup_logs!", "DistSSHQueue.default_bindir", "DistSSHQueue.default_config_body", "DistSSHQueue.default_config_path", "DistSSHQueue.default_fetch_dest_rel", "DistSSHQueue.default_julia_bin", "DistSSHQueue.default_queue_env", "DistSSHQueue.default_queue_env_dir", "DistSSHQueue.default_remote_julia", "DistSSHQueue.default_store_path", "DistSSHQueue.detached_serve_script", "DistSSHQueue.disable_main", "DistSSHQueue.drop_nothing", "DistSSHQueue.drop_unwritten_stage!", "DistSSHQueue.enable_main", "DistSSHQueue.enabled_serve_command", "DistSSHQueue.ensure_serve!", "DistSSHQueue.execute_kwargs", "DistSSHQueue.expand_pool_submit_hosts", "DistSSHQueue.extract_remote_opts", "DistSSHQueue.fail_stale_running!", "DistSSHQueue.fetch_cli", "DistSSHQueue.fetch_dest", "DistSSHQueue.fetch_dest_from_rel", "DistSSHQueue.fetch_dest_is_fresh", "DistSSHQueue.fetch_dest_target", "DistSSHQueue.fetch_extra_leaf", "DistSSHQueue.fetch_extra_paths", "DistSSHQueue.fetch_extra_specs", "DistSSHQueue.fetch_hidden_dest", "DistSSHQueue.fetch_hidden_dests", "DistSSHQueue.fetch_live_primary", "DistSSHQueue.fetch_marker_path", "DistSSHQueue.fetch_relpath", "DistSSHQueue.fetch_source", "DistSSHQueue.fetch_source_expr", "DistSSHQueue.fetch_source_primary", "DistSSHQueue.help_verb_line", "DistSSHQueue.hop_julia_prefix", "DistSSHQueue.hop_print", "DistSSHQueue.host_allow_item", "DistSSHQueue.hosts_toml_line", "DistSSHQueue.is_kit_execute_kind", "DistSSHQueue.is_qhost_stage_project", "DistSSHQueue.job", "DistSSHQueue.job_from_toml", "DistSSHQueue.job_id_from_submit_stdout", "DistSSHQueue.job_id_from_ticket_text", "DistSSHQueue.job_project", "DistSSHQueue.job_to_toml", "DistSSHQueue.jobs", "DistSSHQueue.kit_artifact_from_run_dir", "DistSSHQueue.kit_artifact_from_sidecar", "DistSSHQueue.kit_child_alive", "DistSSHQueue.kit_kind_from_cli", "DistSSHQueue.kit_kwargs", "DistSSHQueue.kit_output_dir", "DistSSHQueue.kit_parse_args", "DistSSHQueue.kit_result_path", "DistSSHQueue.kit_run_dir", "DistSSHQueue.kit_run_error_text", "DistSSHQueue.kit_run_toml", "DistSSHQueue.kit_show_usage", "DistSSHQueue.kit_sidecar_dir", "DistSSHQueue.kit_ssh_name", "DistSSHQueue.kit_verb_and_args", "DistSSHQueue.kit_worker_root", "DistSSHQueue.launch_agent_path", "DistSSHQueue.launch_agent_plist", "DistSSHQueue.launch_agent_store_path", "DistSSHQueue.leading_hop_span", "DistSSHQueue.legacy_launch_agent_path", "DistSSHQueue.legacy_systemd_user_path", "DistSSHQueue.list_host_cli", "DistSSHQueue.load!", "DistSSHQueue.load_config", "DistSSHQueue.load_jobs", "DistSSHQueue.local_fetch_dest", "DistSSHQueue.local_queue_exempt", "DistSSHQueue.local_rsync_version", "DistSSHQueue.looks_like_host_token", "DistSSHQueue.m_package", "DistSSHQueue.maybe_remote", "DistSSHQueue.new_job_id", "DistSSHQueue.orphan_stage_path", "DistSSHQueue.output_dir_from_run_toml", "DistSSHQueue.parse_cli_interval", "DistSSHQueue.parse_fetch_source", "DistSSHQueue.parse_host_cap", "DistSSHQueue.parse_host_caps", "DistSSHQueue.parse_qhost_token", "DistSSHQueue.path_has_distsshkit", "DistSSHQueue.path_has_kit_artifact_leaf", "DistSSHQueue.path_has_queue_leaf", "DistSSHQueue.path_inside_prefix", "DistSSHQueue.path_under_project", "DistSSHQueue.peel_fetch_opts", "DistSSHQueue.peel_status_watch_interval", "DistSSHQueue.peel_status_watch_verbosity", "DistSSHQueue.peel_submit_pool", "DistSSHQueue.pkg_depots_for_instantiate", "DistSSHQueue.plan_cli", "DistSSHQueue.pool_cli", "DistSSHQueue.pool_sizing_assumption_line", "DistSSHQueue.posix_dir", "DistSSHQueue.print_inspect_submit_template", "DistSSHQueue.print_jobs_table", "DistSSHQueue.print_list_host", "DistSSHQueue.print_pool_inventory_notes!", "DistSSHQueue.print_present", "DistSSHQueue.print_queue_client_usage", "DistSSHQueue.print_queue_command_usage", "DistSSHQueue.print_queue_host_usage", "DistSSHQueue.print_queue_plan_submit", "DistSSHQueue.print_queue_pool_submit", "DistSSHQueue.print_queue_root_usage", "DistSSHQueue.print_queue_size_submit", "DistSSHQueue.print_removed", "DistSSHQueue.print_rsync_start", "DistSSHQueue.print_serve_already", "DistSSHQueue.print_serve_banner", "DistSSHQueue.print_serve_gone", "DistSSHQueue.print_serve_idle_note", "DistSSHQueue.print_serve_live_line", "DistSSHQueue.print_serve_started", "DistSSHQueue.print_serve_stopped", "DistSSHQueue.print_setup_usage", "DistSSHQueue.print_status_table", "DistSSHQueue.print_teardown_usage", "DistSSHQueue.print_up_usage", "DistSSHQueue.print_watch_compact", "DistSSHQueue.print_watch_frame", "DistSSHQueue.print_wrapped_row", "DistSSHQueue.print_wrapped_tail", "DistSSHQueue.print_wrote", "DistSSHQueue.println_queue_version", "DistSSHQueue.process_alive", "DistSSHQueue.qhost_default_from_env", "DistSSHQueue.qhost_display_from_env", "DistSSHQueue.queue_command_help", "DistSSHQueue.queue_data_dir", "DistSSHQueue.queue_explain_error", "DistSSHQueue.queue_host_homedir", "DistSSHQueue.queue_host_machine", "DistSSHQueue.queue_source_env", "DistSSHQueue.queue_version_from_line", "DistSSHQueue.queue_version_skew_warning", "DistSSHQueue.read_fetch_marker", "DistSSHQueue.read_jobs", "DistSSHQueue.reap_serve_tag!", "DistSSHQueue.record_test_serve_pid!", "DistSSHQueue.reject_host_token!", "DistSSHQueue.reject_qhost_on_local", "DistSSHQueue.reject_worker_root_collision!", "DistSSHQueue.reload_keep_live!", "DistSSHQueue.remote_dispatch", "DistSSHQueue.remote_main_expr", "DistSSHQueue.remote_pkg_prelude", "DistSSHQueue.remote_stage_root", "DistSSHQueue.remove_host_cli", "DistSSHQueue.remove_host_names!", "DistSSHQueue.remove_pid_file", "DistSSHQueue.remove_pid_file_if!", "DistSSHQueue.replace_or_insert_hosts_line", "DistSSHQueue.require_fetch_extra_leaf", "DistSSHQueue.require_fetchable_leaf", "DistSSHQueue.require_kit_ok", "DistSSHQueue.require_queue_target!", "DistSSHQueue.resolve_fetch_job_id", "DistSSHQueue.resolve_into_path", "DistSSHQueue.resolve_script", "DistSSHQueue.rewrite_one_path", "DistSSHQueue.rewrite_payload_paths", "DistSSHQueue.rsync_from_qhost!", "DistSSHQueue.rsync_from_qhost_file!", "DistSSHQueue.rsync_progress_on", "DistSSHQueue.rsync_to_qhost!", "DistSSHQueue.run_kit", "DistSSHQueue.same_fetch_job", "DistSSHQueue.save_jobs", "DistSSHQueue.script_arg", "DistSSHQueue.serve", "DistSSHQueue.serve!", "DistSSHQueue.serve_alive", "DistSSHQueue.serve_cli", "DistSSHQueue.serve_command_from_unit", "DistSSHQueue.serve_pid", "DistSSHQueue.serve_stopped", "DistSSHQueue.serve_tag", "DistSSHQueue.service_install", "DistSSHQueue.service_main", "DistSSHQueue.service_uninstall", "DistSSHQueue.set_stopped!", "DistSSHQueue.settle_lost_kit_child!", "DistSSHQueue.setup", "DistSSHQueue.setup_main", "DistSSHQueue.sh_single_quote", "DistSSHQueue.should_stage", "DistSSHQueue.should_submit_ticket", "DistSSHQueue.show_status", "DistSSHQueue.show_usage", "DistSSHQueue.size_cli", "DistSSHQueue.size_hosts_from_allow", "DistSSHQueue.sorted_kit_ssh_names", "DistSSHQueue.spawn_detached_serve!", "DistSSHQueue.ssh_g_connect", "DistSSHQueue.stage_env_and_project", "DistSSHQueue.stage_job_tree!", "DistSSHQueue.stage_rsync_files_from_opts", "DistSSHQueue.stage_rsync_push_opts", "DistSSHQueue.stage_send_list", "DistSSHQueue.staging_enabled", "DistSSHQueue.status_cli", "DistSSHQueue.status_watch_hop_tty", "DistSSHQueue.step!", "DistSSHQueue.stop_cli", "DistSSHQueue.stop_serve!", "DistSSHQueue.store_flock_path", "DistSSHQueue.store_path", "DistSSHQueue.store_pid_julia_path", "DistSSHQueue.store_pid_path", "DistSSHQueue.store_pid_start_path", "DistSSHQueue.store_stop_path", "DistSSHQueue.submit!", "DistSSHQueue.submit_cli", "DistSSHQueue.submit_hosts", "DistSSHQueue.submit_kind", "DistSSHQueue.submit_kit_bag", "DistSSHQueue.submit_main", "DistSSHQueue.submit_ticket_dir", "DistSSHQueue.submit_ticket_path", "DistSSHQueue.systemd_user_path", "DistSSHQueue.systemd_user_unit", "DistSSHQueue.teardown", "DistSSHQueue.teardown_main", "DistSSHQueue.teardown_store", "DistSSHQueue.teardown_targets", "DistSSHQueue.teardown_yes", "DistSSHQueue.toml_string_array", "DistSSHQueue.up_main", "DistSSHQueue.warn_child_submit_reach", "DistSSHQueue.warn_remote_queue_version!", "DistSSHQueue.warn_worker_julia", "DistSSHQueue.watch!", "DistSSHQueue.watch_cli", "DistSSHQueue.watch_ticks_from_env", "DistSSHQueue.with_config_lock", "DistSSHQueue.with_fresh_fetch_dest", "DistSSHQueue.with_serve_tag", "DistSSHQueue.with_store_lock", "DistSSHQueue.wrapper_path", "DistSSHQueue.write_config_template", "DistSSHQueue.write_fetch_marker!", "DistSSHQueue.write_host_names!", "DistSSHQueue.write_pid_file", "DistSSHQueue.write_serve_unit", "DistSSHQueue.write_submit_ticket", "DistSSHQueue.xml_escape"]
+total_ms = 1963.6000000000001
+wall_sec = 1.1006300449371338
+args = ["--help"]
+main_ms = 1843.9
+
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue.main), Array{String, 1}}"
+    recompile = false
+    ms = 1843.9
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue.print_queue_usage), Base.PipeEndpoint}"
+    recompile = false
+    ms = 44.8
+
+    [commands.buckets.Base]
+    ms = 52.199999999999996
+    count = 17
+
+    [commands.buckets.stdlib]
+    ms = 16.5
+    count = 13
+
+    [commands.buckets.DistSSHKit]
+    ms = 0.0
+    count = 0
+
+    [commands.buckets.DistSSHRun]
+    ms = 6.2
+    count = 3
+
+    [commands.buckets.DistSSHQueue]
+    ms = 1888.7
+    count = 2
+
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue.main), Array{String, 1}}"
+    recompile = false
+    ms = 1843.9
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue.print_queue_usage), Base.PipeEndpoint}"
+    recompile = false
+    ms = 44.8
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.getproperty), NamedTuple{(:quiet, :progress, :verbose, :yes, :hosts_file, :hosts, :version), Tuple{Tuple{String, String}, Tuple{String}, Tuple{String}, Tuple{String, String}, Tuple{String}, Tuple{String}, Tuple{String, String, String}}}, Symbol}"
+    recompile = false
+    ms = 7.1
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base._cshp), Int64, Tuple{Bool}, Tuple{}, Tuple{Int64}}"
+    recompile = false
+    ms = 5.0
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.getproperty), Base.Order.By{DistSSHQueue.var\"#sorted_kit_ssh_names##0#sorted_kit_ssh_names##1\", Base.Order.ForwardOrdering}, Symbol}"
+    recompile = false
+    ms = 4.8
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.string), Char}"
+    recompile = false
+    ms = 4.1
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.in), Tuple{String, String, String}}"
+    recompile = false
+    ms = 3.3
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.getproperty), Base.Generator{Base.Pairs{Symbol, Union{}, Nothing, NamedTuple{(), Tuple{}}}, DistSSHQueue.var\"#101#102\"}, Symbol}"
+    recompile = false
+    ms = 3.2
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.isequal), String}"
+    recompile = false
+    ms = 3.1
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{Core.TypeEgal{NamedTuple{(:rel, :tree), T} where T<:Tuple}, Tuple{String, String}}"
+    recompile = false
+    ms = 2.9
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.tail), NTuple{15, String}}"
+    recompile = false
+    ms = 2.8
+    [[commands.top]]
+    bucket = "DistSSHRun"
+    signature = "Tuple{typeof(Core.kwcall), NamedTuple{(:source,), Tuple{String}}, typeof(DistSSHRun._kit_set_sync_mode!), Nothing, Symbol}"
+    recompile = false
+    ms = 2.7
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.getproperty), Pair{String, String}, Symbol}"
+    recompile = false
+    ms = 2.7
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.should_use_main_entrypoint)}"
+    recompile = true
+    ms = 2.6
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.tail), NTuple{14, String}}"
+    recompile = false
+    ms = 2.6
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.tail), NTuple{13, String}}"
+    recompile = false
+    ms = 2.5
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.tail), NTuple{12, String}}"
+    recompile = false
+    ms = 2.4
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{typeof(Distributed.flush_gc_msgs)}"
+    recompile = false
+    ms = 2.4
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{Core.TypeEgal{Base.Fix{2, F, T} where T where F}, typeof(Base.in), Tuple{String, String, String}}"
+    recompile = false
+    ms = 2.3
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{Core.TypeEgal{NamedTuple{(:role, :name, :n), T} where T<:Tuple}, Tuple{Symbol, String, Nothing}}"
+    recompile = false
+    ms = 2.3
+[[commands]]
+count = 44
+name = "status"
+exit = 0
+walls_sec = [1.6922152042388916, 1.2588140964508057, 1.2365188598632812]
+missed = ["DistSSHQueue.#101#val", "DistSSHQueue.#102#val", "DistSSHQueue.#103#val", "DistSSHQueue.#104#val", "DistSSHQueue.#105#val", "DistSSHQueue.#106#val", "DistSSHQueue.#107#val", "DistSSHQueue.#108#val", "DistSSHQueue.#109#val", "DistSSHQueue.#110#val", "DistSSHQueue.#111#val", "DistSSHQueue.#112#val", "DistSSHQueue.#113#val", "DistSSHQueue.#114#val", "DistSSHQueue.#115#val", "DistSSHQueue.#116#val", "DistSSHQueue.#118#val", "DistSSHQueue.#119#val", "DistSSHQueue.#120#val", "DistSSHQueue.#121#val", "DistSSHQueue.#122#val", "DistSSHQueue.#123#val", "DistSSHQueue.#124#val", "DistSSHQueue.#125#val", "DistSSHQueue.#126#val", "DistSSHQueue.#127#val", "DistSSHQueue.#128#val", "DistSSHQueue.#129#val", "DistSSHQueue.#130#val", "DistSSHQueue.#131#val", "DistSSHQueue.#132#val", "DistSSHQueue.#141#val", "DistSSHQueue.#142#val", "DistSSHQueue.#145#val", "DistSSHQueue.#147#val", "DistSSHQueue.#148#val", "DistSSHQueue.#149#val", "DistSSHQueue.#156#val", "DistSSHQueue.#157#val", "DistSSHQueue.#158#val", "DistSSHQueue.#159#val", "DistSSHQueue.#160#val", "DistSSHQueue.#161#val", "DistSSHQueue.#162#val", "DistSSHQueue.#163#val", "DistSSHQueue.#164#val", "DistSSHQueue.#165#val", "DistSSHQueue.#166#val", "DistSSHQueue.#167#val", "DistSSHQueue.#168#val", "DistSSHQueue.#169#val", "DistSSHQueue.#170#val", "DistSSHQueue.#173#val", "DistSSHQueue.#174#val", "DistSSHQueue.#175#val", "DistSSHQueue.#176#val", "DistSSHQueue.#177#val", "DistSSHQueue.#178#val", "DistSSHQueue.#179#val", "DistSSHQueue.#18#val", "DistSSHQueue.#181#val", "DistSSHQueue.#182#val", "DistSSHQueue.#183#val", "DistSSHQueue.#184#val", "DistSSHQueue.#185#val", "DistSSHQueue.#186#val", "DistSSHQueue.#187#val", "DistSSHQueue.#188#val", "DistSSHQueue.#189#val", "DistSSHQueue.#19#val", "DistSSHQueue.#190#val", "DistSSHQueue.#191#val", "DistSSHQueue.#192#val", "DistSSHQueue.#193#val", "DistSSHQueue.#197#val", "DistSSHQueue.#198#val", "DistSSHQueue.#199#val", "DistSSHQueue.#20#val", "DistSSHQueue.#200#val", "DistSSHQueue.#201#val", "DistSSHQueue.#202#val", "DistSSHQueue.#203#val", "DistSSHQueue.#206#val", "DistSSHQueue.#208#val", "DistSSHQueue.#209#val", "DistSSHQueue.#21#val", "DistSSHQueue.#210#val", "DistSSHQueue.#211#val", "DistSSHQueue.#212#val", "DistSSHQueue.#213#val", "DistSSHQueue.#215#val", "DistSSHQueue.#216#val", "DistSSHQueue.#217#val", "DistSSHQueue.#218#val", "DistSSHQueue.#219#val", "DistSSHQueue.#22#val", "DistSSHQueue.#220#val", "DistSSHQueue.#221#val", "DistSSHQueue.#222#val", "DistSSHQueue.#229#val", "DistSSHQueue.#230#val", "DistSSHQueue.#231#val", "DistSSHQueue.#232#val", "DistSSHQueue.#235#val", "DistSSHQueue.#237#val", "DistSSHQueue.#238#val", "DistSSHQueue.#239#val", "DistSSHQueue.#24#val", "DistSSHQueue.#240#val", "DistSSHQueue.#241#val", "DistSSHQueue.#242#val", "DistSSHQueue.#243#val", "DistSSHQueue.#244#val", "DistSSHQueue.#245#val", "DistSSHQueue.#246#val", "DistSSHQueue.#247#val", "DistSSHQueue.#248#val", "DistSSHQueue.#249#val", "DistSSHQueue.#25#val", "DistSSHQueue.#250#val", "DistSSHQueue.#253#val", "DistSSHQueue.#254#val", "DistSSHQueue.#259#val", "DistSSHQueue.#260#val", "DistSSHQueue.#261#val", "DistSSHQueue.#27#val", "DistSSHQueue.#28#val", "DistSSHQueue.#29#val", "DistSSHQueue.#30#val", "DistSSHQueue.#32#val", "DistSSHQueue.#33#val", "DistSSHQueue.#34#val", "DistSSHQueue.#35#val", "DistSSHQueue.#36#val", "DistSSHQueue.#37#val", "DistSSHQueue.#38#val", "DistSSHQueue.#39#val", "DistSSHQueue.#40#val", "DistSSHQueue.#41#val", "DistSSHQueue.#42#val", "DistSSHQueue.#43#val", "DistSSHQueue.#44#val", "DistSSHQueue.#45#val", "DistSSHQueue.#46#val", "DistSSHQueue.#47#val", "DistSSHQueue.#48#val", "DistSSHQueue.#49#val", "DistSSHQueue.#50#val", "DistSSHQueue.#51#val", "DistSSHQueue.#52#val", "DistSSHQueue.#53#val", "DistSSHQueue.#54#val", "DistSSHQueue.#55#val", "DistSSHQueue.#56#val", "DistSSHQueue.#57#val", "DistSSHQueue.#58#val", "DistSSHQueue.#59#val", "DistSSHQueue.#60#val", "DistSSHQueue.#62#val", "DistSSHQueue.#63#val", "DistSSHQueue.#64#val", "DistSSHQueue.#65#val", "DistSSHQueue.#66#val", "DistSSHQueue.#67#val", "DistSSHQueue.#68#val", "DistSSHQueue.#70#val", "DistSSHQueue.#72#val", "DistSSHQueue.#73#val", "DistSSHQueue.#74#val", "DistSSHQueue.#75#val", "DistSSHQueue.#78#val", "DistSSHQueue.#80#val", "DistSSHQueue.#81#val", "DistSSHQueue.#82#val", "DistSSHQueue.#91#val", "DistSSHQueue.#92#val", "DistSSHQueue.#93#val", "DistSSHQueue.#96#val", "DistSSHQueue.#97#val", "DistSSHQueue.#98#val", "DistSSHQueue.#Job#1", "DistSSHQueue.#Queue#72", "DistSSHQueue.#_allocate_queue_leaf!#77", "DistSSHQueue.#_drop_unit_files#246", "DistSSHQueue.#_enable_disp#64", "DistSSHQueue.#_enable_unit_path#63", "DistSSHQueue.#_finish!#118", "DistSSHQueue.#_fit_leading_widths#44", "DistSSHQueue.#_forward#269", "DistSSHQueue.#_host_list_assignment#31", "DistSSHQueue.#_job_hosts_disp#43", "DistSSHQueue.#_job_result_disp#42", "DistSSHQueue.#_kit_setup_session#85", "DistSSHQueue.#_maybe_remote_hop#158", "DistSSHQueue.#_pid_record_running#3", "DistSSHQueue.#_print_cli_note#237", "DistSSHQueue.#_print_job_detail#45", "DistSSHQueue.#_print_would_remove#255", "DistSSHQueue.#_queue_command#272", "DistSSHQueue.#_queue_kit_setup!#91", "DistSSHQueue.#_refuse_unprotected_rsync_path!#196", "DistSSHQueue.#_remote_submit_ticket#159", "DistSSHQueue.#_serve_live_text#56", "DistSSHQueue.#_set_running_kit_meta!#111", "DistSSHQueue.#_ssh_disp#232", "DistSSHQueue.#_status_watch_cli#228", "DistSSHQueue.#_store_lock_stale#4", "DistSSHQueue.#_submit!#97", "DistSSHQueue.#_unique_prefixes#49", "DistSSHQueue.#_up_run_on_hosts#252", "DistSSHQueue.#_watch_paint!#222", "DistSSHQueue.#bootout_serve_unit!#248", "DistSSHQueue.#check_fetch_dest#214", "DistSSHQueue.#config_path#24", "DistSSHQueue.#default_bindir#249", "DistSSHQueue.#default_config_body#37", "DistSSHQueue.#default_config_path#22", "DistSSHQueue.#default_queue_env#20", "DistSSHQueue.#default_queue_env_dir#19", "DistSSHQueue.#default_store_path#2", "DistSSHQueue.#drop_unwritten_stage!#178", "DistSSHQueue.#enabled_serve_command#21", "DistSSHQueue.#fetch_cli#215", "DistSSHQueue.#fetch_dest_target#213", "DistSSHQueue.#fetch_relpath#201", "DistSSHQueue.#fetch_source#206", "DistSSHQueue.#hop_print#182", "DistSSHQueue.#job_project#75", "DistSSHQueue.#launch_agent_path#240", "DistSSHQueue.#legacy_launch_agent_path#242", "DistSSHQueue.#legacy_systemd_user_path#243", "DistSSHQueue.#load_config#25", "DistSSHQueue.#local_fetch_dest#212", "DistSSHQueue.#maybe_remote#157", "DistSSHQueue.#orphan_stage_path#177", "DistSSHQueue.#peel_status_watch_interval#219", "DistSSHQueue.#pool_sizing_assumption_line#234", "DistSSHQueue.#print_jobs_table#46", "DistSSHQueue.#print_list_host#233", "DistSSHQueue.#print_pool_inventory_notes!#235", "DistSSHQueue.#print_present#54", "DistSSHQueue.#print_queue_usage#50", "DistSSHQueue.#print_removed#53", "DistSSHQueue.#print_rsync_start#195", "DistSSHQueue.#print_serve_already#60", "DistSSHQueue.#print_serve_banner#55", "DistSSHQueue.#print_serve_gone#59", "DistSSHQueue.#print_serve_idle_note#58", "DistSSHQueue.#print_serve_live_line#57", "DistSSHQueue.#print_serve_started#61", "DistSSHQueue.#print_serve_stopped#62", "DistSSHQueue.#print_status_table#47", "DistSSHQueue.#print_watch_compact#65", "DistSSHQueue.#print_watch_frame#48", "DistSSHQueue.#print_wrapped_row#41", "DistSSHQueue.#print_wrapped_tail#40", "DistSSHQueue.#print_wrote#52", "DistSSHQueue.#queue_data_dir#23", "DistSSHQueue.#queue_version_skew_warning#153", "DistSSHQueue.#remote_dispatch#152", "DistSSHQueue.#remote_stage_root#176", "DistSSHQueue.#remove_pid_file_if!#14", "DistSSHQueue.#require_queue_target!#151", "DistSSHQueue.#resolve_fetch_job_id#210", "DistSSHQueue.#rsync_from_qhost!#198", "DistSSHQueue.#rsync_from_qhost_file!#199", "DistSSHQueue.#rsync_to_qhost!#197", "DistSSHQueue.#run_kit#82", "DistSSHQueue.#serve!#139", "DistSSHQueue.#serve#150", "DistSSHQueue.#service_install#244", "DistSSHQueue.#service_uninstall#245", "DistSSHQueue.#setup#251", "DistSSHQueue.#show_status#220", "DistSSHQueue.#show_usage#267", "DistSSHQueue.#stage_rsync_files_from_opts#193", "DistSSHQueue.#stage_rsync_push_opts#192", "DistSSHQueue.#status_watch_hop_tty#221", "DistSSHQueue.#stop_cli#266", "DistSSHQueue.#submit!#107", "DistSSHQueue.#submit!#108", "DistSSHQueue.#submit_hosts#166", "DistSSHQueue.#submit_kind#175", "DistSSHQueue.#submit_kit_bag#167", "DistSSHQueue.#systemd_user_path#241", "DistSSHQueue.#teardown#256", "DistSSHQueue.#teardown_main#262", "DistSSHQueue.#teardown_store#253", "DistSSHQueue.#teardown_targets#254", "DistSSHQueue.#warn_child_submit_reach#239", "DistSSHQueue.#warn_worker_julia#238", "DistSSHQueue.#watch!#224", "DistSSHQueue.#wrapper_path#250", "DistSSHQueue.#write_config_template#38", "DistSSHQueue.#write_submit_ticket#211", "DistSSHQueue._allocate_queue_leaf!", "DistSSHQueue._append_warning_dicts!", "DistSSHQueue._argv", "DistSSHQueue._bin_julia_version", "DistSSHQueue._break_run", "DistSSHQueue._cfg_env_string", "DistSSHQueue._clip_cols", "DistSSHQueue._config_env_skipped", "DistSSHQueue._confirm_path_quote", "DistSSHQueue._drop_unit_files", "DistSSHQueue._dt", "DistSSHQueue._enable_disp", "DistSSHQueue._enable_unit_path", "DistSSHQueue._entry_direct", "DistSSHQueue._entry_forward", "DistSSHQueue._fetch", "DistSSHQueue._fetch_note_field", "DistSSHQueue._fetch_note_sanitize", "DistSSHQueue._finish!", "DistSSHQueue._fit_leading_widths", "DistSSHQueue._flock!", "DistSSHQueue._forget_absent_config_env!", "DistSSHQueue._forward", "DistSSHQueue._help_command_argv", "DistSSHQueue._host_assignment_span", "DistSSHQueue._host_list_assignment", "DistSSHQueue._host_name_disp", "DistSSHQueue._host_token", "DistSSHQueue._human_span", "DistSSHQueue._id_chrome", "DistSSHQueue._index_id", "DistSSHQueue._index_state", "DistSSHQueue._is_interrupt", "DistSSHQueue._job_cancel_flag", "DistSSHQueue._job_cancel_requested", "DistSSHQueue._job_elapsed_disp", "DistSSHQueue._job_error_disp", "DistSSHQueue._job_has_warnings", "DistSSHQueue._job_hosts_disp", "DistSSHQueue._job_id8", "DistSSHQueue._job_phase_disp", "DistSSHQueue._job_project_disp", "DistSSHQueue._job_queued_disp", "DistSSHQueue._job_result_disp", "DistSSHQueue._job_row", "DistSSHQueue._job_script_disp", "DistSSHQueue._job_state_disp", "DistSSHQueue._job_still_running", "DistSSHQueue._job_wall_disp", "DistSSHQueue._jobs_store_bad_row", "DistSSHQueue._jobs_store_bad_toml", "DistSSHQueue._jobs_store_not_list", "DistSSHQueue._jobs_table", "DistSSHQueue._join_serve_spin!", "DistSSHQueue._julia_diff_kind", "DistSSHQueue._julia_diff_word", "DistSSHQueue._juliaup_default_disp", "DistSSHQueue._kit_env_on", "DistSSHQueue._kit_flag_takes_value", "DistSSHQueue._kit_setup_child_tokens", "DistSSHQueue._kit_setup_session", "DistSSHQueue._launch_agent_serves", "DistSSHQueue._launchctl_load", "DistSSHQueue._launchctl_unload", "DistSSHQueue._list_host_fit", "DistSSHQueue._live_running", "DistSSHQueue._load_from_store!", "DistSSHQueue._macos_ps_start_key", "DistSSHQueue._main", "DistSSHQueue._manifest_absent_project", "DistSSHQueue._maybe_remote_hop", "DistSSHQueue._missing_path_io", "DistSSHQueue._note_serve_interval!", "DistSSHQueue._own_start_key", "DistSSHQueue._padded_clip", "DistSSHQueue._parse_pid_text", "DistSSHQueue._payload", "DistSSHQueue._persist!", "DistSSHQueue._persist_job_warnings!", "DistSSHQueue._pid_julia_version", "DistSSHQueue._pid_record_from", "DistSSHQueue._pid_record_running", "DistSSHQueue._plist_program_args", "DistSSHQueue._positive_n", "DistSSHQueue._print_cli_note", "DistSSHQueue._print_fetch_notes", "DistSSHQueue._print_job_detail", "DistSSHQueue._print_manifest_absent!", "DistSSHQueue._print_would_remove", "DistSSHQueue._process_alive_fallback", "DistSSHQueue._process_start_key", "DistSSHQueue._project_has_deps", "DistSSHQueue._q_short", "DistSSHQueue._q_state_color", "DistSSHQueue._qhost_disp", "DistSSHQueue._queue_command", "DistSSHQueue._queue_env_on", "DistSSHQueue._queue_kit_setup!", "DistSSHQueue._queue_local_instantiate!", "DistSSHQueue._queue_tables", "DistSSHQueue._read_local_rsync_version", "DistSSHQueue._read_lock_pid", "DistSSHQueue._read_lock_record", "DistSSHQueue._read_serve_record", "DistSSHQueue._record_kit_setup_logs!", "DistSSHQueue._record_manifest_absent!", "DistSSHQueue._refuse_directory_store!", "DistSSHQueue._refuse_fetch_dot_part!", "DistSSHQueue._refuse_unprotected_rsync_path!", "DistSSHQueue._regex_literal", "DistSSHQueue._reject_subcommand", "DistSSHQueue._rel_under", "DistSSHQueue._remote_julia_full", "DistSSHQueue._remote_submit_ticket", "DistSSHQueue._require_kit_setup_ok!", "DistSSHQueue._require_written_hosts!", "DistSSHQueue._resolve_id", "DistSSHQueue._row_dt", "DistSSHQueue._row_dt_text", "DistSSHQueue._row_string", "DistSSHQueue._row_text", "DistSSHQueue._rsync_bin", "DistSSHQueue._running", "DistSSHQueue._running_copy", "DistSSHQueue._serve_can_draw", "DistSSHQueue._serve_disp", "DistSSHQueue._serve_from_args", "DistSSHQueue._serve_julia_baseline", "DistSSHQueue._serve_live_job", "DistSSHQueue._serve_live_text", "DistSSHQueue._set_job_phase!", "DistSSHQueue._set_qhost", "DistSSHQueue._set_queue_env", "DistSSHQueue._set_running_kit_meta!", "DistSSHQueue._set_running_result_path!", "DistSSHQueue._setup_warning_dicts", "DistSSHQueue._source_from_queue_env", "DistSSHQueue._split_posix_words", "DistSSHQueue._ssh_disp", "DistSSHQueue._ssh_mkdir!", "DistSSHQueue._ssh_transport", "DistSSHQueue._stage_cleanup_store", "DistSSHQueue._stage_extra_paths", "DistSSHQueue._stage_rel_is_queue", "DistSSHQueue._stage_rsync_files_from!", "DistSSHQueue._start!", "DistSSHQueue._start_key", "DistSSHQueue._start_text", "DistSSHQueue._status_watch_cli", "DistSSHQueue._steal_store_lock", "DistSSHQueue._store_lock_pid_path", "DistSSHQueue._store_lock_stale", "DistSSHQueue._store_lock_start_path", "DistSSHQueue._store_mtime", "DistSSHQueue._store_path_disp", "DistSSHQueue._store_proc_lock", "DistSSHQueue._string_paths", "DistSSHQueue._submit!", "DistSSHQueue._submit_requests_help", "DistSSHQueue._systemd_disable", "DistSSHQueue._systemd_enable", "DistSSHQueue._systemd_reload", "DistSSHQueue._tail_jobs", "DistSSHQueue._teardown", "DistSSHQueue._teardown_confirm_set", "DistSSHQueue._teardown_granted", "DistSSHQueue._throw_if_cancelled", "DistSSHQueue._toml_bracket_delta", "DistSSHQueue._unique_prefixes", "DistSSHQueue._up_run_on_hosts", "DistSSHQueue._utc_to_local", "DistSSHQueue._warn_dead_kit_pid!", "DistSSHQueue._warn_jobs_not_list", "DistSSHQueue._warn_plan_once!", "DistSSHQueue._warn_teardown_symlinks!", "DistSSHQueue._warn_tilde_store!", "DistSSHQueue._watch_paint!", "DistSSHQueue._watch_redraw!", "DistSSHQueue._with_pkg_depots", "DistSSHQueue._with_store", "DistSSHQueue._with_store_dir_lock", "DistSSHQueue._wrap_words", "DistSSHQueue._write_span", "DistSSHQueue._xml_unescape", "DistSSHQueue._yes_from_config", "DistSSHQueue.add_host_cli", "DistSSHQueue.add_host_names!", "DistSSHQueue.adopt_running!", "DistSSHQueue.append_hop_forwarded_env!", "DistSSHQueue.apply_config_env!", "DistSSHQueue.as_host_allow", "DistSSHQueue.bootout_serve_unit!", "DistSSHQueue.cancel!", "DistSSHQueue.cancel_cli", "DistSSHQueue.capture_kit_run_toml!", "DistSSHQueue.check_fetch_dest", "DistSSHQueue.claim_serve!", "DistSSHQueue.clamp_pool_slots", "DistSSHQueue.clear_stopped!", "DistSSHQueue.cli_cols", "DistSSHQueue.coalesce_queue_env", "DistSSHQueue.coalesce_remote", "DistSSHQueue.command_help_argv", "DistSSHQueue.config_host_names", "DistSSHQueue.config_path", "DistSSHQueue.config_store_path", "DistSSHQueue.copy_setup_logs!", "DistSSHQueue.default_bindir", "DistSSHQueue.default_config_body", "DistSSHQueue.default_config_path", "DistSSHQueue.default_fetch_dest_rel", "DistSSHQueue.default_julia_bin", "DistSSHQueue.default_queue_env", "DistSSHQueue.default_queue_env_dir", "DistSSHQueue.default_remote_julia", "DistSSHQueue.default_store_path", "DistSSHQueue.detached_serve_script", "DistSSHQueue.disable_main", "DistSSHQueue.drop_nothing", "DistSSHQueue.drop_unwritten_stage!", "DistSSHQueue.enable_main", "DistSSHQueue.enabled_serve_command", "DistSSHQueue.ensure_serve!", "DistSSHQueue.execute_kwargs", "DistSSHQueue.expand_pool_submit_hosts", "DistSSHQueue.extract_remote_opts", "DistSSHQueue.fail_stale_running!", "DistSSHQueue.fetch_cli", "DistSSHQueue.fetch_dest", "DistSSHQueue.fetch_dest_from_rel", "DistSSHQueue.fetch_dest_is_fresh", "DistSSHQueue.fetch_dest_target", "DistSSHQueue.fetch_extra_leaf", "DistSSHQueue.fetch_extra_paths", "DistSSHQueue.fetch_extra_specs", "DistSSHQueue.fetch_hidden_dest", "DistSSHQueue.fetch_hidden_dests", "DistSSHQueue.fetch_live_primary", "DistSSHQueue.fetch_marker_path", "DistSSHQueue.fetch_relpath", "DistSSHQueue.fetch_source", "DistSSHQueue.fetch_source_expr", "DistSSHQueue.fetch_source_primary", "DistSSHQueue.help_verb_line", "DistSSHQueue.hop_julia_prefix", "DistSSHQueue.hop_print", "DistSSHQueue.host_allow_item", "DistSSHQueue.hosts_toml_line", "DistSSHQueue.is_kit_execute_kind", "DistSSHQueue.is_qhost_stage_project", "DistSSHQueue.job", "DistSSHQueue.job_from_toml", "DistSSHQueue.job_id_from_submit_stdout", "DistSSHQueue.job_id_from_ticket_text", "DistSSHQueue.job_project", "DistSSHQueue.job_to_toml", "DistSSHQueue.jobs", "DistSSHQueue.kit_artifact_from_run_dir", "DistSSHQueue.kit_artifact_from_sidecar", "DistSSHQueue.kit_child_alive", "DistSSHQueue.kit_kind_from_cli", "DistSSHQueue.kit_kwargs", "DistSSHQueue.kit_output_dir", "DistSSHQueue.kit_parse_args", "DistSSHQueue.kit_result_path", "DistSSHQueue.kit_run_dir", "DistSSHQueue.kit_run_error_text", "DistSSHQueue.kit_run_toml", "DistSSHQueue.kit_show_usage", "DistSSHQueue.kit_sidecar_dir", "DistSSHQueue.kit_ssh_name", "DistSSHQueue.kit_verb_and_args", "DistSSHQueue.kit_worker_root", "DistSSHQueue.launch_agent_path", "DistSSHQueue.launch_agent_plist", "DistSSHQueue.launch_agent_store_path", "DistSSHQueue.leading_hop_span", "DistSSHQueue.legacy_launch_agent_path", "DistSSHQueue.legacy_systemd_user_path", "DistSSHQueue.list_host_cli", "DistSSHQueue.load!", "DistSSHQueue.load_config", "DistSSHQueue.load_jobs", "DistSSHQueue.local_fetch_dest", "DistSSHQueue.local_queue_exempt", "DistSSHQueue.local_rsync_version", "DistSSHQueue.looks_like_host_token", "DistSSHQueue.m_package", "DistSSHQueue.maybe_remote", "DistSSHQueue.new_job_id", "DistSSHQueue.orphan_stage_path", "DistSSHQueue.output_dir_from_run_toml", "DistSSHQueue.parse_cli_interval", "DistSSHQueue.parse_fetch_source", "DistSSHQueue.parse_host_cap", "DistSSHQueue.parse_host_caps", "DistSSHQueue.parse_qhost_token", "DistSSHQueue.path_has_distsshkit", "DistSSHQueue.path_has_kit_artifact_leaf", "DistSSHQueue.path_has_queue_leaf", "DistSSHQueue.path_inside_prefix", "DistSSHQueue.path_under_project", "DistSSHQueue.peel_fetch_opts", "DistSSHQueue.peel_status_watch_interval", "DistSSHQueue.peel_status_watch_verbosity", "DistSSHQueue.peel_submit_pool", "DistSSHQueue.pkg_depots_for_instantiate", "DistSSHQueue.plan_cli", "DistSSHQueue.pool_cli", "DistSSHQueue.pool_sizing_assumption_line", "DistSSHQueue.posix_dir", "DistSSHQueue.print_inspect_submit_template", "DistSSHQueue.print_jobs_table", "DistSSHQueue.print_list_host", "DistSSHQueue.print_pool_inventory_notes!", "DistSSHQueue.print_present", "DistSSHQueue.print_queue_client_usage", "DistSSHQueue.print_queue_command_usage", "DistSSHQueue.print_queue_host_usage", "DistSSHQueue.print_queue_plan_submit", "DistSSHQueue.print_queue_pool_submit", "DistSSHQueue.print_queue_root_usage", "DistSSHQueue.print_queue_size_submit", "DistSSHQueue.print_queue_usage", "DistSSHQueue.print_removed", "DistSSHQueue.print_rsync_start", "DistSSHQueue.print_serve_already", "DistSSHQueue.print_serve_banner", "DistSSHQueue.print_serve_gone", "DistSSHQueue.print_serve_idle_note", "DistSSHQueue.print_serve_live_line", "DistSSHQueue.print_serve_started", "DistSSHQueue.print_serve_stopped", "DistSSHQueue.print_setup_usage", "DistSSHQueue.print_status_table", "DistSSHQueue.print_teardown_usage", "DistSSHQueue.print_up_usage", "DistSSHQueue.print_watch_compact", "DistSSHQueue.print_watch_frame", "DistSSHQueue.print_wrapped_row", "DistSSHQueue.print_wrapped_tail", "DistSSHQueue.print_wrote", "DistSSHQueue.println_queue_version", "DistSSHQueue.process_alive", "DistSSHQueue.qhost_default_from_env", "DistSSHQueue.qhost_display_from_env", "DistSSHQueue.queue_command_help", "DistSSHQueue.queue_data_dir", "DistSSHQueue.queue_explain_error", "DistSSHQueue.queue_host_homedir", "DistSSHQueue.queue_host_machine", "DistSSHQueue.queue_source_env", "DistSSHQueue.queue_version_from_line", "DistSSHQueue.queue_version_skew_warning", "DistSSHQueue.read_fetch_marker", "DistSSHQueue.read_jobs", "DistSSHQueue.reap_serve_tag!", "DistSSHQueue.record_test_serve_pid!", "DistSSHQueue.reject_host_token!", "DistSSHQueue.reject_qhost_on_local", "DistSSHQueue.reject_worker_root_collision!", "DistSSHQueue.reload_keep_live!", "DistSSHQueue.remote_dispatch", "DistSSHQueue.remote_main_expr", "DistSSHQueue.remote_pkg_prelude", "DistSSHQueue.remote_stage_root", "DistSSHQueue.remove_host_cli", "DistSSHQueue.remove_host_names!", "DistSSHQueue.remove_pid_file", "DistSSHQueue.remove_pid_file_if!", "DistSSHQueue.replace_or_insert_hosts_line", "DistSSHQueue.require_fetch_extra_leaf", "DistSSHQueue.require_fetchable_leaf", "DistSSHQueue.require_kit_ok", "DistSSHQueue.require_queue_target!", "DistSSHQueue.resolve_fetch_job_id", "DistSSHQueue.resolve_into_path", "DistSSHQueue.resolve_script", "DistSSHQueue.rewrite_one_path", "DistSSHQueue.rewrite_payload_paths", "DistSSHQueue.rsync_from_qhost!", "DistSSHQueue.rsync_from_qhost_file!", "DistSSHQueue.rsync_progress_on", "DistSSHQueue.rsync_to_qhost!", "DistSSHQueue.run_kit", "DistSSHQueue.same_fetch_job", "DistSSHQueue.save_jobs", "DistSSHQueue.script_arg", "DistSSHQueue.serve", "DistSSHQueue.serve!", "DistSSHQueue.serve_alive", "DistSSHQueue.serve_cli", "DistSSHQueue.serve_command_from_unit", "DistSSHQueue.serve_pid", "DistSSHQueue.serve_stopped", "DistSSHQueue.serve_tag", "DistSSHQueue.service_install", "DistSSHQueue.service_main", "DistSSHQueue.service_uninstall", "DistSSHQueue.set_stopped!", "DistSSHQueue.settle_lost_kit_child!", "DistSSHQueue.setup", "DistSSHQueue.setup_main", "DistSSHQueue.sh_single_quote", "DistSSHQueue.should_stage", "DistSSHQueue.should_submit_ticket", "DistSSHQueue.show_usage", "DistSSHQueue.size_cli", "DistSSHQueue.size_hosts_from_allow", "DistSSHQueue.sorted_kit_ssh_names", "DistSSHQueue.spawn_detached_serve!", "DistSSHQueue.ssh_g_connect", "DistSSHQueue.stage_env_and_project", "DistSSHQueue.stage_job_tree!", "DistSSHQueue.stage_rsync_files_from_opts", "DistSSHQueue.stage_rsync_push_opts", "DistSSHQueue.stage_send_list", "DistSSHQueue.staging_enabled", "DistSSHQueue.status_watch_hop_tty", "DistSSHQueue.step!", "DistSSHQueue.stop_cli", "DistSSHQueue.stop_serve!", "DistSSHQueue.store_flock_path", "DistSSHQueue.store_path", "DistSSHQueue.store_pid_julia_path", "DistSSHQueue.store_pid_path", "DistSSHQueue.store_pid_start_path", "DistSSHQueue.store_stop_path", "DistSSHQueue.submit!", "DistSSHQueue.submit_cli", "DistSSHQueue.submit_hosts", "DistSSHQueue.submit_kind", "DistSSHQueue.submit_kit_bag", "DistSSHQueue.submit_main", "DistSSHQueue.submit_ticket_dir", "DistSSHQueue.submit_ticket_path", "DistSSHQueue.systemd_user_path", "DistSSHQueue.systemd_user_unit", "DistSSHQueue.teardown", "DistSSHQueue.teardown_main", "DistSSHQueue.teardown_store", "DistSSHQueue.teardown_targets", "DistSSHQueue.teardown_yes", "DistSSHQueue.toml_string_array", "DistSSHQueue.up_main", "DistSSHQueue.warn_child_submit_reach", "DistSSHQueue.warn_remote_queue_version!", "DistSSHQueue.warn_worker_julia", "DistSSHQueue.watch!", "DistSSHQueue.watch_cli", "DistSSHQueue.watch_ticks_from_env", "DistSSHQueue.with_config_lock", "DistSSHQueue.with_fresh_fetch_dest", "DistSSHQueue.with_serve_tag", "DistSSHQueue.with_store_lock", "DistSSHQueue.wrapper_path", "DistSSHQueue.write_config_template", "DistSSHQueue.write_fetch_marker!", "DistSSHQueue.write_host_names!", "DistSSHQueue.write_pid_file", "DistSSHQueue.write_serve_unit", "DistSSHQueue.write_submit_ticket", "DistSSHQueue.xml_escape"]
+total_ms = 1385.9
+wall_sec = 1.2588140964508057
+args = ["status"]
+main_ms = 675.7
+
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue.main), Array{String, 1}}"
+    recompile = false
+    ms = 675.7
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{DistSSHQueue.var\"##show_status#220\", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(DistSSHQueue.show_status), String}"
+    recompile = false
+    ms = 399.1
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{DistSSHQueue.var\"#_entry_forward##0#_entry_forward##1\"{DistSSHQueue.var\"#_argv##0#_argv##1\"{typeof(DistSSHQueue.status_cli)}, String, Bool, Bool}, DistSSHQueue.CliContext, Array{String, 1}}"
+    recompile = false
+    ms = 258.6
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(Core.kwcall), NamedTuple{(:quiet, :tail, :verbose), Tuple{Bool, Nothing, Bool}}, typeof(DistSSHQueue.show_status), String}"
+    recompile = false
+    ms = 6.3
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._q_cell), String, Int64}"
+    recompile = false
+    ms = 4.3
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._set_status_watch_mode), Nothing, Symbol}"
+    recompile = false
+    ms = 1.7
+
+    [commands.buckets.Base]
+    ms = 20.9
+    count = 20
+
+    [commands.buckets.stdlib]
+    ms = 18.400000000000002
+    count = 15
+
+    [commands.buckets.DistSSHKit]
+    ms = 0.0
+    count = 0
+
+    [commands.buckets.DistSSHRun]
+    ms = 0.8999999999999999
+    count = 3
+
+    [commands.buckets.DistSSHQueue]
+    ms = 1345.7
+    count = 6
+
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue.main), Array{String, 1}}"
+    recompile = false
+    ms = 675.7
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{DistSSHQueue.var\"##show_status#220\", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(DistSSHQueue.show_status), String}"
+    recompile = false
+    ms = 399.1
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{DistSSHQueue.var\"#_entry_forward##0#_entry_forward##1\"{DistSSHQueue.var\"#_argv##0#_argv##1\"{typeof(DistSSHQueue.status_cli)}, String, Bool, Bool}, DistSSHQueue.CliContext, Array{String, 1}}"
+    recompile = false
+    ms = 258.6
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(Core.kwcall), NamedTuple{(:quiet, :tail, :verbose), Tuple{Bool, Nothing, Bool}}, typeof(DistSSHQueue.show_status), String}"
+    recompile = false
+    ms = 6.3
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{Core.TypeEgal{NamedTuple{(:verb, :default_interval), T} where T<:Tuple}, Tuple{String, Nothing}}"
+    recompile = false
+    ms = 4.9
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base._array_for), Core.TypeEgal{DistSSHQueue.Job}, Array{Any, 1}, Base.HasShape{1}}"
+    recompile = false
+    ms = 4.9
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._q_cell), String, Int64}"
+    recompile = false
+    ms = 4.3
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.should_use_main_entrypoint)}"
+    recompile = true
+    ms = 2.6
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{typeof(Distributed.flush_gc_msgs)}"
+    recompile = false
+    ms = 2.6
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{Core.TypeEgal{Base.LinearIndices{N, R} where R<:Tuple{Vararg{Base.AbstractUnitRange{Int64}, N}} where N}, Array{DistSSHQueue.Job, 1}}"
+    recompile = false
+    ms = 2.4
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{Base.var\"##192#193\", Vararg{Any, 4}}"
+    recompile = true
+    ms = 2.3
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.:(^)), String, Int64}"
+    recompile = false
+    ms = 1.9
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._set_status_watch_mode), Nothing, Symbol}"
+    recompile = false
+    ms = 1.7
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.repeat), String, Int64}"
+    recompile = false
+    ms = 1.7
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.getproperty), NamedTuple{(:quiet, :progress, :verbose, :yes, :hosts_file, :hosts, :version), Tuple{Tuple{String, String}, Tuple{String}, Tuple{String}, Tuple{String, String}, Tuple{String}, Tuple{String}, Tuple{String, String, String}}}, Symbol}"
+    recompile = false
+    ms = 1.1
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.getproperty), Base.Order.By{DistSSHQueue.var\"#sorted_kit_ssh_names##0#sorted_kit_ssh_names##1\", Base.Order.ForwardOrdering}, Symbol}"
+    recompile = false
+    ms = 0.9
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{Core.TypeEgal{NamedTuple{(:force, :recursive), T} where T<:Tuple}, Tuple{Bool, Bool}}"
+    recompile = false
+    ms = 0.9
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{Base.var\"##lock#448\", Base.UseDefaultToken, typeof(Base.lock), Distributed.var\"#start_gc_msgs_task##2#start_gc_msgs_task##3\", Base.ReentrantLock}"
+    recompile = false
+    ms = 0.9
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base._cshp), Int64, Tuple{Bool}, Tuple{}, Tuple{Int64}}"
+    recompile = false
+    ms = 0.8
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.string), Char}"
+    recompile = false
+    ms = 0.8
+[[commands]]
+count = 59
+name = "submit"
+exit = 0
+walls_sec = [1.8415980339050293, 1.1616759300231934, 1.1649830341339111]
+missed = ["DistSSHQueue.#101#val", "DistSSHQueue.#102#val", "DistSSHQueue.#103#val", "DistSSHQueue.#104#val", "DistSSHQueue.#105#val", "DistSSHQueue.#106#val", "DistSSHQueue.#107#val", "DistSSHQueue.#108#val", "DistSSHQueue.#109#val", "DistSSHQueue.#110#val", "DistSSHQueue.#111#val", "DistSSHQueue.#112#val", "DistSSHQueue.#113#val", "DistSSHQueue.#114#val", "DistSSHQueue.#115#val", "DistSSHQueue.#116#val", "DistSSHQueue.#118#val", "DistSSHQueue.#119#val", "DistSSHQueue.#120#val", "DistSSHQueue.#121#val", "DistSSHQueue.#122#val", "DistSSHQueue.#123#val", "DistSSHQueue.#124#val", "DistSSHQueue.#125#val", "DistSSHQueue.#126#val", "DistSSHQueue.#127#val", "DistSSHQueue.#128#val", "DistSSHQueue.#129#val", "DistSSHQueue.#130#val", "DistSSHQueue.#131#val", "DistSSHQueue.#132#val", "DistSSHQueue.#141#val", "DistSSHQueue.#142#val", "DistSSHQueue.#145#val", "DistSSHQueue.#147#val", "DistSSHQueue.#148#val", "DistSSHQueue.#149#val", "DistSSHQueue.#156#val", "DistSSHQueue.#157#val", "DistSSHQueue.#158#val", "DistSSHQueue.#159#val", "DistSSHQueue.#160#val", "DistSSHQueue.#161#val", "DistSSHQueue.#162#val", "DistSSHQueue.#163#val", "DistSSHQueue.#164#val", "DistSSHQueue.#165#val", "DistSSHQueue.#166#val", "DistSSHQueue.#167#val", "DistSSHQueue.#168#val", "DistSSHQueue.#169#val", "DistSSHQueue.#170#val", "DistSSHQueue.#173#val", "DistSSHQueue.#174#val", "DistSSHQueue.#175#val", "DistSSHQueue.#176#val", "DistSSHQueue.#177#val", "DistSSHQueue.#178#val", "DistSSHQueue.#179#val", "DistSSHQueue.#18#val", "DistSSHQueue.#181#val", "DistSSHQueue.#182#val", "DistSSHQueue.#183#val", "DistSSHQueue.#184#val", "DistSSHQueue.#185#val", "DistSSHQueue.#186#val", "DistSSHQueue.#187#val", "DistSSHQueue.#188#val", "DistSSHQueue.#189#val", "DistSSHQueue.#19#val", "DistSSHQueue.#190#val", "DistSSHQueue.#191#val", "DistSSHQueue.#192#val", "DistSSHQueue.#193#val", "DistSSHQueue.#197#val", "DistSSHQueue.#198#val", "DistSSHQueue.#199#val", "DistSSHQueue.#20#val", "DistSSHQueue.#200#val", "DistSSHQueue.#201#val", "DistSSHQueue.#202#val", "DistSSHQueue.#203#val", "DistSSHQueue.#206#val", "DistSSHQueue.#208#val", "DistSSHQueue.#209#val", "DistSSHQueue.#21#val", "DistSSHQueue.#210#val", "DistSSHQueue.#211#val", "DistSSHQueue.#212#val", "DistSSHQueue.#213#val", "DistSSHQueue.#215#val", "DistSSHQueue.#216#val", "DistSSHQueue.#217#val", "DistSSHQueue.#218#val", "DistSSHQueue.#219#val", "DistSSHQueue.#22#val", "DistSSHQueue.#220#val", "DistSSHQueue.#221#val", "DistSSHQueue.#222#val", "DistSSHQueue.#229#val", "DistSSHQueue.#230#val", "DistSSHQueue.#231#val", "DistSSHQueue.#232#val", "DistSSHQueue.#235#val", "DistSSHQueue.#237#val", "DistSSHQueue.#238#val", "DistSSHQueue.#239#val", "DistSSHQueue.#24#val", "DistSSHQueue.#240#val", "DistSSHQueue.#241#val", "DistSSHQueue.#242#val", "DistSSHQueue.#243#val", "DistSSHQueue.#244#val", "DistSSHQueue.#245#val", "DistSSHQueue.#246#val", "DistSSHQueue.#247#val", "DistSSHQueue.#248#val", "DistSSHQueue.#249#val", "DistSSHQueue.#25#val", "DistSSHQueue.#250#val", "DistSSHQueue.#253#val", "DistSSHQueue.#254#val", "DistSSHQueue.#259#val", "DistSSHQueue.#260#val", "DistSSHQueue.#261#val", "DistSSHQueue.#27#val", "DistSSHQueue.#28#val", "DistSSHQueue.#29#val", "DistSSHQueue.#30#val", "DistSSHQueue.#32#val", "DistSSHQueue.#33#val", "DistSSHQueue.#34#val", "DistSSHQueue.#35#val", "DistSSHQueue.#36#val", "DistSSHQueue.#37#val", "DistSSHQueue.#38#val", "DistSSHQueue.#39#val", "DistSSHQueue.#40#val", "DistSSHQueue.#41#val", "DistSSHQueue.#42#val", "DistSSHQueue.#43#val", "DistSSHQueue.#44#val", "DistSSHQueue.#45#val", "DistSSHQueue.#46#val", "DistSSHQueue.#47#val", "DistSSHQueue.#48#val", "DistSSHQueue.#49#val", "DistSSHQueue.#50#val", "DistSSHQueue.#51#val", "DistSSHQueue.#52#val", "DistSSHQueue.#53#val", "DistSSHQueue.#54#val", "DistSSHQueue.#55#val", "DistSSHQueue.#56#val", "DistSSHQueue.#57#val", "DistSSHQueue.#58#val", "DistSSHQueue.#59#val", "DistSSHQueue.#60#val", "DistSSHQueue.#62#val", "DistSSHQueue.#63#val", "DistSSHQueue.#64#val", "DistSSHQueue.#65#val", "DistSSHQueue.#66#val", "DistSSHQueue.#67#val", "DistSSHQueue.#68#val", "DistSSHQueue.#70#val", "DistSSHQueue.#72#val", "DistSSHQueue.#73#val", "DistSSHQueue.#74#val", "DistSSHQueue.#75#val", "DistSSHQueue.#78#val", "DistSSHQueue.#80#val", "DistSSHQueue.#81#val", "DistSSHQueue.#82#val", "DistSSHQueue.#91#val", "DistSSHQueue.#92#val", "DistSSHQueue.#93#val", "DistSSHQueue.#96#val", "DistSSHQueue.#97#val", "DistSSHQueue.#98#val", "DistSSHQueue.#Job#1", "DistSSHQueue.#Queue#72", "DistSSHQueue.#_allocate_queue_leaf!#77", "DistSSHQueue.#_drop_unit_files#246", "DistSSHQueue.#_enable_disp#64", "DistSSHQueue.#_enable_unit_path#63", "DistSSHQueue.#_finish!#118", "DistSSHQueue.#_fit_leading_widths#44", "DistSSHQueue.#_forward#269", "DistSSHQueue.#_host_list_assignment#31", "DistSSHQueue.#_job_hosts_disp#43", "DistSSHQueue.#_job_result_disp#42", "DistSSHQueue.#_kit_setup_session#85", "DistSSHQueue.#_maybe_remote_hop#158", "DistSSHQueue.#_pid_record_running#3", "DistSSHQueue.#_print_cli_note#237", "DistSSHQueue.#_print_job_detail#45", "DistSSHQueue.#_print_would_remove#255", "DistSSHQueue.#_queue_command#272", "DistSSHQueue.#_queue_kit_setup!#91", "DistSSHQueue.#_refuse_unprotected_rsync_path!#196", "DistSSHQueue.#_remote_submit_ticket#159", "DistSSHQueue.#_serve_live_text#56", "DistSSHQueue.#_set_running_kit_meta!#111", "DistSSHQueue.#_ssh_disp#232", "DistSSHQueue.#_status_watch_cli#228", "DistSSHQueue.#_store_lock_stale#4", "DistSSHQueue.#_submit!#97", "DistSSHQueue.#_unique_prefixes#49", "DistSSHQueue.#_up_run_on_hosts#252", "DistSSHQueue.#_watch_paint!#222", "DistSSHQueue.#bootout_serve_unit!#248", "DistSSHQueue.#check_fetch_dest#214", "DistSSHQueue.#config_path#24", "DistSSHQueue.#default_bindir#249", "DistSSHQueue.#default_config_body#37", "DistSSHQueue.#default_config_path#22", "DistSSHQueue.#default_queue_env#20", "DistSSHQueue.#default_queue_env_dir#19", "DistSSHQueue.#default_store_path#2", "DistSSHQueue.#drop_unwritten_stage!#178", "DistSSHQueue.#enabled_serve_command#21", "DistSSHQueue.#fetch_cli#215", "DistSSHQueue.#fetch_dest_target#213", "DistSSHQueue.#fetch_relpath#201", "DistSSHQueue.#fetch_source#206", "DistSSHQueue.#hop_print#182", "DistSSHQueue.#job_project#75", "DistSSHQueue.#launch_agent_path#240", "DistSSHQueue.#legacy_launch_agent_path#242", "DistSSHQueue.#legacy_systemd_user_path#243", "DistSSHQueue.#load_config#25", "DistSSHQueue.#local_fetch_dest#212", "DistSSHQueue.#maybe_remote#157", "DistSSHQueue.#orphan_stage_path#177", "DistSSHQueue.#peel_status_watch_interval#219", "DistSSHQueue.#pool_sizing_assumption_line#234", "DistSSHQueue.#print_jobs_table#46", "DistSSHQueue.#print_list_host#233", "DistSSHQueue.#print_pool_inventory_notes!#235", "DistSSHQueue.#print_present#54", "DistSSHQueue.#print_queue_usage#50", "DistSSHQueue.#print_removed#53", "DistSSHQueue.#print_rsync_start#195", "DistSSHQueue.#print_serve_already#60", "DistSSHQueue.#print_serve_banner#55", "DistSSHQueue.#print_serve_gone#59", "DistSSHQueue.#print_serve_idle_note#58", "DistSSHQueue.#print_serve_live_line#57", "DistSSHQueue.#print_serve_started#61", "DistSSHQueue.#print_serve_stopped#62", "DistSSHQueue.#print_status_table#47", "DistSSHQueue.#print_watch_compact#65", "DistSSHQueue.#print_watch_frame#48", "DistSSHQueue.#print_wrapped_row#41", "DistSSHQueue.#print_wrapped_tail#40", "DistSSHQueue.#print_wrote#52", "DistSSHQueue.#queue_data_dir#23", "DistSSHQueue.#queue_version_skew_warning#153", "DistSSHQueue.#remote_dispatch#152", "DistSSHQueue.#remote_stage_root#176", "DistSSHQueue.#remove_pid_file_if!#14", "DistSSHQueue.#require_queue_target!#151", "DistSSHQueue.#resolve_fetch_job_id#210", "DistSSHQueue.#rsync_from_qhost!#198", "DistSSHQueue.#rsync_from_qhost_file!#199", "DistSSHQueue.#rsync_to_qhost!#197", "DistSSHQueue.#run_kit#82", "DistSSHQueue.#serve!#139", "DistSSHQueue.#serve#150", "DistSSHQueue.#service_install#244", "DistSSHQueue.#service_uninstall#245", "DistSSHQueue.#setup#251", "DistSSHQueue.#show_status#220", "DistSSHQueue.#show_usage#267", "DistSSHQueue.#stage_rsync_files_from_opts#193", "DistSSHQueue.#stage_rsync_push_opts#192", "DistSSHQueue.#status_watch_hop_tty#221", "DistSSHQueue.#stop_cli#266", "DistSSHQueue.#submit!#107", "DistSSHQueue.#submit!#108", "DistSSHQueue.#submit_hosts#166", "DistSSHQueue.#submit_kind#175", "DistSSHQueue.#submit_kit_bag#167", "DistSSHQueue.#systemd_user_path#241", "DistSSHQueue.#teardown#256", "DistSSHQueue.#teardown_main#262", "DistSSHQueue.#teardown_store#253", "DistSSHQueue.#teardown_targets#254", "DistSSHQueue.#warn_child_submit_reach#239", "DistSSHQueue.#warn_worker_julia#238", "DistSSHQueue.#watch!#224", "DistSSHQueue.#wrapper_path#250", "DistSSHQueue.#write_config_template#38", "DistSSHQueue.#write_submit_ticket#211", "DistSSHQueue._allocate_queue_leaf!", "DistSSHQueue._append_warning_dicts!", "DistSSHQueue._argv", "DistSSHQueue._bin_julia_version", "DistSSHQueue._break_run", "DistSSHQueue._cfg_env_string", "DistSSHQueue._clip_cols", "DistSSHQueue._config_env_skipped", "DistSSHQueue._confirm_path_quote", "DistSSHQueue._drop_unit_files", "DistSSHQueue._dt", "DistSSHQueue._enable_disp", "DistSSHQueue._enable_unit_path", "DistSSHQueue._entry_direct", "DistSSHQueue._entry_forward", "DistSSHQueue._fetch", "DistSSHQueue._fetch_note_field", "DistSSHQueue._fetch_note_sanitize", "DistSSHQueue._finish!", "DistSSHQueue._fit_leading_widths", "DistSSHQueue._flock!", "DistSSHQueue._forget_absent_config_env!", "DistSSHQueue._forward", "DistSSHQueue._help_command_argv", "DistSSHQueue._host_assignment_span", "DistSSHQueue._host_list_assignment", "DistSSHQueue._host_name_disp", "DistSSHQueue._host_token", "DistSSHQueue._human_span", "DistSSHQueue._id_chrome", "DistSSHQueue._index_id", "DistSSHQueue._index_state", "DistSSHQueue._is_interrupt", "DistSSHQueue._job_cancel_flag", "DistSSHQueue._job_cancel_requested", "DistSSHQueue._job_elapsed_disp", "DistSSHQueue._job_error_disp", "DistSSHQueue._job_has_warnings", "DistSSHQueue._job_hosts_disp", "DistSSHQueue._job_id8", "DistSSHQueue._job_phase_disp", "DistSSHQueue._job_project_disp", "DistSSHQueue._job_queued_disp", "DistSSHQueue._job_result_disp", "DistSSHQueue._job_row", "DistSSHQueue._job_script_disp", "DistSSHQueue._job_state_disp", "DistSSHQueue._job_still_running", "DistSSHQueue._job_wall_disp", "DistSSHQueue._jobs_store_bad_row", "DistSSHQueue._jobs_store_bad_toml", "DistSSHQueue._jobs_store_not_list", "DistSSHQueue._jobs_table", "DistSSHQueue._join_serve_spin!", "DistSSHQueue._julia_diff_kind", "DistSSHQueue._julia_diff_word", "DistSSHQueue._juliaup_default_disp", "DistSSHQueue._kit_env_on", "DistSSHQueue._kit_flag_takes_value", "DistSSHQueue._kit_setup_child_tokens", "DistSSHQueue._kit_setup_session", "DistSSHQueue._launch_agent_serves", "DistSSHQueue._launchctl_load", "DistSSHQueue._launchctl_unload", "DistSSHQueue._list_host_fit", "DistSSHQueue._live_running", "DistSSHQueue._load_from_store!", "DistSSHQueue._macos_ps_start_key", "DistSSHQueue._main", "DistSSHQueue._manifest_absent_project", "DistSSHQueue._maybe_remote_hop", "DistSSHQueue._missing_path_io", "DistSSHQueue._note_serve_interval!", "DistSSHQueue._own_start_key", "DistSSHQueue._padded_clip", "DistSSHQueue._parse_pid_text", "DistSSHQueue._payload", "DistSSHQueue._persist!", "DistSSHQueue._persist_job_warnings!", "DistSSHQueue._pid_julia_version", "DistSSHQueue._pid_record_from", "DistSSHQueue._pid_record_running", "DistSSHQueue._plist_program_args", "DistSSHQueue._positive_n", "DistSSHQueue._print_cli_note", "DistSSHQueue._print_fetch_notes", "DistSSHQueue._print_job_detail", "DistSSHQueue._print_would_remove", "DistSSHQueue._process_alive_fallback", "DistSSHQueue._process_start_key", "DistSSHQueue._project_has_deps", "DistSSHQueue._q_cell", "DistSSHQueue._q_short", "DistSSHQueue._q_state_color", "DistSSHQueue._qhost_disp", "DistSSHQueue._queue_command", "DistSSHQueue._queue_env_on", "DistSSHQueue._queue_kit_setup!", "DistSSHQueue._queue_local_instantiate!", "DistSSHQueue._queue_tables", "DistSSHQueue._read_local_rsync_version", "DistSSHQueue._read_lock_pid", "DistSSHQueue._read_lock_record", "DistSSHQueue._read_serve_record", "DistSSHQueue._record_kit_setup_logs!", "DistSSHQueue._record_manifest_absent!", "DistSSHQueue._refuse_directory_store!", "DistSSHQueue._refuse_fetch_dot_part!", "DistSSHQueue._refuse_unprotected_rsync_path!", "DistSSHQueue._regex_literal", "DistSSHQueue._reject_subcommand", "DistSSHQueue._rel_under", "DistSSHQueue._remote_julia_full", "DistSSHQueue._remote_submit_ticket", "DistSSHQueue._require_kit_setup_ok!", "DistSSHQueue._require_written_hosts!", "DistSSHQueue._resolve_id", "DistSSHQueue._row_dt", "DistSSHQueue._row_dt_text", "DistSSHQueue._row_string", "DistSSHQueue._row_text", "DistSSHQueue._rsync_bin", "DistSSHQueue._running", "DistSSHQueue._running_copy", "DistSSHQueue._serve_can_draw", "DistSSHQueue._serve_disp", "DistSSHQueue._serve_from_args", "DistSSHQueue._serve_julia_baseline", "DistSSHQueue._serve_live_job", "DistSSHQueue._serve_live_text", "DistSSHQueue._set_job_phase!", "DistSSHQueue._set_qhost", "DistSSHQueue._set_queue_env", "DistSSHQueue._set_running_kit_meta!", "DistSSHQueue._set_running_result_path!", "DistSSHQueue._set_status_watch_mode", "DistSSHQueue._setup_warning_dicts", "DistSSHQueue._source_from_queue_env", "DistSSHQueue._split_posix_words", "DistSSHQueue._ssh_disp", "DistSSHQueue._ssh_mkdir!", "DistSSHQueue._ssh_transport", "DistSSHQueue._stage_cleanup_store", "DistSSHQueue._stage_extra_paths", "DistSSHQueue._stage_rel_is_queue", "DistSSHQueue._stage_rsync_files_from!", "DistSSHQueue._start!", "DistSSHQueue._start_key", "DistSSHQueue._start_text", "DistSSHQueue._status_watch_cli", "DistSSHQueue._steal_store_lock", "DistSSHQueue._store_lock_pid_path", "DistSSHQueue._store_lock_stale", "DistSSHQueue._store_lock_start_path", "DistSSHQueue._store_mtime", "DistSSHQueue._store_path_disp", "DistSSHQueue._store_proc_lock", "DistSSHQueue._string_paths", "DistSSHQueue._submit!", "DistSSHQueue._submit_requests_help", "DistSSHQueue._systemd_disable", "DistSSHQueue._systemd_enable", "DistSSHQueue._systemd_reload", "DistSSHQueue._tail_jobs", "DistSSHQueue._teardown", "DistSSHQueue._teardown_confirm_set", "DistSSHQueue._teardown_granted", "DistSSHQueue._throw_if_cancelled", "DistSSHQueue._toml_bracket_delta", "DistSSHQueue._unique_prefixes", "DistSSHQueue._up_run_on_hosts", "DistSSHQueue._utc_to_local", "DistSSHQueue._warn_dead_kit_pid!", "DistSSHQueue._warn_jobs_not_list", "DistSSHQueue._warn_plan_once!", "DistSSHQueue._warn_teardown_symlinks!", "DistSSHQueue._warn_tilde_store!", "DistSSHQueue._watch_paint!", "DistSSHQueue._watch_redraw!", "DistSSHQueue._with_pkg_depots", "DistSSHQueue._with_store", "DistSSHQueue._with_store_dir_lock", "DistSSHQueue._wrap_words", "DistSSHQueue._write_span", "DistSSHQueue._xml_unescape", "DistSSHQueue._yes_from_config", "DistSSHQueue.add_host_cli", "DistSSHQueue.add_host_names!", "DistSSHQueue.adopt_running!", "DistSSHQueue.append_hop_forwarded_env!", "DistSSHQueue.apply_config_env!", "DistSSHQueue.as_host_allow", "DistSSHQueue.bootout_serve_unit!", "DistSSHQueue.cancel!", "DistSSHQueue.cancel_cli", "DistSSHQueue.capture_kit_run_toml!", "DistSSHQueue.check_fetch_dest", "DistSSHQueue.claim_serve!", "DistSSHQueue.clamp_pool_slots", "DistSSHQueue.clear_stopped!", "DistSSHQueue.cli_cols", "DistSSHQueue.coalesce_queue_env", "DistSSHQueue.coalesce_remote", "DistSSHQueue.command_help_argv", "DistSSHQueue.config_host_names", "DistSSHQueue.config_path", "DistSSHQueue.config_store_path", "DistSSHQueue.copy_setup_logs!", "DistSSHQueue.default_bindir", "DistSSHQueue.default_config_body", "DistSSHQueue.default_config_path", "DistSSHQueue.default_fetch_dest_rel", "DistSSHQueue.default_julia_bin", "DistSSHQueue.default_queue_env", "DistSSHQueue.default_queue_env_dir", "DistSSHQueue.default_remote_julia", "DistSSHQueue.default_store_path", "DistSSHQueue.detached_serve_script", "DistSSHQueue.disable_main", "DistSSHQueue.drop_nothing", "DistSSHQueue.drop_unwritten_stage!", "DistSSHQueue.enable_main", "DistSSHQueue.enabled_serve_command", "DistSSHQueue.ensure_serve!", "DistSSHQueue.execute_kwargs", "DistSSHQueue.expand_pool_submit_hosts", "DistSSHQueue.extract_remote_opts", "DistSSHQueue.fail_stale_running!", "DistSSHQueue.fetch_cli", "DistSSHQueue.fetch_dest", "DistSSHQueue.fetch_dest_from_rel", "DistSSHQueue.fetch_dest_is_fresh", "DistSSHQueue.fetch_dest_target", "DistSSHQueue.fetch_extra_leaf", "DistSSHQueue.fetch_extra_paths", "DistSSHQueue.fetch_extra_specs", "DistSSHQueue.fetch_hidden_dest", "DistSSHQueue.fetch_hidden_dests", "DistSSHQueue.fetch_live_primary", "DistSSHQueue.fetch_marker_path", "DistSSHQueue.fetch_relpath", "DistSSHQueue.fetch_source", "DistSSHQueue.fetch_source_expr", "DistSSHQueue.fetch_source_primary", "DistSSHQueue.help_verb_line", "DistSSHQueue.hop_julia_prefix", "DistSSHQueue.hop_print", "DistSSHQueue.host_allow_item", "DistSSHQueue.hosts_toml_line", "DistSSHQueue.is_kit_execute_kind", "DistSSHQueue.is_qhost_stage_project", "DistSSHQueue.job", "DistSSHQueue.job_from_toml", "DistSSHQueue.job_id_from_submit_stdout", "DistSSHQueue.job_id_from_ticket_text", "DistSSHQueue.job_project", "DistSSHQueue.job_to_toml", "DistSSHQueue.jobs", "DistSSHQueue.kit_artifact_from_run_dir", "DistSSHQueue.kit_artifact_from_sidecar", "DistSSHQueue.kit_child_alive", "DistSSHQueue.kit_kind_from_cli", "DistSSHQueue.kit_kwargs", "DistSSHQueue.kit_output_dir", "DistSSHQueue.kit_parse_args", "DistSSHQueue.kit_result_path", "DistSSHQueue.kit_run_dir", "DistSSHQueue.kit_run_error_text", "DistSSHQueue.kit_run_toml", "DistSSHQueue.kit_show_usage", "DistSSHQueue.kit_sidecar_dir", "DistSSHQueue.kit_ssh_name", "DistSSHQueue.kit_verb_and_args", "DistSSHQueue.kit_worker_root", "DistSSHQueue.launch_agent_path", "DistSSHQueue.launch_agent_plist", "DistSSHQueue.launch_agent_store_path", "DistSSHQueue.leading_hop_span", "DistSSHQueue.legacy_launch_agent_path", "DistSSHQueue.legacy_systemd_user_path", "DistSSHQueue.list_host_cli", "DistSSHQueue.load!", "DistSSHQueue.load_config", "DistSSHQueue.load_jobs", "DistSSHQueue.local_fetch_dest", "DistSSHQueue.local_queue_exempt", "DistSSHQueue.local_rsync_version", "DistSSHQueue.looks_like_host_token", "DistSSHQueue.m_package", "DistSSHQueue.maybe_remote", "DistSSHQueue.new_job_id", "DistSSHQueue.orphan_stage_path", "DistSSHQueue.output_dir_from_run_toml", "DistSSHQueue.parse_cli_interval", "DistSSHQueue.parse_fetch_source", "DistSSHQueue.parse_host_caps", "DistSSHQueue.parse_qhost_token", "DistSSHQueue.path_has_distsshkit", "DistSSHQueue.path_has_kit_artifact_leaf", "DistSSHQueue.path_has_queue_leaf", "DistSSHQueue.path_inside_prefix", "DistSSHQueue.path_under_project", "DistSSHQueue.peel_fetch_opts", "DistSSHQueue.peel_status_watch_interval", "DistSSHQueue.peel_status_watch_verbosity", "DistSSHQueue.peel_submit_pool", "DistSSHQueue.pkg_depots_for_instantiate", "DistSSHQueue.plan_cli", "DistSSHQueue.pool_cli", "DistSSHQueue.pool_sizing_assumption_line", "DistSSHQueue.posix_dir", "DistSSHQueue.print_inspect_submit_template", "DistSSHQueue.print_jobs_table", "DistSSHQueue.print_list_host", "DistSSHQueue.print_pool_inventory_notes!", "DistSSHQueue.print_present", "DistSSHQueue.print_queue_client_usage", "DistSSHQueue.print_queue_command_usage", "DistSSHQueue.print_queue_host_usage", "DistSSHQueue.print_queue_plan_submit", "DistSSHQueue.print_queue_pool_submit", "DistSSHQueue.print_queue_root_usage", "DistSSHQueue.print_queue_size_submit", "DistSSHQueue.print_queue_usage", "DistSSHQueue.print_removed", "DistSSHQueue.print_rsync_start", "DistSSHQueue.print_serve_already", "DistSSHQueue.print_serve_banner", "DistSSHQueue.print_serve_gone", "DistSSHQueue.print_serve_idle_note", "DistSSHQueue.print_serve_live_line", "DistSSHQueue.print_serve_started", "DistSSHQueue.print_serve_stopped", "DistSSHQueue.print_setup_usage", "DistSSHQueue.print_status_table", "DistSSHQueue.print_teardown_usage", "DistSSHQueue.print_up_usage", "DistSSHQueue.print_watch_compact", "DistSSHQueue.print_watch_frame", "DistSSHQueue.print_wrapped_row", "DistSSHQueue.print_wrapped_tail", "DistSSHQueue.print_wrote", "DistSSHQueue.println_queue_version", "DistSSHQueue.process_alive", "DistSSHQueue.qhost_default_from_env", "DistSSHQueue.qhost_display_from_env", "DistSSHQueue.queue_command_help", "DistSSHQueue.queue_data_dir", "DistSSHQueue.queue_explain_error", "DistSSHQueue.queue_host_homedir", "DistSSHQueue.queue_host_machine", "DistSSHQueue.queue_source_env", "DistSSHQueue.queue_version_from_line", "DistSSHQueue.queue_version_skew_warning", "DistSSHQueue.read_fetch_marker", "DistSSHQueue.read_jobs", "DistSSHQueue.reap_serve_tag!", "DistSSHQueue.record_test_serve_pid!", "DistSSHQueue.reject_host_token!", "DistSSHQueue.reject_qhost_on_local", "DistSSHQueue.reload_keep_live!", "DistSSHQueue.remote_dispatch", "DistSSHQueue.remote_main_expr", "DistSSHQueue.remote_pkg_prelude", "DistSSHQueue.remote_stage_root", "DistSSHQueue.remove_host_cli", "DistSSHQueue.remove_host_names!", "DistSSHQueue.remove_pid_file", "DistSSHQueue.remove_pid_file_if!", "DistSSHQueue.replace_or_insert_hosts_line", "DistSSHQueue.require_fetch_extra_leaf", "DistSSHQueue.require_fetchable_leaf", "DistSSHQueue.require_kit_ok", "DistSSHQueue.require_queue_target!", "DistSSHQueue.resolve_fetch_job_id", "DistSSHQueue.resolve_into_path", "DistSSHQueue.resolve_script", "DistSSHQueue.rewrite_one_path", "DistSSHQueue.rewrite_payload_paths", "DistSSHQueue.rsync_from_qhost!", "DistSSHQueue.rsync_from_qhost_file!", "DistSSHQueue.rsync_progress_on", "DistSSHQueue.rsync_to_qhost!", "DistSSHQueue.run_kit", "DistSSHQueue.same_fetch_job", "DistSSHQueue.save_jobs", "DistSSHQueue.serve", "DistSSHQueue.serve!", "DistSSHQueue.serve_alive", "DistSSHQueue.serve_cli", "DistSSHQueue.serve_command_from_unit", "DistSSHQueue.serve_pid", "DistSSHQueue.serve_stopped", "DistSSHQueue.serve_tag", "DistSSHQueue.service_install", "DistSSHQueue.service_main", "DistSSHQueue.service_uninstall", "DistSSHQueue.set_stopped!", "DistSSHQueue.settle_lost_kit_child!", "DistSSHQueue.setup", "DistSSHQueue.setup_main", "DistSSHQueue.sh_single_quote", "DistSSHQueue.should_stage", "DistSSHQueue.should_submit_ticket", "DistSSHQueue.show_status", "DistSSHQueue.show_usage", "DistSSHQueue.size_cli", "DistSSHQueue.size_hosts_from_allow", "DistSSHQueue.sorted_kit_ssh_names", "DistSSHQueue.spawn_detached_serve!", "DistSSHQueue.ssh_g_connect", "DistSSHQueue.stage_env_and_project", "DistSSHQueue.stage_job_tree!", "DistSSHQueue.stage_rsync_files_from_opts", "DistSSHQueue.stage_rsync_push_opts", "DistSSHQueue.stage_send_list", "DistSSHQueue.staging_enabled", "DistSSHQueue.status_cli", "DistSSHQueue.status_watch_hop_tty", "DistSSHQueue.step!", "DistSSHQueue.stop_cli", "DistSSHQueue.stop_serve!", "DistSSHQueue.store_flock_path", "DistSSHQueue.store_path", "DistSSHQueue.store_pid_julia_path", "DistSSHQueue.store_pid_path", "DistSSHQueue.store_pid_start_path", "DistSSHQueue.store_stop_path", "DistSSHQueue.submit_cli", "DistSSHQueue.submit_kind", "DistSSHQueue.submit_ticket_dir", "DistSSHQueue.submit_ticket_path", "DistSSHQueue.systemd_user_path", "DistSSHQueue.systemd_user_unit", "DistSSHQueue.teardown", "DistSSHQueue.teardown_main", "DistSSHQueue.teardown_store", "DistSSHQueue.teardown_targets", "DistSSHQueue.teardown_yes", "DistSSHQueue.toml_string_array", "DistSSHQueue.up_main", "DistSSHQueue.warn_child_submit_reach", "DistSSHQueue.warn_remote_queue_version!", "DistSSHQueue.warn_worker_julia", "DistSSHQueue.watch!", "DistSSHQueue.watch_cli", "DistSSHQueue.watch_ticks_from_env", "DistSSHQueue.with_config_lock", "DistSSHQueue.with_fresh_fetch_dest", "DistSSHQueue.with_serve_tag", "DistSSHQueue.with_store_lock", "DistSSHQueue.wrapper_path", "DistSSHQueue.write_config_template", "DistSSHQueue.write_fetch_marker!", "DistSSHQueue.write_host_names!", "DistSSHQueue.write_pid_file", "DistSSHQueue.write_serve_unit", "DistSSHQueue.write_submit_ticket", "DistSSHQueue.xml_escape"]
+total_ms = 1521.2
+wall_sec = 1.1649830341339111
+args = ["submit", "go", "parent:1", "{work}/hello.jl"]
+main_ms = 733.0
+
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue.main), Array{String, 1}}"
+    recompile = false
+    ms = 733.0
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(Core.kwcall), NamedTuple{(:kind, :quiet, :verbosity), Tuple{Symbol, Bool, String}}, typeof(DistSSHQueue.submit!), DistSSHQueue.Queue, String, Array{String, 1}}"
+    recompile = false
+    ms = 296.4
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._print_manifest_absent!), Base.PipeEndpoint, Base.Dict{String, Any}}"
+    recompile = false
+    ms = 89.8
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{DistSSHQueue.var\"#_entry_forward##0#_entry_forward##1\"{DistSSHQueue.var\"#_argv##0#_argv##1\"{typeof(DistSSHQueue.submit_main)}, String, Bool, Bool}, DistSSHQueue.CliContext, Array{String, 1}}"
+    recompile = false
+    ms = 69.9
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(Core.kwcall), NamedTuple{(:kind,), Tuple{Symbol}}, typeof(DistSSHQueue.submit_kit_bag), NamedTuple{(:help, :show_version, :cli_session, :script_path, :script_args, :hosts, :sync, :output_dir, :julia, :repeat), Tuple{Bool, Bool, DistSSHRun.KitCliSession, String, Array{String, 1}, Array{String, 1}, Vararg{Nothing, 4}}}}"
+    recompile = false
+    ms = 59.1
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue.script_arg), String, String}"
+    recompile = false
+    ms = 47.8
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue.reject_worker_root_collision!), Array{DistSSHQueue.Job, 1}, String, Base.Dict{String, Any}}"
+    recompile = false
+    ms = 41.6
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue.parse_host_cap), String}"
+    recompile = false
+    ms = 37.4
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(Core.kwcall), NamedTuple{(:kind,), Tuple{Symbol}}, typeof(DistSSHQueue.submit_hosts), NamedTuple{(:help, :show_version, :cli_session, :script_path, :script_args, :hosts, :sync, :output_dir, :julia, :repeat), Tuple{Bool, Bool, DistSSHRun.KitCliSession, String, Array{String, 1}, Array{String, 1}, Vararg{Nothing, 4}}}}"
+    recompile = false
+    ms = 13.0
+
+    [commands.buckets.Base]
+    ms = 107.9
+    count = 29
+
+    [commands.buckets.stdlib]
+    ms = 24.4
+    count = 18
+
+    [commands.buckets.DistSSHKit]
+    ms = 0.0
+    count = 0
+
+    [commands.buckets.DistSSHRun]
+    ms = 0.8999999999999999
+    count = 3
+
+    [commands.buckets.DistSSHQueue]
+    ms = 1387.9999999999998
+    count = 9
+
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue.main), Array{String, 1}}"
+    recompile = false
+    ms = 733.0
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(Core.kwcall), NamedTuple{(:kind, :quiet, :verbosity), Tuple{Symbol, Bool, String}}, typeof(DistSSHQueue.submit!), DistSSHQueue.Queue, String, Array{String, 1}}"
+    recompile = false
+    ms = 296.4
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._print_manifest_absent!), Base.PipeEndpoint, Base.Dict{String, Any}}"
+    recompile = false
+    ms = 89.8
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{Base.var\"##lock#448\", Base.UseDefaultToken, typeof(Base.lock), DistSSHQueue.var\"#with_store_lock##0#with_store_lock##1\"{DistSSHQueue.var\"#103#104\"{DistSSHQueue.Queue, Symbol, String, Base.Dict{String, Any}, Base.Dict{String, Union{Nothing, Int64}}, Array{String, 1}}, String}, Base.ReentrantLock}"
+    recompile = false
+    ms = 70.6
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{DistSSHQueue.var\"#_entry_forward##0#_entry_forward##1\"{DistSSHQueue.var\"#_argv##0#_argv##1\"{typeof(DistSSHQueue.submit_main)}, String, Bool, Bool}, DistSSHQueue.CliContext, Array{String, 1}}"
+    recompile = false
+    ms = 69.9
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(Core.kwcall), NamedTuple{(:kind,), Tuple{Symbol}}, typeof(DistSSHQueue.submit_kit_bag), NamedTuple{(:help, :show_version, :cli_session, :script_path, :script_args, :hosts, :sync, :output_dir, :julia, :repeat), Tuple{Bool, Bool, DistSSHRun.KitCliSession, String, Array{String, 1}, Array{String, 1}, Vararg{Nothing, 4}}}}"
+    recompile = false
+    ms = 59.1
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue.script_arg), String, String}"
+    recompile = false
+    ms = 47.8
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue.reject_worker_root_collision!), Array{DistSSHQueue.Job, 1}, String, Base.Dict{String, Any}}"
+    recompile = false
+    ms = 41.6
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue.parse_host_cap), String}"
+    recompile = false
+    ms = 37.4
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(Core.kwcall), NamedTuple{(:kind,), Tuple{Symbol}}, typeof(DistSSHQueue.submit_hosts), NamedTuple{(:help, :show_version, :cli_session, :script_path, :script_args, :hosts, :sync, :output_dir, :julia, :repeat), Tuple{Bool, Bool, DistSSHRun.KitCliSession, String, Array{String, 1}, Array{String, 1}, Vararg{Nothing, 4}}}}"
+    recompile = false
+    ms = 13.0
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{Type{Pair{A, B} where B where A}, String, Array{String, 1}}"
+    recompile = false
+    ms = 5.1
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.merge), NamedTuple{(:kind,), Tuple{Symbol}}, NamedTuple{(:quiet, :verbosity), Tuple{Bool, String}}}"
+    recompile = false
+    ms = 4.1
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.iterate), Array{Base.Dict{String, Any}, 1}, Int64}"
+    recompile = false
+    ms = 3.7
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.iterate), Array{Base.Dict{String, Any}, 1}}"
+    recompile = false
+    ms = 3.5
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.getproperty), Pair{Symbol, Nothing}, Symbol}"
+    recompile = false
+    ms = 3.1
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Core.kwcall), NamedTuple{(:indent, :first_block, :sorted, :by, :inline_tables, :comments), Tuple{Int64, Bool, Bool, typeof(Base.identity), Base.IdSet{Base.Dict{String, V} where V}, Nothing}}, typeof(Base.TOML.Printer.print_table), typeof(Base.identity), Base.IOStream, Base.Dict{String, Any}, Array{String, 1}}"
+    recompile = false
+    ms = 2.8
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{typeof(Distributed.flush_gc_msgs)}"
+    recompile = false
+    ms = 2.7
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.should_use_main_entrypoint)}"
+    recompile = true
+    ms = 2.6
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{Core.TypeEgal{Pair{A, B} where B where A}, String, Bool}"
+    recompile = false
+    ms = 2.6
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.TOML.Printer.printvalue), typeof(Base.identity), Base.IOStream, Bool, Bool}"
+    recompile = false
+    ms = 2.5
+[[commands]]
+count = 45
+name = "watch"
+exit = 0
+walls_sec = [1.6713149547576904, 1.2238388061523438, 1.2240681648254395]
+missed = ["DistSSHQueue.#101#val", "DistSSHQueue.#102#val", "DistSSHQueue.#103#val", "DistSSHQueue.#104#val", "DistSSHQueue.#105#val", "DistSSHQueue.#106#val", "DistSSHQueue.#107#val", "DistSSHQueue.#108#val", "DistSSHQueue.#109#val", "DistSSHQueue.#110#val", "DistSSHQueue.#111#val", "DistSSHQueue.#112#val", "DistSSHQueue.#113#val", "DistSSHQueue.#114#val", "DistSSHQueue.#115#val", "DistSSHQueue.#116#val", "DistSSHQueue.#118#val", "DistSSHQueue.#119#val", "DistSSHQueue.#120#val", "DistSSHQueue.#121#val", "DistSSHQueue.#122#val", "DistSSHQueue.#123#val", "DistSSHQueue.#124#val", "DistSSHQueue.#125#val", "DistSSHQueue.#126#val", "DistSSHQueue.#127#val", "DistSSHQueue.#128#val", "DistSSHQueue.#129#val", "DistSSHQueue.#130#val", "DistSSHQueue.#131#val", "DistSSHQueue.#132#val", "DistSSHQueue.#141#val", "DistSSHQueue.#142#val", "DistSSHQueue.#145#val", "DistSSHQueue.#147#val", "DistSSHQueue.#148#val", "DistSSHQueue.#149#val", "DistSSHQueue.#156#val", "DistSSHQueue.#157#val", "DistSSHQueue.#158#val", "DistSSHQueue.#159#val", "DistSSHQueue.#160#val", "DistSSHQueue.#161#val", "DistSSHQueue.#162#val", "DistSSHQueue.#163#val", "DistSSHQueue.#164#val", "DistSSHQueue.#165#val", "DistSSHQueue.#166#val", "DistSSHQueue.#167#val", "DistSSHQueue.#168#val", "DistSSHQueue.#169#val", "DistSSHQueue.#170#val", "DistSSHQueue.#173#val", "DistSSHQueue.#174#val", "DistSSHQueue.#175#val", "DistSSHQueue.#176#val", "DistSSHQueue.#177#val", "DistSSHQueue.#178#val", "DistSSHQueue.#179#val", "DistSSHQueue.#18#val", "DistSSHQueue.#181#val", "DistSSHQueue.#182#val", "DistSSHQueue.#183#val", "DistSSHQueue.#184#val", "DistSSHQueue.#185#val", "DistSSHQueue.#186#val", "DistSSHQueue.#187#val", "DistSSHQueue.#188#val", "DistSSHQueue.#189#val", "DistSSHQueue.#19#val", "DistSSHQueue.#190#val", "DistSSHQueue.#191#val", "DistSSHQueue.#192#val", "DistSSHQueue.#193#val", "DistSSHQueue.#197#val", "DistSSHQueue.#198#val", "DistSSHQueue.#199#val", "DistSSHQueue.#20#val", "DistSSHQueue.#200#val", "DistSSHQueue.#201#val", "DistSSHQueue.#202#val", "DistSSHQueue.#203#val", "DistSSHQueue.#206#val", "DistSSHQueue.#208#val", "DistSSHQueue.#209#val", "DistSSHQueue.#21#val", "DistSSHQueue.#210#val", "DistSSHQueue.#211#val", "DistSSHQueue.#212#val", "DistSSHQueue.#213#val", "DistSSHQueue.#215#val", "DistSSHQueue.#216#val", "DistSSHQueue.#217#val", "DistSSHQueue.#218#val", "DistSSHQueue.#219#val", "DistSSHQueue.#22#val", "DistSSHQueue.#220#val", "DistSSHQueue.#221#val", "DistSSHQueue.#222#val", "DistSSHQueue.#229#val", "DistSSHQueue.#230#val", "DistSSHQueue.#231#val", "DistSSHQueue.#232#val", "DistSSHQueue.#235#val", "DistSSHQueue.#237#val", "DistSSHQueue.#238#val", "DistSSHQueue.#239#val", "DistSSHQueue.#24#val", "DistSSHQueue.#240#val", "DistSSHQueue.#241#val", "DistSSHQueue.#242#val", "DistSSHQueue.#243#val", "DistSSHQueue.#244#val", "DistSSHQueue.#245#val", "DistSSHQueue.#246#val", "DistSSHQueue.#247#val", "DistSSHQueue.#248#val", "DistSSHQueue.#249#val", "DistSSHQueue.#25#val", "DistSSHQueue.#250#val", "DistSSHQueue.#253#val", "DistSSHQueue.#254#val", "DistSSHQueue.#259#val", "DistSSHQueue.#260#val", "DistSSHQueue.#261#val", "DistSSHQueue.#27#val", "DistSSHQueue.#28#val", "DistSSHQueue.#29#val", "DistSSHQueue.#30#val", "DistSSHQueue.#32#val", "DistSSHQueue.#33#val", "DistSSHQueue.#34#val", "DistSSHQueue.#35#val", "DistSSHQueue.#36#val", "DistSSHQueue.#37#val", "DistSSHQueue.#38#val", "DistSSHQueue.#39#val", "DistSSHQueue.#40#val", "DistSSHQueue.#41#val", "DistSSHQueue.#42#val", "DistSSHQueue.#43#val", "DistSSHQueue.#44#val", "DistSSHQueue.#45#val", "DistSSHQueue.#46#val", "DistSSHQueue.#47#val", "DistSSHQueue.#48#val", "DistSSHQueue.#49#val", "DistSSHQueue.#50#val", "DistSSHQueue.#51#val", "DistSSHQueue.#52#val", "DistSSHQueue.#53#val", "DistSSHQueue.#54#val", "DistSSHQueue.#55#val", "DistSSHQueue.#56#val", "DistSSHQueue.#57#val", "DistSSHQueue.#58#val", "DistSSHQueue.#59#val", "DistSSHQueue.#60#val", "DistSSHQueue.#62#val", "DistSSHQueue.#63#val", "DistSSHQueue.#64#val", "DistSSHQueue.#65#val", "DistSSHQueue.#66#val", "DistSSHQueue.#67#val", "DistSSHQueue.#68#val", "DistSSHQueue.#70#val", "DistSSHQueue.#72#val", "DistSSHQueue.#73#val", "DistSSHQueue.#74#val", "DistSSHQueue.#75#val", "DistSSHQueue.#78#val", "DistSSHQueue.#80#val", "DistSSHQueue.#81#val", "DistSSHQueue.#82#val", "DistSSHQueue.#91#val", "DistSSHQueue.#92#val", "DistSSHQueue.#93#val", "DistSSHQueue.#96#val", "DistSSHQueue.#97#val", "DistSSHQueue.#98#val", "DistSSHQueue.#Job#1", "DistSSHQueue.#Queue#72", "DistSSHQueue.#_allocate_queue_leaf!#77", "DistSSHQueue.#_drop_unit_files#246", "DistSSHQueue.#_enable_disp#64", "DistSSHQueue.#_enable_unit_path#63", "DistSSHQueue.#_finish!#118", "DistSSHQueue.#_fit_leading_widths#44", "DistSSHQueue.#_forward#269", "DistSSHQueue.#_host_list_assignment#31", "DistSSHQueue.#_job_hosts_disp#43", "DistSSHQueue.#_job_result_disp#42", "DistSSHQueue.#_kit_setup_session#85", "DistSSHQueue.#_maybe_remote_hop#158", "DistSSHQueue.#_pid_record_running#3", "DistSSHQueue.#_print_cli_note#237", "DistSSHQueue.#_print_job_detail#45", "DistSSHQueue.#_print_would_remove#255", "DistSSHQueue.#_queue_command#272", "DistSSHQueue.#_queue_kit_setup!#91", "DistSSHQueue.#_refuse_unprotected_rsync_path!#196", "DistSSHQueue.#_remote_submit_ticket#159", "DistSSHQueue.#_serve_live_text#56", "DistSSHQueue.#_set_running_kit_meta!#111", "DistSSHQueue.#_ssh_disp#232", "DistSSHQueue.#_status_watch_cli#228", "DistSSHQueue.#_store_lock_stale#4", "DistSSHQueue.#_submit!#97", "DistSSHQueue.#_unique_prefixes#49", "DistSSHQueue.#_up_run_on_hosts#252", "DistSSHQueue.#_watch_paint!#222", "DistSSHQueue.#bootout_serve_unit!#248", "DistSSHQueue.#check_fetch_dest#214", "DistSSHQueue.#config_path#24", "DistSSHQueue.#default_bindir#249", "DistSSHQueue.#default_config_body#37", "DistSSHQueue.#default_config_path#22", "DistSSHQueue.#default_queue_env#20", "DistSSHQueue.#default_queue_env_dir#19", "DistSSHQueue.#default_store_path#2", "DistSSHQueue.#drop_unwritten_stage!#178", "DistSSHQueue.#enabled_serve_command#21", "DistSSHQueue.#fetch_cli#215", "DistSSHQueue.#fetch_dest_target#213", "DistSSHQueue.#fetch_relpath#201", "DistSSHQueue.#fetch_source#206", "DistSSHQueue.#hop_print#182", "DistSSHQueue.#job_project#75", "DistSSHQueue.#launch_agent_path#240", "DistSSHQueue.#legacy_launch_agent_path#242", "DistSSHQueue.#legacy_systemd_user_path#243", "DistSSHQueue.#load_config#25", "DistSSHQueue.#local_fetch_dest#212", "DistSSHQueue.#maybe_remote#157", "DistSSHQueue.#orphan_stage_path#177", "DistSSHQueue.#peel_status_watch_interval#219", "DistSSHQueue.#pool_sizing_assumption_line#234", "DistSSHQueue.#print_jobs_table#46", "DistSSHQueue.#print_list_host#233", "DistSSHQueue.#print_pool_inventory_notes!#235", "DistSSHQueue.#print_present#54", "DistSSHQueue.#print_queue_usage#50", "DistSSHQueue.#print_removed#53", "DistSSHQueue.#print_rsync_start#195", "DistSSHQueue.#print_serve_already#60", "DistSSHQueue.#print_serve_banner#55", "DistSSHQueue.#print_serve_gone#59", "DistSSHQueue.#print_serve_idle_note#58", "DistSSHQueue.#print_serve_live_line#57", "DistSSHQueue.#print_serve_started#61", "DistSSHQueue.#print_serve_stopped#62", "DistSSHQueue.#print_status_table#47", "DistSSHQueue.#print_watch_compact#65", "DistSSHQueue.#print_watch_frame#48", "DistSSHQueue.#print_wrapped_row#41", "DistSSHQueue.#print_wrapped_tail#40", "DistSSHQueue.#print_wrote#52", "DistSSHQueue.#queue_data_dir#23", "DistSSHQueue.#queue_version_skew_warning#153", "DistSSHQueue.#remote_dispatch#152", "DistSSHQueue.#remote_stage_root#176", "DistSSHQueue.#remove_pid_file_if!#14", "DistSSHQueue.#require_queue_target!#151", "DistSSHQueue.#resolve_fetch_job_id#210", "DistSSHQueue.#rsync_from_qhost!#198", "DistSSHQueue.#rsync_from_qhost_file!#199", "DistSSHQueue.#rsync_to_qhost!#197", "DistSSHQueue.#run_kit#82", "DistSSHQueue.#serve!#139", "DistSSHQueue.#serve#150", "DistSSHQueue.#service_install#244", "DistSSHQueue.#service_uninstall#245", "DistSSHQueue.#setup#251", "DistSSHQueue.#show_status#220", "DistSSHQueue.#show_usage#267", "DistSSHQueue.#stage_rsync_files_from_opts#193", "DistSSHQueue.#stage_rsync_push_opts#192", "DistSSHQueue.#status_watch_hop_tty#221", "DistSSHQueue.#stop_cli#266", "DistSSHQueue.#submit!#107", "DistSSHQueue.#submit!#108", "DistSSHQueue.#submit_hosts#166", "DistSSHQueue.#submit_kind#175", "DistSSHQueue.#submit_kit_bag#167", "DistSSHQueue.#systemd_user_path#241", "DistSSHQueue.#teardown#256", "DistSSHQueue.#teardown_main#262", "DistSSHQueue.#teardown_store#253", "DistSSHQueue.#teardown_targets#254", "DistSSHQueue.#warn_child_submit_reach#239", "DistSSHQueue.#warn_worker_julia#238", "DistSSHQueue.#watch!#224", "DistSSHQueue.#wrapper_path#250", "DistSSHQueue.#write_config_template#38", "DistSSHQueue.#write_submit_ticket#211", "DistSSHQueue._allocate_queue_leaf!", "DistSSHQueue._append_warning_dicts!", "DistSSHQueue._argv", "DistSSHQueue._bin_julia_version", "DistSSHQueue._break_run", "DistSSHQueue._cfg_env_string", "DistSSHQueue._clip_cols", "DistSSHQueue._config_env_skipped", "DistSSHQueue._confirm_path_quote", "DistSSHQueue._drop_unit_files", "DistSSHQueue._dt", "DistSSHQueue._enable_disp", "DistSSHQueue._enable_unit_path", "DistSSHQueue._entry_direct", "DistSSHQueue._entry_forward", "DistSSHQueue._fetch", "DistSSHQueue._fetch_note_field", "DistSSHQueue._fetch_note_sanitize", "DistSSHQueue._finish!", "DistSSHQueue._fit_leading_widths", "DistSSHQueue._flock!", "DistSSHQueue._forget_absent_config_env!", "DistSSHQueue._forward", "DistSSHQueue._help_command_argv", "DistSSHQueue._host_assignment_span", "DistSSHQueue._host_list_assignment", "DistSSHQueue._host_name_disp", "DistSSHQueue._host_token", "DistSSHQueue._human_span", "DistSSHQueue._id_chrome", "DistSSHQueue._index_id", "DistSSHQueue._index_state", "DistSSHQueue._is_interrupt", "DistSSHQueue._job_cancel_flag", "DistSSHQueue._job_cancel_requested", "DistSSHQueue._job_elapsed_disp", "DistSSHQueue._job_error_disp", "DistSSHQueue._job_has_warnings", "DistSSHQueue._job_hosts_disp", "DistSSHQueue._job_id8", "DistSSHQueue._job_phase_disp", "DistSSHQueue._job_project_disp", "DistSSHQueue._job_queued_disp", "DistSSHQueue._job_result_disp", "DistSSHQueue._job_row", "DistSSHQueue._job_script_disp", "DistSSHQueue._job_state_disp", "DistSSHQueue._job_still_running", "DistSSHQueue._job_wall_disp", "DistSSHQueue._jobs_store_bad_row", "DistSSHQueue._jobs_store_bad_toml", "DistSSHQueue._jobs_store_not_list", "DistSSHQueue._jobs_table", "DistSSHQueue._join_serve_spin!", "DistSSHQueue._julia_diff_kind", "DistSSHQueue._julia_diff_word", "DistSSHQueue._juliaup_default_disp", "DistSSHQueue._kit_env_on", "DistSSHQueue._kit_flag_takes_value", "DistSSHQueue._kit_setup_child_tokens", "DistSSHQueue._kit_setup_session", "DistSSHQueue._launch_agent_serves", "DistSSHQueue._launchctl_load", "DistSSHQueue._launchctl_unload", "DistSSHQueue._list_host_fit", "DistSSHQueue._live_running", "DistSSHQueue._load_from_store!", "DistSSHQueue._macos_ps_start_key", "DistSSHQueue._main", "DistSSHQueue._manifest_absent_project", "DistSSHQueue._maybe_remote_hop", "DistSSHQueue._missing_path_io", "DistSSHQueue._note_serve_interval!", "DistSSHQueue._own_start_key", "DistSSHQueue._padded_clip", "DistSSHQueue._parse_pid_text", "DistSSHQueue._payload", "DistSSHQueue._persist!", "DistSSHQueue._persist_job_warnings!", "DistSSHQueue._pid_julia_version", "DistSSHQueue._pid_record_from", "DistSSHQueue._pid_record_running", "DistSSHQueue._plist_program_args", "DistSSHQueue._positive_n", "DistSSHQueue._print_cli_note", "DistSSHQueue._print_fetch_notes", "DistSSHQueue._print_job_detail", "DistSSHQueue._print_manifest_absent!", "DistSSHQueue._print_would_remove", "DistSSHQueue._process_alive_fallback", "DistSSHQueue._process_start_key", "DistSSHQueue._project_has_deps", "DistSSHQueue._q_short", "DistSSHQueue._q_state_color", "DistSSHQueue._qhost_disp", "DistSSHQueue._queue_command", "DistSSHQueue._queue_env_on", "DistSSHQueue._queue_kit_setup!", "DistSSHQueue._queue_local_instantiate!", "DistSSHQueue._queue_tables", "DistSSHQueue._read_local_rsync_version", "DistSSHQueue._read_lock_pid", "DistSSHQueue._read_lock_record", "DistSSHQueue._read_serve_record", "DistSSHQueue._record_kit_setup_logs!", "DistSSHQueue._record_manifest_absent!", "DistSSHQueue._refuse_directory_store!", "DistSSHQueue._refuse_fetch_dot_part!", "DistSSHQueue._refuse_unprotected_rsync_path!", "DistSSHQueue._regex_literal", "DistSSHQueue._reject_subcommand", "DistSSHQueue._rel_under", "DistSSHQueue._remote_julia_full", "DistSSHQueue._remote_submit_ticket", "DistSSHQueue._require_kit_setup_ok!", "DistSSHQueue._require_written_hosts!", "DistSSHQueue._resolve_id", "DistSSHQueue._row_dt", "DistSSHQueue._row_dt_text", "DistSSHQueue._row_string", "DistSSHQueue._row_text", "DistSSHQueue._rsync_bin", "DistSSHQueue._running", "DistSSHQueue._running_copy", "DistSSHQueue._serve_can_draw", "DistSSHQueue._serve_disp", "DistSSHQueue._serve_from_args", "DistSSHQueue._serve_julia_baseline", "DistSSHQueue._serve_live_job", "DistSSHQueue._serve_live_text", "DistSSHQueue._set_job_phase!", "DistSSHQueue._set_qhost", "DistSSHQueue._set_queue_env", "DistSSHQueue._set_running_kit_meta!", "DistSSHQueue._set_running_result_path!", "DistSSHQueue._setup_warning_dicts", "DistSSHQueue._source_from_queue_env", "DistSSHQueue._split_posix_words", "DistSSHQueue._ssh_disp", "DistSSHQueue._ssh_mkdir!", "DistSSHQueue._ssh_transport", "DistSSHQueue._stage_cleanup_store", "DistSSHQueue._stage_extra_paths", "DistSSHQueue._stage_rel_is_queue", "DistSSHQueue._stage_rsync_files_from!", "DistSSHQueue._start!", "DistSSHQueue._start_key", "DistSSHQueue._start_text", "DistSSHQueue._status_watch_cli", "DistSSHQueue._steal_store_lock", "DistSSHQueue._store_lock_pid_path", "DistSSHQueue._store_lock_stale", "DistSSHQueue._store_lock_start_path", "DistSSHQueue._store_mtime", "DistSSHQueue._store_path_disp", "DistSSHQueue._store_proc_lock", "DistSSHQueue._string_paths", "DistSSHQueue._submit!", "DistSSHQueue._submit_requests_help", "DistSSHQueue._systemd_disable", "DistSSHQueue._systemd_enable", "DistSSHQueue._systemd_reload", "DistSSHQueue._tail_jobs", "DistSSHQueue._teardown", "DistSSHQueue._teardown_confirm_set", "DistSSHQueue._teardown_granted", "DistSSHQueue._throw_if_cancelled", "DistSSHQueue._toml_bracket_delta", "DistSSHQueue._unique_prefixes", "DistSSHQueue._up_run_on_hosts", "DistSSHQueue._utc_to_local", "DistSSHQueue._warn_dead_kit_pid!", "DistSSHQueue._warn_jobs_not_list", "DistSSHQueue._warn_plan_once!", "DistSSHQueue._warn_teardown_symlinks!", "DistSSHQueue._warn_tilde_store!", "DistSSHQueue._watch_paint!", "DistSSHQueue._watch_redraw!", "DistSSHQueue._with_pkg_depots", "DistSSHQueue._with_store", "DistSSHQueue._with_store_dir_lock", "DistSSHQueue._wrap_words", "DistSSHQueue._write_span", "DistSSHQueue._xml_unescape", "DistSSHQueue._yes_from_config", "DistSSHQueue.add_host_cli", "DistSSHQueue.add_host_names!", "DistSSHQueue.adopt_running!", "DistSSHQueue.append_hop_forwarded_env!", "DistSSHQueue.apply_config_env!", "DistSSHQueue.as_host_allow", "DistSSHQueue.bootout_serve_unit!", "DistSSHQueue.cancel!", "DistSSHQueue.cancel_cli", "DistSSHQueue.capture_kit_run_toml!", "DistSSHQueue.check_fetch_dest", "DistSSHQueue.claim_serve!", "DistSSHQueue.clamp_pool_slots", "DistSSHQueue.clear_stopped!", "DistSSHQueue.cli_cols", "DistSSHQueue.coalesce_queue_env", "DistSSHQueue.coalesce_remote", "DistSSHQueue.command_help_argv", "DistSSHQueue.config_host_names", "DistSSHQueue.config_path", "DistSSHQueue.config_store_path", "DistSSHQueue.copy_setup_logs!", "DistSSHQueue.default_bindir", "DistSSHQueue.default_config_body", "DistSSHQueue.default_config_path", "DistSSHQueue.default_fetch_dest_rel", "DistSSHQueue.default_julia_bin", "DistSSHQueue.default_queue_env", "DistSSHQueue.default_queue_env_dir", "DistSSHQueue.default_remote_julia", "DistSSHQueue.default_store_path", "DistSSHQueue.detached_serve_script", "DistSSHQueue.disable_main", "DistSSHQueue.drop_nothing", "DistSSHQueue.drop_unwritten_stage!", "DistSSHQueue.enable_main", "DistSSHQueue.enabled_serve_command", "DistSSHQueue.ensure_serve!", "DistSSHQueue.execute_kwargs", "DistSSHQueue.expand_pool_submit_hosts", "DistSSHQueue.extract_remote_opts", "DistSSHQueue.fail_stale_running!", "DistSSHQueue.fetch_cli", "DistSSHQueue.fetch_dest", "DistSSHQueue.fetch_dest_from_rel", "DistSSHQueue.fetch_dest_is_fresh", "DistSSHQueue.fetch_dest_target", "DistSSHQueue.fetch_extra_leaf", "DistSSHQueue.fetch_extra_paths", "DistSSHQueue.fetch_extra_specs", "DistSSHQueue.fetch_hidden_dest", "DistSSHQueue.fetch_hidden_dests", "DistSSHQueue.fetch_live_primary", "DistSSHQueue.fetch_marker_path", "DistSSHQueue.fetch_relpath", "DistSSHQueue.fetch_source", "DistSSHQueue.fetch_source_expr", "DistSSHQueue.fetch_source_primary", "DistSSHQueue.help_verb_line", "DistSSHQueue.hop_julia_prefix", "DistSSHQueue.hop_print", "DistSSHQueue.host_allow_item", "DistSSHQueue.hosts_toml_line", "DistSSHQueue.is_kit_execute_kind", "DistSSHQueue.is_qhost_stage_project", "DistSSHQueue.job", "DistSSHQueue.job_from_toml", "DistSSHQueue.job_id_from_submit_stdout", "DistSSHQueue.job_id_from_ticket_text", "DistSSHQueue.job_project", "DistSSHQueue.job_to_toml", "DistSSHQueue.jobs", "DistSSHQueue.kit_artifact_from_run_dir", "DistSSHQueue.kit_artifact_from_sidecar", "DistSSHQueue.kit_child_alive", "DistSSHQueue.kit_kind_from_cli", "DistSSHQueue.kit_kwargs", "DistSSHQueue.kit_output_dir", "DistSSHQueue.kit_parse_args", "DistSSHQueue.kit_result_path", "DistSSHQueue.kit_run_dir", "DistSSHQueue.kit_run_error_text", "DistSSHQueue.kit_run_toml", "DistSSHQueue.kit_show_usage", "DistSSHQueue.kit_sidecar_dir", "DistSSHQueue.kit_ssh_name", "DistSSHQueue.kit_verb_and_args", "DistSSHQueue.kit_worker_root", "DistSSHQueue.launch_agent_path", "DistSSHQueue.launch_agent_plist", "DistSSHQueue.launch_agent_store_path", "DistSSHQueue.leading_hop_span", "DistSSHQueue.legacy_launch_agent_path", "DistSSHQueue.legacy_systemd_user_path", "DistSSHQueue.list_host_cli", "DistSSHQueue.load!", "DistSSHQueue.load_config", "DistSSHQueue.load_jobs", "DistSSHQueue.local_fetch_dest", "DistSSHQueue.local_queue_exempt", "DistSSHQueue.local_rsync_version", "DistSSHQueue.looks_like_host_token", "DistSSHQueue.m_package", "DistSSHQueue.maybe_remote", "DistSSHQueue.new_job_id", "DistSSHQueue.orphan_stage_path", "DistSSHQueue.output_dir_from_run_toml", "DistSSHQueue.parse_cli_interval", "DistSSHQueue.parse_fetch_source", "DistSSHQueue.parse_host_cap", "DistSSHQueue.parse_host_caps", "DistSSHQueue.parse_qhost_token", "DistSSHQueue.path_has_distsshkit", "DistSSHQueue.path_has_kit_artifact_leaf", "DistSSHQueue.path_has_queue_leaf", "DistSSHQueue.path_inside_prefix", "DistSSHQueue.path_under_project", "DistSSHQueue.peel_fetch_opts", "DistSSHQueue.peel_status_watch_interval", "DistSSHQueue.peel_status_watch_verbosity", "DistSSHQueue.peel_submit_pool", "DistSSHQueue.pkg_depots_for_instantiate", "DistSSHQueue.plan_cli", "DistSSHQueue.pool_cli", "DistSSHQueue.pool_sizing_assumption_line", "DistSSHQueue.posix_dir", "DistSSHQueue.print_inspect_submit_template", "DistSSHQueue.print_jobs_table", "DistSSHQueue.print_list_host", "DistSSHQueue.print_pool_inventory_notes!", "DistSSHQueue.print_present", "DistSSHQueue.print_queue_client_usage", "DistSSHQueue.print_queue_command_usage", "DistSSHQueue.print_queue_host_usage", "DistSSHQueue.print_queue_plan_submit", "DistSSHQueue.print_queue_pool_submit", "DistSSHQueue.print_queue_root_usage", "DistSSHQueue.print_queue_size_submit", "DistSSHQueue.print_queue_usage", "DistSSHQueue.print_removed", "DistSSHQueue.print_rsync_start", "DistSSHQueue.print_serve_already", "DistSSHQueue.print_serve_banner", "DistSSHQueue.print_serve_gone", "DistSSHQueue.print_serve_idle_note", "DistSSHQueue.print_serve_live_line", "DistSSHQueue.print_serve_started", "DistSSHQueue.print_serve_stopped", "DistSSHQueue.print_setup_usage", "DistSSHQueue.print_status_table", "DistSSHQueue.print_teardown_usage", "DistSSHQueue.print_up_usage", "DistSSHQueue.print_watch_compact", "DistSSHQueue.print_watch_frame", "DistSSHQueue.print_wrapped_row", "DistSSHQueue.print_wrapped_tail", "DistSSHQueue.print_wrote", "DistSSHQueue.println_queue_version", "DistSSHQueue.process_alive", "DistSSHQueue.qhost_default_from_env", "DistSSHQueue.qhost_display_from_env", "DistSSHQueue.queue_command_help", "DistSSHQueue.queue_data_dir", "DistSSHQueue.queue_explain_error", "DistSSHQueue.queue_host_homedir", "DistSSHQueue.queue_host_machine", "DistSSHQueue.queue_source_env", "DistSSHQueue.queue_version_from_line", "DistSSHQueue.queue_version_skew_warning", "DistSSHQueue.read_fetch_marker", "DistSSHQueue.read_jobs", "DistSSHQueue.reap_serve_tag!", "DistSSHQueue.record_test_serve_pid!", "DistSSHQueue.reject_host_token!", "DistSSHQueue.reject_qhost_on_local", "DistSSHQueue.reject_worker_root_collision!", "DistSSHQueue.reload_keep_live!", "DistSSHQueue.remote_dispatch", "DistSSHQueue.remote_main_expr", "DistSSHQueue.remote_pkg_prelude", "DistSSHQueue.remote_stage_root", "DistSSHQueue.remove_host_cli", "DistSSHQueue.remove_host_names!", "DistSSHQueue.remove_pid_file", "DistSSHQueue.remove_pid_file_if!", "DistSSHQueue.replace_or_insert_hosts_line", "DistSSHQueue.require_fetch_extra_leaf", "DistSSHQueue.require_fetchable_leaf", "DistSSHQueue.require_kit_ok", "DistSSHQueue.require_queue_target!", "DistSSHQueue.resolve_fetch_job_id", "DistSSHQueue.resolve_into_path", "DistSSHQueue.resolve_script", "DistSSHQueue.rewrite_one_path", "DistSSHQueue.rewrite_payload_paths", "DistSSHQueue.rsync_from_qhost!", "DistSSHQueue.rsync_from_qhost_file!", "DistSSHQueue.rsync_progress_on", "DistSSHQueue.rsync_to_qhost!", "DistSSHQueue.run_kit", "DistSSHQueue.same_fetch_job", "DistSSHQueue.save_jobs", "DistSSHQueue.script_arg", "DistSSHQueue.serve", "DistSSHQueue.serve!", "DistSSHQueue.serve_alive", "DistSSHQueue.serve_cli", "DistSSHQueue.serve_command_from_unit", "DistSSHQueue.serve_pid", "DistSSHQueue.serve_stopped", "DistSSHQueue.serve_tag", "DistSSHQueue.service_install", "DistSSHQueue.service_main", "DistSSHQueue.service_uninstall", "DistSSHQueue.set_stopped!", "DistSSHQueue.settle_lost_kit_child!", "DistSSHQueue.setup", "DistSSHQueue.setup_main", "DistSSHQueue.sh_single_quote", "DistSSHQueue.should_stage", "DistSSHQueue.should_submit_ticket", "DistSSHQueue.show_status", "DistSSHQueue.show_usage", "DistSSHQueue.size_cli", "DistSSHQueue.size_hosts_from_allow", "DistSSHQueue.sorted_kit_ssh_names", "DistSSHQueue.spawn_detached_serve!", "DistSSHQueue.ssh_g_connect", "DistSSHQueue.stage_env_and_project", "DistSSHQueue.stage_job_tree!", "DistSSHQueue.stage_rsync_files_from_opts", "DistSSHQueue.stage_rsync_push_opts", "DistSSHQueue.stage_send_list", "DistSSHQueue.staging_enabled", "DistSSHQueue.status_cli", "DistSSHQueue.status_watch_hop_tty", "DistSSHQueue.step!", "DistSSHQueue.stop_cli", "DistSSHQueue.stop_serve!", "DistSSHQueue.store_flock_path", "DistSSHQueue.store_path", "DistSSHQueue.store_pid_julia_path", "DistSSHQueue.store_pid_path", "DistSSHQueue.store_pid_start_path", "DistSSHQueue.store_stop_path", "DistSSHQueue.submit!", "DistSSHQueue.submit_cli", "DistSSHQueue.submit_hosts", "DistSSHQueue.submit_kind", "DistSSHQueue.submit_kit_bag", "DistSSHQueue.submit_main", "DistSSHQueue.submit_ticket_dir", "DistSSHQueue.submit_ticket_path", "DistSSHQueue.systemd_user_path", "DistSSHQueue.systemd_user_unit", "DistSSHQueue.teardown", "DistSSHQueue.teardown_main", "DistSSHQueue.teardown_store", "DistSSHQueue.teardown_targets", "DistSSHQueue.teardown_yes", "DistSSHQueue.toml_string_array", "DistSSHQueue.up_main", "DistSSHQueue.warn_child_submit_reach", "DistSSHQueue.warn_remote_queue_version!", "DistSSHQueue.warn_worker_julia", "DistSSHQueue.watch_ticks_from_env", "DistSSHQueue.with_config_lock", "DistSSHQueue.with_fresh_fetch_dest", "DistSSHQueue.with_serve_tag", "DistSSHQueue.with_store_lock", "DistSSHQueue.wrapper_path", "DistSSHQueue.write_config_template", "DistSSHQueue.write_fetch_marker!", "DistSSHQueue.write_host_names!", "DistSSHQueue.write_pid_file", "DistSSHQueue.write_serve_unit", "DistSSHQueue.write_submit_ticket", "DistSSHQueue.xml_escape"]
+total_ms = 1356.8000000000004
+wall_sec = 1.2240681648254395
+args = ["watch", "--interval", "0.05"]
+main_ms = 673.2
+
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue.main), Array{String, 1}}"
+    recompile = false
+    ms = 673.2
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{DistSSHQueue.var\"##watch!#224\", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(DistSSHQueue.watch!), String}"
+    recompile = false
+    ms = 410.3
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{DistSSHQueue.var\"#_entry_forward##0#_entry_forward##1\"{DistSSHQueue.var\"#_argv##0#_argv##1\"{typeof(DistSSHQueue.watch_cli)}, String, Bool, Bool}, DistSSHQueue.CliContext, Array{String, 1}}"
+    recompile = false
+    ms = 230.3
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(Core.kwcall), NamedTuple{(:interval, :ticks, :quiet, :tail, :verbose), Tuple{Float64, Int64, Bool, Nothing, Bool}}, typeof(DistSSHQueue.watch!), String}"
+    recompile = false
+    ms = 8.7
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._q_cell), String, Int64}"
+    recompile = false
+    ms = 0.7
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._set_status_watch_mode), Nothing, Symbol}"
+    recompile = false
+    ms = 0.4
+
+    [commands.buckets.Base]
+    ms = 14.500000000000004
+    count = 20
+
+    [commands.buckets.stdlib]
+    ms = 17.7
+    count = 16
+
+    [commands.buckets.DistSSHKit]
+    ms = 0.0
+    count = 0
+
+    [commands.buckets.DistSSHRun]
+    ms = 1.0
+    count = 3
+
+    [commands.buckets.DistSSHQueue]
+    ms = 1323.6000000000001
+    count = 6
+
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue.main), Array{String, 1}}"
+    recompile = false
+    ms = 673.2
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{DistSSHQueue.var\"##watch!#224\", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(DistSSHQueue.watch!), String}"
+    recompile = false
+    ms = 410.3
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{DistSSHQueue.var\"#_entry_forward##0#_entry_forward##1\"{DistSSHQueue.var\"#_argv##0#_argv##1\"{typeof(DistSSHQueue.watch_cli)}, String, Bool, Bool}, DistSSHQueue.CliContext, Array{String, 1}}"
+    recompile = false
+    ms = 230.3
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(Core.kwcall), NamedTuple{(:interval, :ticks, :quiet, :tail, :verbose), Tuple{Float64, Int64, Bool, Nothing, Bool}}, typeof(DistSSHQueue.watch!), String}"
+    recompile = false
+    ms = 8.7
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{Core.TypeEgal{NamedTuple{(:verb, :default_interval), T} where T<:Tuple}, Tuple{String, Float64}}"
+    recompile = false
+    ms = 5.1
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.should_use_main_entrypoint)}"
+    recompile = true
+    ms = 2.6
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{typeof(Distributed.flush_gc_msgs)}"
+    recompile = false
+    ms = 2.4
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{Base.var\"##192#193\", Vararg{Any, 4}}"
+    recompile = true
+    ms = 2.3
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base._array_for), Core.TypeEgal{DistSSHQueue.Job}, Array{Any, 1}, Base.HasShape{1}}"
+    recompile = false
+    ms = 1.4
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.getproperty), NamedTuple{(:quiet, :progress, :verbose, :yes, :hosts_file, :hosts, :version), Tuple{Tuple{String, String}, Tuple{String}, Tuple{String}, Tuple{String, String}, Tuple{String}, Tuple{String}, Tuple{String, String, String}}}, Symbol}"
+    recompile = false
+    ms = 1.0
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{Core.TypeEgal{NamedTuple{(:roles,), T} where T<:Tuple}, Tuple{Bool}}"
+    recompile = false
+    ms = 0.9
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.getproperty), Base.Order.By{DistSSHQueue.var\"#sorted_kit_ssh_names##0#sorted_kit_ssh_names##1\", Base.Order.ForwardOrdering}, Symbol}"
+    recompile = false
+    ms = 0.9
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{Core.TypeEgal{NamedTuple{(:force, :recursive), T} where T<:Tuple}, Tuple{Bool, Bool}}"
+    recompile = false
+    ms = 0.9
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{Base.var\"##lock#448\", Base.UseDefaultToken, typeof(Base.lock), Distributed.var\"#start_gc_msgs_task##2#start_gc_msgs_task##3\", Base.ReentrantLock}"
+    recompile = false
+    ms = 0.9
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base._cshp), Int64, Tuple{Bool}, Tuple{}, Tuple{Int64}}"
+    recompile = false
+    ms = 0.8
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.string), Char}"
+    recompile = false
+    ms = 0.8
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{Core.TypeEgal{NamedTuple{(:source,), T} where T<:Tuple}, Tuple{String}}"
+    recompile = false
+    ms = 0.7
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._q_cell), String, Int64}"
+    recompile = false
+    ms = 0.7
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{Core.TypeEgal{Base.LinearIndices{N, R} where R<:Tuple{Vararg{Base.AbstractUnitRange{Int64}, N}} where N}, Array{DistSSHQueue.Job, 1}}"
+    recompile = false
+    ms = 0.7
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.in), Tuple{String, String, String}}"
+    recompile = false
+    ms = 0.6
+[[commands]]
+count = 62
+name = "cancel"
+exit = 0
+walls_sec = [2.2596700191497803, 1.2569761276245117, 1.274902105331421]
+missed = ["DistSSHQueue.#101#val", "DistSSHQueue.#102#val", "DistSSHQueue.#103#val", "DistSSHQueue.#104#val", "DistSSHQueue.#105#val", "DistSSHQueue.#106#val", "DistSSHQueue.#107#val", "DistSSHQueue.#108#val", "DistSSHQueue.#109#val", "DistSSHQueue.#110#val", "DistSSHQueue.#111#val", "DistSSHQueue.#112#val", "DistSSHQueue.#113#val", "DistSSHQueue.#114#val", "DistSSHQueue.#115#val", "DistSSHQueue.#116#val", "DistSSHQueue.#118#val", "DistSSHQueue.#119#val", "DistSSHQueue.#120#val", "DistSSHQueue.#121#val", "DistSSHQueue.#122#val", "DistSSHQueue.#123#val", "DistSSHQueue.#124#val", "DistSSHQueue.#125#val", "DistSSHQueue.#126#val", "DistSSHQueue.#127#val", "DistSSHQueue.#128#val", "DistSSHQueue.#129#val", "DistSSHQueue.#130#val", "DistSSHQueue.#131#val", "DistSSHQueue.#132#val", "DistSSHQueue.#141#val", "DistSSHQueue.#142#val", "DistSSHQueue.#145#val", "DistSSHQueue.#147#val", "DistSSHQueue.#148#val", "DistSSHQueue.#149#val", "DistSSHQueue.#156#val", "DistSSHQueue.#157#val", "DistSSHQueue.#158#val", "DistSSHQueue.#159#val", "DistSSHQueue.#160#val", "DistSSHQueue.#161#val", "DistSSHQueue.#162#val", "DistSSHQueue.#163#val", "DistSSHQueue.#164#val", "DistSSHQueue.#165#val", "DistSSHQueue.#166#val", "DistSSHQueue.#167#val", "DistSSHQueue.#168#val", "DistSSHQueue.#169#val", "DistSSHQueue.#170#val", "DistSSHQueue.#173#val", "DistSSHQueue.#174#val", "DistSSHQueue.#175#val", "DistSSHQueue.#176#val", "DistSSHQueue.#177#val", "DistSSHQueue.#178#val", "DistSSHQueue.#179#val", "DistSSHQueue.#18#val", "DistSSHQueue.#181#val", "DistSSHQueue.#182#val", "DistSSHQueue.#183#val", "DistSSHQueue.#184#val", "DistSSHQueue.#185#val", "DistSSHQueue.#186#val", "DistSSHQueue.#187#val", "DistSSHQueue.#188#val", "DistSSHQueue.#189#val", "DistSSHQueue.#19#val", "DistSSHQueue.#190#val", "DistSSHQueue.#191#val", "DistSSHQueue.#192#val", "DistSSHQueue.#193#val", "DistSSHQueue.#197#val", "DistSSHQueue.#198#val", "DistSSHQueue.#199#val", "DistSSHQueue.#20#val", "DistSSHQueue.#200#val", "DistSSHQueue.#201#val", "DistSSHQueue.#202#val", "DistSSHQueue.#203#val", "DistSSHQueue.#206#val", "DistSSHQueue.#208#val", "DistSSHQueue.#209#val", "DistSSHQueue.#21#val", "DistSSHQueue.#210#val", "DistSSHQueue.#211#val", "DistSSHQueue.#212#val", "DistSSHQueue.#213#val", "DistSSHQueue.#215#val", "DistSSHQueue.#216#val", "DistSSHQueue.#217#val", "DistSSHQueue.#218#val", "DistSSHQueue.#219#val", "DistSSHQueue.#22#val", "DistSSHQueue.#220#val", "DistSSHQueue.#221#val", "DistSSHQueue.#222#val", "DistSSHQueue.#229#val", "DistSSHQueue.#230#val", "DistSSHQueue.#231#val", "DistSSHQueue.#232#val", "DistSSHQueue.#235#val", "DistSSHQueue.#237#val", "DistSSHQueue.#238#val", "DistSSHQueue.#239#val", "DistSSHQueue.#24#val", "DistSSHQueue.#240#val", "DistSSHQueue.#241#val", "DistSSHQueue.#242#val", "DistSSHQueue.#243#val", "DistSSHQueue.#244#val", "DistSSHQueue.#245#val", "DistSSHQueue.#246#val", "DistSSHQueue.#247#val", "DistSSHQueue.#248#val", "DistSSHQueue.#249#val", "DistSSHQueue.#25#val", "DistSSHQueue.#250#val", "DistSSHQueue.#253#val", "DistSSHQueue.#254#val", "DistSSHQueue.#259#val", "DistSSHQueue.#260#val", "DistSSHQueue.#261#val", "DistSSHQueue.#27#val", "DistSSHQueue.#28#val", "DistSSHQueue.#29#val", "DistSSHQueue.#30#val", "DistSSHQueue.#32#val", "DistSSHQueue.#33#val", "DistSSHQueue.#34#val", "DistSSHQueue.#35#val", "DistSSHQueue.#36#val", "DistSSHQueue.#37#val", "DistSSHQueue.#38#val", "DistSSHQueue.#39#val", "DistSSHQueue.#40#val", "DistSSHQueue.#41#val", "DistSSHQueue.#42#val", "DistSSHQueue.#43#val", "DistSSHQueue.#44#val", "DistSSHQueue.#45#val", "DistSSHQueue.#46#val", "DistSSHQueue.#47#val", "DistSSHQueue.#48#val", "DistSSHQueue.#49#val", "DistSSHQueue.#50#val", "DistSSHQueue.#51#val", "DistSSHQueue.#52#val", "DistSSHQueue.#53#val", "DistSSHQueue.#54#val", "DistSSHQueue.#55#val", "DistSSHQueue.#56#val", "DistSSHQueue.#57#val", "DistSSHQueue.#58#val", "DistSSHQueue.#59#val", "DistSSHQueue.#60#val", "DistSSHQueue.#62#val", "DistSSHQueue.#63#val", "DistSSHQueue.#64#val", "DistSSHQueue.#65#val", "DistSSHQueue.#66#val", "DistSSHQueue.#67#val", "DistSSHQueue.#68#val", "DistSSHQueue.#70#val", "DistSSHQueue.#72#val", "DistSSHQueue.#73#val", "DistSSHQueue.#74#val", "DistSSHQueue.#75#val", "DistSSHQueue.#78#val", "DistSSHQueue.#80#val", "DistSSHQueue.#81#val", "DistSSHQueue.#82#val", "DistSSHQueue.#91#val", "DistSSHQueue.#92#val", "DistSSHQueue.#93#val", "DistSSHQueue.#96#val", "DistSSHQueue.#97#val", "DistSSHQueue.#98#val", "DistSSHQueue.#Job#1", "DistSSHQueue.#Queue#72", "DistSSHQueue.#_allocate_queue_leaf!#77", "DistSSHQueue.#_drop_unit_files#246", "DistSSHQueue.#_enable_disp#64", "DistSSHQueue.#_enable_unit_path#63", "DistSSHQueue.#_finish!#118", "DistSSHQueue.#_fit_leading_widths#44", "DistSSHQueue.#_forward#269", "DistSSHQueue.#_host_list_assignment#31", "DistSSHQueue.#_job_hosts_disp#43", "DistSSHQueue.#_job_result_disp#42", "DistSSHQueue.#_kit_setup_session#85", "DistSSHQueue.#_maybe_remote_hop#158", "DistSSHQueue.#_pid_record_running#3", "DistSSHQueue.#_print_cli_note#237", "DistSSHQueue.#_print_job_detail#45", "DistSSHQueue.#_print_would_remove#255", "DistSSHQueue.#_queue_command#272", "DistSSHQueue.#_queue_kit_setup!#91", "DistSSHQueue.#_refuse_unprotected_rsync_path!#196", "DistSSHQueue.#_remote_submit_ticket#159", "DistSSHQueue.#_serve_live_text#56", "DistSSHQueue.#_set_running_kit_meta!#111", "DistSSHQueue.#_ssh_disp#232", "DistSSHQueue.#_status_watch_cli#228", "DistSSHQueue.#_store_lock_stale#4", "DistSSHQueue.#_submit!#97", "DistSSHQueue.#_unique_prefixes#49", "DistSSHQueue.#_up_run_on_hosts#252", "DistSSHQueue.#_watch_paint!#222", "DistSSHQueue.#bootout_serve_unit!#248", "DistSSHQueue.#check_fetch_dest#214", "DistSSHQueue.#config_path#24", "DistSSHQueue.#default_bindir#249", "DistSSHQueue.#default_config_body#37", "DistSSHQueue.#default_config_path#22", "DistSSHQueue.#default_queue_env#20", "DistSSHQueue.#default_queue_env_dir#19", "DistSSHQueue.#default_store_path#2", "DistSSHQueue.#drop_unwritten_stage!#178", "DistSSHQueue.#enabled_serve_command#21", "DistSSHQueue.#fetch_cli#215", "DistSSHQueue.#fetch_dest_target#213", "DistSSHQueue.#fetch_relpath#201", "DistSSHQueue.#fetch_source#206", "DistSSHQueue.#hop_print#182", "DistSSHQueue.#job_project#75", "DistSSHQueue.#launch_agent_path#240", "DistSSHQueue.#legacy_launch_agent_path#242", "DistSSHQueue.#legacy_systemd_user_path#243", "DistSSHQueue.#load_config#25", "DistSSHQueue.#local_fetch_dest#212", "DistSSHQueue.#maybe_remote#157", "DistSSHQueue.#orphan_stage_path#177", "DistSSHQueue.#peel_status_watch_interval#219", "DistSSHQueue.#pool_sizing_assumption_line#234", "DistSSHQueue.#print_jobs_table#46", "DistSSHQueue.#print_list_host#233", "DistSSHQueue.#print_pool_inventory_notes!#235", "DistSSHQueue.#print_present#54", "DistSSHQueue.#print_queue_usage#50", "DistSSHQueue.#print_removed#53", "DistSSHQueue.#print_rsync_start#195", "DistSSHQueue.#print_serve_already#60", "DistSSHQueue.#print_serve_banner#55", "DistSSHQueue.#print_serve_gone#59", "DistSSHQueue.#print_serve_idle_note#58", "DistSSHQueue.#print_serve_live_line#57", "DistSSHQueue.#print_serve_started#61", "DistSSHQueue.#print_serve_stopped#62", "DistSSHQueue.#print_status_table#47", "DistSSHQueue.#print_watch_compact#65", "DistSSHQueue.#print_watch_frame#48", "DistSSHQueue.#print_wrapped_row#41", "DistSSHQueue.#print_wrapped_tail#40", "DistSSHQueue.#print_wrote#52", "DistSSHQueue.#queue_data_dir#23", "DistSSHQueue.#queue_version_skew_warning#153", "DistSSHQueue.#remote_dispatch#152", "DistSSHQueue.#remote_stage_root#176", "DistSSHQueue.#remove_pid_file_if!#14", "DistSSHQueue.#require_queue_target!#151", "DistSSHQueue.#resolve_fetch_job_id#210", "DistSSHQueue.#rsync_from_qhost!#198", "DistSSHQueue.#rsync_from_qhost_file!#199", "DistSSHQueue.#rsync_to_qhost!#197", "DistSSHQueue.#run_kit#82", "DistSSHQueue.#serve!#139", "DistSSHQueue.#serve#150", "DistSSHQueue.#service_install#244", "DistSSHQueue.#service_uninstall#245", "DistSSHQueue.#setup#251", "DistSSHQueue.#show_status#220", "DistSSHQueue.#show_usage#267", "DistSSHQueue.#stage_rsync_files_from_opts#193", "DistSSHQueue.#stage_rsync_push_opts#192", "DistSSHQueue.#status_watch_hop_tty#221", "DistSSHQueue.#stop_cli#266", "DistSSHQueue.#submit!#107", "DistSSHQueue.#submit!#108", "DistSSHQueue.#submit_hosts#166", "DistSSHQueue.#submit_kind#175", "DistSSHQueue.#submit_kit_bag#167", "DistSSHQueue.#systemd_user_path#241", "DistSSHQueue.#teardown#256", "DistSSHQueue.#teardown_main#262", "DistSSHQueue.#teardown_store#253", "DistSSHQueue.#teardown_targets#254", "DistSSHQueue.#warn_child_submit_reach#239", "DistSSHQueue.#warn_worker_julia#238", "DistSSHQueue.#watch!#224", "DistSSHQueue.#wrapper_path#250", "DistSSHQueue.#write_config_template#38", "DistSSHQueue.#write_submit_ticket#211", "DistSSHQueue._allocate_queue_leaf!", "DistSSHQueue._append_warning_dicts!", "DistSSHQueue._argv", "DistSSHQueue._bin_julia_version", "DistSSHQueue._break_run", "DistSSHQueue._cfg_env_string", "DistSSHQueue._clip_cols", "DistSSHQueue._config_env_skipped", "DistSSHQueue._confirm_path_quote", "DistSSHQueue._drop_unit_files", "DistSSHQueue._enable_disp", "DistSSHQueue._enable_unit_path", "DistSSHQueue._entry_direct", "DistSSHQueue._entry_forward", "DistSSHQueue._fetch", "DistSSHQueue._fetch_note_field", "DistSSHQueue._fetch_note_sanitize", "DistSSHQueue._finish!", "DistSSHQueue._fit_leading_widths", "DistSSHQueue._flock!", "DistSSHQueue._forget_absent_config_env!", "DistSSHQueue._forward", "DistSSHQueue._help_command_argv", "DistSSHQueue._host_assignment_span", "DistSSHQueue._host_list_assignment", "DistSSHQueue._host_name_disp", "DistSSHQueue._host_token", "DistSSHQueue._human_span", "DistSSHQueue._id_chrome", "DistSSHQueue._index_id", "DistSSHQueue._index_state", "DistSSHQueue._is_interrupt", "DistSSHQueue._job_cancel_flag", "DistSSHQueue._job_cancel_requested", "DistSSHQueue._job_elapsed_disp", "DistSSHQueue._job_error_disp", "DistSSHQueue._job_has_warnings", "DistSSHQueue._job_hosts_disp", "DistSSHQueue._job_id8", "DistSSHQueue._job_phase_disp", "DistSSHQueue._job_project_disp", "DistSSHQueue._job_queued_disp", "DistSSHQueue._job_result_disp", "DistSSHQueue._job_script_disp", "DistSSHQueue._job_state_disp", "DistSSHQueue._job_still_running", "DistSSHQueue._job_wall_disp", "DistSSHQueue._jobs_store_bad_row", "DistSSHQueue._jobs_store_bad_toml", "DistSSHQueue._jobs_store_not_list", "DistSSHQueue._jobs_table", "DistSSHQueue._join_serve_spin!", "DistSSHQueue._julia_diff_kind", "DistSSHQueue._julia_diff_word", "DistSSHQueue._juliaup_default_disp", "DistSSHQueue._kit_env_on", "DistSSHQueue._kit_flag_takes_value", "DistSSHQueue._kit_setup_child_tokens", "DistSSHQueue._kit_setup_session", "DistSSHQueue._launch_agent_serves", "DistSSHQueue._launchctl_load", "DistSSHQueue._launchctl_unload", "DistSSHQueue._list_host_fit", "DistSSHQueue._live_running", "DistSSHQueue._load_from_store!", "DistSSHQueue._macos_ps_start_key", "DistSSHQueue._main", "DistSSHQueue._manifest_absent_project", "DistSSHQueue._maybe_remote_hop", "DistSSHQueue._missing_path_io", "DistSSHQueue._note_serve_interval!", "DistSSHQueue._own_start_key", "DistSSHQueue._padded_clip", "DistSSHQueue._parse_pid_text", "DistSSHQueue._payload", "DistSSHQueue._persist!", "DistSSHQueue._persist_job_warnings!", "DistSSHQueue._pid_julia_version", "DistSSHQueue._pid_record_from", "DistSSHQueue._pid_record_running", "DistSSHQueue._plist_program_args", "DistSSHQueue._positive_n", "DistSSHQueue._print_cli_note", "DistSSHQueue._print_fetch_notes", "DistSSHQueue._print_job_detail", "DistSSHQueue._print_manifest_absent!", "DistSSHQueue._print_would_remove", "DistSSHQueue._process_alive_fallback", "DistSSHQueue._process_start_key", "DistSSHQueue._project_has_deps", "DistSSHQueue._q_cell", "DistSSHQueue._q_short", "DistSSHQueue._q_state_color", "DistSSHQueue._qhost_disp", "DistSSHQueue._queue_command", "DistSSHQueue._queue_env_on", "DistSSHQueue._queue_kit_setup!", "DistSSHQueue._queue_local_instantiate!", "DistSSHQueue._queue_tables", "DistSSHQueue._read_local_rsync_version", "DistSSHQueue._read_lock_pid", "DistSSHQueue._read_lock_record", "DistSSHQueue._read_serve_record", "DistSSHQueue._record_kit_setup_logs!", "DistSSHQueue._record_manifest_absent!", "DistSSHQueue._refuse_directory_store!", "DistSSHQueue._refuse_fetch_dot_part!", "DistSSHQueue._refuse_unprotected_rsync_path!", "DistSSHQueue._regex_literal", "DistSSHQueue._reject_subcommand", "DistSSHQueue._rel_under", "DistSSHQueue._remote_julia_full", "DistSSHQueue._remote_submit_ticket", "DistSSHQueue._require_kit_setup_ok!", "DistSSHQueue._require_written_hosts!", "DistSSHQueue._resolve_id", "DistSSHQueue._rsync_bin", "DistSSHQueue._running", "DistSSHQueue._running_copy", "DistSSHQueue._serve_can_draw", "DistSSHQueue._serve_disp", "DistSSHQueue._serve_from_args", "DistSSHQueue._serve_julia_baseline", "DistSSHQueue._serve_live_job", "DistSSHQueue._serve_live_text", "DistSSHQueue._set_job_phase!", "DistSSHQueue._set_qhost", "DistSSHQueue._set_queue_env", "DistSSHQueue._set_running_kit_meta!", "DistSSHQueue._set_running_result_path!", "DistSSHQueue._set_status_watch_mode", "DistSSHQueue._setup_warning_dicts", "DistSSHQueue._source_from_queue_env", "DistSSHQueue._split_posix_words", "DistSSHQueue._ssh_disp", "DistSSHQueue._ssh_mkdir!", "DistSSHQueue._ssh_transport", "DistSSHQueue._stage_cleanup_store", "DistSSHQueue._stage_extra_paths", "DistSSHQueue._stage_rel_is_queue", "DistSSHQueue._stage_rsync_files_from!", "DistSSHQueue._start!", "DistSSHQueue._start_key", "DistSSHQueue._start_text", "DistSSHQueue._status_watch_cli", "DistSSHQueue._steal_store_lock", "DistSSHQueue._store_lock_pid_path", "DistSSHQueue._store_lock_stale", "DistSSHQueue._store_lock_start_path", "DistSSHQueue._store_mtime", "DistSSHQueue._store_path_disp", "DistSSHQueue._store_proc_lock", "DistSSHQueue._string_paths", "DistSSHQueue._submit!", "DistSSHQueue._submit_requests_help", "DistSSHQueue._systemd_disable", "DistSSHQueue._systemd_enable", "DistSSHQueue._systemd_reload", "DistSSHQueue._tail_jobs", "DistSSHQueue._teardown", "DistSSHQueue._teardown_confirm_set", "DistSSHQueue._teardown_granted", "DistSSHQueue._throw_if_cancelled", "DistSSHQueue._toml_bracket_delta", "DistSSHQueue._unique_prefixes", "DistSSHQueue._up_run_on_hosts", "DistSSHQueue._utc_to_local", "DistSSHQueue._warn_dead_kit_pid!", "DistSSHQueue._warn_jobs_not_list", "DistSSHQueue._warn_plan_once!", "DistSSHQueue._warn_teardown_symlinks!", "DistSSHQueue._warn_tilde_store!", "DistSSHQueue._watch_paint!", "DistSSHQueue._watch_redraw!", "DistSSHQueue._with_pkg_depots", "DistSSHQueue._with_store", "DistSSHQueue._with_store_dir_lock", "DistSSHQueue._wrap_words", "DistSSHQueue._write_span", "DistSSHQueue._xml_unescape", "DistSSHQueue._yes_from_config", "DistSSHQueue.add_host_cli", "DistSSHQueue.add_host_names!", "DistSSHQueue.adopt_running!", "DistSSHQueue.append_hop_forwarded_env!", "DistSSHQueue.apply_config_env!", "DistSSHQueue.as_host_allow", "DistSSHQueue.bootout_serve_unit!", "DistSSHQueue.cancel!", "DistSSHQueue.capture_kit_run_toml!", "DistSSHQueue.check_fetch_dest", "DistSSHQueue.claim_serve!", "DistSSHQueue.clamp_pool_slots", "DistSSHQueue.clear_stopped!", "DistSSHQueue.cli_cols", "DistSSHQueue.coalesce_queue_env", "DistSSHQueue.coalesce_remote", "DistSSHQueue.command_help_argv", "DistSSHQueue.config_host_names", "DistSSHQueue.config_path", "DistSSHQueue.config_store_path", "DistSSHQueue.copy_setup_logs!", "DistSSHQueue.default_bindir", "DistSSHQueue.default_config_body", "DistSSHQueue.default_config_path", "DistSSHQueue.default_fetch_dest_rel", "DistSSHQueue.default_julia_bin", "DistSSHQueue.default_queue_env", "DistSSHQueue.default_queue_env_dir", "DistSSHQueue.default_remote_julia", "DistSSHQueue.default_store_path", "DistSSHQueue.detached_serve_script", "DistSSHQueue.disable_main", "DistSSHQueue.drop_nothing", "DistSSHQueue.drop_unwritten_stage!", "DistSSHQueue.enable_main", "DistSSHQueue.enabled_serve_command", "DistSSHQueue.ensure_serve!", "DistSSHQueue.execute_kwargs", "DistSSHQueue.expand_pool_submit_hosts", "DistSSHQueue.extract_remote_opts", "DistSSHQueue.fail_stale_running!", "DistSSHQueue.fetch_cli", "DistSSHQueue.fetch_dest", "DistSSHQueue.fetch_dest_from_rel", "DistSSHQueue.fetch_dest_is_fresh", "DistSSHQueue.fetch_dest_target", "DistSSHQueue.fetch_extra_leaf", "DistSSHQueue.fetch_extra_paths", "DistSSHQueue.fetch_extra_specs", "DistSSHQueue.fetch_hidden_dest", "DistSSHQueue.fetch_hidden_dests", "DistSSHQueue.fetch_live_primary", "DistSSHQueue.fetch_marker_path", "DistSSHQueue.fetch_relpath", "DistSSHQueue.fetch_source", "DistSSHQueue.fetch_source_expr", "DistSSHQueue.fetch_source_primary", "DistSSHQueue.help_verb_line", "DistSSHQueue.hop_julia_prefix", "DistSSHQueue.hop_print", "DistSSHQueue.host_allow_item", "DistSSHQueue.hosts_toml_line", "DistSSHQueue.is_kit_execute_kind", "DistSSHQueue.is_qhost_stage_project", "DistSSHQueue.job", "DistSSHQueue.job_from_toml", "DistSSHQueue.job_id_from_submit_stdout", "DistSSHQueue.job_id_from_ticket_text", "DistSSHQueue.job_project", "DistSSHQueue.job_to_toml", "DistSSHQueue.jobs", "DistSSHQueue.kit_artifact_from_run_dir", "DistSSHQueue.kit_artifact_from_sidecar", "DistSSHQueue.kit_child_alive", "DistSSHQueue.kit_kind_from_cli", "DistSSHQueue.kit_kwargs", "DistSSHQueue.kit_output_dir", "DistSSHQueue.kit_parse_args", "DistSSHQueue.kit_result_path", "DistSSHQueue.kit_run_dir", "DistSSHQueue.kit_run_error_text", "DistSSHQueue.kit_run_toml", "DistSSHQueue.kit_show_usage", "DistSSHQueue.kit_sidecar_dir", "DistSSHQueue.kit_ssh_name", "DistSSHQueue.kit_verb_and_args", "DistSSHQueue.kit_worker_root", "DistSSHQueue.launch_agent_path", "DistSSHQueue.launch_agent_plist", "DistSSHQueue.launch_agent_store_path", "DistSSHQueue.leading_hop_span", "DistSSHQueue.legacy_launch_agent_path", "DistSSHQueue.legacy_systemd_user_path", "DistSSHQueue.list_host_cli", "DistSSHQueue.load!", "DistSSHQueue.load_config", "DistSSHQueue.load_jobs", "DistSSHQueue.local_fetch_dest", "DistSSHQueue.local_queue_exempt", "DistSSHQueue.local_rsync_version", "DistSSHQueue.looks_like_host_token", "DistSSHQueue.m_package", "DistSSHQueue.maybe_remote", "DistSSHQueue.new_job_id", "DistSSHQueue.orphan_stage_path", "DistSSHQueue.output_dir_from_run_toml", "DistSSHQueue.parse_cli_interval", "DistSSHQueue.parse_fetch_source", "DistSSHQueue.parse_host_cap", "DistSSHQueue.parse_host_caps", "DistSSHQueue.parse_qhost_token", "DistSSHQueue.path_has_distsshkit", "DistSSHQueue.path_has_kit_artifact_leaf", "DistSSHQueue.path_has_queue_leaf", "DistSSHQueue.path_inside_prefix", "DistSSHQueue.path_under_project", "DistSSHQueue.peel_fetch_opts", "DistSSHQueue.peel_status_watch_interval", "DistSSHQueue.peel_status_watch_verbosity", "DistSSHQueue.peel_submit_pool", "DistSSHQueue.pkg_depots_for_instantiate", "DistSSHQueue.plan_cli", "DistSSHQueue.pool_cli", "DistSSHQueue.pool_sizing_assumption_line", "DistSSHQueue.posix_dir", "DistSSHQueue.print_inspect_submit_template", "DistSSHQueue.print_jobs_table", "DistSSHQueue.print_list_host", "DistSSHQueue.print_pool_inventory_notes!", "DistSSHQueue.print_present", "DistSSHQueue.print_queue_client_usage", "DistSSHQueue.print_queue_command_usage", "DistSSHQueue.print_queue_host_usage", "DistSSHQueue.print_queue_plan_submit", "DistSSHQueue.print_queue_pool_submit", "DistSSHQueue.print_queue_root_usage", "DistSSHQueue.print_queue_size_submit", "DistSSHQueue.print_queue_usage", "DistSSHQueue.print_removed", "DistSSHQueue.print_rsync_start", "DistSSHQueue.print_serve_already", "DistSSHQueue.print_serve_banner", "DistSSHQueue.print_serve_gone", "DistSSHQueue.print_serve_idle_note", "DistSSHQueue.print_serve_live_line", "DistSSHQueue.print_serve_started", "DistSSHQueue.print_serve_stopped", "DistSSHQueue.print_setup_usage", "DistSSHQueue.print_status_table", "DistSSHQueue.print_teardown_usage", "DistSSHQueue.print_up_usage", "DistSSHQueue.print_watch_compact", "DistSSHQueue.print_watch_frame", "DistSSHQueue.print_wrapped_row", "DistSSHQueue.print_wrapped_tail", "DistSSHQueue.print_wrote", "DistSSHQueue.println_queue_version", "DistSSHQueue.process_alive", "DistSSHQueue.qhost_default_from_env", "DistSSHQueue.qhost_display_from_env", "DistSSHQueue.queue_command_help", "DistSSHQueue.queue_data_dir", "DistSSHQueue.queue_explain_error", "DistSSHQueue.queue_host_homedir", "DistSSHQueue.queue_host_machine", "DistSSHQueue.queue_source_env", "DistSSHQueue.queue_version_from_line", "DistSSHQueue.queue_version_skew_warning", "DistSSHQueue.read_fetch_marker", "DistSSHQueue.read_jobs", "DistSSHQueue.reap_serve_tag!", "DistSSHQueue.record_test_serve_pid!", "DistSSHQueue.reject_host_token!", "DistSSHQueue.reject_qhost_on_local", "DistSSHQueue.reject_worker_root_collision!", "DistSSHQueue.reload_keep_live!", "DistSSHQueue.remote_dispatch", "DistSSHQueue.remote_main_expr", "DistSSHQueue.remote_pkg_prelude", "DistSSHQueue.remote_stage_root", "DistSSHQueue.remove_host_cli", "DistSSHQueue.remove_host_names!", "DistSSHQueue.remove_pid_file", "DistSSHQueue.remove_pid_file_if!", "DistSSHQueue.replace_or_insert_hosts_line", "DistSSHQueue.require_fetch_extra_leaf", "DistSSHQueue.require_fetchable_leaf", "DistSSHQueue.require_kit_ok", "DistSSHQueue.require_queue_target!", "DistSSHQueue.resolve_fetch_job_id", "DistSSHQueue.resolve_into_path", "DistSSHQueue.resolve_script", "DistSSHQueue.rewrite_one_path", "DistSSHQueue.rewrite_payload_paths", "DistSSHQueue.rsync_from_qhost!", "DistSSHQueue.rsync_from_qhost_file!", "DistSSHQueue.rsync_progress_on", "DistSSHQueue.rsync_to_qhost!", "DistSSHQueue.run_kit", "DistSSHQueue.same_fetch_job", "DistSSHQueue.save_jobs", "DistSSHQueue.script_arg", "DistSSHQueue.serve", "DistSSHQueue.serve!", "DistSSHQueue.serve_alive", "DistSSHQueue.serve_cli", "DistSSHQueue.serve_command_from_unit", "DistSSHQueue.serve_pid", "DistSSHQueue.serve_stopped", "DistSSHQueue.serve_tag", "DistSSHQueue.service_install", "DistSSHQueue.service_main", "DistSSHQueue.service_uninstall", "DistSSHQueue.set_stopped!", "DistSSHQueue.settle_lost_kit_child!", "DistSSHQueue.setup", "DistSSHQueue.setup_main", "DistSSHQueue.sh_single_quote", "DistSSHQueue.should_stage", "DistSSHQueue.should_submit_ticket", "DistSSHQueue.show_status", "DistSSHQueue.show_usage", "DistSSHQueue.size_cli", "DistSSHQueue.size_hosts_from_allow", "DistSSHQueue.sorted_kit_ssh_names", "DistSSHQueue.spawn_detached_serve!", "DistSSHQueue.ssh_g_connect", "DistSSHQueue.stage_env_and_project", "DistSSHQueue.stage_job_tree!", "DistSSHQueue.stage_rsync_files_from_opts", "DistSSHQueue.stage_rsync_push_opts", "DistSSHQueue.stage_send_list", "DistSSHQueue.staging_enabled", "DistSSHQueue.status_cli", "DistSSHQueue.status_watch_hop_tty", "DistSSHQueue.step!", "DistSSHQueue.stop_cli", "DistSSHQueue.stop_serve!", "DistSSHQueue.store_flock_path", "DistSSHQueue.store_path", "DistSSHQueue.store_pid_julia_path", "DistSSHQueue.store_pid_path", "DistSSHQueue.store_pid_start_path", "DistSSHQueue.store_stop_path", "DistSSHQueue.submit!", "DistSSHQueue.submit_cli", "DistSSHQueue.submit_hosts", "DistSSHQueue.submit_kind", "DistSSHQueue.submit_kit_bag", "DistSSHQueue.submit_main", "DistSSHQueue.submit_ticket_dir", "DistSSHQueue.submit_ticket_path", "DistSSHQueue.systemd_user_path", "DistSSHQueue.systemd_user_unit", "DistSSHQueue.teardown", "DistSSHQueue.teardown_main", "DistSSHQueue.teardown_store", "DistSSHQueue.teardown_targets", "DistSSHQueue.teardown_yes", "DistSSHQueue.toml_string_array", "DistSSHQueue.up_main", "DistSSHQueue.warn_child_submit_reach", "DistSSHQueue.warn_remote_queue_version!", "DistSSHQueue.warn_worker_julia", "DistSSHQueue.watch!", "DistSSHQueue.watch_cli", "DistSSHQueue.watch_ticks_from_env", "DistSSHQueue.with_config_lock", "DistSSHQueue.with_fresh_fetch_dest", "DistSSHQueue.with_serve_tag", "DistSSHQueue.with_store_lock", "DistSSHQueue.wrapper_path", "DistSSHQueue.write_config_template", "DistSSHQueue.write_fetch_marker!", "DistSSHQueue.write_host_names!", "DistSSHQueue.write_pid_file", "DistSSHQueue.write_serve_unit", "DistSSHQueue.write_submit_ticket", "DistSSHQueue.xml_escape"]
+total_ms = 1942.6000000000006
+wall_sec = 1.274902105331421
+args = ["cancel", "11111111-1111-1111-1111-111111111111"]
+main_ms = 677.5
+
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{DistSSHQueue.var\"#_entry_forward##0#_entry_forward##1\"{DistSSHQueue.var\"#_argv##0#_argv##1\"{typeof(DistSSHQueue.cancel_cli)}, String, Bool, Bool}, DistSSHQueue.CliContext, Array{String, 1}}"
+    recompile = false
+    ms = 951.7
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue.main), Array{String, 1}}"
+    recompile = false
+    ms = 677.5
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._job_row), Base.Dict{String, Any}, String}"
+    recompile = false
+    ms = 102.5
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._row_dt), String, String}"
+    recompile = false
+    ms = 44.2
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._row_dt_text), String, String}"
+    recompile = false
+    ms = 2.4
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._row_string), String, String}"
+    recompile = false
+    ms = 2.1
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._dt), Dates.DateTime}"
+    recompile = false
+    ms = 1.9
+    [[commands.methods]]
+    bucket = "DistSSHQueue"
+    owner = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._row_text), String, String}"
+    recompile = false
+    ms = 1.7
+
+    [commands.buckets.Base]
+    ms = 110.2
+    count = 30
+
+    [commands.buckets.stdlib]
+    ms = 41.9
+    count = 20
+
+    [commands.buckets.DistSSHKit]
+    ms = 0.0
+    count = 0
+
+    [commands.buckets.DistSSHRun]
+    ms = 6.5
+    count = 4
+
+    [commands.buckets.DistSSHQueue]
+    ms = 1784.0000000000002
+    count = 8
+
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{DistSSHQueue.var\"#_entry_forward##0#_entry_forward##1\"{DistSSHQueue.var\"#_argv##0#_argv##1\"{typeof(DistSSHQueue.cancel_cli)}, String, Bool, Bool}, DistSSHQueue.CliContext, Array{String, 1}}"
+    recompile = false
+    ms = 951.7
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue.main), Array{String, 1}}"
+    recompile = false
+    ms = 677.5
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._job_row), Base.Dict{String, Any}, String}"
+    recompile = false
+    ms = 102.5
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{Base.var\"##lock#448\", Base.UseDefaultToken, typeof(Base.lock), DistSSHQueue.var\"#with_store_lock##0#with_store_lock##1\"{DistSSHQueue.var\"#cancel!##0#cancel!##1\"{DistSSHQueue.Queue, String}, String}, Base.ReentrantLock}"
+    recompile = false
+    ms = 68.2
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._row_dt), String, String}"
+    recompile = false
+    ms = 44.2
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{Core.TypeEgal{Base.Dict{String, Any}}, Base.Generator{Base.Dict{String, Any}, DistSSHQueue.var\"#job_from_toml##0#job_from_toml##1\"}}"
+    recompile = false
+    ms = 16.9
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Core.kwcall), NamedTuple{(:id, :kind, :script, :hosts, :state, :queued_at, :started_at, :finished_at, :error, :result_path, :kwargs), Tuple{String, Symbol, String, Array{String, 1}, Symbol, Dates.DateTime, Nothing, Nothing, Nothing, Nothing, Base.Dict{String, Any}}}, Core.TypeEgal{DistSSHQueue.Job}}"
+    recompile = false
+    ms = 12.7
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{Core.TypeEgal{Base.Dict{String, Any}}, Pair{String, String}, Pair{String, String}, Pair{String, String}, Pair{String, Array{String, 1}}, Pair{String, String}, Pair{String, Dates.DateTime}, Pair{String, String}, Pair{String, String}, Pair{String, String}, Pair{String, String}, Pair{String, Base.Dict{String, Any}}}"
+    recompile = false
+    ms = 9.3
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.iterate), Base.Dict{String, Any}}"
+    recompile = false
+    ms = 7.8
+    [[commands.top]]
+    bucket = "DistSSHRun"
+    signature = "Tuple{typeof(DistSSHRun.DistSSHBase._wait_known), Symbol}"
+    recompile = false
+    ms = 5.6
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.setindex!), Array{DistSSHQueue.Job, 1}, DistSSHQueue.Job, Int64}"
+    recompile = false
+    ms = 3.3
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base.should_use_main_entrypoint)}"
+    recompile = true
+    ms = 2.7
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._row_dt_text), String, String}"
+    recompile = false
+    ms = 2.4
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{typeof(Distributed.flush_gc_msgs)}"
+    recompile = false
+    ms = 2.4
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{Base.var\"##192#193\", Vararg{Any, 4}}"
+    recompile = true
+    ms = 2.3
+    [[commands.top]]
+    bucket = "stdlib"
+    signature = "Tuple{Core.TypeEgal{Base.Generator{I, F} where F where I}, DistSSHQueue.var\"#job_from_toml##0#job_from_toml##1\", Base.Dict{String, Any}}"
+    recompile = false
+    ms = 2.2
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._row_string), String, String}"
+    recompile = false
+    ms = 2.1
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._dt), Dates.DateTime}"
+    recompile = false
+    ms = 1.9
+    [[commands.top]]
+    bucket = "DistSSHQueue"
+    signature = "Tuple{typeof(DistSSHQueue._row_text), String, String}"
+    recompile = false
+    ms = 1.7
+    [[commands.top]]
+    bucket = "Base"
+    signature = "Tuple{typeof(Base._array_for), Core.TypeEgal{DistSSHQueue.Job}, Array{Any, 1}, Base.HasShape{1}}"
+    recompile = false
+    ms = 1.2
+
+[[imports]]
+name = "DistSSHRun"
+ms = 6.1
+[[imports]]
+name = "DistSSHQueue"
+ms = 3.0
+
+[[deps]]
+version = "0.1.16"
+name = "DistSSHRun"
+tree = "c1e751a8133decc0e61d055108e91f9b2c0fe995"
