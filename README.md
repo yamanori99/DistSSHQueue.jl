@@ -12,22 +12,13 @@ table starts open.
 
 ## Flagged
 
-- 1.13: status method new -> 808.8 ms: Tuple{DistSSHQueue.var"##show_status#220", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(D...
-- 1.13: submit method new -> 508.1 ms: Tuple{typeof(Base.lock), DistSSHQueue.var"#with_store_lock##0#with_store_lock##1"{DistSSHQueue.var"#...
-- 1.13: watch method new -> 838.1 ms: Tuple{DistSSHQueue.var"##watch!#224", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, Nothing, Boo...
-- 1.13: cancel method new -> 410.6 ms: Tuple{typeof(Base.lock), DistSSHQueue.var"#with_store_lock##0#with_store_lock##1"{DistSSHQueue.var"#...
-- 1.14-nightly: status method new -> 552.8 ms: Tuple{DistSSHQueue.var"##show_status#220", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(D...
-- 1.14-nightly: watch method new -> 582.2 ms: Tuple{DistSSHQueue.var"##watch!#224", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, Nothing, Boo...
-- nightly: julia 1.15.0-DEV.150 -> 1.15.0-DEV.160
-- nightly: status method new -> 606.2 ms: Tuple{DistSSHQueue.var"##show_status#220", Base.PipeEndpoint, Nothing, Bool, Nothing, Bool, typeof(D...
-- nightly: watch method new -> 640.2 ms: Tuple{DistSSHQueue.var"##watch!#224", Float64, Int64, Base.PipeEndpoint, Nothing, Bool, Nothing, Boo...
+- nightly: julia 1.15.0-DEV.160 -> 1.15.0-DEV.162
 
 <details open>
 <summary>1.13</summary>
 
 | date | commit | version | julia | os | arch | src files | code lines | full s | pkg s | using s | help s | status s | submit s | watch s | cancel s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-10-19 | fbd948c | 0.9.7 | 1.13.2 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 8.81 | 2.16 | 0.34 | 1.08 | 6.25 | 7.08 | 6.2 | 6.45 |
 | 2026-10-20 | 59adc28 | 0.9.7 | 1.13.2 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 7.72 | 1.92 | 0.31 | 1.0 | 5.63 | 6.4 | 5.6 | 5.82 |
 | 2026-10-20 | 6d3a5c7 | 0.9.7 | 1.13.2 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 9.34 | 2.28 | 0.36 | 1.16 | 6.52 | 7.45 | 6.41 | 6.67 |
 | 2026-10-21 | 7c2c5df | 0.9.7 | 1.13.2 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6735 | 8.5 | 2.14 | 0.33 | 1.08 | 6.06 | 7.16 | 6.09 | 6.37 |
@@ -39,6 +30,7 @@ table starts open.
 | 2026-10-26 | ebb72a5 | 0.9.10 | 1.13.2 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7216 | 5.78 | 1.47 | 0.23 | 2.59 | 5.09 | 5.21 | 5.23 | 5.32 |
 | 2026-10-26 | 045acf7 | 0.9.10 | 1.13.3 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7241 | 7.13 | 1.84 | 0.31 | 3.34 | 4.25 | 4.31 | 4.14 | 4.59 |
 | 2026-10-27 | 882e53f | 0.9.10 | 1.13.3 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7300 | 9.06 | 2.34 | 0.35 | 3.95 | 5.08 | 5.26 | 5.1 | 5.64 |
+| 2026-10-27 | 3bfc569 | 0.9.10 | 1.13.3 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7300 | 6.82 | 1.79 | 0.3 | 3.09 | 3.96 | 4.11 | 4.02 | 4.45 |
 
 </details>
 
@@ -47,7 +39,6 @@ table starts open.
 
 | date | commit | version | julia | os | arch | src files | code lines | full s | pkg s | using s | help s | status s | submit s | watch s | cancel s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-10-19 | fbd948c | 0.9.7 | 1.14.0-DEV.3787 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 5.3 | 1.42 | 0.33 | 0.64 | 1.63 | 1.58 | 1.4 | 1.52 |
 | 2026-10-20 | 59adc28 | 0.9.7 | 1.14.0-DEV.3787 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 5.6 | 1.48 | 0.28 | 0.68 | 1.59 | 1.74 | 1.4 | 1.63 |
 | 2026-10-20 | 6d3a5c7 | 0.9.7 | 1.14.0-alpha1 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 7.79 | 2.03 | 0.35 | 0.78 | 2.01 | 2.22 | 1.96 | 2.06 |
 | 2026-10-22 | 7c2c5df | 0.9.7 | 1.14.0-alpha1 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6735 | 6.2 | 1.67 | 0.28 | 0.62 | 1.6 | 1.83 | 1.59 | 1.71 |
@@ -59,6 +50,7 @@ table starts open.
 | 2026-10-26 | ebb72a5 | 0.9.10 | 1.14.0-alpha1.112 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7216 | 8.24 | 2.17 | 0.3 | 1.6 | 2.43 | 2.36 | 2.4 | 2.36 |
 | 2026-10-26 | 045acf7 | 0.9.10 | 1.14.0-alpha2 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7241 | 8.47 | 2.21 | 0.31 | 1.63 | 2.03 | 1.88 | 2.03 | 2.12 |
 | 2026-10-27 | 882e53f | 0.9.10 | 1.14.0-alpha2 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7300 | 6.4 | 1.71 | 0.25 | 1.36 | 1.6 | 1.47 | 1.58 | 1.64 |
+| 2026-10-27 | 3bfc569 | 0.9.10 | 1.14.0-alpha2 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7300 | 4.85 | 1.32 | 0.2 | 1.1 | 1.26 | 1.16 | 1.22 | 1.27 |
 
 </details>
 
@@ -67,7 +59,6 @@ table starts open.
 
 | date | commit | version | julia | os | arch | src files | code lines | full s | pkg s | using s | help s | status s | submit s | watch s | cancel s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-10-19 | fbd948c | 0.9.7 | 1.15.0-DEV.18 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 8.16 | 2.1 | 0.36 | 0.77 | 2.03 | 2.34 | 2.01 | 2.16 |
 | 2026-10-20 | 59adc28 | 0.9.7 | 1.15.0-DEV.29 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 8.35 | 2.13 | 0.37 | 0.83 | 2.17 | 2.46 | 2.2 | 2.31 |
 | 2026-10-20 | 6d3a5c7 | 0.9.7 | 1.15.0-DEV.53 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6182 | 6.6 | 1.69 | 0.3 | 0.66 | 1.76 | 2.06 | 1.7 | 1.9 |
 | 2026-10-22 | 7c2c5df | 0.9.7 | 1.15.0-DEV.71 | Ubuntu 24.04.5 LTS | x86_64 | 24 | 6735 | 8.61 | 2.28 | 0.36 | 0.83 | 2.21 | 2.43 | 2.16 | 2.26 |
@@ -79,6 +70,7 @@ table starts open.
 | 2026-10-26 | ebb72a5 | 0.9.10 | 1.15.0-DEV.132 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7216 | 6.13 | 1.6 | 0.21 | 1.22 | 1.91 | 1.83 | 1.98 | 1.86 |
 | 2026-10-26 | 045acf7 | 0.9.10 | 1.15.0-DEV.150 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7241 | 8.11 | 2.1 | 0.23 | 1.57 | 1.87 | 1.75 | 1.85 | 1.92 |
 | 2026-10-27 | 882e53f | 0.9.10 | 1.15.0-DEV.160 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7300 | 7.2 | 1.89 | 0.23 | 1.49 | 1.79 | 1.69 | 1.79 | 1.87 |
+| 2026-10-27 | 3bfc569 | 0.9.10 | 1.15.0-DEV.162 | Ubuntu 26.04.1 LTS | x86_64 | 24 | 7300 | 6.58 | 1.75 | 0.21 | 1.38 | 1.65 | 1.52 | 1.61 | 1.72 |
 
 </details>
 
