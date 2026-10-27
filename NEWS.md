@@ -39,6 +39,12 @@ GitHub Releases use the notes on `@JuliaRegistrator register`. Those notes are o
   compiles less. A command without `qhost:` does not compile the SSH hop.
   Flags, text, and exit codes stay the same. A `qhost:` hop still compiles
   the first time that process runs one.
+- `teardown` with `-y`, `--yes`, or `DISTSSHKIT_YES` (process or config
+  `[env]`) still deletes and exits 0. stderr says that `-y` /
+  `DISTSSHKIT_YES` will not delete in DistSSHQueue 0.10.0, and to pass
+  `--confirm-path`. `DISTSSHKIT_QUIET` does not hide that line. A matching
+  `--confirm-path` does not print it. `up default` still honors
+  `DISTSSHKIT_YES`.
 
 ## 0.9.10
 
