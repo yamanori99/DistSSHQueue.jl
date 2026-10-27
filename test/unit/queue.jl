@@ -3066,6 +3066,7 @@ end
     mktempdir() do d
         mark = joinpath(d, "RAN")
         write(joinpath(d, "Project.toml"), "[deps]\n")
+        write(joinpath(d, "Manifest.toml"), "# lock\n")
         write(joinpath(d, "mark.jl"), "write($(repr(mark)), \"yes\")\n")
         kp = DistSSHRun.execute!(
             :go,
