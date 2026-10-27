@@ -73,7 +73,14 @@ trap 'rm -f "$tmp"' EXIT
           - "testenv/**"
 EOF
   shopt -s nullglob
+  test_entries=()
   for entry in "${ROOT}/test/"*; do
+    test_entries+=("$entry")
+  done
+  if ((${#test_entries[@]})); then
+    mapfile -t test_entries < <(printf '%s\n' "${test_entries[@]}" | LC_ALL=C sort)
+  fi
+  for entry in "${test_entries[@]}"; do
     name="$(basename "$entry")"
     skip=false
     for tree in "${product_test_trees[@]}"; do
