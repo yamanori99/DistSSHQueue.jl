@@ -40,7 +40,9 @@
 
 using Test
 using Dates
+using Pkg
 using Sockets
+using TOML
 using DistSSHRun
 using DistSSHQueue
 
@@ -158,6 +160,58 @@ function isolate_job_git_root(src::AbstractString)::String
 end
 
 const JOB_PROJECT = isolate_job_git_root(JOB_SOURCE)
+
+const _EXAMPLE_DISTSSHRUN_UUID = "b568025c-2759-4ef1-8b14-17d00e2cd000"
+
+"""Resolve `proj` in this process's depot so `setup!` has a Manifest to send.
+
+Workers instantiate that lock. A `path` or `repo-url` entry is not on the image.
+"""
+function instantiate_example_job!(proj::AbstractString)
+    Pkg.activate(String(proj)) do
+        Pkg.instantiate()
+        return nothing
+    end
+    return nothing
+end
+
+"""True when `regs` is the General registry and no other registry."""
+function _general_registry(regs)::Bool
+    regs == "General" && return true
+    regs isa AbstractVector || return false
+    length(regs) == 1 || return false
+    return first(regs) == "General"
+end
+
+"""True when `manifest` locks DistSSHRun to a General version, not a path checkout."""
+function distsshrun_general_lock(manifest::AbstractString)::Bool
+    data = TOML.parsefile(String(manifest))
+    deps = get(data, "deps", nothing)
+    deps isa Dict || return false
+    entries = get(deps, "DistSSHRun", nothing)
+    entries isa Vector || return false
+    length(entries) == 1 || return false
+    entry = entries[1]
+    entry isa Dict || return false
+    haskey(entry, "path") && return false
+    haskey(entry, "repo-url") && return false
+    haskey(entry, "repo-rev") && return false
+    get(entry, "uuid", nothing) == _EXAMPLE_DISTSSHRUN_UUID || return false
+    _general_registry(get(entry, "registries", nothing)) || return false
+    ver = get(entry, "version", nothing)
+    tree = get(entry, "git-tree-sha1", nothing)
+    return ver isa String && !isempty(ver) && tree isa String && !isempty(tree)
+end
+
+"""`git check-ignore` for `Manifest.toml`, with `core.excludesFile` unset.
+
+Exit 1 means the send list keeps the file. Exit 0 means a pattern ignores it.
+"""
+function manifest_check_ignore_status(proj::AbstractString)::Int
+    cmd = `git -C $proj -c core.excludesFile= check-ignore -- Manifest.toml`
+    proc = run(pipeline(ignorestatus(cmd); stdout = devnull, stderr = devnull))
+    return proc.exitcode
+end
 
 const _E2E_DEMO_RELS = (
     "demos/without_kit/pi_file.jl",
@@ -569,6 +623,13 @@ end
 
         @testset "setup! deploys example job (Kit demos + DistSSHKit)" begin
             @e2e_announce "setup! deploys example job (Kit demos + DistSSHKit)"
+            # Run's `_require_manifest!` refuses this tree until a Manifest
+            # exists. Resolve here, in the test depot, before rsync.
+            instantiate_example_job!(JOB_PROJECT)
+            manifest = joinpath(JOB_PROJECT, "Manifest.toml")
+            @test isfile(manifest)
+            @test distsshrun_general_lock(manifest)
+            @test manifest_check_ignore_status(JOB_PROJECT) == 1
             session = KitSession(
                 project = JOB_PROJECT,
                 workers = ["child:$(h)" for h in HOSTS],
@@ -1177,11 +1238,8 @@ end
                             server = read(joinpath(sshd_dir, "sshd.log"), String)
                             error("loopback ssh to distsshqueue-qh failed: $client$server")
                         end
-                        # Stage rsync honors `.gitignore` (`Manifest.toml` is listed).
-                        # This job lists DistSSHKit in [deps], so Kit 0.7.2 still
-                        # uses `--project=` of the stage; the Manifest [2/11] wrote
-                        # must reach it. Do not instantiate that Manifest on
-                        # workers (path-dev Kit).
+                        # Stage rsync honors `.gitignore`. Drop a `Manifest.toml` line
+                        # so the General lock from setup! stays on the send list.
                         write(gi, replace(gi_body, r"^Manifest\.toml\r?\n?"m => ""))
                         write(joinpath(JOB_PROJECT, ".distsshqueue-backup"), "keep\n")
                         mkpath(joinpath(JOB_PROJECT, ".distsshqueue"))
