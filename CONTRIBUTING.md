@@ -173,7 +173,7 @@ still runs when `docs/**`, README,
 Linux E2E is skipped on allowlisted markdown-only PRs (same skipping UI):
 
 - `AGENTS.md`, `REVIEW.md`, `README.md`, `README.ja.md`,
-  `CONTRIBUTING.md`, `NEWS.md`,
+  `CONTRIBUTING.md`, `NEWS.md`, `changelog.d/**`,
   `SECURITY.md`, `LICENSE`
 - `.gitignore`, `.git-blame-ignore-revs`,
   `.github/pull_request_template.md`, `.coderabbit.yaml`
@@ -312,7 +312,7 @@ Every tracked path must match some `area:*` glob (`gen-labeler.sh --check`). Glo
 | Harness under `test/` (not `unit/` / `integration/`) and `testenv/**` | `area:test` |
 | `test/e2e.jl` | `area:client` and `area:qhost` as well |
 | `docs/**` | `area:docs` |
-| `README.md`, `README.ja.md`, `NEWS.md`, `CONTRIBUTING.md`, `SECURITY.md` | `area:project-docs` |
+| `README.md`, `README.ja.md`, `NEWS.md`, `changelog.d/**`, `CONTRIBUTING.md`, `SECURITY.md` | `area:project-docs` |
 | `.github/**`, `codecov.yml`, `.coderabbit.yaml` | `area:ci` |
 
 New leftover queue test file: edit the script, regenerate, create the GitHub label.
@@ -373,4 +373,4 @@ An issue on the open breaking milestone (`X.Y.0`, no due date) gets `when:later`
 
 ## Language
 
-`.jl` comments, docstrings, and errors: English. Install or Docs links: `docs/src`, [README.md](README.md), and [README.ja.md](README.ja.md). User-visible behavior: NEWS. Generative AI is allowed; you own the diff. Keep docs plain.
+`.jl` comments, docstrings, and errors: English. Install or Docs links: `docs/src`, [README.md](README.md), and [README.ja.md](README.ja.md). User-visible behavior: one fragment in `changelog.d/`. The version-cut PR copies fragments into `NEWS.md`. Generative AI is allowed; you own the diff. Keep docs plain.

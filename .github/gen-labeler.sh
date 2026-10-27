@@ -14,7 +14,7 @@
 #   - SSH E2E entry (`test/e2e.jl`) also gets area:client and area:qhost.
 #   - Documenter → area:docs (docs/**)
 #   - GitHub / repo prose → area:project-docs (README, NEWS, CONTRIBUTING,
-#     SECURITY, AGENTS, REVIEW, CODEOWNERS)
+#     SECURITY, AGENTS, REVIEW, CODEOWNERS, changelog.d)
 #   - .github/**, bench/**, codecov.yml, .coderabbit.yaml,
 #     .JETLSConfig.toml → area:ci
 #
@@ -51,6 +51,7 @@ trap 'rm -f "$tmp"' EXIT
           - "README.md"
           - "README.ja.md"
           - "NEWS.md"
+          - "changelog.d/**"
           - "CONTRIBUTING.md"
           - "SECURITY.md"
           - "AGENTS.md"
@@ -72,7 +73,14 @@ trap 'rm -f "$tmp"' EXIT
           - "testenv/**"
 EOF
   shopt -s nullglob
+  test_entries=()
   for entry in "${ROOT}/test/"*; do
+    test_entries+=("$entry")
+  done
+  if ((${#test_entries[@]})); then
+    mapfile -t test_entries < <(printf '%s\n' "${test_entries[@]}" | LC_ALL=C sort)
+  fi
+  for entry in "${test_entries[@]}"; do
     name="$(basename "$entry")"
     skip=false
     for tree in "${product_test_trees[@]}"; do
