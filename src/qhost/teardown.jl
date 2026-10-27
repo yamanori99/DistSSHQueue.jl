@@ -218,7 +218,7 @@ function teardown_main(args::Vector{String}; process_yes::Bool = teardown_yes())
     if yes && !granted
         print_help_lines(
             stderr,
-            "  -y / DISTSSHKIT_YES still deletes teardown. This stops in 0.10. Pass --confirm-path.",
+            "  -y / DISTSSHKIT_YES will not delete in DistSSHQueue 0.10.0. Pass --confirm-path.",
         )
         _print_would_remove(existing)
         return teardown(;
