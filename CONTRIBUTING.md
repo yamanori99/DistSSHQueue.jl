@@ -45,7 +45,16 @@ julia --project=. -e 'using Pkg; Pkg.test()'
 
 Run this on Julia **1.13** (and **1.14-nightly** or **nightly** if you have them). Layout: [test/README.md](test/README.md). When adding a file under `test/runtests.jl` or an inner SSH E2E `@testset`, bump `_RUNTEST_N` / `_E2E_N` so `[i/N]` stays honest.
 
-Checkout `Pkg.test()` is not the PkgEval sandbox. Before a General cut, run the recipe in [test/README.md](test/README.md#pkgeval). CI runs that job on **main** and a version increase (host Julia 1.13; test Julia is the julia-latest tarball; `continue-on-error`; not a required check).
+Checkout `Pkg.test()` is not a registry install. General puts the
+committed tree in `~/.julia/packages/DistSSHQueue/<slug>` with read-only
+files and no gitignored `Manifest.toml`. CI runs that install on the
+heavy gate (`Registry install (1.13, ubuntu-latest, x64)`), including
+ordinary pull requests and **main**. A pull request installs its head
+commit, not the merge commit. Dependencies come from General.
+`PkgEval (nightly, ubuntu-latest, x64)` is the sandbox in
+[test/README.md](test/README.md#pkgeval): **main** and a version increase,
+host Julia 1.13, test Julia the julia-latest tarball, `continue-on-error`,
+not a required check. Not ordinary PRs. Run that recipe before a General cut.
 
 ```bash
 julia -e 'using Pkg; Pkg.Apps.add("Runic")'   # once
@@ -141,8 +150,13 @@ changed. Linux E2E (1.13) uses the same **path filter** as **main** push
 runs on a **version increase**, **E2E weekly** (`ssh-e2e-weekly.yml`; `CI.yml` has no
 `schedule`), and `workflow_dispatch`. **1.14-nightly** and **nightly** `Pkg.test` / Aqua
 on Ubuntu stay on **main**, **CI weekly**, and a version increase, not
-ordinary PRs. Informational JETLS 1.14-nightly runs on the heavy gate. macOS and WSL2 nightly stay on **CI weekly** only. PkgEval stays on **main**
-and a version increase, not ordinary PRs. It is `continue-on-error` and not a required check.
+ordinary PRs. Informational JETLS 1.14-nightly runs on the heavy gate. macOS and WSL2 nightly stay on **CI weekly** only.
+`Registry install (1.13, ubuntu-latest, x64)` uses the same heavy gate
+as Ubuntu `Pkg.test` 1.13, so ordinary pull requests and **main** run it.
+It installs the head commit into a job-local depot and runs `Pkg.test`
+with `--check-bounds=yes`. DistSSHRun resolves from General. The PkgEval
+sandbox stays on **main** and a version increase, not ordinary PRs. It is
+`continue-on-error` and not a required check.
 
 [Runic](https://github.com/fredrikekre/Runic.jl) is a separate light
 workflow ([`.github/workflows/runic.yml`](.github/workflows/runic.yml)).
@@ -151,7 +165,7 @@ required-name list). Monthly cron on `main` opens Issue
 `Runic monthly failed` (`alert`) when `--check` is red.
 
 These files **alone** skip the heavy jobs (UI: skipping; Pkg.test on
-Ubuntu and macOS, plus JETLS / Aqua, do not start). Documenter
+Ubuntu and macOS, Registry install, plus JETLS / Aqua, do not start). Documenter
 still runs when `docs/**`, README,
 `src/**`, or `Project.toml` changed; otherwise it is skipped too.
 Linux E2E is skipped on allowlisted markdown-only PRs (same skipping UI):
@@ -166,7 +180,7 @@ Linux E2E is skipped on allowlisted markdown-only PRs (same skipping UI):
 A new root markdown file stays heavy until listed in
 [`.github/actions/ci-heavy/action.yml`](.github/actions/ci-heavy/action.yml).
 A `Project.toml` version increase skips none of this: Pkg.test (Ubuntu,
-macOS), JETLS, Aqua, Documenter, and Linux E2E all run (E2E
+macOS), Registry install, JETLS, Aqua, Documenter, and Linux E2E all run (E2E
 Codecov too). macOS and WSL SSH E2E stay on `E2E weekly`, not the PR.
 Register when the required checks below are green. Intel / WSL weekly are
 watchers, not the register gate.
@@ -182,6 +196,7 @@ Required to merge (ruleset `main` uses these names). **1.14-nightly** and **nigh
 
 - `Pkg.test (1.13, ubuntu-latest, x64)`
 - `Pkg.test (1.13, macos-latest, aarch64)`
+- `Registry install (1.13, ubuntu-latest, x64)`
 - `JETLS (1.13, ubuntu-latest, x64)`
 - `Aqua (1.13, ubuntu-latest, x64)`
 - `Documenter (1.13, ubuntu-latest, x64)`
