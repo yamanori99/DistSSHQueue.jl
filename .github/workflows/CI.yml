@@ -9,9 +9,10 @@ on:
 
 # Cancel redundant runs on the same branch/PR.
 # A Project.toml version increase (see version-cut.sh) runs Ubuntu
-# 1.14-nightly, nightly, Aqua on those channels, and PkgEval in this workflow.
-# Registry install follows the heavy gate, including ordinary pull requests.
-# macOS for both channels is CI weekly. WSL2 1.13 Pkg.test runs on a main
+# nightly, Aqua on nightly, and PkgEval in this workflow.
+# 1.14-pre uses setup-julia "~1.14.0-0" and follows the heavy gate,
+# including ordinary pull requests. Registry install does too.
+# macOS for 1.14-pre and nightly is CI weekly. WSL2 1.13 Pkg.test runs on a main
 # push and CI weekly, not on a pull request. No label is involved.
 # A main push that changes only Project.toml and NEWS.md, and raises
 # version, skips Test and does not start Linux E2E.
@@ -199,10 +200,10 @@ jobs:
         shell: wsl-bash {0}
         run: ./.github/wsl-julia.sh 1.13 julia --project=. -e 'using Pkg; Pkg.test()'
 
-  test-1-14-nightly:
-    name: Pkg.test (1.14-nightly, ubuntu-latest, x64)
+  test-1-14-pre:
+    name: Pkg.test (1.14-pre, ubuntu-latest, x64)
     needs: detect
-    if: needs.detect.outputs.heavy == 'true' && (github.event_name != 'pull_request' || needs.detect.outputs.version_cut == 'true')
+    if: needs.detect.outputs.heavy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     continue-on-error: true
@@ -212,7 +213,7 @@ jobs:
           persist-credentials: false
       - uses: julia-actions/setup-julia@da908477b5db94c10ffce8cfea9f2b3b9d5db687 # v3.0.3
         with:
-          version: "1.14-nightly"
+          version: "~1.14.0-0"
       - uses: julia-actions/cache@9353db09a0f2bbbdec6f41791918c75d37391b36 # v3.5.0
         with:
           cache-scratchspaces: false
@@ -283,10 +284,10 @@ jobs:
       - name: Aqua.test_all (latest Aqua)
         run: ./.github/aqua-check.sh
 
-  aqua-1-14-nightly:
-    name: Aqua (1.14-nightly, ubuntu-latest, x64)
+  aqua-1-14-pre:
+    name: Aqua (1.14-pre, ubuntu-latest, x64)
     needs: detect
-    if: needs.detect.outputs.heavy == 'true' && (github.event_name != 'pull_request' || needs.detect.outputs.version_cut == 'true')
+    if: needs.detect.outputs.heavy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     continue-on-error: true
@@ -296,7 +297,7 @@ jobs:
           persist-credentials: false
       - uses: julia-actions/setup-julia@da908477b5db94c10ffce8cfea9f2b3b9d5db687 # v3.0.3
         with:
-          version: "1.14-nightly"
+          version: "~1.14.0-0"
       - uses: julia-actions/cache@9353db09a0f2bbbdec6f41791918c75d37391b36 # v3.5.0
         with:
           cache-scratchspaces: false
@@ -327,7 +328,7 @@ jobs:
 
   # Literal names: skipped matrix jobs leave ${{ matrix.* }} unexpanded.
   # JETLS 2026-10-26 officially supports 1.12.2 through 1.14.
-  # The required job stays on 1.13. 1.14-nightly is informational
+  # The required job stays on 1.13. 1.14-pre is informational
   # (continue-on-error) and is not a required check. No JETLS on nightly.
   jetls-1-13:
     name: JETLS (1.13, ubuntu-latest, x64)
@@ -352,8 +353,8 @@ jobs:
         with:
           files: ${{ steps.files.outputs.list }}
 
-  jetls-1-14-nightly:
-    name: JETLS (1.14-nightly, ubuntu-latest, x64)
+  jetls-1-14-pre:
+    name: JETLS (1.14-pre, ubuntu-latest, x64)
     needs: detect
     if: needs.detect.outputs.heavy == 'true'
     runs-on: ubuntu-latest
@@ -367,7 +368,7 @@ jobs:
         run: echo "list=$(./.github/jetls-check.sh --print-files)" >> "$GITHUB_OUTPUT"
       - uses: julia-actions/setup-julia@da908477b5db94c10ffce8cfea9f2b3b9d5db687 # v3.0.3
         with:
-          version: "1.14-nightly"
+          version: "~1.14.0-0"
       - uses: julia-actions/cache@9353db09a0f2bbbdec6f41791918c75d37391b36 # v3.5.0
         with:
           cache-scratchspaces: false

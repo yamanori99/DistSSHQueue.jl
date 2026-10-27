@@ -81,8 +81,12 @@ if [[ ! -x "$HOME/.juliaup/bin/julialauncher" && ! -x "$HOME/.juliaup/bin/juliau
 fi
 distsshqueue_relink_julia
 export PATH="$HOME/.juliaup/bin:$PATH"
-# A cache hit would keep the first nightly build. Move that channel forward.
-if [[ "$restored" -eq 1 && ( "$channel" == "nightly" || "$channel" == *-nightly ) ]]; then
+# A cache hit would keep the first build of a moving channel. Move it forward.
+# `1.13` stays on the cached build until the cache key changes.
+# `1.14` is the juliaup release channel for the 1.14 prerelease line
+# (alpha, beta, rc, then 1.14.x). juliaup does not take the setup-julia
+# range `~1.14.0-0`.
+if [[ "$restored" -eq 1 && ( "$channel" == "nightly" || "$channel" == *-nightly || "$channel" == "1.14" ) ]]; then
   juliaup update "$channel"
   distsshqueue_relink_julia
 fi
