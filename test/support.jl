@@ -1,5 +1,4 @@
 import DistSSHRun
-import Pkg
 
 # Seconds live here. DistSSHBase resolves the name and any environment override.
 const WAIT_SECONDS = Dict{Symbol, Float64}(
@@ -411,19 +410,28 @@ function copy_registry_distsshrun_project!(dir::AbstractString)
     return nothing
 end
 
+# The test project does not depend on Pkg. DistSSHQueue already loaded it.
+function _loaded_pkg()::Module
+    for (id, mod) in Base.loaded_modules
+        id.name == "Pkg" && return mod
+    end
+    error("Pkg is not loaded")
+end
+
 function _registry_run_project()::String
     cached = _REGISTRY_RUN_PROJECT[]
     cached === nothing || return cached
+    pkg = _loaded_pkg()
     dir = mktempdir(; prefix = "distsshqueue-run-project-")
     prev = Base.active_project()
     try
-        Pkg.activate(dir)
-        Pkg.add(Pkg.PackageSpec(; name = "DistSSHRun", version = "0.1.14"))
+        pkg.activate(dir)
+        pkg.add(pkg.PackageSpec(; name = "DistSSHRun", version = "0.1.14"))
     finally
         if prev === nothing
-            Pkg.activate()
+            pkg.activate()
         else
-            Pkg.activate(dirname(prev))
+            pkg.activate(dirname(prev))
         end
     end
     _REGISTRY_RUN_PROJECT[] = dir
