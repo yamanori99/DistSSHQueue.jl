@@ -109,6 +109,27 @@ rm -f "${ROOT}/.generated/known_hosts"
 echo "Workers ready: child-1 (2222), child-2 (2223)"
 echo "SSH config: ${ROOT}/.generated/ssh_config"
 
+# Images built before the Dockerfile registry RUN have an empty depot.
+# `setup --instantiate` stops when reachable_registries() is empty.
+# Add General only then, as user dev, in that user's default depot.
+ensure_worker_general() {
+  local name="$1"
+  if ! docker exec -u dev "$name" /usr/local/bin/julia --startup-file=no -e '
+    using Pkg
+    if isempty(Pkg.Registry.reachable_registries())
+      Pkg.Registry.add("General")
+    end
+    if isempty(Pkg.Registry.reachable_registries())
+      error("worker has no reachable package registry")
+    end
+  '; then
+    echo "failed to ensure General in ${name} (user dev, default depot)" >&2
+    exit 1
+  fi
+}
+ensure_worker_general child-1
+ensure_worker_general child-2
+
 if [[ "$RUN_E2E" -eq 1 ]]; then
   export DISTSSHQUEUE_SSH_E2E=1
   cd "${QUEUE_ROOT}"
