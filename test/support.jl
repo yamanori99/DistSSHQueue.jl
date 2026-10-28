@@ -388,3 +388,52 @@ function drive_until_terminal!(q, id; tries::Integer = wait_tries(:go_job, 0.2),
     end
     return job(q, id).state
 end
+
+const _REGISTRY_RUN_PROJECT = Ref{Union{Nothing, String}}(nothing)
+
+# Detached `execute!` runs `julia -m` with `--project=` set to the job tree.
+# Run #236 removes the fallback to serve's project, so empty `[deps]` cannot
+# load DistSSHRun. `go` rejects an absolute `[sources]` path, so a developed
+# checkout is not a job tree. Resolve the registry package once (0.1 floor,
+# same as this test env) and copy that Project.toml and Manifest.
+function copy_registry_distsshrun_project!(dir::AbstractString)
+    src = _registry_run_project()
+    mkpath(dir)
+    for name in readdir(src)
+        keep = name == "Project.toml" || (startswith(name, "Manifest") && endswith(name, ".toml"))
+        keep || continue
+        cp(joinpath(src, name), joinpath(dir, name); force = true)
+    end
+    isfile(joinpath(dir, "Project.toml")) || error("registry DistSSHRun project has no Project.toml")
+    any(name -> startswith(name, "Manifest") && endswith(name, ".toml"), readdir(dir)) ||
+        error("registry DistSSHRun project has no Manifest")
+    return nothing
+end
+
+# The test project does not depend on Pkg. DistSSHQueue already loaded it.
+function _loaded_pkg()::Module
+    for (id, mod) in Base.loaded_modules
+        id.name == "Pkg" && return mod
+    end
+    error("Pkg is not loaded")
+end
+
+function _registry_run_project()::String
+    cached = _REGISTRY_RUN_PROJECT[]
+    cached === nothing || return cached
+    pkg = _loaded_pkg()
+    dir = mktempdir(; prefix = "distsshqueue-run-project-")
+    prev = Base.active_project()
+    try
+        pkg.activate(dir)
+        pkg.add(pkg.PackageSpec(; name = "DistSSHRun", version = "0.1.14"))
+    finally
+        if prev === nothing
+            pkg.activate()
+        else
+            pkg.activate(dirname(prev))
+        end
+    end
+    _REGISTRY_RUN_PROJECT[] = dir
+    return dir
+end

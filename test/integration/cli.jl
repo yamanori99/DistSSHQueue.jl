@@ -77,13 +77,19 @@ function read_cli(
     return text
 end
 
-function cli_env(d::AbstractString)
+function cli_env(d::AbstractString; distsshrun::Bool = false)
     cfg = joinpath(d, "config.toml")
     store = joinpath(d, "jobs.toml")
     jobdir = joinpath(d, "job")
     mkpath(jobdir)
-    write(joinpath(jobdir, "Project.toml"), "[deps]\n")
-    write(joinpath(jobdir, "Manifest.toml"), "# lock\n")
+    # Run #236 detached `execute!` has no fallback project. Only the go
+    # jobs pass `distsshrun`; other callers keep an empty `[deps]` tree.
+    if distsshrun
+        copy_registry_distsshrun_project!(jobdir)
+    else
+        write(joinpath(jobdir, "Project.toml"), "[deps]\n")
+        write(joinpath(jobdir, "Manifest.toml"), "# lock\n")
+    end
     write(joinpath(jobdir, "hello.jl"), "write(joinpath(@__DIR__, \"hello.ran\"), \"cli-local\\n\")\nprintln(\"cli-local\")\n")
     write(joinpath(jobdir, "hold.jl"), "while true; sleep(1); end\n")
     write(cfg, "store = $(repr(store))\nhosts = [\"parent\"]\n\n[env]\nDISTSSHKIT_YES = \"1\"\n")
@@ -180,7 +186,7 @@ end
 @testset "CLI (parent:1)" begin
     @testset "setup submit status parent:1 (explicit serve)" begin
         mktempdir() do d
-            base, _, store, jobdir = cli_env(d)
+            base, _, store, jobdir = cli_env(d; distsshrun = true)
             env = merge(base, Dict("DISTSSHQUEUE_NO_AUTOSERVE" => "1"))
             serve_cmd = addenv(qcli(["serve", "--interval", "0.1"]), env...)
             proc = run(serve_cmd; wait = false)
@@ -214,7 +220,7 @@ end
 
     @testset "auto-serve submit and cancel queued" begin
         mktempdir() do d
-            env, _, store, jobdir = cli_env(d)
+            env, _, store, jobdir = cli_env(d; distsshrun = true)
             try
                 cd(jobdir) do
                     hold_out = joinpath(d, "hold-queued-out")
@@ -253,7 +259,7 @@ end
 
     @testset "cancel running parent:1" begin
         mktempdir() do d
-            env, _, store, jobdir = cli_env(d)
+            env, _, store, jobdir = cli_env(d; distsshrun = true)
             try
                 cd(jobdir) do
                     id = strip(

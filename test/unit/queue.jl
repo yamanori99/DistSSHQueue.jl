@@ -3065,8 +3065,8 @@ end
 @testset "go with job_id still runs the user script" begin
     mktempdir() do d
         mark = joinpath(d, "RAN")
-        write(joinpath(d, "Project.toml"), "[deps]\n")
-        write(joinpath(d, "Manifest.toml"), "# lock\n")
+        # Run #236 detached `execute!` has no fallback project.
+        copy_registry_distsshrun_project!(d)
         write(joinpath(d, "mark.jl"), "write($(repr(mark)), \"yes\")\n")
         kp = DistSSHRun.execute!(
             :go,
