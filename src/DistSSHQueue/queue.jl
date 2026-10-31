@@ -254,15 +254,35 @@ function kit_result_path(j::Job, result)::Union{Nothing, String}
     return kit_artifact_from_run_dir(kit_run_dir(j))
 end
 
-"""Artifact leaf from `kit.result` or `run.toml`. Never the `runs/` sidecar itself."""
+"""True when `a` and `b` name the same directory."""
+function _same_dir(a::AbstractString, b::AbstractString)::Bool
+    na = normpath(abspath(strip(a)))
+    nb = normpath(abspath(strip(b)))
+    na == nb && return true
+    try
+        return Base.Filesystem.samefile(na, nb)
+    catch
+        return false
+    end
+end
+
+"""Artifact leaf from `kit.result` or `run.toml`. Never the `runs/` sidecar itself.
+
+`terminate_run!` records the directory it was given as `output_dir` when
+`kit.result` is missing. That directory is this sidecar, so it is skipped
+and `run.toml` `output_dir` is used instead.
+"""
 function kit_artifact_from_sidecar(dir::Union{Nothing, AbstractString})::Union{Nothing, String}
     dir === nothing && return nothing
-    rec = DistSSHRun.kit_result_from_dir(String(dir))
+    side = String(dir)
+    rec = DistSSHRun.kit_result_from_dir(side)
     if rec !== nothing
         od = rec.output_dir
         if od !== nothing
             s = strip(String(od))
-            !isempty(s) && return s
+            if !isempty(s) && !_same_dir(s, side)
+                return s
+            end
         end
     end
     return kit_artifact_from_run_dir(dir)
