@@ -241,7 +241,9 @@ jobs:
       - uses: ./.github/actions/pkg-test
 
   # Not required to merge. This checkout inside PkgEval's sandbox, against
-  # Julia nightly. Host Julia is 1.13. Dependencies come from General.
+  # Julia nightly. Host Julia is 1.13. The sandbox resolves like General.
+  # A `[sources]` git rev is not in that sandbox, so this stays red while
+  # DistSSHRun is only on its main branch. continue-on-error.
   pkgeval:
     name: PkgEval (nightly, ubuntu-latest, x64)
     needs: detect

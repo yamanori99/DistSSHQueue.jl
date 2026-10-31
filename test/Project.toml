@@ -5,8 +5,10 @@ DistSSHRun = "b568025c-2759-4ef1-8b14-17d00e2cd000"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
-DistSSHQueue = {path = ".."}
+DistSSHQueue = { path = ".." }
+# Same rev as the root project. Drop both at the 0.10.0 cut.
+DistSSHRun = { url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "main" }
 
 [compat]
-DistSSHRun = "0.1.14"
+DistSSHRun = "0.2.0"
 Test = "1"

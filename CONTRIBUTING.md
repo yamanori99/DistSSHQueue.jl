@@ -156,7 +156,7 @@ on **CI weekly** only.
 `Registry install (1.13, ubuntu-latest, x64)` uses the same heavy gate
 as Ubuntu `Pkg.test` 1.13, so ordinary pull requests and **main** run it.
 It installs the head commit into a job-local depot and runs `Pkg.test`
-with `--check-bounds=yes`. DistSSHRun resolves from General. The PkgEval
+with `--check-bounds=yes`. DistSSHRun resolves from the `[sources]` git rev in `Project.toml` and `test/Project.toml` while that entry is present. Drop it at the cut, after that DistSSHRun is on General. The PkgEval
 sandbox stays on **main** and a version increase, not ordinary PRs. It is
 `continue-on-error` and not a required check.
 
