@@ -390,23 +390,27 @@ function drive_until_terminal!(q, id; tries::Integer = wait_tries(:go_job, 0.2),
 end
 
 const _REGISTRY_RUN_PROJECT = Ref{Union{Nothing, String}}(nothing)
+const _DISTSSHRUN_UUID = "b568025c-2759-4ef1-8b14-17d00e2cd000"
 
 # Detached `execute!` runs `julia -m` with `--project=` set to the job tree.
 # Run #236 removes the fallback to serve's project, so empty `[deps]` cannot
 # load DistSSHRun. `go` rejects an absolute `[sources]` path, so a developed
-# checkout is not a job tree. Resolve the registry package once (0.1 floor,
-# same as this test env) and copy that Project.toml and Manifest.
+# checkout is not a job tree. Copy the DistSSHRun this process loaded into
+# `vendor/DistSSHRun` and point `[sources]` at that relative path.
 function copy_registry_distsshrun_project!(dir::AbstractString)
     src = _registry_run_project()
     mkpath(dir)
     for name in readdir(src)
-        keep = name == "Project.toml" || (startswith(name, "Manifest") && endswith(name, ".toml"))
+        keep = name == "Project.toml" || name == "vendor" ||
+            (startswith(name, "Manifest") && endswith(name, ".toml"))
         keep || continue
         cp(joinpath(src, name), joinpath(dir, name); force = true)
     end
-    isfile(joinpath(dir, "Project.toml")) || error("registry DistSSHRun project has no Project.toml")
+    isfile(joinpath(dir, "Project.toml")) || error("job DistSSHRun project has no Project.toml")
     any(name -> startswith(name, "Manifest") && endswith(name, ".toml"), readdir(dir)) ||
-        error("registry DistSSHRun project has no Manifest")
+        error("job DistSSHRun project has no Manifest")
+    isdir(joinpath(dir, "vendor", "DistSSHRun")) ||
+        error("job DistSSHRun project has no vendor/DistSSHRun")
     return nothing
 end
 
@@ -418,15 +422,40 @@ function _loaded_pkg()::Module
     error("Pkg is not loaded")
 end
 
+function _copy_loaded_distsshrun_src!(dest::AbstractString)
+    src = pkgdir(DistSSHRun)
+    src === nothing && error("DistSSHRun has no pkgdir")
+    mkpath(dest)
+    skip = (".git", "test", "docs", "testenv", ".github")
+    for name in readdir(src)
+        name in skip && continue
+        cp(joinpath(src, name), joinpath(dest, name); force = true)
+    end
+    isfile(joinpath(dest, "Project.toml")) || error("loaded DistSSHRun has no Project.toml")
+    isdir(joinpath(dest, "src")) || error("loaded DistSSHRun has no src")
+    return nothing
+end
+
 function _registry_run_project()::String
     cached = _REGISTRY_RUN_PROJECT[]
     cached === nothing || return cached
     pkg = _loaded_pkg()
     dir = mktempdir(; prefix = "distsshqueue-run-project-")
+    _copy_loaded_distsshrun_src!(joinpath(dir, "vendor", "DistSSHRun"))
+    write(
+        joinpath(dir, "Project.toml"),
+        """
+        [deps]
+        DistSSHRun = "$(_DISTSSHRUN_UUID)"
+
+        [sources]
+        DistSSHRun = {path = "vendor/DistSSHRun"}
+        """,
+    )
     prev = Base.active_project()
     try
         pkg.activate(dir)
-        pkg.add(pkg.PackageSpec(; name = "DistSSHRun", version = "0.1.14"))
+        pkg.instantiate()
     finally
         if prev === nothing
             pkg.activate()
