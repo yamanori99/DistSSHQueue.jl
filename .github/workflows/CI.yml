@@ -329,7 +329,7 @@ jobs:
         run: ./.github/aqua-check.sh
 
   # Literal names: skipped matrix jobs leave ${{ matrix.* }} unexpanded.
-  # JETLS 2026-10-26 officially supports 1.12.2 through 1.14.
+  # JETLS 2026-11-04 officially supports 1.12.2 through 1.14.
   # The required job stays on 1.13. 1.14-pre is informational
   # (continue-on-error) and is not a required check. No JETLS on nightly.
   jetls-1-13:
