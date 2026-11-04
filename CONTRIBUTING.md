@@ -124,7 +124,7 @@ has only just shipped, as an automatic rule.
 
 When the floor moves, rename the **1.13** jobs to the new version in the same PR as `Project.toml`, the worker Dockerfile `--default-channel`, and the WSL `julia_channel`. Ruleset `main` uses those job names, so update the required checks with the rename.
 
-JETLS 2026-10-26 officially supports 1.12.2 through 1.14. The required job stays on 1.13. `JETLS (1.14-pre, ubuntu-latest, x64)` is informational (`continue-on-error`) and is not a required check. No JETLS on nightly.
+JETLS 2026-11-04 officially supports 1.12.2 through 1.14. The required job stays on 1.13. `JETLS (1.14-pre, ubuntu-latest, x64)` is informational (`continue-on-error`) and is not a required check. No JETLS on nightly.
 
 When a new RC of the floor's minor lands, point **1.13** jobs at `~1.13.0-0` so setup-julia includes prereleases. When that minor GAs, drop the tilde. A new **major.minor** is a floor move, not a second stable job.
 
