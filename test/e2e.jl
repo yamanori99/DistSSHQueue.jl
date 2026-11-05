@@ -624,7 +624,7 @@ end
         @testset "setup! deploys example job (Kit demos + DistSSHKit)" begin
             @e2e_announce "setup! deploys example job (Kit demos + DistSSHKit)"
             # Run's `_require_manifest!` refuses this tree until a Manifest
-            # exists. Resolve here, in the test depot, before rsync.
+            # exists. Resolve here, in the test depot, before ship.
             instantiate_example_job!(JOB_PROJECT)
             manifest = joinpath(JOB_PROJECT, "Manifest.toml")
             @test isfile(manifest)
@@ -640,7 +640,7 @@ end
             # Multi-mode `setup!` rejects keyword arguments, so `:delete`
             # takes `confirm_path` on its own call.
             deleted = setup_delete_e2e!(session)
-            prep = setup!(session, :rsync, :instantiate)
+            prep = setup!(session, :ship_tree, :instantiate)
             @test deleted.ok
             @test prep.ok
             @test length(deleted.hosts) == length(HOSTS)

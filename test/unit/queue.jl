@@ -23,7 +23,7 @@ end
 
 function (p::_KitSetupFail)(_, mode::Symbol; gitignore::Bool = true)
     mode === p.bad || return (; ok = true, gitignore)
-    p.throw_on_bad && error(mode === :rsync ? "rsync failed" : "failed")
+    p.throw_on_bad && error(mode === :ship_tree ? "ship-tree failed" : "failed")
     return (; ok = false, gitignore)
 end
 
@@ -48,7 +48,7 @@ end
 
 function (p::_StageRsyncProbe)(_, mode::Symbol; gitignore::Bool = true)
     push!(p.modes, mode)
-    if mode === :rsync
+    if mode === :ship_tree
         empty!(p.gitignore)
         push!(p.gitignore, gitignore)
     end
@@ -424,7 +424,7 @@ end
                 cancel_requested = Returns(true),
             )
         end
-        @test modes == [:rsync]
+        @test modes == [:ship_tree]
         bare = DistSSHQueue.Job(;
             kind = :go,
             script = "a.jl",
@@ -975,29 +975,29 @@ end
                 kit_setup! = _KitSetupOk(modes),
             )
         end
-        @test modes == [:rsync, :instantiate, :check]
-        @test phases == ["rsync", "instantiate", "check"]
+        @test modes == [:ship_tree, :instantiate, :check]
+        @test phases == ["ship-tree", "instantiate", "check"]
     end
 end
 
-@testset "stage rsync skips gitignore and stays before instantiate" begin
+@testset "stage ship uses gitignore and stays before instantiate" begin
     mktempdir() do d
         stage = joinpath(d, ".distsshqueue", "stage", "11111111-1111-4111-8111-111111111111")
         mkpath(stage)
         write(joinpath(stage, "Project.toml"), "[deps]\n")
         got = _stage_rsync_setup!(stage)
-        @test got.gitignore === false
-        @test got.modes == [:rsync, :instantiate, :check]
-        @test got.phases == ["rsync", "instantiate", "check"]
-        @test got.manifest_at[:rsync] === false
+        @test got.gitignore === true
+        @test got.modes == [:ship_tree, :instantiate, :check]
+        @test got.phases == ["ship-tree", "instantiate", "check"]
+        @test got.manifest_at[:ship_tree] === false
         @test got.manifest_at[:instantiate] === true
     end
     mktempdir() do d
         write(joinpath(d, "Project.toml"), "[deps]\n")
         got = _stage_rsync_setup!(d)
         @test got.gitignore === true
-        @test got.modes == [:rsync, :instantiate, :check]
-        @test got.phases == ["rsync", "instantiate", "check"]
+        @test got.modes == [:ship_tree, :instantiate, :check]
+        @test got.phases == ["ship-tree", "instantiate", "check"]
     end
 end
 
@@ -1052,7 +1052,7 @@ end
         @test leaf isa String
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
-                j, Returns(nothing); kit_setup! = _KitSetupFail(:rsync, true),
+                j, Returns(nothing); kit_setup! = _KitSetupFail(:ship_tree, true),
             )
         end
         @test !isfile(joinpath(leaf, "setup_failure.log"))

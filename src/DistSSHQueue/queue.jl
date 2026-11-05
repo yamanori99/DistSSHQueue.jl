@@ -692,9 +692,9 @@ function _queue_kit_setup!(
         return nothing
     end
     try
-        on_phase("rsync")
-        # Kit rsync refuses a nonempty remote. Later jobs still instantiate.
-        kit_setup!(session, :rsync; gitignore = !is_qhost_stage_project(String(proj)))
+        on_phase("ship-tree")
+        # Run 0.2 rejects `:rsync` and `gitignore=false`. `.gitignore` is the filter.
+        kit_setup!(session, :ship_tree)
         _throw_if_cancelled(cancel_requested)
         on_phase("instantiate")
         _queue_local_instantiate!(String(proj))
