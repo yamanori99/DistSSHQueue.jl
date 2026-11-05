@@ -12,8 +12,10 @@ on:
 # nightly, Aqua on nightly, and PkgEval in this workflow.
 # 1.14-pre passes julia-slot "~1.14.0-0" (setup-julia) and follows the heavy gate,
 # including ordinary pull requests. Registry install does too.
-# macOS for 1.14-pre and nightly is CI weekly. WSL2 1.13 Pkg.test runs on a main
+# macOS 1.14-pre Pkg.test follows the heavy gate and is continue-on-error.
+# macOS nightly stays on CI weekly. WSL2 1.13 Pkg.test runs on a main
 # push and CI weekly, not on a pull request. No label is involved.
+# Linux SSH E2E 1.14-pre follows the E2E path filter (continue-on-error).
 # A main push that changes only Project.toml, NEWS.md, and changelog.d/**,
 # and raises version, skips Test and does not start Linux E2E.
 concurrency:
@@ -36,10 +38,17 @@ jobs:
   # and not on pull_request.
   # cache-scratchspaces: false — registry_updates.toml in scratchspaces can
   # poison Pkg.Registry.update on 1.13 if restored corrupt.
-  # Aqua / JETLS share this workflow so the Test badge is the PR gate.
-  # Linux E2E (1.13): path filter on PR / main push; always on a version
-  # increase and dispatch. JETLS uses `.github/actions/jetls-check` (no nested
-  # cache; julia-actions/cache#236).
+# Aqua / JETLS / Runic share this workflow so the Test badge is the PR gate.
+# `.github/workflows/runic.yml` keeps the monthly schedule.
+# Runic, JETLS 1.13, and Aqua 1.13 start after detect. Pkg.test, Registry,
+# PkgEval, Downstream, and SSH E2E start only after those three succeed.
+# An `if` drops the implicit success() check, so each of those jobs names
+# needs.*.result == 'success'. 1.14-pre Aqua and JETLS stay
+# continue-on-error and do not hold the hosts.
+# Linux E2E (1.13 required, 1.14-pre continue-on-error): path filter on PR /
+# main push; always on a version
+# increase and dispatch. JETLS uses `.github/actions/jetls-check` (no nested
+# cache; julia-actions/cache#236).
   detect:
     name: detect
     runs-on: ubuntu-latest
@@ -97,8 +106,8 @@ jobs:
 
   test-1-13:
     name: Pkg.test (1.13, ubuntu-latest, x64)
-    needs: detect
-    if: needs.detect.outputs.heavy == 'true'
+    needs: [detect, runic, jetls, aqua]
+    if: needs.detect.outputs.heavy == 'true' && needs.runic.result == 'success' && needs.jetls.result == 'success' && needs.aqua.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -126,8 +135,8 @@ jobs:
   # Add the job name to the main ruleset; this file does not change it.
   registry-install:
     name: Registry install (1.13, ubuntu-latest, x64)
-    needs: detect
-    if: needs.detect.outputs.heavy == 'true'
+    needs: [detect, runic, jetls, aqua]
+    if: needs.detect.outputs.heavy == 'true' && needs.runic.result == 'success' && needs.jetls.result == 'success' && needs.aqua.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -149,8 +158,8 @@ jobs:
 
   test-1-13-macos:
     name: Pkg.test (1.13, macos-latest, aarch64)
-    needs: detect
-    if: needs.detect.outputs.heavy == 'true'
+    needs: [detect, runic, jetls, aqua]
+    if: needs.detect.outputs.heavy == 'true' && needs.runic.result == 'success' && needs.jetls.result == 'success' && needs.aqua.result == 'success'
     runs-on: macos-latest
     timeout-minutes: 45
     permissions:
@@ -170,8 +179,8 @@ jobs:
 
   test-1-13-wsl:
     name: Pkg.test (1.13, WSL2 ubuntu-24.04, x64)
-    needs: detect
-    if: needs.detect.outputs.heavy == 'true' && github.event_name != 'pull_request'
+    needs: [detect, runic, jetls, aqua]
+    if: needs.detect.outputs.heavy == 'true' && needs.runic.result == 'success' && needs.jetls.result == 'success' && needs.aqua.result == 'success' && github.event_name != 'pull_request'
     runs-on: windows-latest
     timeout-minutes: 45
     permissions:
@@ -202,8 +211,8 @@ jobs:
 
   test-1-14-pre:
     name: Pkg.test (1.14-pre, ubuntu-latest, x64)
-    needs: detect
-    if: needs.detect.outputs.heavy == 'true'
+    needs: [detect, runic, jetls, aqua]
+    if: needs.detect.outputs.heavy == 'true' && needs.runic.result == 'success' && needs.jetls.result == 'success' && needs.aqua.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     continue-on-error: true
@@ -220,10 +229,32 @@ jobs:
           delete-old-caches: false
       - uses: ./.github/actions/pkg-test
 
+  # Same heavy gate as Ubuntu 1.14-pre. continue-on-error: not a ruleset
+  # check. Runner stays macos-latest. Nightly macOS stays on CI weekly.
+  test-1-14-pre-macos:
+    name: Pkg.test (1.14-pre, macos-latest, aarch64)
+    needs: [detect, runic, jetls, aqua]
+    if: needs.detect.outputs.heavy == 'true' && needs.runic.result == 'success' && needs.jetls.result == 'success' && needs.aqua.result == 'success'
+    runs-on: macos-latest
+    timeout-minutes: 45
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/julia-slot
+        with:
+          version: "~1.14.0-0"
+      - uses: julia-actions/cache@9353db09a0f2bbbdec6f41791918c75d37391b36 # v3.5.0
+        with:
+          cache-scratchspaces: false
+          delete-old-caches: false
+      - uses: ./.github/actions/pkg-test
+
   test-nightly:
     name: Pkg.test (nightly, ubuntu-latest, x64)
-    needs: detect
-    if: needs.detect.outputs.heavy == 'true' && (github.event_name != 'pull_request' || needs.detect.outputs.version_cut == 'true')
+    needs: [detect, runic, jetls, aqua]
+    if: needs.detect.outputs.heavy == 'true' && needs.runic.result == 'success' && needs.jetls.result == 'success' && needs.aqua.result == 'success' && (github.event_name != 'pull_request' || needs.detect.outputs.version_cut == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     continue-on-error: true
@@ -246,8 +277,8 @@ jobs:
   # DistSSHRun is only on its main branch. continue-on-error.
   pkgeval:
     name: PkgEval (nightly, ubuntu-latest, x64)
-    needs: detect
-    if: needs.detect.outputs.heavy == 'true' && (github.event_name != 'pull_request' || needs.detect.outputs.version_cut == 'true')
+    needs: [detect, runic, jetls, aqua]
+    if: needs.detect.outputs.heavy == 'true' && needs.runic.result == 'success' && needs.jetls.result == 'success' && needs.aqua.result == 'success' && (github.event_name != 'pull_request' || needs.detect.outputs.version_cut == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 90
     continue-on-error: true
@@ -266,7 +297,28 @@ jobs:
         with:
           package: DistSSHQueue
 
-  aqua-1-13:
+  # Same check as the monthly workflow. That file no longer runs on a PR
+  # or a main push, so this job is the one heavy jobs wait for. Not a
+  # ruleset name. A red result skips Pkg.test, so the required checks stay
+  # skipping. The job name stays `Runic`.
+  runic:
+    name: Runic
+    needs: detect
+    if: needs.detect.outputs.heavy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/julia-slot
+        with:
+          version: "1.13"
+      - uses: fredrikekre/runic-action@b4dbd650db5cc684baae27fea45d22daf41693c2 # v1.5.0
+        with:
+          version: '1'
+
+  aqua:
     name: Aqua (1.13, ubuntu-latest, x64)
     needs: detect
     if: needs.detect.outputs.heavy == 'true'
@@ -332,7 +384,7 @@ jobs:
   # JETLS 2026-11-04 officially supports 1.12.2 through 1.14.
   # The required job stays on 1.13. 1.14-pre is informational
   # (continue-on-error) and is not a required check. No JETLS on nightly.
-  jetls-1-13:
+  jetls:
     name: JETLS (1.13, ubuntu-latest, x64)
     needs: detect
     if: needs.detect.outputs.heavy == 'true'
@@ -381,8 +433,8 @@ jobs:
 
   ssh-e2e:
     name: ubuntu-latest → ubuntu-26.04
-    needs: detect
-    if: needs.detect.outputs.e2e == 'true'
+    needs: [detect, runic, jetls, aqua]
+    if: needs.detect.outputs.e2e == 'true' && needs.runic.result == 'success' && needs.jetls.result == 'success' && needs.aqua.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -425,6 +477,51 @@ jobs:
         if: ${{ always() }}
         run: ./testenv/docker-ssh/scripts/down.sh || true
 
+  # Same path gate as 1.13. Parent Julia is ~1.14.0-0. Workers follow
+  # JULIA_CHANNEL (Queue's name for the image channel). continue-on-error;
+  # not a ruleset check. No Codecov upload.
+  ssh-e2e-1-14-pre:
+    name: ubuntu-latest → ubuntu-26.04 (1.14-pre)
+    needs: [detect, runic, jetls, aqua]
+    if: needs.detect.outputs.e2e == 'true' && needs.runic.result == 'success' && needs.jetls.result == 'success' && needs.aqua.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: true
+    permissions:
+      contents: read
+      actions: write # buildx type=gha cache for the worker image
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/julia-slot
+        with:
+          version: "~1.14.0-0"
+      - name: Julia version
+        run: julia --version
+
+      - uses: julia-actions/cache@9353db09a0f2bbbdec6f41791918c75d37391b36 # v3.5.0
+        with:
+          cache-scratchspaces: false
+          delete-old-caches: false
+
+      - uses: julia-actions/julia-buildpkg@e3eb439fad4f9aba7da2667e7510e4a46ebc46e1 # v1.7.0
+        with:
+          project: test
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
+
+      - name: docker-ssh up + SSH E2E
+        env:
+          DISTSSHQUEUE_BUILD_CACHE: gha
+          JULIA_CHANNEL: "1.14"
+        run: ./testenv/docker-ssh/scripts/up.sh --e2e
+
+      - name: Teardown workers
+        if: ${{ always() }}
+        run: ./testenv/docker-ssh/scripts/down.sh || true
+
   # Downstream main, with this checkout developed into its test project.
   # The job name includes `@main` because `ref` below is `main`.
   # Red is correct when this PR needs a downstream change that is not on main
@@ -432,8 +529,8 @@ jobs:
   # fails (for example a 0.2 bump).
   downstream:
     name: Downstream (${{ matrix.pkg }}@main, 1.13)
-    needs: detect
-    if: needs.detect.outputs.heavy == 'true'
+    needs: [detect, runic, jetls, aqua]
+    if: needs.detect.outputs.heavy == 'true' && needs.runic.result == 'success' && needs.jetls.result == 'success' && needs.aqua.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -459,6 +556,10 @@ jobs:
         with:
           cache-scratchspaces: false
           delete-old-caches: false
+      - name: Public Queue names in downstream src
+        env:
+          DOWNSTREAM_SRC: ${{ github.workspace }}/downstream/src
+        run: julia --startup-file=no --project=. .github/downstream_public.jl "$DOWNSTREAM_SRC"
       - name: Pkg.test downstream against this checkout
         env:
           PKG: ${{ matrix.pkg }}

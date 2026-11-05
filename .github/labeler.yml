@@ -27,6 +27,7 @@
           - "codecov.yml"
           - ".coderabbit.yaml"
           - ".JETLSConfig.toml"
+          - "test/unit/downstream_public.jl"
 
 "area:test":
   - changed-files:
