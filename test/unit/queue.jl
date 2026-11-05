@@ -63,7 +63,7 @@ function _stage_rsync_setup!(proj::String)
         kind = :go,
         script = script,
         hosts = ["child:w1:1"],
-        kwargs = Dict{String, Any}("project" => proj),
+        kwargs = Dict{String, Any}("project" => proj, "remote" => "/custom/root"),
     )
     manifest = joinpath(proj, "Manifest.toml")
     modes = Symbol[]
@@ -964,7 +964,10 @@ end
             kind = :go,
             script = script,
             hosts = ["child:w1:1"],
-            kwargs = Dict{String, Any}("project" => String(d)),
+            kwargs = Dict{String, Any}(
+                "project" => String(d),
+                "remote" => "/custom/root",
+            ),
         )
         modes = Symbol[]
         phases = String[]
@@ -975,8 +978,26 @@ end
                 kit_setup! = _KitSetupOk(modes),
             )
         end
-        @test modes == [:ship_tree, :instantiate, :check]
-        @test phases == ["ship-tree", "instantiate", "check"]
+        @test modes == [:remote_root, :ship_tree, :instantiate, :check]
+        @test phases == ["remote-root", "ship-tree", "instantiate", "check"]
+        @test DistSSHQueue._absolute_remote_path("/custom/root")
+        @test DistSSHQueue._absolute_remote_path("  /custom/root")
+        @test !DistSSHQueue._absolute_remote_path("jobs/app")
+        @test !DistSSHQueue._absolute_remote_path("~/jobs")
+        @test !DistSSHQueue._absolute_remote_path(nothing)
+        rel = DistSSHQueue.Job(;
+            kind = :go,
+            script = script,
+            hosts = ["child:w1:1"],
+            kwargs = Dict{String, Any}("project" => String(d), "remote" => "jobs/app"),
+        )
+        rel_modes = Symbol[]
+        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+            DistSSHQueue._queue_kit_setup!(
+                rel, Returns(nothing); kit_setup! = _KitSetupOk(rel_modes),
+            )
+        end
+        @test rel_modes == [:ship_tree, :instantiate, :check]
     end
 end
 
@@ -987,8 +1008,8 @@ end
         write(joinpath(stage, "Project.toml"), "[deps]\n")
         got = _stage_rsync_setup!(stage)
         @test got.gitignore === true
-        @test got.modes == [:ship_tree, :instantiate, :check]
-        @test got.phases == ["ship-tree", "instantiate", "check"]
+        @test got.modes == [:remote_root, :ship_tree, :instantiate, :check]
+        @test got.phases == ["remote-root", "ship-tree", "instantiate", "check"]
         @test got.manifest_at[:ship_tree] === false
         @test got.manifest_at[:instantiate] === true
     end
@@ -996,8 +1017,8 @@ end
         write(joinpath(d, "Project.toml"), "[deps]\n")
         got = _stage_rsync_setup!(d)
         @test got.gitignore === true
-        @test got.modes == [:ship_tree, :instantiate, :check]
-        @test got.phases == ["ship-tree", "instantiate", "check"]
+        @test got.modes == [:remote_root, :ship_tree, :instantiate, :check]
+        @test got.phases == ["remote-root", "ship-tree", "instantiate", "check"]
     end
 end
 

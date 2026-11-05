@@ -640,7 +640,7 @@ end
             # Multi-mode `setup!` rejects keyword arguments, so `:delete`
             # takes `confirm_path` on its own call.
             deleted = setup_delete_e2e!(session)
-            prep = setup!(session, :ship_tree, :instantiate)
+            prep = setup!(session, :remote_root, :ship_tree, :instantiate)
             @test deleted.ok
             @test prep.ok
             @test length(deleted.hosts) == length(HOSTS)
