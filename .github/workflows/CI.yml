@@ -26,7 +26,7 @@ permissions:
   contents: read
 
 jobs:
-  # `Pkg.test` 1.13 on a pull request is ubuntu-latest and macos-latest.
+  # `Pkg.test` 1.13 on a pull request is ubuntu-latest and xcode-27.
   # WSL2 Ubuntu is a main push and CI weekly, not a pull request.
   # macOS is required. The macOS job exercises `enable --write-only`
   # on LaunchAgent (Linux CI takes systemd). Coverage uploads from Ubuntu only.
@@ -34,7 +34,7 @@ jobs:
   # (macos-15-intel Colima, not this job).
   # One detect job; markdown-only / allowlisted PRs skip heavy jobs (UI: skipping).
   # Required check names include the Julia version and the architecture.
-  # Codecov (flag pkgtest): main push, Ubuntu 1.13 only — not macos-latest,
+  # Codecov (flag pkgtest): main push, Ubuntu 1.13 only — not xcode-27,
   # and not on pull_request.
   # cache-scratchspaces: false — registry_updates.toml in scratchspaces can
   # poison Pkg.Registry.update on 1.13 if restored corrupt.
@@ -157,10 +157,10 @@ jobs:
           rev: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
   test-1-13-macos:
-    name: Pkg.test (1.13, macos-latest, aarch64)
+    name: Pkg.test (1.13, xcode-27, aarch64)
     needs: [detect, runic, jetls, aqua]
     if: needs.detect.outputs.heavy == 'true' && needs.runic.result == 'success' && needs.jetls.result == 'success' && needs.aqua.result == 'success'
-    runs-on: macos-latest
+    runs-on: xcode-27
     timeout-minutes: 45
     permissions:
       contents: read
@@ -230,12 +230,12 @@ jobs:
       - uses: ./.github/actions/pkg-test
 
   # Same heavy gate as Ubuntu 1.14-pre. continue-on-error: not a ruleset
-  # check. Runner stays macos-latest. Nightly macOS stays on CI weekly.
+  # check. Runner is xcode-27. Nightly macOS stays on CI weekly.
   test-1-14-pre-macos:
-    name: Pkg.test (1.14-pre, macos-latest, aarch64)
+    name: Pkg.test (1.14-pre, xcode-27, aarch64)
     needs: [detect, runic, jetls, aqua]
     if: needs.detect.outputs.heavy == 'true' && needs.runic.result == 'success' && needs.jetls.result == 'success' && needs.aqua.result == 'success'
-    runs-on: macos-latest
+    runs-on: xcode-27
     timeout-minutes: 45
     continue-on-error: true
     steps:

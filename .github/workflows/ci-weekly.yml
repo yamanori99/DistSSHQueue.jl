@@ -4,7 +4,7 @@ name: CI weekly
 # @release drift when no PR ran that day. PR / main push stay the gate.
 # 1.14-pre and nightly jobs are continue-on-error and omitted from notify.
 # A 1.13 compile bench failure on main opens "Compile bench failed".
-# 1.13 macos-latest Pkg.test matches a PR (no coverage). WSL2 1.13 Pkg.test
+# 1.13 xcode-27 Pkg.test matches a PR (no coverage). WSL2 1.13 Pkg.test
 # runs here and on a main push, not on a pull request.
 # macOS nightly, WSL2 1.14-pre, and WSL2 nightly Pkg.test, and Aqua on
 # macOS and WSL2, run here only. macOS 1.14-pre Pkg.test also runs in Test
@@ -41,8 +41,8 @@ jobs:
       - uses: ./.github/actions/pkg-test
 
   test-1-13-macos:
-    name: Pkg.test (1.13, macos-latest, aarch64)
-    runs-on: macos-latest
+    name: Pkg.test (1.13, xcode-27, aarch64)
+    runs-on: xcode-27
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -124,8 +124,8 @@ jobs:
       - uses: ./.github/actions/pkg-test
 
   test-1-14-pre-macos:
-    name: Pkg.test (1.14-pre, macos-latest, aarch64)
-    runs-on: macos-latest
+    name: Pkg.test (1.14-pre, xcode-27, aarch64)
+    runs-on: xcode-27
     timeout-minutes: 45
     continue-on-error: true
     steps:
@@ -142,8 +142,8 @@ jobs:
       - uses: ./.github/actions/pkg-test
 
   test-nightly-macos:
-    name: Pkg.test (nightly, macos-latest, aarch64)
-    runs-on: macos-latest
+    name: Pkg.test (nightly, xcode-27, aarch64)
+    runs-on: xcode-27
     timeout-minutes: 45
     continue-on-error: true
     steps:
@@ -297,8 +297,8 @@ jobs:
         run: ./.github/aqua-check.sh
 
   aqua-1-14-pre-macos:
-    name: Aqua (1.14-pre, macos-latest, aarch64)
-    runs-on: macos-latest
+    name: Aqua (1.14-pre, xcode-27, aarch64)
+    runs-on: xcode-27
     timeout-minutes: 45
     continue-on-error: true
     steps:
@@ -316,8 +316,8 @@ jobs:
         run: ./.github/aqua-check.sh
 
   aqua-nightly-macos:
-    name: Aqua (nightly, macos-latest, aarch64)
-    runs-on: macos-latest
+    name: Aqua (nightly, xcode-27, aarch64)
+    runs-on: xcode-27
     timeout-minutes: 45
     continue-on-error: true
     steps:
