@@ -80,7 +80,9 @@ end
 function cli_env(d::AbstractString; distsshrun::Bool = false)
     cfg = joinpath(d, "config.toml")
     store = joinpath(d, "jobs.toml")
-    jobdir = joinpath(d, "job")
+    # A `go` job's DistSSHRun source must outlive `compilecache` (see
+    # `durable_tmpdir`). Other CLI trees have no path-source package.
+    jobdir = distsshrun ? durable_tmpdir(; prefix = "distsshqueue-job-") : joinpath(d, "job")
     mkpath(jobdir)
     # Run #236 detached `execute!` has no fallback project. Only the go
     # jobs pass `distsshrun`; other callers keep an empty `[deps]` tree.

@@ -3063,7 +3063,7 @@ end
 end
 
 @testset "go with job_id still runs the user script" begin
-    mktempdir() do d
+    let d = durable_tmpdir(; prefix = "distsshqueue-go-job-")
         mark = joinpath(d, "RAN")
         # Run #236 detached `execute!` has no fallback project.
         copy_registry_distsshrun_project!(d)
