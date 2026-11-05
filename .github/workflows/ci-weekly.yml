@@ -6,8 +6,9 @@ name: CI weekly
 # A 1.13 compile bench failure on main opens "Compile bench failed".
 # 1.13 macos-latest Pkg.test matches a PR (no coverage). WSL2 1.13 Pkg.test
 # runs here and on a main push, not on a pull request.
-# 1.14-pre and nightly Pkg.test and Aqua on macOS and WSL2 run here only.
-# Ubuntu copies also run in Test.
+# macOS nightly, WSL2 1.14-pre, and WSL2 nightly Pkg.test, and Aqua on
+# macOS and WSL2, run here only. macOS 1.14-pre Pkg.test also runs in Test
+# (continue-on-error). Ubuntu copies also run in Test.
 on:
   workflow_dispatch:
   # Daily 06:00 JST (UTC 21:00). Misses E2E weekly (daily UTC 19:00).
