@@ -23,7 +23,7 @@ end
 
 function (p::_KitSetupFail)(_, mode::Symbol; gitignore::Bool = true)
     mode === p.bad || return (; ok = true, gitignore)
-    p.throw_on_bad && error(mode === :rsync ? "rsync failed" : "failed")
+    p.throw_on_bad && error(mode === :ship_tree ? "ship-tree failed" : "failed")
     return (; ok = false, gitignore)
 end
 
@@ -48,7 +48,7 @@ end
 
 function (p::_StageRsyncProbe)(_, mode::Symbol; gitignore::Bool = true)
     push!(p.modes, mode)
-    if mode === :rsync
+    if mode === :ship_tree
         empty!(p.gitignore)
         push!(p.gitignore, gitignore)
     end
@@ -63,7 +63,7 @@ function _stage_rsync_setup!(proj::String)
         kind = :go,
         script = script,
         hosts = ["child:w1:1"],
-        kwargs = Dict{String, Any}("project" => proj),
+        kwargs = Dict{String, Any}("project" => proj, "remote" => "/custom/root"),
     )
     manifest = joinpath(proj, "Manifest.toml")
     modes = Symbol[]
@@ -424,7 +424,7 @@ end
                 cancel_requested = Returns(true),
             )
         end
-        @test modes == [:rsync]
+        @test modes == [:ship_tree]
         bare = DistSSHQueue.Job(;
             kind = :go,
             script = "a.jl",
@@ -964,7 +964,10 @@ end
             kind = :go,
             script = script,
             hosts = ["child:w1:1"],
-            kwargs = Dict{String, Any}("project" => String(d)),
+            kwargs = Dict{String, Any}(
+                "project" => String(d),
+                "remote" => "/custom/root",
+            ),
         )
         modes = Symbol[]
         phases = String[]
@@ -975,29 +978,47 @@ end
                 kit_setup! = _KitSetupOk(modes),
             )
         end
-        @test modes == [:rsync, :instantiate, :check]
-        @test phases == ["rsync", "instantiate", "check"]
+        @test modes == [:remote_root, :ship_tree, :instantiate, :check]
+        @test phases == ["remote-root", "ship-tree", "instantiate", "check"]
+        @test DistSSHQueue._absolute_remote_path("/custom/root")
+        @test DistSSHQueue._absolute_remote_path("  /custom/root")
+        @test !DistSSHQueue._absolute_remote_path("jobs/app")
+        @test !DistSSHQueue._absolute_remote_path("~/jobs")
+        @test !DistSSHQueue._absolute_remote_path(nothing)
+        rel = DistSSHQueue.Job(;
+            kind = :go,
+            script = script,
+            hosts = ["child:w1:1"],
+            kwargs = Dict{String, Any}("project" => String(d), "remote" => "jobs/app"),
+        )
+        rel_modes = Symbol[]
+        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+            DistSSHQueue._queue_kit_setup!(
+                rel, Returns(nothing); kit_setup! = _KitSetupOk(rel_modes),
+            )
+        end
+        @test rel_modes == [:ship_tree, :instantiate, :check]
     end
 end
 
-@testset "stage rsync skips gitignore and stays before instantiate" begin
+@testset "stage ship uses gitignore and stays before instantiate" begin
     mktempdir() do d
         stage = joinpath(d, ".distsshqueue", "stage", "11111111-1111-4111-8111-111111111111")
         mkpath(stage)
         write(joinpath(stage, "Project.toml"), "[deps]\n")
         got = _stage_rsync_setup!(stage)
-        @test got.gitignore === false
-        @test got.modes == [:rsync, :instantiate, :check]
-        @test got.phases == ["rsync", "instantiate", "check"]
-        @test got.manifest_at[:rsync] === false
+        @test got.gitignore === true
+        @test got.modes == [:remote_root, :ship_tree, :instantiate, :check]
+        @test got.phases == ["remote-root", "ship-tree", "instantiate", "check"]
+        @test got.manifest_at[:ship_tree] === false
         @test got.manifest_at[:instantiate] === true
     end
     mktempdir() do d
         write(joinpath(d, "Project.toml"), "[deps]\n")
         got = _stage_rsync_setup!(d)
         @test got.gitignore === true
-        @test got.modes == [:rsync, :instantiate, :check]
-        @test got.phases == ["rsync", "instantiate", "check"]
+        @test got.modes == [:remote_root, :ship_tree, :instantiate, :check]
+        @test got.phases == ["remote-root", "ship-tree", "instantiate", "check"]
     end
 end
 
@@ -1052,7 +1073,7 @@ end
         @test leaf isa String
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
-                j, Returns(nothing); kit_setup! = _KitSetupFail(:rsync, true),
+                j, Returns(nothing); kit_setup! = _KitSetupFail(:ship_tree, true),
             )
         end
         @test !isfile(joinpath(leaf, "setup_failure.log"))

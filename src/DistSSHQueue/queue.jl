@@ -594,6 +594,12 @@ function _queue_local_instantiate!(proj::AbstractString)
     return nothing
 end
 
+"""True when `remote` is an absolute path Run can pass to `setup! :remote_root`."""
+function _absolute_remote_path(remote)::Bool
+    remote isa AbstractString || return false
+    return startswith(strip(String(remote)), "/")
+end
+
 """Throw unless Kit `setup!` reported `ok` (instantiate / check)."""
 function _require_kit_setup_ok!(result, step::AbstractString)
     hasproperty(result, :ok) || return nothing
@@ -692,9 +698,16 @@ function _queue_kit_setup!(
         return nothing
     end
     try
-        on_phase("rsync")
-        # Kit rsync refuses a nonempty remote. Later jobs still instantiate.
-        kit_setup!(session, :rsync; gitignore = !is_qhost_stage_project(String(proj)))
+        # Run 0.2 `:ship_tree` refuses a missing remote root. `:remote_root`
+        # creates an absolute one. A relative or missing remote is left alone.
+        if _absolute_remote_path(session.remote)
+            on_phase("remote-root")
+            _require_kit_setup_ok!(kit_setup!(session, :remote_root), "remote-root")
+            _throw_if_cancelled(cancel_requested)
+        end
+        on_phase("ship-tree")
+        # Run 0.2 rejects `:rsync` and `gitignore=false`. `.gitignore` is the filter.
+        kit_setup!(session, :ship_tree)
         _throw_if_cancelled(cancel_requested)
         on_phase("instantiate")
         _queue_local_instantiate!(String(proj))
