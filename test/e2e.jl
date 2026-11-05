@@ -251,7 +251,10 @@ end
 """Latest `runs/*/src` from `:ship_tree`, or `nothing` when that directory is absent."""
 function _latest_remote_ship_src(host::AbstractString)::Union{Nothing, String}
     remote = "ls -1d $(REMOTE_ROOT)/runs/*/src 2>/dev/null | sort | tail -n 1"
-    cmd = `ssh -F $SSH_CONFIG -o BatchMode=yes -o ConnectTimeout=15 $host bash -lc $remote`
+    # One argument after the host. OpenSSH joins that into the remote shell
+    # command, so the pipe and glob stay inside it. `bash -lc` as its own
+    # argv lets the remote shell parse the pipe outside `-c` (`ls` of $HOME).
+    cmd = `ssh -F $SSH_CONFIG -o BatchMode=yes -o ConnectTimeout=15 $host $remote`
     out = read(pipeline(ignorestatus(cmd); stderr = devnull), String)
     s = strip(out)
     return isempty(s) ? nothing : s
