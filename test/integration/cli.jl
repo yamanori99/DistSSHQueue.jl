@@ -461,4 +461,77 @@ end
             end
         end
     end
+
+    @testset "qhost ssh signal is failure" begin
+        function write_ssh(dir::AbstractString, script::AbstractString)
+            path = joinpath(dir, "ssh")
+            write(path, "#!/bin/sh\n" * script)
+            chmod(path, 0o755)
+            return path
+        end
+
+        function with_fake_ssh(f, script::AbstractString)
+            mktempdir() do dir
+                write_ssh(dir, script)
+                path = dir * ":" * get(ENV, "PATH", "")
+                withenv(
+                    "PATH" => path,
+                    "DISTSSHKIT_QUIET" => "1",
+                    "DISTSSHQUEUE_CONFIG" => joinpath(dir, "no-config.toml"),
+                    "DISTSSHQUEUE_HOST" => nothing,
+                    DistSSHQueue.NO_STAGE_ENV => "1",
+                ) do
+                    f(dir)
+                end
+            end
+        end
+
+        id = "01234567-89ab-cdef-0123-456789abcdef"
+        printed_then_term = "printf '%s\\n' '$id'\nkill -TERM \$\$\nsleep 30\nexit 1\n"
+        for (script, code) in (
+                "exit 0\n" => 0,
+                "exit 3\n" => 3,
+                "exit 255\n" => 255,
+                "kill -TERM \$\$\nsleep 30\nexit 1\n" => 143,
+                "kill -KILL \$\$\nsleep 30\nexit 1\n" => 137,
+            )
+            with_fake_ssh(script) do _
+                @test DistSSHQueue.remote_dispatch("qh", "/opt/julia", "status", String[]) == code
+                @test DistSSHQueue.main(["qhost:qh", "--remote-julia", "/opt/julia", "status"]) == code
+            end
+        end
+        with_fake_ssh(printed_then_term) do _
+            err = try
+                DistSSHQueue.hop_print("qh", "/opt/julia", "print(homedir())")
+                nothing
+            catch e
+                e
+            end
+            @test err isa ArgumentError
+            @test occursin("exit 143", err.msg)
+        end
+        with_fake_ssh("kill -KILL \$\$\nsleep 30\nexit 1\n") do _
+            err = try
+                DistSSHQueue.hop_print("qh", "/opt/julia", "print(homedir())")
+                nothing
+            catch e
+                e
+            end
+            @test err isa ArgumentError
+            @test occursin("exit 137", err.msg)
+        end
+        with_fake_ssh(printed_then_term) do dir
+            proj = joinpath(dir, "job")
+            mkpath(proj)
+            write(joinpath(proj, "hello.jl"), "println(\"ok\")\n")
+            tickets = joinpath(proj, ".distsshqueue", "tickets")
+            code = cd(proj) do
+                return DistSSHQueue.main(
+                    ["qhost:qh", "--remote-julia", "/opt/julia", "submit", "go", "hello.jl"],
+                )
+            end
+            @test code == 143
+            @test !isdir(tickets)
+        end
+    end
 end
