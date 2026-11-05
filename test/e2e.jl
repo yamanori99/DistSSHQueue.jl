@@ -165,7 +165,8 @@ const _EXAMPLE_DISTSSHRUN_UUID = "b568025c-2759-4ef1-8b14-17d00e2cd000"
 
 """Resolve `proj` in this process's depot so `setup!` has a Manifest to send.
 
-Workers instantiate that lock. A `path` or `repo-url` entry is not on the image.
+Workers instantiate that lock. Until the 0.10.0 cut, DistSSHRun is a
+`[sources]` url (`main`). A `path` source is still not on the image.
 """
 function instantiate_example_job!(proj::AbstractString)
     Pkg.activate(String(proj)) do
@@ -183,7 +184,11 @@ function _general_registry(regs)::Bool
     return first(regs) == "General"
 end
 
-"""True when `manifest` locks DistSSHRun to a General version, not a path checkout."""
+"""True when `manifest` locks DistSSHRun to Run `main`.
+
+Revert at the 0.10.0 cut: assert a General lock again
+(`_general_registry`, no `repo-url` / `repo-rev`).
+"""
 function distsshrun_general_lock(manifest::AbstractString)::Bool
     data = TOML.parsefile(String(manifest))
     deps = get(data, "deps", nothing)
@@ -194,10 +199,10 @@ function distsshrun_general_lock(manifest::AbstractString)::Bool
     entry = entries[1]
     entry isa Dict || return false
     haskey(entry, "path") && return false
-    haskey(entry, "repo-url") && return false
-    haskey(entry, "repo-rev") && return false
     get(entry, "uuid", nothing) == _EXAMPLE_DISTSSHRUN_UUID || return false
-    _general_registry(get(entry, "registries", nothing)) || return false
+    get(entry, "repo-url", nothing) == "https://github.com/yamanori99/DistSSHRun.jl" ||
+        return false
+    get(entry, "repo-rev", nothing) == "main" || return false
     ver = get(entry, "version", nothing)
     tree = get(entry, "git-tree-sha1", nothing)
     return ver isa String && !isempty(ver) && tree isa String && !isempty(tree)
@@ -243,11 +248,26 @@ function setup_delete_e2e!(session)
     end
 end
 
-"""Fail with the missing path when `setup!` did not deliver a demo."""
+"""Latest `runs/*/src` from `:ship_tree`, or `nothing` when that directory is absent."""
+function _latest_remote_ship_src(host::AbstractString)::Union{Nothing, String}
+    remote = "ls -1d $(REMOTE_ROOT)/runs/*/src 2>/dev/null | sort | tail -n 1"
+    cmd = `ssh -F $SSH_CONFIG -o BatchMode=yes -o ConnectTimeout=15 $host bash -lc $remote`
+    out = read(pipeline(ignorestatus(cmd); stderr = devnull), String)
+    s = strip(out)
+    return isempty(s) ? nothing : s
+end
+
+"""Fail with the missing path when `setup!` did not deliver a demo.
+
+Run 0.2 `:ship_tree` extracts under `REMOTE_ROOT/runs/<id>/src`, not `REMOTE_ROOT` itself.
+"""
 function require_remote_demos!()
     for host in HOSTS
+        src = _latest_remote_ship_src(host)
+        src === nothing &&
+            error("setup! did not create $(REMOTE_ROOT)/runs/*/src on $host")
         for rel in _E2E_DEMO_RELS
-            remote = REMOTE_ROOT * "/" * rel
+            remote = src * "/" * rel
             cmd = `ssh -F $SSH_CONFIG -o BatchMode=yes -o ConnectTimeout=15 $host test -f $remote`
             proc = run(pipeline(ignorestatus(cmd); stdout = devnull, stderr = devnull))
             proc.exitcode == 0 || error("setup! did not deliver $remote on $host")
