@@ -15,7 +15,7 @@
 #   - Documenter → area:docs (docs/**)
 #   - GitHub / repo prose → area:project-docs (README, NEWS, CONTRIBUTING,
 #     SECURITY, AGENTS, REVIEW, CODEOWNERS, changelog.d)
-#   - .github/**, bench/**, codecov.yml, .coderabbit.yaml,
+#   - .github/**, .cursor/**, bench/**, codecov.yml, .coderabbit.yaml,
 #     .JETLSConfig.toml, and the Downstream public-name unit test
 #     (test/unit/downstream_public.jl) → area:ci
 #
@@ -63,6 +63,7 @@ trap 'rm -f "$tmp"' EXIT
   - changed-files:
       - any-glob-to-any-file:
           - ".github/**"
+          - ".cursor/**"
           - "bench/**"
           - "codecov.yml"
           - ".coderabbit.yaml"

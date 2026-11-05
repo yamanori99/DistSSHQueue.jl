@@ -23,6 +23,7 @@
   - changed-files:
       - any-glob-to-any-file:
           - ".github/**"
+          - ".cursor/**"
           - "bench/**"
           - "codecov.yml"
           - ".coderabbit.yaml"
