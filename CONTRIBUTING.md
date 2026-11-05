@@ -103,7 +103,7 @@ JETLS is the type gate. Do not commit `.vscode/settings.json` to silence the Lan
 
 ### Julia versions
 
-Workflows pass a version to `julia-actions/setup-julia`. The job name is the display label (`1.13`, `1.14-pre`, `nightly`). **1.14-pre** is not that version string: setup-julia gets `~1.14.0-0`, which follows the 1.14 prerelease line (alpha, then beta, then rc, then 1.14.0) and does not move to 1.15. WSL installs juliaup channel `1.14`.
+Workflows pass a version to [`.github/actions/julia-slot`](.github/actions/julia-slot/action.yml). That action checks the string is its own line in [`.github/julia-slots.env`](.github/julia-slots.env), then calls `julia-actions/setup-julia`. The job name is the display label (`1.13`, `1.14-pre`, `nightly`). **1.14-pre** is not that version string: setup-julia gets `~1.14.0-0`, which follows the 1.14 prerelease line (alpha, then beta, then rc, then 1.14.0) and does not move to 1.15. WSL installs juliaup channel `1.14`.
 
 | Version | Role | Required |
 | --- | --- | --- |
