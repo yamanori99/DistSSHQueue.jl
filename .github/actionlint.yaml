@@ -1,4 +1,4 @@
-# GitHub-hosted runners only: ubuntu-latest, macos-latest, macos-15-intel,
-# windows-latest. No self-hosted label. xcode-27 is not a Queue runner.
+# GitHub-hosted runners: ubuntu-latest, macos-15-intel, windows-latest.
+# xcode-27 is the self-hosted macOS label.
 self-hosted-runner:
-  labels: []
+  labels: [xcode-27]

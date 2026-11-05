@@ -111,7 +111,7 @@ Workflows pass a version to [`.github/actions/julia-slot`](.github/actions/julia
 | **1.14-pre** | setup-julia `~1.14.0-0`. Pkg.test, Aqua, informational JETLS. Heavy gate, including ordinary PRs. `continue-on-error` | no |
 | **nightly** | Published `julia-latest` tarball. It follows master and can lag a `VERSION` bump. Pkg.test and Aqua. Not ordinary PRs. `continue-on-error` | no |
 
-**1.13** runs on ordinary PRs (heavy gate), on Ubuntu and macOS. WSL2 1.13 runs on a main push and CI weekly, not on a pull request. Ubuntu **1.14-pre** `Pkg.test`, Aqua, and informational JETLS use that same heavy gate, including ordinary PRs. Ubuntu **nightly** `Pkg.test` and Aqua run on **main**, **CI weekly**, and a `Project.toml` version increase ([`.github/version-cut.sh`](.github/version-cut.sh)), not ordinary PRs. macOS and WSL2 **1.14-pre** and **nightly** run on **CI weekly** only.
+**1.13** runs on ordinary PRs (heavy gate), on Ubuntu and macOS. WSL2 1.13 runs on a main push and CI weekly, not on a pull request. Ubuntu **1.14-pre** `Pkg.test`, Aqua, and informational JETLS use that same heavy gate, including ordinary PRs. Ubuntu **nightly** `Pkg.test` and Aqua run on **main**, **CI weekly**, and a `Project.toml` version increase ([`.github/version-cut.sh`](.github/version-cut.sh)), not ordinary PRs. macOS **1.14-pre** `Pkg.test` uses that same heavy gate and is `continue-on-error`. macOS **nightly**, and WSL2 **1.14-pre** and **nightly**, run on **CI weekly** only.
 
 This package feels SSH hosts, Pkg, and lockfiles more than a compute-model
 library does. When Julia announces that it has stopped maintaining the
@@ -133,7 +133,7 @@ When a new RC of the floor's minor lands, point **1.13** jobs at `~1.13.0-0` so 
 These run as jobs of the `Test` workflow
 ([`.github/workflows/CI.yml`](.github/workflows/CI.yml)). Ubuntu:
 `Pkg.test` 1.13, JETLS 1.13, Aqua 1.13, Gitleaks
-(also rejects `< 0.0.1` in `Project.toml`). macOS (`macos-latest`):
+(also rejects `< 0.0.1` in `Project.toml`). macOS (`xcode-27`):
 `Pkg.test` 1.13, same heavy gate, no coverage upload.
 macOS runs `enable --write-only` on LaunchAgent. macOS is required.
 WSL2 1.13 is a main push and CI weekly, not a pull request.
@@ -191,7 +191,7 @@ Codecov too). macOS and WSL SSH E2E stay on `E2E weekly`, not the PR.
 Register when the required checks below are green. Intel / WSL weekly are
 watchers, not the register gate.
 
-CI uploads Codecov on **main push** only (Ubuntu `Pkg.test` 1.13, flag `pkgtest`). The `macos-latest` job does not upload. PR E2E does not upload; a version-increase PR and **E2E weekly** Linux upload flag `e2e`. Public repo + Codecov OIDC (`id-token: write`). Status checks are informational (`codecov.yml`). Local coverage:
+CI uploads Codecov on **main push** only (Ubuntu `Pkg.test` 1.13, flag `pkgtest`). The `xcode-27` job does not upload. PR E2E does not upload; a version-increase PR and **E2E weekly** Linux upload flag `e2e`. Public repo + Codecov OIDC (`id-token: write`). Status checks are informational (`codecov.yml`). Local coverage:
 
 ```bash
 julia --project=. -e 'using Pkg; Pkg.test(; coverage=true)'
@@ -201,7 +201,7 @@ DISTSSHQUEUE_CODE_COVERAGE=1 ./testenv/docker-ssh/scripts/up.sh --e2e
 Required to merge (ruleset `main` uses these names). **1.14-pre** and **nightly** jobs are allow-failure and are not in that ruleset. A job skipped by the heavy / E2E gate shows as skipping (not a green empty run). Ubuntu **1.14-pre** runs on the heavy gate, including ordinary PRs. macOS **1.14-pre** `Pkg.test` and Linux E2E **1.14-pre** do too (`continue-on-error`). Ubuntu **nightly** runs on **main**, weekly, and a version increase, not ordinary PRs. macOS **nightly**, and WSL2 **1.14-pre** and **nightly**, run on CI weekly only. E2E weekly and CI weekly are not required.
 
 - `Pkg.test (1.13, ubuntu-latest, x64)`
-- `Pkg.test (1.13, macos-latest, aarch64)`
+- `Pkg.test (1.13, xcode-27, aarch64)`
 - `Registry install (1.13, ubuntu-latest, x64)`
 - `JETLS (1.13, ubuntu-latest, x64)`
 - `Aqua (1.13, ubuntu-latest, x64)`
@@ -214,7 +214,7 @@ Required to merge (ruleset `main` uses these names). **1.14-pre** and **nightly*
 | When | Workflow | What |
 | --- | --- | --- |
 | Daily 04:00 JST, or Run workflow | `E2E weekly` | `ubuntu-latest`, `macos-15-intel`, WSL2 → `ubuntu-26.04`. Linux job uploads E2E Codecov. Not a PR check. Failure opens (or comments on) Issue `E2E weekly failed`; a later all-green run closes it. A red **Linux** job on a scheduled run adds `cut-hold`, and a later green scheduled Linux removes it. Intel / WSL red does not. |
-| Daily 06:00 JST, or Run workflow | `CI weekly` | Same 1.13 `Pkg.test` / JETLS / Aqua versions as a PR, including `macos-latest` (no coverage). WSL2 1.13 runs here and on a main push, not on a pull request. macOS nightly, WSL2 1.14-pre, and WSL2 nightly `Pkg.test`, and Aqua on macOS and WSL2, run here only. macOS 1.14-pre `Pkg.test` also runs in `Test`. `Compile bench` measures precompile, load, CLI wall time, `src/**/*.jl` size, and the host OS, arch, and CPU on 1.13, 1.14-pre, and nightly. The page opens on 1.13. A solid line marks a `Project.toml` version change. On the 1.13 slot, a dash-dot line marks a Julia patch change. CI weekly runs it, and a **main** push that changes the measured tree runs it too (`src/`, the bench measure inputs, `Project.toml`, and the compile-bench action and workflow). A docs-only push does not. A second run of the same commit on the same UTC day keeps the first sample. A **main** run appends that sample to the `bench-data` branch. A render job then rebuilds the README and `bench.html`, and a main run publishes that page on GitHub Pages. A **main** push of `bench/compile/report.jl` or `bench/compile/charts.jl` rebuilds them and does not measure. A pull request that changes the file renders the history into the job summary and does not push. A command that exits nonzero is not recorded. It flags a host change, a 1.5x jump (and a 200 ms method that is new or doubled) but does not fail the run. Not a PR check. Catches 1.13 / Aqua / JETLS `@release` drift when nothing merged that day. Failure of the 1.13 jobs opens Issue `CI weekly failed` (`alert`); 1.14-pre, nightly, and compile bench are omitted from that notify. `cache-gc` keeps one Actions cache per restore-key prefix. |
+| Daily 06:00 JST, or Run workflow | `CI weekly` | Same 1.13 `Pkg.test` / JETLS / Aqua versions as a PR, including `xcode-27` (no coverage). WSL2 1.13 runs here and on a main push, not on a pull request. macOS nightly, WSL2 1.14-pre, and WSL2 nightly `Pkg.test`, and Aqua on macOS and WSL2, run here only. macOS 1.14-pre `Pkg.test` also runs in `Test`. `Compile bench` measures precompile, load, CLI wall time, `src/**/*.jl` size, and the host OS, arch, and CPU on 1.13, 1.14-pre, and nightly. The page opens on 1.13. A solid line marks a `Project.toml` version change. On the 1.13 slot, a dash-dot line marks a Julia patch change. CI weekly runs it, and a **main** push that changes the measured tree runs it too (`src/`, the bench measure inputs, `Project.toml`, and the compile-bench action and workflow). A docs-only push does not. A second run of the same commit on the same UTC day keeps the first sample. A **main** run appends that sample to the `bench-data` branch. A render job then rebuilds the README and `bench.html`, and a main run publishes that page on GitHub Pages. A **main** push of `bench/compile/report.jl` or `bench/compile/charts.jl` rebuilds them and does not measure. A pull request that changes the file renders the history into the job summary and does not push. A command that exits nonzero is not recorded. It flags a host change, a 1.5x jump (and a 200 ms method that is new or doubled) but does not fail the run. Not a PR check. Catches 1.13 / Aqua / JETLS `@release` drift when nothing merged that day. Failure of the 1.13 jobs opens Issue `CI weekly failed` (`alert`); 1.14-pre, nightly, and compile bench are omitted from that notify. `cache-gc` keeps one Actions cache per restore-key prefix. |
 | 1st 10:00 JST, or Run workflow | `Runic` | Monthly `runic --check` on tracked `.jl` (`version: '1'`). Pull requests and main pushes run the same check in `Test` (job name `Runic`). Not a required PR check. Catches Runic minor drift when nothing formatted that month. Failure opens Issue `Runic monthly failed` (`alert`). |
 
 ## Pull requests
