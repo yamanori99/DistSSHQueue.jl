@@ -58,7 +58,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: julia-actions/setup-julia@da908477b5db94c10ffce8cfea9f2b3b9d5db687 # v3.0.3
+      - uses: ./.github/actions/julia-slot
         with:
           version: "1.13"
       - uses: julia-actions/cache@9353db09a0f2bbbdec6f41791918c75d37391b36 # v3.5.0
@@ -105,7 +105,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: julia-actions/setup-julia@da908477b5db94c10ffce8cfea9f2b3b9d5db687 # v3.0.3
+      - uses: ./.github/actions/julia-slot
         with:
           version: "1.13"
       - uses: julia-actions/cache@9353db09a0f2bbbdec6f41791918c75d37391b36 # v3.5.0
@@ -170,8 +170,8 @@ jobs:
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .ci-cache/wsl-julia
-          # root's depot. Pkg.test uses wsl-julia-ci-1.13, so /root paths stay here.
-          key: wsl-julia-e2e-1.13-${{ hashFiles('Project.toml', 'test/Project.toml') }}
+          # root's depot. Pkg.test uses wsl-julia-1.13, so /root paths stay here.
+          key: wsl-julia-${{ hashFiles('Project.toml', 'test/Project.toml', '.github/julia-slots.env') }}
           # No restore-keys: a prefix hit would unpack an older Julia's julia.tgz.
       - name: GHCR token for WSL
         env:
@@ -214,6 +214,7 @@ jobs:
           echo "$(cat "$src/.ci-cache/ghcr.token")" | docker login ghcr.io -u "$actor" --password-stdin
           rm -f "$src/.ci-cache/ghcr.token" "$src/.ci-cache/ghcr.actor"
           julia_channel=1.13
+          # Channel must match the stable line in .github/julia-slots.env
           # shellcheck source=/dev/null
           source "$dest/testenv/docker-ssh/scripts/retry.sh"
           if [[ -f "$cache/julia.tgz" ]]; then
