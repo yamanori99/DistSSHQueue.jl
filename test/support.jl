@@ -389,6 +389,20 @@ function drive_until_terminal!(q, id; tries::Integer = wait_tries(:go_job, 0.2),
     return job(q, id).state
 end
 
+# Job trees that ship a path-source DistSSHRun. `mktempdir() do` deletes the
+# tree when the test returns, including while a detached `julia` is still in
+# `compilecache`. Julia 1.13 then does
+# `chmod(ji, filemode(source) & 0o777 | 0o200)`. A missing source makes that
+# mode 0200, and the next `find_all_in_cache_path` throws EACCES.
+# These directories live until the test process exits.
+const _DURABLE_TMP = String[]
+
+function durable_tmpdir(; prefix::AbstractString = "distsshqueue-durable-")
+    d = mktempdir(; prefix = String(prefix))
+    push!(_DURABLE_TMP, d)
+    return d
+end
+
 const _REGISTRY_RUN_PROJECT = Ref{Union{Nothing, String}}(nothing)
 const _DISTSSHRUN_UUID = "b568025c-2759-4ef1-8b14-17d00e2cd000"
 
@@ -455,7 +469,9 @@ function _registry_run_project()::String
     prev = Base.active_project()
     try
         pkg.activate(dir)
-        pkg.instantiate()
+        # Do not precompile this vendor copy in-process. That is a second
+        # DistSSHRun source, and it races the CLI children on Julia 1.13.
+        pkg.instantiate(; allow_autoprecomp = false)
     finally
         if prev === nothing
             pkg.activate()
