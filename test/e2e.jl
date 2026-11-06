@@ -1381,6 +1381,11 @@ end
                         @test status_shows_id(after, id2)
                         @test occursin("cancelled", after)
 
+                        # A live kit.pid blocks teardown, including --write-only.
+                        cancelled_hold = read_cli(addenv(qh(["cancel", id2]), client_env...))
+                        @test cancelled_hold == id2
+                        wait_store_job(qh_store, id2, (:cancelled,); tries = GO_WAIT_TRIES)
+
                         @test run_cli(addenv(qh(["stop"]), client_env...)).exitcode == 0
                         confirm = String[]
                         withenv(
