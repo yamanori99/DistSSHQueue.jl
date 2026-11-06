@@ -581,12 +581,57 @@ function _with_pkg_depots(f)
     end
 end
 
+"""Throw unless Manifest `julia_version` is a Julia version of this minor.
+
+The path is `Base.active_manifest` (a versioned Manifest when Julia selects one).
+A missing key, a non-string, an unparseable version, or a different minor
+throws before `Pkg.instantiate`. A matching minor returns.
+"""
+function _refuse_manifest_julia_minor!(manifest_path::AbstractString)
+    parsed = TOML.parsefile(String(manifest_path))
+    julia_version = parsed isa AbstractDict ? get(parsed, "julia_version", nothing) : nothing
+    if !(julia_version isa AbstractString)
+        error("Manifest julia_version is missing. See help setup.")
+    end
+    parsed_version = try
+        VersionNumber(String(julia_version))
+    catch
+        nothing
+    end
+    if !(parsed_version isa VersionNumber)
+        error("Manifest julia_version is not a Julia version. See help setup.")
+    end
+    if Base.thisminor(parsed_version) != Base.thisminor(VERSION)
+        error(
+            "Manifest julia_version $(julia_version) does not match this Julia $(VERSION). See help setup.",
+        )
+    end
+    return nothing
+end
+
+"""`Pkg.instantiate` the job tree on this host.
+
+No `Project.toml`: return. An active Manifest whose `julia_version` is missing,
+not a Julia version, or a different minor fails the step. A matching minor
+instantiates that Manifest and does not update registries. No Manifest keeps
+the previous `Pkg.instantiate()` call.
+"""
 function _queue_local_instantiate!(proj::AbstractString)
     root = canonical_local_path(proj)
     isfile(joinpath(root, "Project.toml")) || return nothing
     _with_pkg_depots() do
         Pkg.activate(root) do
-            Pkg.instantiate()
+            manifest = Base.active_manifest()
+            if manifest isa AbstractString
+                _refuse_manifest_julia_minor!(manifest)
+                Pkg.instantiate(;
+                    manifest = true,
+                    update_registry = false,
+                    julia_version_strict = true,
+                )
+            else
+                Pkg.instantiate()
+            end
             return nothing
         end
         return nothing

@@ -233,7 +233,9 @@ julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
 `submit` は、`serve` が無ければキューホスト上で起動する。`serve` が
-ジョブ木をそこで `Pkg.instantiate` し、`child:` には
+ジョブ木をそこで `Pkg.instantiate` する。Manifest の `julia_version` が
+無い、Julia の版でない、または minor が `serve` の Julia と違うときは
+この段階で失敗する。`child:` には
 `setup!` を走らせる (stage で `setup` を手で打たない)。
 `:check` は `child:` で常に走る。`qhost:` の stage は `.git/`
 を送らないが、無いときは fail ではなく警告にする。
