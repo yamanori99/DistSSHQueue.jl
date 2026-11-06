@@ -749,7 +749,17 @@ end
     end
 end
 
-_teardown_yes_warn()::String = "  -y / DISTSSHKIT_YES will not delete in DistSSHQueue 0.10.0. Pass --confirm-path."
+_teardown_yes_warn()::String =
+    "  -y, --yes, and DISTSSHKIT_YES do not authorize teardown. Nothing deleted. Pass --confirm-path PATH."
+
+function _teardown_confirm_args(home::AbstractString)::Vector{String}
+    args = String[]
+    for p in DistSSHQueue.teardown_targets(; home = home)
+        ispath(p) || continue
+        push!(args, "--confirm-path", p)
+    end
+    return args
+end
 
 function _seed_teardown_home(home::String; extra::AbstractString = "")::String
     data = joinpath(home, ".distsshqueue")
@@ -760,7 +770,7 @@ function _seed_teardown_home(home::String; extra::AbstractString = "")::String
     return data
 end
 
-@testset "teardown -y removes queue-host files" begin
+@testset "teardown dry-run lists queue-host files and confirm removes them" begin
     mktempdir() do home::String
         data = joinpath(home, ".distsshqueue")
         mkpath(joinpath(data, "env"))
@@ -786,7 +796,7 @@ end
             @test code1 == 0
             @test occursin("Would remove", out1)
             @test occursin(".lock", out1)
-            @test occursin("Pass -y / --yes to delete.", out1)
+            @test !occursin("Pass -y / --yes to delete.", out1)
             @test occursin("Pass --confirm-path for each quoted path above.", out1)
             @test !occursin("Error:", err1)
             @test !occursin("Error:", out1)
@@ -795,10 +805,16 @@ end
             code_y, out_y, err_y = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "-y", "--write-only"])
             end
-            @test code_y == 0
+            @test code_y == 1
             @test chomp(err_y) == _teardown_yes_warn()
-            @test occursin("Would remove", out_y)
-            @test !isfile(store)
+            @test !occursin("Would remove", out_y)
+            @test isfile(store)
+            @test isfile(wrap)
+            code_ok, _, err_ok = capture_stdio() do
+                DistSSHQueue.teardown_main(["--home", home, "--write-only", _teardown_confirm_args(home)...])
+            end
+            @test code_ok == 0
+            @test err_ok == ""
         end
         @test !ispath(data)
         @test !isfile(wrap)
@@ -890,7 +906,7 @@ end
     end
 end
 
-@testset "teardown DISTSSHKIT_YES still deletes" begin
+@testset "teardown DISTSSHKIT_YES does not delete" begin
     mktempdir() do home::String
         data = joinpath(home, ".distsshqueue")
         mkpath(data)
@@ -906,15 +922,15 @@ end
             code, out, err = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "--write-only"])
             end
-            @test code == 0
+            @test code == 1
             @test chomp(err) == _teardown_yes_warn()
-            @test occursin("Would remove", out)
-            @test !ispath(data)
+            @test !occursin("Would remove", out)
+            @test ispath(data)
         end
     end
 end
 
-@testset "teardown DISTSSHKIT_YES from target config [env] still deletes" begin
+@testset "teardown DISTSSHKIT_YES from target config [env] does not delete" begin
     mktempdir() do home::String
         data = joinpath(home, ".distsshqueue")
         mkpath(data)
@@ -930,15 +946,15 @@ end
             code, out, err = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "--write-only"])
             end
-            @test code == 0
+            @test code == 1
             @test chomp(err) == _teardown_yes_warn()
-            @test occursin("Would remove", out)
-            @test !ispath(data)
+            @test !occursin("Would remove", out)
+            @test ispath(data)
         end
     end
 end
 
-@testset "teardown config YES deletes and does not import test hooks" begin
+@testset "teardown config YES does not delete and does not import test hooks" begin
     mktempdir() do home
         data = joinpath(home, ".distsshqueue")
         mkpath(data)
@@ -964,22 +980,23 @@ end
                 code, out, err = capture_stdio() do
                     DistSSHQueue._main(["teardown", "--write-only"])
                 end
-                @test code == 0
+                @test code == 1
                 @test chomp(err) == _teardown_yes_warn()
                 @test get(ENV, "DISTSSHKIT_YES", "") == "1"
                 @test get(ENV, "DISTSSHKIT_TEST", "") == ""
                 @test get(ENV, "DISTSSHKIT_TEST_SSH", "") == ""
                 @test get(ENV, "DISTSSHQUEUE_TEST_PIDS", "") == ""
                 @test !occursin("Pass --confirm-path for each quoted path above.", out)
+                @test ispath(data)
             end
         finally
             DistSSHQueue._forget_absent_config_env!()
         end
-        @test !ispath(data)
+        @test ispath(data)
     end
 end
 
-@testset "teardown yes warning names DistSSHQueue 0.10.0" begin
+@testset "teardown YES attempt exits 1 and confirm still deletes" begin
     clear = (
         "DISTSSHQUEUE_CONFIG" => nothing,
         "DISTSSHQUEUE_STORE" => nothing,
@@ -992,10 +1009,10 @@ end
             code, out, err = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "--yes", "--write-only"])
             end
-            @test code == 0
+            @test code == 1
             @test chomp(err) == _teardown_yes_warn()
-            @test occursin("Would remove", out)
-            @test !ispath(data)
+            @test !occursin("Would remove", out)
+            @test ispath(data)
         end
     end
     for val in ("1", "yes", "on", " 1 ")
@@ -1005,10 +1022,10 @@ end
                 code, out, err = capture_stdio() do
                     DistSSHQueue.teardown_main(["--home", home, "--write-only"])
                 end
-                @test code == 0
+                @test code == 1
                 @test chomp(err) == _teardown_yes_warn()
-                @test occursin("Would remove", out)
-                @test !ispath(data)
+                @test !occursin("Would remove", out)
+                @test ispath(data)
             end
         end
     end
@@ -1032,9 +1049,9 @@ end
             code, _, err = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "--write-only"])
             end
-            @test code == 0
+            @test code == 1
             @test chomp(err) == _teardown_yes_warn()
-            @test !ispath(data)
+            @test ispath(data)
         end
     end
     mktempdir() do home::String
@@ -1043,9 +1060,9 @@ end
             code, _, err = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "-y", "--write-only"])
             end
-            @test code == 0
+            @test code == 1
             @test chomp(err) == _teardown_yes_warn()
-            @test !ispath(data)
+            @test ispath(data)
         end
     end
     mktempdir() do home::String
@@ -1745,6 +1762,273 @@ end
             @test islink(link)
             @test isfile(real)
         end
+    end
+end
+
+@testset "teardown refuses a symlink that leaves the teardown root" begin
+    mktempdir() do home::String
+        data = joinpath(home, ".distsshqueue")
+        mkpath(data)
+        real = joinpath(home, "outside.toml")
+        write(real, "store = $(repr(joinpath(data, "jobs.toml")))\n")
+        write(joinpath(data, "jobs.toml"), "jobs = []\n")
+        link = joinpath(data, "config.toml")
+        symlink(real, link)
+        withenv(
+            "DISTSSHQUEUE_CONFIG" => nothing,
+            "DISTSSHQUEUE_STORE" => nothing,
+            "DISTSSHKIT_YES" => nothing,
+        ) do
+            code, _, err = capture_stdio() do
+                DistSSHQueue.teardown_main(
+                    [
+                        "--home", home, "--write-only", _teardown_confirm_args(home)...,
+                    ]
+                )
+            end
+            @test code == 1
+            @test occursin("path leaves the teardown root", err)
+            @test islink(link)
+            @test isfile(real)
+            @test isdir(data)
+        end
+    end
+end
+
+@testset "teardown confirm accepts a hard link of a target" begin
+    mktempdir() do home::String
+        data = _seed_teardown_home(home)
+        cfg = joinpath(data, "config.toml")
+        alias = joinpath(home, "config-alias.toml")
+        hardlink(cfg, alias)
+        args = String["--home", home, "--write-only"]
+        for p in DistSSHQueue.teardown_targets(; home = home)
+            ispath(p) || continue
+            push!(args, "--confirm-path", p == cfg ? alias : p)
+        end
+        withenv(
+            "DISTSSHQUEUE_CONFIG" => nothing,
+            "DISTSSHQUEUE_STORE" => nothing,
+        ) do
+            code, _, err = capture_stdio() do
+                DistSSHQueue.teardown_main(args)
+            end
+            @test code == 0
+            @test err == ""
+        end
+        @test !ispath(data)
+    end
+end
+
+@testset "teardown default [env] does not select another home" begin
+    mktempdir() do root::String
+        def = joinpath(root, "default-home")
+        other = joinpath(root, "other-home")
+        def_data = _seed_teardown_home(
+            def;
+            extra = "\n[env]\nDISTSSHKIT_YES = \"1\"\nDISTSSHQUEUE_STORE = " *
+                "$(repr(joinpath(def, ".distsshqueue", "jobs.toml")))\n",
+        )
+        other_data = _seed_teardown_home(other)
+        other_cfg = joinpath(other_data, "config.toml")
+        def_store = joinpath(def_data, "jobs.toml")
+        try
+            withenv(
+                "HOME" => def,
+                "DISTSSHQUEUE_CONFIG" => nothing,
+                "DISTSSHQUEUE_STORE" => nothing,
+                "DISTSSHKIT_YES" => nothing,
+            ) do
+                code, out, err = capture_stdio() do
+                    DistSSHQueue._main(
+                        [
+                            "teardown", "--home", other, "--config", other_cfg, "--write-only",
+                        ]
+                    )
+                end
+                @test code == 0
+                @test err == ""
+                @test occursin("Would remove", out)
+                @test !occursin(def_store, out)
+                @test isfile(def_store)
+                @test isdir(other_data)
+            end
+        finally
+            DistSSHQueue._forget_absent_config_env!()
+        end
+    end
+end
+
+@testset "teardown process DISTSSHQUEUE_STORE still selects that store" begin
+    mktempdir() do home::String
+        data = _seed_teardown_home(home)
+        store = joinpath(home, "outside.toml")
+        write(store, "jobs = []\n")
+        withenv(
+            "DISTSSHQUEUE_CONFIG" => nothing,
+            "DISTSSHQUEUE_STORE" => store,
+            "DISTSSHKIT_YES" => nothing,
+        ) do
+            listed = DistSSHQueue.teardown_targets(; home = home)
+            @test store in listed
+            code, _, _ = capture_stdio() do
+                DistSSHQueue.teardown_main(
+                    [
+                        "--home", home, "--write-only", _teardown_confirm_args(home)...,
+                    ]
+                )
+            end
+            @test code == 0
+        end
+        @test !isfile(store)
+        @test !ispath(data)
+    end
+end
+
+function _teardown_running_job!(store::AbstractString, out::AbstractString, child)::DistSSHQueue.Job
+    mkpath(out)
+    write(joinpath(out, "kit.pid"), string(getpid(child)))
+    job = DistSSHQueue.Job(;
+        kind = :go,
+        script = "hold.jl",
+        hosts = ["parent"],
+        state = :running,
+        result_path = out,
+        kwargs = Dict{String, Any}("output_dir" => out),
+    )
+    DistSSHQueue.save_jobs(store, [job])
+    return job
+end
+
+@testset "teardown refuses a live kit.pid and --stop-jobs reaps it" begin
+    mktempdir() do home::String
+        data = _seed_teardown_home(home)
+        store = joinpath(data, "jobs.toml")
+        out = joinpath(data, "stage", "job")
+        child = run(`sleep 60`; wait = false)
+        try
+            job = _teardown_running_job!(store, out, child)
+            withenv(
+                "DISTSSHQUEUE_CONFIG" => nothing,
+                "DISTSSHQUEUE_STORE" => nothing,
+                "DISTSSHKIT_YES" => nothing,
+            ) do
+                code, _, err = capture_stdio() do
+                    DistSSHQueue.teardown_main(["--home", home, "--write-only"])
+                end
+                @test code == 1
+                @test occursin(job.id, err)
+                @test process_running(child)
+                @test isdir(data)
+                code_flag, _, err_flag = capture_stdio() do
+                    DistSSHQueue.teardown_main(
+                        [
+                            "--home", home, "--stop-jobs", "--write-only",
+                        ]
+                    )
+                end
+                @test code_flag == 1
+                @test occursin("--write-only", err_flag)
+                @test process_running(child)
+                code_bare, _, err_bare = capture_stdio() do
+                    DistSSHQueue.teardown_main(["--home", home, "--stop-jobs"])
+                end
+                @test code_bare == 1
+                @test occursin(job.id, err_bare)
+                @test process_running(child)
+                @test isdir(data)
+                code_ok, _, err_ok = capture_stdio() do
+                    DistSSHQueue.teardown_main(
+                        [
+                            "--home", home, "--stop-jobs", _teardown_confirm_args(home)...,
+                        ]
+                    )
+                end
+                @test code_ok == 0
+                @test err_ok == ""
+            end
+            @test !process_running(child)
+            @test !ispath(data)
+        finally
+            process_running(child) && kill(child)
+            wait(child)
+        end
+    end
+end
+
+@testset "teardown does not block on a dead kit.pid or a running row without one" begin
+    mktempdir() do home::String
+        data = _seed_teardown_home(home)
+        store = joinpath(data, "jobs.toml")
+        out = joinpath(data, "stage", "dead")
+        mkpath(out)
+        child = run(`sleep 30`; wait = false)
+        pid = getpid(child)
+        kill(child)
+        wait(child)
+        write(joinpath(out, "kit.pid"), string(pid))
+        DistSSHQueue.save_jobs(
+            store,
+            [
+                DistSSHQueue.Job(;
+                    kind = :go,
+                    script = "hold.jl",
+                    hosts = ["parent"],
+                    state = :running,
+                    result_path = out,
+                    kwargs = Dict{String, Any}("output_dir" => out),
+                ),
+            ],
+        )
+        withenv(
+            "DISTSSHQUEUE_CONFIG" => nothing,
+            "DISTSSHQUEUE_STORE" => nothing,
+        ) do
+            code, _, err = capture_stdio() do
+                DistSSHQueue.teardown_main(
+                    [
+                        "--home", home, "--write-only", _teardown_confirm_args(home)...,
+                    ]
+                )
+            end
+            @test code == 0
+            @test err == ""
+        end
+        @test !ispath(data)
+    end
+    mktempdir() do home::String
+        data = _seed_teardown_home(home)
+        store = joinpath(data, "jobs.toml")
+        out = joinpath(data, "stage", "setup")
+        mkpath(out)
+        DistSSHQueue.save_jobs(
+            store,
+            [
+                DistSSHQueue.Job(;
+                    kind = :go,
+                    script = "hold.jl",
+                    hosts = ["parent"],
+                    state = :running,
+                    result_path = out,
+                    kwargs = Dict{String, Any}("output_dir" => out),
+                ),
+            ],
+        )
+        withenv(
+            "DISTSSHQUEUE_CONFIG" => nothing,
+            "DISTSSHQUEUE_STORE" => nothing,
+        ) do
+            code, _, err = capture_stdio() do
+                DistSSHQueue.teardown_main(
+                    [
+                        "--home", home, "--write-only", _teardown_confirm_args(home)...,
+                    ]
+                )
+            end
+            @test code == 0
+            @test err == ""
+        end
+        @test !ispath(data)
     end
 end
 

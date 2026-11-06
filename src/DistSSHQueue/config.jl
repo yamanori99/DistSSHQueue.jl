@@ -43,8 +43,9 @@ function _config_env_skipped(key::AbstractString)::Bool
     return k == "DISTSSHKIT_TEST" || startswith(k, "DISTSSHKIT_TEST_") || k == "DISTSSHQUEUE_TEST_PIDS"
 end
 
-# Keys this process inserted from config `[env]`. A later `teardown` does not
-# treat those as process YES. `up default` still reads `ENV`.
+# Keys this process inserted from config `[env]`. `teardown` drops them
+# before it reads the selected file, and does not use them to pick a path.
+# `up default` still reads `ENV`, including `DISTSSHKIT_YES`.
 const _config_env_set = Set{String}()
 
 function _forget_absent_config_env!()
@@ -54,9 +55,26 @@ function _forget_absent_config_env!()
     return nothing
 end
 
-function _yes_from_config()::Bool
+"""Remove keys this process copied from config `[env]`.
+
+A variable that was already in the process stays. `teardown` calls this
+so `_main`'s default config does not select another `--config` home.
+"""
+function _drop_config_env!()
     _forget_absent_config_env!()
-    return "DISTSSHKIT_YES" in _config_env_set
+    for key in collect(_config_env_set)
+        delete!(ENV, key)
+        delete!(_config_env_set, key)
+    end
+    return nothing
+end
+
+"""Process value of `key`, ignoring a copy this process made from config `[env]`."""
+function _process_env_value(key::AbstractString)::String
+    _forget_absent_config_env!()
+    name = String(key)
+    name in _config_env_set && return ""
+    return strip(get(ENV, name, ""))
 end
 
 """Apply `cfg["env"]` into `ENV` without overwriting keys already set."""

@@ -1795,7 +1795,8 @@ end
                 @test occursin("unknown status option: help", err_word_help)
                 td_h = sprint(DistSSHQueue.print_teardown_usage)
                 @test occursin("--confirm-path PATH", td_h)
-                @test occursin("Still deletes. Removed in 0.10", td_h)
+                @test occursin("Does not delete", td_h)
+                @test occursin("--stop-jobs", td_h)
                 @test occursin("$(DistSSHQueue.cli_m()) $(DistSSHQueue.cli_qhost())teardown", td_h)
                 @test !occursin("teardown -y", td_h)
                 code_sh, out_sh, _ = capture_stdio() do
