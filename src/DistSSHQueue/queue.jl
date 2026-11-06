@@ -1015,7 +1015,7 @@ function submit!(q::Queue, script::AbstractString, hosts::AbstractVector{<:Abstr
     return _submit!(q, kind, script, hosts; kwargs...)
 end
 
-"""Cancel `:queued` now. A `:running` job with no live `kit.pid` stays `:running` and records a cancel flag, so the slot stays taken until setup stops. A live `kit.pid` under the run dir or `output_dir` is `terminate_run!` and `:cancelled`.
+"""Cancel `:queued` now. A `:running` job with no live `kit.pid` stays `:running` and records a cancel flag, so the slot stays taken until setup stops. A live `kit.pid` under the run dir or `output_dir` is `terminate_run!` and `:cancelled`. That stop sends SIGINT once, waits 30 seconds or `DISTSSHKIT_WAIT_SIGINT_GRACE` in this process (`0` sends no SIGINT), then SIGTERM. The tagged-worker reap has its own bound and still returns when a host is unreachable.
 
 A setup step (`rsync`, `instantiate`, `check`) runs to the end. The flag is read again before the next step and before `execute!`.
 """

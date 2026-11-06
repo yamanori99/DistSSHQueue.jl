@@ -10,9 +10,6 @@ The version-cut PR copies them into this file.
 
 ### Planned breaking (next minor)
 
-- `cancel` of a `:running` job will send SIGINT before SIGTERM, once
-  DistSSHRun's `interrupt_grace` defaults to a positive value. Until then
-  `cancel` does not send SIGINT.
 - A `jobs` value that is not a list will be rejected on read. 0.9.x leaves
   the file on disk. `status` warns once. A write already stops with `Error:`
   and does not replace the file.
