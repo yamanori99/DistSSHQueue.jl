@@ -223,7 +223,6 @@ rsync し、実行前にそこで instantiate する。
 ```bash
 julia --project=. -m DistSSHQueue qhost:HOST list-host
 julia --project=. -m DistSSHQueue qhost:HOST size
-julia --project=. -m DistSSHQueue qhost:HOST plan SCRIPT.jl
 julia --project=. -m DistSSHQueue qhost:HOST pool
 julia --project=. -m DistSSHQueue qhost:HOST submit go child:host1:4 SCRIPT.jl
 julia --project=. -m DistSSHQueue qhost:HOST status

@@ -226,7 +226,6 @@ From a **client** (job directory; this package must be loadable from that env):
 ```bash
 julia --project=. -m DistSSHQueue qhost:HOST list-host
 julia --project=. -m DistSSHQueue qhost:HOST size
-julia --project=. -m DistSSHQueue qhost:HOST plan SCRIPT.jl
 julia --project=. -m DistSSHQueue qhost:HOST pool
 julia --project=. -m DistSSHQueue qhost:HOST submit go child:host1:4 SCRIPT.jl
 julia --project=. -m DistSSHQueue qhost:HOST status
