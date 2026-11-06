@@ -19,7 +19,7 @@ end
 """DistSSHRun `execute!` kinds this package can enqueue.
 
 Public, not exported. The promise is this binding. Inspect verbs
-(`size` / `plan` / `pool`) are not this list.
+(`size` / `pool`) are not this list.
 """
 const KIT_EXECUTE_KINDS = (:go, :drive, :ride)
 public KIT_EXECUTE_KINDS

@@ -11,7 +11,7 @@
 # client (`qhost:HOST` over loopback OpenSSH, including `fetch`). The staged
 # tree is the git send list (`setup --rsync`), with `.distsshqueue/` left
 # out and `.distsshqueue-backup` kept. Inspect verbs
-# (`size` / `plan` / `pool`) are Queue chrome only (header + submit footer).
+# (`size` / `pool`) are Queue chrome only (header + submit footer).
 # Kit slots on docker-ssh (`child:child-1:1`).
 # Three roles, one suite: client = loopback, qhost = this host, child = containers.
 # Do not treat a container as qhost. `parent:1` only occupies FIFO here.
@@ -21,7 +21,7 @@
 # Table jobs are the four *file*/*echo* demos plus `ride/map_echo.jl`.
 # `pipeline_pi.jl` / `pipeline_square.jl` call `go!` / `pipeline!` themselves —
 # not Queue rows. One `go` uses `child:HOST:2` (`go_manifest.txt` `slots=2`).
-# `size` / `plan` / `pool` list every worker in the hosts file.
+# `size` / `pool` list every worker in the hosts file.
 #
 # Also: FIFO one-at-a-time, cancel queued (skip that row), cancel running
 # (`terminate_run!`, then the next queued row).
@@ -1191,15 +1191,6 @@ end
                     @test occursin("Suggested submit (template):", size_out)
                     for h in HOSTS
                         @test occursin("child:$(h):", size_out)
-                    end
-
-                    plan_out = read_cli(addenv(qcmd(["plan", inspect_hosts..., script]), size_env...))
-                    @test occursin("DistSSHQueue plan", plan_out)
-                    @test occursin("Suggested submit (template):", plan_out)
-                    @test occursin("submit go", plan_out) || occursin("submit ride", plan_out) ||
-                        occursin("submit drive", plan_out)
-                    for h in HOSTS
-                        @test occursin("child:$(h):", plan_out)
                     end
 
                     pool_out = read_cli(
