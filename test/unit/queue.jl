@@ -1310,6 +1310,65 @@ end
     end
 end
 
+@testset "queue-host instantiate refuses a foreign Manifest minor" begin
+    minor = "$(VERSION.major).$(VERSION.minor).0"
+    other = "$(VERSION.major).$(VERSION.minor + 1).0"
+    function _lock(julia_version::AbstractString)::String
+        return "manifest_format = \"2.0\"\njulia_version = \"$(julia_version)\"\n"
+    end
+    mktempdir() do dir
+        write(joinpath(dir, "Project.toml"), "[deps]\n")
+        path = joinpath(dir, "Manifest.toml")
+        foreign = _lock(other)
+        write(path, foreign)
+        thrown = @test_throws ErrorException DistSSHQueue._queue_local_instantiate!(dir)
+        @test thrown.value.msg ==
+            "Manifest julia_version $(other) does not match this Julia $(VERSION). See help setup."
+        @test read(path, String) == foreign
+    end
+    mktempdir() do dir
+        write(joinpath(dir, "Project.toml"), "[deps]\n")
+        path = joinpath(dir, "Manifest.toml")
+        write(path, "manifest_format = \"2.0\"\n")
+        before = read(path, String)
+        thrown = @test_throws ErrorException DistSSHQueue._queue_local_instantiate!(dir)
+        @test thrown.value.msg == "Manifest julia_version is missing. See help setup."
+        @test read(path, String) == before
+    end
+    mktempdir() do dir
+        write(joinpath(dir, "Project.toml"), "[deps]\n")
+        path = joinpath(dir, "Manifest.toml")
+        write(path, _lock("not-a-version"))
+        before = read(path, String)
+        thrown = @test_throws ErrorException DistSSHQueue._queue_local_instantiate!(dir)
+        @test thrown.value.msg == "Manifest julia_version is not a Julia version. See help setup."
+        @test read(path, String) == before
+    end
+    mktempdir() do dir
+        write(joinpath(dir, "Project.toml"), "[deps]\n")
+        write(joinpath(dir, "Manifest.toml"), _lock(minor))
+        @test DistSSHQueue._queue_local_instantiate!(dir) === nothing
+        @test isfile(joinpath(dir, "Manifest.toml"))
+    end
+    mktempdir() do dir
+        @test DistSSHQueue._queue_local_instantiate!(dir) === nothing
+        @test !isfile(joinpath(dir, "Manifest.toml"))
+    end
+    mktempdir() do dir
+        write(joinpath(dir, "Project.toml"), "[deps]\n")
+        @test DistSSHQueue._queue_local_instantiate!(dir) === nothing
+    end
+    mktempdir() do dir
+        write(joinpath(dir, "Project.toml"), "[deps]\n")
+        foreign = _lock(other)
+        write(joinpath(dir, "Manifest.toml"), foreign)
+        vername = "Manifest-v$(VERSION.major).$(VERSION.minor).toml"
+        write(joinpath(dir, vername), _lock(minor))
+        @test DistSSHQueue._queue_local_instantiate!(dir) === nothing
+        @test read(joinpath(dir, "Manifest.toml"), String) == foreign
+    end
+end
+
 @testset "run_kit skips execute when no longer running" begin
     mktempdir() do d
         script = joinpath(d, "nope.jl")

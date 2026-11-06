@@ -236,7 +236,9 @@ julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
 `submit` starts `serve` on the queue host if none is running. `serve`
-instantiates the job project there and runs `setup!`
+instantiates the job project there. That step fails when Manifest
+`julia_version` is missing, is not a Julia version, or its minor differs
+from the Julia running `serve`. `serve` runs `setup!`
 on `child:` hosts before each job (you do not hand-run
 `setup` on the stage tree). `:check` always runs there
 (a `qhost:` stage with no `.git/` warns). Job ids are a
