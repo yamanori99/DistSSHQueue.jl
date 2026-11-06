@@ -27,8 +27,10 @@ say there is nothing to fix.
   `_remote_sh_quote` or `_remote_shell_path_word`.
 - **Teardown.** A path calculation in this diff can remove a path the
   user did not confirm. Library `teardown` deletes only when
-  `confirm_paths` matches every existing target. `-y`, `--yes`, and
-  `DISTSSHKIT_YES` still skip the prompt.
+  `confirm_paths` matches every existing target and no live `kit.pid`
+  is running, unless `stop_jobs` is set. `-y`, `--yes`, and
+  `DISTSSHKIT_YES` do not authorize deletion. `--stop-jobs` does not
+  either, without that match.
 - **Public behavior.** Flags, confirmation, exit codes, or what is deleted
   changed, and the pull request is not labeled `breaking`, or that
   breaking change is mixed with another change.
