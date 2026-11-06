@@ -438,6 +438,8 @@ end
             DistSSHQueue.show_usage(; command = "cancel")
         end
         @test occursin("setup step runs to the end", help_out)
+        @test occursin("SIGINT, then SIGTERM", help_out)
+        @test occursin("Unreachable hosts do not hold the reap open", help_out)
     end
 end
 

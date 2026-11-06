@@ -791,6 +791,7 @@ function queue_command_help(verb::AbstractString)
         ("  cancel ID",),
         (
             ("", "A setup step runs to the end, then the job stops. A detached Kit job is stopped."),
+            ("", "A live Kit job gets SIGINT, then SIGTERM. Unreachable hosts do not hold the reap open."),
             h,
         ),
     )
