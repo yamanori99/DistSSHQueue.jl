@@ -1662,7 +1662,7 @@ end
                 @test !occursin("--help client", help)
                 @test !occursin("--help qhost", help)
                 @test length(DistSSHQueue.CLIENT_COMMAND_LINES) == 9
-                @test length(DistSSHQueue.QUEUE_HOST_COMMAND_LINES) == 12
+                @test length(DistSSHQueue.QUEUE_HOST_COMMAND_LINES) == 11
                 @test Base.ispublic(DistSSHQueue, :CLIENT_COMMAND_LINES)
                 @test Base.ispublic(DistSSHQueue, :QUEUE_HOST_COMMAND_LINES)
                 @test Base.ispublic(DistSSHQueue, :KIT_EXECUTE_KINDS)
@@ -1706,7 +1706,7 @@ end
                 @test occursin("fetch", client_h)
                 @test occursin("Copy a finished Kit leaf", client_h)
                 @test occursin("size", client_h)
-                @test occursin("plan", client_h)
+                @test !occursin("plan", client_h)
                 @test occursin("pool", client_h)
                 @test occursin("ride", client_h)
                 @test occursin("See DistSSHKit", client_h)
@@ -1734,7 +1734,7 @@ end
                 @test occursin(DistSSHQueue.help_verb_line("teardown", "Stop serve and remove ~/.distsshqueue"), queue_h)
                 @test occursin(DistSSHQueue.help_verb_line("", "Would remove, then --confirm-path. ~/.distsshqueue goes, including stage."), queue_h)
                 @test occursin("size", queue_h)
-                @test occursin("plan", queue_h)
+                @test !occursin("plan", queue_h)
                 @test occursin("pool", queue_h)
                 @test !occursin("teardown -y", queue_h)
                 @test_throws ArgumentError DistSSHQueue.print_queue_usage(IOBuffer(); topic = "nope")
@@ -2662,19 +2662,8 @@ end
     @test occursin("Does not enqueue", out)
 end
 
-@testset "plan inspects a script and does not enqueue" begin
-    code, out, _ = capture_stdio() do
-        DistSSHQueue.main(["plan", "-h"])
-    end
-    @test code == 0
-    @test occursin("DistSSHQueue plan", out)
-    @test occursin("Queue", out)
-    @test occursin("Does not enqueue", out)
+@testset "plan is an unknown subcommand and does not enqueue" begin
     mktempdir() do d
-        jobdir = joinpath(d, "job")
-        mkpath(jobdir)
-        write(joinpath(jobdir, "Project.toml"), "[deps]\n")
-        write(joinpath(jobdir, "echo.jl"), "println(1)\n")
         p = joinpath(d, "jobs.toml")
         withenv(
             "DISTSSHQUEUE_STORE" => p,
@@ -2682,19 +2671,12 @@ end
             "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
             "DISTRIBUTED_PROJECT_ROOT" => nothing,
         ) do
-            cd(jobdir) do
-                code_p, out_p, _ = capture_stdio() do
-                    DistSSHQueue.main(["plan", "echo.jl"])
-                end
-                @test code_p == 0
-                @test occursin("suggest:", out_p)
-                @test occursin("Suggested submit (template):", out_p)
-                @test occursin("julia --project=. -m DistSSHQueue submit", out_p)
-                @test !occursin("-m DistSSHKit submit", out_p)
-                @test occursin("submit go", out_p) || occursin("submit ride", out_p) ||
-                    occursin("submit drive", out_p)
-                @test !isfile(p)
+            code, _, err = capture_stdio() do
+                DistSSHQueue.main(["plan", "echo.jl"])
             end
+            @test code == 1
+            @test occursin("unknown subcommand: plan", err)
+            @test !isfile(p)
         end
     end
 end

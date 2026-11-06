@@ -55,7 +55,6 @@ include("client/status.jl")
 include("client/list_host.jl")
 include("client/inspect.jl")
 include("client/size.jl")
-include("client/plan.jl")
 include("client/pool.jl")
 include("client/edit_hosts.jl")
 include("client/cancel.jl")
@@ -162,7 +161,6 @@ function _queue_tables()
         "status" => _queue_command(:forward, _argv(status_cli), "status"; label_qhost = true, watch_tty = true),
         "list-host" => _queue_command(:forward, _argv(list_host_cli), "list-host"; label_qhost = true),
         "size" => _queue_command(:forward, _argv(size_cli), "size"),
-        "plan" => _queue_command(:forward, _argv(plan_cli), "plan"),
         "pool" => _queue_command(:forward, _argv(pool_cli), "pool"),
         "add-host" => _queue_command(:local, _argv(add_host_cli), "add-host"),
         "remove-host" => _queue_command(:local, _argv(remove_host_cli), "remove-host"),
