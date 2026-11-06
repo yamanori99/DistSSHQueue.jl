@@ -699,10 +699,15 @@ function stop_serve!(store::AbstractString)::Bool
 end
 
 function fail_stale_running!(jobs::Vector{Job})
+    settled = Job[]
     for j in jobs
         j.state === :running || continue
         kit_child_alive(j) && continue
         settle_lost_kit_child!(j)
+        push!(settled, j)
+    end
+    for j in settled
+        _warn_content_tree_divergence!(jobs, j)
     end
     return jobs
 end

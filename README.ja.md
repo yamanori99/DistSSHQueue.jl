@@ -174,6 +174,8 @@ config では `DISTRIBUTED_REMOTE_PROJECT_ROOT` を設定しない。`child:`
   jobs.toml.log
   jobs.toml.pid         serve 中
   jobs.toml.stopped     stop 後、serve まで
+  run-toml/<job-id>/    コントローラ run.toml のバイトコピー
+    run.toml
   env/                  qhost: 既定 --project=。enable はあれば使う
     Project.toml
     Manifest.toml
@@ -184,6 +186,8 @@ config では `DISTRIBUTED_REMOTE_PROJECT_ROOT` を設定しない。`child:`
     .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  result_path (実行層かスクリプトが決める)
     .distsshkit/setup/*.log         setup logs
 ```
+
+終了または cancel されたジョブは、コントローラの `run.toml` を `run-toml/<job-id>/` にバイト単位で残し、その SHA-256 をジョブ行に置く。Run が `provenance.shipped` を書いたとき、ship のハッシュも残す。
 
 `enable` (任意。この端末の `serve` だけなら不要):
 

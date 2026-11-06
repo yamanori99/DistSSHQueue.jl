@@ -590,7 +590,9 @@ end
         child = Base.run(`sleep 60`; wait = false)
         write(joinpath(run, "kit.pid"), string(getpid(child)))
         try
-            @test cancel!(q, id)
+            withenv("HOME" => d) do
+                @test cancel!(q, id)
+            end
             @test job(q, id).result_path == art
             @test !process_running(child)
         finally
@@ -3499,5 +3501,197 @@ end
         @test got.code == 0
         @test !occursin("no Manifest.toml", got.stderr)
         @test got.job.kwargs["warnings"][1]["kind"] == "manifest_absent"
+    end
+end
+
+function _shipped_run_toml(dir::AbstractString; hash = nothing, run_id = nothing)
+    mkpath(dir)
+    lines = String[
+        "schema = 1",
+        "writer = \"DistSSHRun test\"",
+        "kind = \"go\"",
+        "output_dir = $(repr(dir))",
+    ]
+    if hash !== nothing || run_id !== nothing
+        push!(lines, "", "[provenance.shipped]")
+        hash !== nothing && push!(lines, "content_tree_hash = $(repr(hash))")
+        run_id !== nothing && push!(lines, "run_id = $(repr(run_id))")
+    end
+    write(joinpath(dir, "run.toml"), join(lines, "\n") * "\n")
+    return nothing
+end
+
+function _kit_result_at(dir::AbstractString; ok::Bool = true)
+    return DistSSHRun.KitRunResult(
+        ok, :go, dir, nothing, ok ? nothing : "go", ok ? 0 : 1;
+        run_dir = dir,
+    )
+end
+
+@testset "controller run.toml is archived on the job" begin
+    mktempdir() do home
+        withenv("HOME" => home, DistSSHQueue.NO_KIT_SETUP_ENV => "1") do
+            src = joinpath(home, "src-run")
+            _shipped_run_toml(src; hash = "hash-aaa", run_id = "run-aaa")
+            original = read(joinpath(src, "run.toml"))
+            result = _kit_result_at(src)
+            j = DistSSHQueue.Job(;
+                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kwargs = Dict{String, Any}("run_dir" => src),
+            )
+            @test DistSSHQueue._archive_controller_run_toml!(j, result) === nothing
+            archived = j.kwargs["run_toml_archive"]
+            @test archived == joinpath(home, ".distsshqueue", "run-toml", j.id, "run.toml")
+            @test read(archived) == original
+            @test j.kwargs["run_toml_sha256"] == DistSSHRun.file_sha256(archived)
+            @test j.kwargs["content_tree_hash"] == "hash-aaa"
+            @test j.kwargs["remote_run_id"] == "run-aaa"
+            @test !haskey(j.kwargs, "run_toml")
+
+            blank = joinpath(home, "blank-run")
+            _shipped_run_toml(blank; hash = "", run_id = "")
+            bare = DistSSHQueue.Job(;
+                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kwargs = Dict{String, Any}("run_dir" => blank),
+            )
+            DistSSHQueue._archive_controller_run_toml!(bare, _kit_result_at(blank))
+            @test haskey(bare.kwargs, "run_toml_sha256")
+            @test !haskey(bare.kwargs, "content_tree_hash")
+            @test !haskey(bare.kwargs, "remote_run_id")
+
+            missing = DistSSHQueue.Job(;
+                kind = :go, script = "a.jl", hosts = ["parent:1"],
+            )
+            nowhere = joinpath(home, "missing-run")
+            mkpath(nowhere)
+            DistSSHQueue._archive_controller_run_toml!(missing, _kit_result_at(nowhere))
+            @test !haskey(missing.kwargs, "run_toml_sha256")
+            @test !haskey(missing.kwargs, "content_tree_hash")
+
+            failed_dir = joinpath(home, "failed-run")
+            _shipped_run_toml(failed_dir; hash = "hash-fail", run_id = "run-fail")
+            proc = Base.run(`/usr/bin/false`; wait = false)::Base.Process
+            kp = DistSSHRun.KitProcess(proc; kind = :go, run_dir = failed_dir)
+            failed = DistSSHQueue.Job(;
+                kind = :go, script = "a.jl", hosts = ["parent:1"],
+            )
+            @test_throws ErrorException DistSSHQueue.run_kit(
+                failed, Returns(nothing);
+                execute = (args...; kwargs...) -> (_ = kwargs; kp),
+            )
+            @test failed.kwargs["content_tree_hash"] == "hash-fail"
+            @test failed.kwargs["remote_run_id"] == "run-fail"
+            @test read(failed.kwargs["run_toml_archive"]) == read(joinpath(failed_dir, "run.toml"))
+
+            cancel_dir = joinpath(home, "cancel-run")
+            _shipped_run_toml(cancel_dir; hash = "hash-cancel", run_id = "run-cancel")
+            held = Base.run(`/usr/bin/true`; wait = false)::Base.Process
+            wait(held)
+            held_kp = DistSSHRun.KitProcess(held; kind = :go, run_dir = cancel_dir)
+            armed = Ref(false)
+            cancelled = DistSSHQueue.Job(;
+                kind = :go, script = "a.jl", hosts = ["parent:1"],
+            )
+            @test_throws DistSSHQueue._JobCancelled DistSSHQueue.run_kit(
+                cancelled, Returns(nothing);
+                cancel_requested = () -> armed[],
+                execute = (args...; kwargs...) -> (_ = kwargs; armed[] = true; held_kp),
+                terminate = (side; kind) -> (_ = (side, kind); _kit_result_at(cancel_dir; ok = false)),
+            )
+            @test cancelled.kwargs["content_tree_hash"] == "hash-cancel"
+            @test cancelled.kwargs["remote_run_id"] == "run-cancel"
+
+            plain_dir = joinpath(home, "plain-run")
+            _shipped_run_toml(plain_dir; hash = "hash-plain", run_id = "run-plain")
+            plain_proc = Base.run(`/usr/bin/true`; wait = false)::Base.Process
+            wait(plain_proc)
+            plain_kp = DistSSHRun.KitProcess(plain_proc; kind = :go, run_dir = plain_dir)
+            armed_plain = Ref(false)
+            plain_job = DistSSHQueue.Job(;
+                kind = :go, script = "a.jl", hosts = ["parent:1"],
+            )
+            @test_throws DistSSHQueue._JobCancelled DistSSHQueue.run_kit(
+                plain_job, Returns(nothing);
+                cancel_requested = () -> armed_plain[],
+                execute = (args...; kwargs...) -> (_ = kwargs; armed_plain[] = true; plain_kp),
+                terminate = (side; kind) -> (_ = (side, kind); nothing),
+            )
+            @test haskey(plain_job.kwargs, "run_toml_sha256")
+            @test !haskey(plain_job.kwargs, "content_tree_hash")
+            @test !haskey(plain_job.kwargs, "remote_run_id")
+
+            store = joinpath(home, "jobs.toml")
+            script = joinpath(home, "hold.jl")
+            write(script, "1\n")
+            ev = Base.Event()
+            q = Queue(; store, runner = _ -> wait(ev))
+            id = submit!(q, script, "parent:1"; project = home, submission = "batch-1")
+            @test job(q, id).kwargs["submission"] == "batch-1"
+            @test !haskey(DistSSHQueue.execute_kwargs(job(q, id)), :submission)
+            mem = Queue(; runner = _ -> nothing)
+            lone = submit!(mem, script, "parent:1")
+            @test job(mem, lone).kwargs["submission"] == lone
+            @test step!(q) == 1
+            side = joinpath(home, "side-run")
+            _shipped_run_toml(side; hash = "hash-side", run_id = "run-side")
+            DistSSHRun._write_kit_result_file(_kit_result_at(side))
+            DistSSHQueue._set_running_kit_meta!(q, id; run_dir = side)
+            child = Base.run(`sleep 60`; wait = false)
+            write(joinpath(side, "kit.pid"), string(getpid(child)))
+            try
+                @test cancel!(q, id)
+            finally
+                process_running(child) && kill(child)
+                wait(child)
+            end
+            row = job(q, id)
+            @test row.state === :cancelled
+            @test read(row.kwargs["run_toml_archive"]) == read(joinpath(side, "run.toml"))
+            @test row.kwargs["run_toml_sha256"] == DistSSHRun.file_sha256(row.kwargs["run_toml_archive"])
+            @test row.kwargs["content_tree_hash"] == "hash-side"
+            @test row.kwargs["remote_run_id"] == "run-side"
+            @test !haskey(row.kwargs, "warnings")
+            notify(ev)
+
+            same_a = joinpath(home, "same-a")
+            same_b = joinpath(home, "same-b")
+            _shipped_run_toml(same_a; hash = "hash-one", run_id = "run-one")
+            _shipped_run_toml(same_b; hash = "hash-two", run_id = "run-two")
+            Div = DistSSHQueue.Job
+            first = Div(;
+                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kwargs = Dict{String, Any}(
+                    "submission" => "shared",
+                    "content_tree_hash" => "hash-one",
+                ),
+            )
+            second = Div(;
+                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kwargs = Dict{String, Any}(
+                    "submission" => "shared",
+                    "content_tree_hash" => "hash-two",
+                ),
+            )
+            other = Div(;
+                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kwargs = Dict{String, Any}(
+                    "submission" => "other",
+                    "content_tree_hash" => "hash-nine",
+                ),
+            )
+            _, _, err = capture_stdio() do
+                @test DistSSHQueue._warn_content_tree_divergence!([first], first) === nothing
+                @test DistSSHQueue._warn_content_tree_divergence!([first, other], other) === nothing
+                @test DistSSHQueue._warn_content_tree_divergence!([first, second], second) === nothing
+            end
+            @test !haskey(first.kwargs, "warnings")
+            @test !haskey(other.kwargs, "warnings")
+            @test second.kwargs["warnings"][1]["kind"] == "content_tree_hash"
+            @test occursin("content_tree_hash differs across submission shared", err)
+            capture_stdio() do
+                DistSSHQueue._warn_content_tree_divergence!([first, second], first)
+            end
+            @test !haskey(first.kwargs, "warnings")
+        end
     end
 end
