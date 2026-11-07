@@ -11,7 +11,7 @@
 # client (`qhost:HOST` over loopback OpenSSH, including `fetch`). The staged
 # tree is the git send list (`setup --rsync`), with `.distsshqueue/` left
 # out and `.distsshqueue-backup` kept. Inspect verbs
-# (`size` / `plan` / `pool`) are Queue chrome only (header + submit footer).
+# (`pool`) is Queue chrome only (header + inventory notes).
 # Kit slots on docker-ssh (`child:child-1:1`).
 # Three roles, one suite: client = loopback, qhost = this host, child = containers.
 # Do not treat a container as qhost. `parent:1` only occupies FIFO here.
@@ -21,7 +21,7 @@
 # Table jobs are the four *file*/*echo* demos plus `ride/map_echo.jl`.
 # `pipeline_pi.jl` / `pipeline_square.jl` call `go!` / `pipeline!` themselves —
 # not Queue rows. One `go` uses `child:HOST:2` (`go_manifest.txt` `slots=2`).
-# `size` / `plan` / `pool` list every worker in the hosts file.
+# `pool` lists every worker in the hosts file.
 #
 # Also: FIFO one-at-a-time, cancel queued (skip that row), cancel running
 # (`terminate_run!`, then the next queued row).
@@ -1155,41 +1155,28 @@ end
                     @test run_cli(addenv(qcmd(["disable", "--write-only"]), env...)).exitcode == 0
                     @test !isfile(unit)
 
-                    # Glue only: header + submit template footer. Table layout is Kit E2E.
+                    # Glue only: Queue header + inventory notes. Table layout is Kit E2E.
                     size_env = merge(env, Dict("DISTSSHKIT_QUIET" => "0"))
                     inspect_hosts = ["parent"; ["child:$(h)" for h in HOSTS]]
-                    size_out = read_cli(
-                        addenv(
-                            qcmd(["size", "--gb-per-worker", "1.5", inspect_hosts...]),
-                            size_env...,
-                        )
+                    code_sz, _, size_err = capture_cli(
+                        addenv(qcmd(["size", "--gb-per-worker", "1.5", inspect_hosts...]), size_env...),
                     )
-                    @test occursin("DistSSHQueue size", size_out)
-                    @test occursin("Suggested submit (template):", size_out)
-                    for h in HOSTS
-                        @test occursin("child:$(h):", size_out)
-                    end
-
-                    plan_out = read_cli(addenv(qcmd(["plan", inspect_hosts..., script]), size_env...))
-                    @test occursin("DistSSHQueue plan", plan_out)
-                    @test occursin("Suggested submit (template):", plan_out)
-                    @test occursin("submit go", plan_out) || occursin("submit ride", plan_out) ||
-                        occursin("submit drive", plan_out)
-                    for h in HOSTS
-                        @test occursin("child:$(h):", plan_out)
-                    end
+                    @test code_sz == 1
+                    @test occursin("was removed", size_err)
 
                     pool_out = read_cli(
                         addenv(
-                            qcmd(["pool", "--gb-per-worker", "1.5", inspect_hosts...]),
+                            qcmd(["pool", inspect_hosts...]),
                             size_env...,
                         )
                     )
                     @test occursin("DistSSHQueue pool", pool_out)
-                    @test occursin("Suggested submit (template):", pool_out)
-                    @test occursin("no RSS; use size to measure", pool_out)
+                    @test occursin("Pool:", pool_out)
+                    @test !occursin("Suggested submit (template):", pool_out)
+                    @test !occursin("GB/worker", pool_out)
+                    @test occursin("parent is this queue host", pool_out)
                     for h in HOSTS
-                        @test occursin("child:$(h):", pool_out)
+                        @test occursin(h, pool_out)
                     end
                     @test !isfile(store)
 

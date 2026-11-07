@@ -77,8 +77,7 @@ function _kit_flag_takes_value(a::AbstractString)::Bool
     startswith(a, "--") || startswith(a, "-") || return false
     occursin('=', a) && return false
     return a in (
-        "--julia", "--output-dir", "--repeat", "--gb-per-worker", "--probe",
-        "--mem-headroom", "--parent-gb", "--workers", "-w", "--hosts",
+        "--julia", "--output-dir", "--repeat", "--workers", "-w", "--hosts",
         "--hosts-file", "--n", "--log-dir", "--package", "--project",
     )
 end

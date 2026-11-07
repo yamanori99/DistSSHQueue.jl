@@ -1,6 +1,6 @@
 # CLI `pool`: DistSSHKit `pool!` on the queue host (cwd / project).
 #
-# Cores / RAM / slot hint. No RSS (`size` does that). Does not enqueue.
+# Cores / RAM / reachability. No slot estimate. Does not enqueue.
 # No tokens: pool every name on config `hosts`. From a client: `qhost:HOST pool …`.
 function clamp_pool_slots(slots::Int, allow::Union{Nothing, HostAllow}, host::AbstractString)::Int
     allow === nothing && return slots
@@ -10,18 +10,29 @@ function clamp_pool_slots(slots::Int, allow::Union{Nothing, HostAllow}, host::Ab
     return min(slots, cap)
 end
 
-function print_queue_pool_submit(pool, allow::Union{Nothing, HostAllow} = nothing)
-    parts = String[]
-    for row in pool.hosts
-        row.ok || continue
-        slots = clamp_pool_slots(row.slots, allow, row.host)
-        slots > 0 || continue
-        role = is_parent_host_name(row.host) ? :parent : :child
-        name = role === :parent ? PARENT_HOST_NAME : String(row.host)
-        push!(parts, format_placement_token(role, name, slots))
+function pool_hosts_from_allow(
+        include_parent::Bool,
+        hosts::Vector{String},
+        allow::Union{Nothing, HostAllow},
+    )::Tuple{Bool, Vector{String}}
+    isempty(hosts) || return include_parent, String[String(h) for h in hosts]
+    include_parent && return include_parent, String[String(h) for h in hosts]
+    allow === nothing && throw(
+        ArgumentError(
+            "pool: pass `parent` / `child:NAME`, or add-host first",
+        )
+    )
+    isempty(allow) && throw(ArgumentError("pool: hosts = []; add-host first"))
+    out = String[]
+    parent = false
+    for n in sorted_kit_ssh_names(allow)
+        if is_parent_host_name(n)
+            parent = true
+        else
+            push!(out, n)
+        end
     end
-    print_inspect_submit_template("drive", parts)
-    return nothing
+    return parent, out
 end
 
 function pool_cli(args::Vector{String})::Cint
@@ -35,12 +46,13 @@ function pool_cli(args::Vector{String})::Cint
             "  Same flags as DistSSHKit pool. Runs on the queue host (cwd / project).",
             "  $(cli_m()) [qhost:HOST] pool [parent] [child:NAME...]",
             "  Omit tokens to pool config hosts. Does not enqueue.",
+            "  Does not recommend a worker count. Submit with parent:N / child:NAME:N or pool:N.",
         )
         return 0
     end
     opts.show_version && (DistSSHRun.println_kit_version(); return 0)
     allow = config_host_names(load_config())
-    include_parent, hosts = size_hosts_from_allow(
+    include_parent, hosts = pool_hosts_from_allow(
         opts.include_parent,
         opts.hosts,
         allow,
@@ -69,20 +81,9 @@ function pool_cli(args::Vector{String})::Cint
         verbosity = opts.cli_session.verbosity,
         yes = opts.cli_session.yes,
     )
-    result = DistSSHRun.pool!(
-        session;
-        gb_per_worker = opts.gb_per_worker,
-        mem_headroom = opts.mem_headroom,
-        parent_gb = opts.parent_gb,
-    )
+    result = DistSSHRun.pool!(session)
     DistSSHRun.print_pool(result)
-    print_pool_inventory_notes!(;
-        gb_per_worker = opts.gb_per_worker,
-        mem_headroom = opts.mem_headroom,
-        parent_gb = opts.parent_gb,
-    )
+    print_pool_inventory_notes!()
     warn_worker_julia(tokens)
-    any(row -> row.ok && clamp_pool_slots(row.slots, allow, row.host) > 0, result.hosts) &&
-        print_queue_pool_submit(result, allow)
     return result.ok ? 0 : 1
 end

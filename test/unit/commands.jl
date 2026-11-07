@@ -1,5 +1,5 @@
 # The command table is the dispatch. Help pages and the table stay the same set,
-# plus the verbs that have no page (`size`, `plan`, `pool`, `service`).
+# plus the verbs that have no page (`pool`, `service`).
 
 using Test
 using DistSSHQueue
@@ -8,7 +8,7 @@ using DistSSHQueue
     pages = Set(String.(DistSSHQueue.QUEUE_COMMAND_HELP))
     names = Set(keys(DistSSHQueue.QUEUE_COMMANDS))
     @test pages ⊆ names
-    @test setdiff(names, pages) == Set(["size", "plan", "pool", "service"])
+    @test setdiff(names, pages) == Set(["pool", "service"])
     status = DistSSHQueue.QUEUE_COMMANDS["status"]
     @test status.hop === :forward
     @test status.label_qhost
