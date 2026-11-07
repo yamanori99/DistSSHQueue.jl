@@ -34,14 +34,6 @@ using DistSSHQueue
             exit(255)
             """,
         )
-        ok_ssh = joinpath(dir, "ok_ssh.jl")
-        write(
-            ok_ssh,
-            """
-            # Minimal double for probes that never reach remote sizing in these cases.
-            println("ok")
-            """,
-        )
 
         # Queued job with enough hosts to trigger compact truncation (`_HOSTS_KEEP = 2`).
         many_hosts = String[
@@ -62,8 +54,12 @@ using DistSSHQueue
         short_id = first(seed.id, 8)
 
         size_cmd = _queue_cli_cmd(["size", "parent", "--gb-per-worker", "0.5"])
+        size_quiet_cmd = _queue_cli_cmd(["size", "-q", "parent", "--gb-per-worker", "0.5"])
         pool_cmd = _queue_cli_cmd(
             ["pool", "parent", "child:host1", "child:host2", "--gb-per-worker", "0.5"],
+        )
+        pool_quiet_cmd = _queue_cli_cmd(
+            ["pool", "-q", "parent", "child:host1", "child:host2", "--gb-per-worker", "0.5"],
         )
         status_cmd = _queue_cli_cmd(["status"])
         status_verbose_cmd = _queue_cli_cmd(["status", "--verbose"])
@@ -90,6 +86,7 @@ using DistSSHQueue
                 """
                 #!/bin/sh
                 # Do not `set -e`: pool exits 1 when child hosts fail SSH (expected).
+                # Record each command's status; the wrapper's last status is watch.
                 $(_queue_stty_prefix())
                 unset NO_COLOR
                 unset DISTSSHKIT_QUIET
@@ -113,47 +110,70 @@ using DistSSHQueue
             return nothing
         end
 
+        function run_marked(cmd::Cmd)
+            return """
+            $(_queue_argv_line(cmd))
+            echo "___EC:\$?___"
+            echo '___SPLIT___'
+            """
+        end
+
         runner = joinpath(dir, "runner.sh")
         write_runner(
             runner,
             """
-            $(_queue_argv_line(size_cmd))
-            echo '___SPLIT___'
-            $(_queue_argv_line(pool_cmd))
-            echo '___SPLIT___'
-            $(_queue_argv_line(status_cmd))
-            echo '___SPLIT___'
-            $(_queue_argv_line(status_verbose_cmd))
-            echo '___SPLIT___'
-            $(_queue_argv_line(status_progress_cmd))
-            echo '___SPLIT___'
-            $(_queue_argv_line(status_quiet_cmd))
-            echo '___SPLIT___'
+            $(run_marked(size_cmd))
+            $(run_marked(size_quiet_cmd))
+            $(run_marked(pool_cmd))
+            $(run_marked(pool_quiet_cmd))
+            $(run_marked(status_cmd))
+            $(run_marked(status_verbose_cmd))
+            $(run_marked(status_progress_cmd))
+            $(run_marked(status_quiet_cmd))
             export DISTSSHQUEUE_WATCH_TICKS=2
-            $(_queue_argv_line(watch_cmd))
-            echo '___SPLIT___'
-            $(_queue_argv_line(watch_quiet_cmd))
+            $(run_marked(watch_cmd))
+            $(run_marked(watch_quiet_cmd))
             """,
         )
 
         dest = joinpath(dir, "typescript.txt")
         env = _queue_child_env(base_env)
         captured = _queue_pty_capture(runner, dest; env = env)
-        @info "Queue progress_tty shared script wall" elapsed = captured.elapsed
-        # Diagnostic only: cold Julia startups dominate; no pass/fail threshold.
-        @test captured.elapsed > 0
+        @info "Queue progress_tty shared script wall" elapsed = captured.elapsed exitcode =
+            captured.exitcode
         @test isfinite(captured.elapsed)
+        # Last command is watch -q (exit 0). Linux `script -e` returns that.
+        @test captured.exitcode == 0
 
         parts = split(captured.raw, "___SPLIT___")
-        @test length(parts) == 8
-        size_tty = length(parts) == 8 ? parts[1] : ""
-        pool_tty = length(parts) == 8 ? parts[2] : ""
-        status_tty = length(parts) == 8 ? parts[3] : ""
-        status_verbose_tty = length(parts) == 8 ? parts[4] : ""
-        status_progress_tty = length(parts) == 8 ? parts[5] : ""
-        status_quiet_tty = length(parts) == 8 ? parts[6] : ""
-        watch_tty = length(parts) == 8 ? parts[7] : ""
-        watch_quiet_tty = length(parts) == 8 ? parts[8] : ""
+        @test length(parts) >= 10
+        function take_n(i::Int)
+            i <= length(parts) || return "", nothing
+            return _queue_section_exit(parts[i])
+        end
+        size_tty, size_ec = take_n(1)
+        size_quiet_tty, size_quiet_ec = take_n(2)
+        pool_tty, pool_ec = take_n(3)
+        pool_quiet_tty, pool_quiet_ec = take_n(4)
+        status_tty, status_ec = take_n(5)
+        status_verbose_tty, status_verbose_ec = take_n(6)
+        status_progress_tty, status_progress_ec = take_n(7)
+        status_quiet_tty, status_quiet_ec = take_n(8)
+        watch_tty, watch_ec = take_n(9)
+        watch_quiet_tty, watch_quiet_ec = take_n(10)
+
+        @testset "per-command exit codes on TTY" begin
+            @test size_ec == 0
+            @test size_quiet_ec == 0
+            @test pool_ec == 1
+            @test pool_quiet_ec == 1
+            @test status_ec == 0
+            @test status_verbose_ec == 0
+            @test status_progress_ec == 0
+            @test status_quiet_ec == 0
+            @test watch_ec == 0
+            @test watch_quiet_ec == 0
+        end
 
         @testset "size parent on TTY keeps table; hides :progress headings" begin
             size_plain = _queue_tty_strip_ansi(size_tty)
@@ -165,37 +185,43 @@ using DistSSHQueue
             @test !occursin("DistSSHQueue size", size_plain)
             @test !occursin(r"(?m)^Project:", size_plain)
             @test !any(l -> startswith(strip(l), "Project:"), size_lines)
-            # Structure only — do not assert machine-specific RAM/core numbers.
             @test occursin(r"Total:\s*\d+\s*workers", size_plain) ||
                 occursin("workers", lowercase(size_plain))
+            quiet_plain = _queue_tty_strip_ansi(size_quiet_tty)
+            @test occursin("parent", quiet_plain)
+            @test !occursin("DistSSHQueue size", quiet_plain)
+            @test !occursin(r"(?m)^Project:", quiet_plain)
         end
 
-        @testset "pool two-host SSH failures stay visible on TTY" begin
+        @testset "pool parent local + two-host SSH failures on TTY" begin
             pool_plain = _queue_tty_strip_ansi(pool_tty)
             pool_lines = _queue_tty_lines(pool_tty)
+            @test occursin("parent", pool_plain)
             @test occursin("host1", pool_plain)
             @test occursin("host2", pool_plain)
-            @test any(l -> occursin("host1", l) && occursin("fail", l), pool_lines)
-            @test any(l -> occursin("host2", l) && occursin("fail", l), pool_lines)
-            @test occursin("Permission denied", pool_plain) ||
-                occursin("publickey", pool_plain) ||
-                occursin("failed", lowercase(pool_plain))
+            @test any(l -> _queue_host_fail_line(l, "host1"), pool_lines)
+            @test any(l -> _queue_host_fail_line(l, "host2"), pool_lines)
             @test _queue_tty_message_visible(pool_tty, "host1")
             @test _queue_tty_message_visible(pool_tty, "host2")
-            # A later bar below the fail lines is fine; cursor-up redraw over them is not.
-            fail_at = findlast("fail", pool_tty)
-            if fail_at !== nothing
-                @test !_queue_tty_cursor_up_after(pool_tty, "fail")
-            end
+            host1_at = findlast("host1", pool_tty)
+            host2_at = findlast("host2", pool_tty)
+            @test host1_at !== nothing && !_queue_tty_cursor_up_after(pool_tty, "host1")
+            @test host2_at !== nothing && !_queue_tty_cursor_up_after(pool_tty, "host2")
             @test !occursin("DistSSHQueue pool", pool_plain)
             @test !occursin(r"(?m)^Project:", pool_plain)
+            quiet_plain = _queue_tty_strip_ansi(pool_quiet_tty)
+            quiet_lines = _queue_tty_lines(pool_quiet_tty)
+            @test occursin("host1", quiet_plain)
+            @test occursin("host2", quiet_plain)
+            @test any(l -> _queue_host_fail_line(l, "host1"), quiet_lines)
+            @test any(l -> _queue_host_fail_line(l, "host2"), quiet_lines)
+            @test !occursin("DistSSHQueue pool", quiet_plain)
         end
 
         @testset "status compact / verbose / progress / quiet on TTY" begin
             status_plain = _queue_tty_strip_ansi(status_tty)
             @test occursin(short_id, status_plain)
             @test occursin("hosts", status_plain)
-            # Default compact: first two hosts + "+N".
             @test occursin("+3", status_plain) || occursin("+ 3", status_plain)
             @test !occursin("child:host4:1", status_plain)
 
@@ -205,7 +231,6 @@ using DistSSHQueue
             @test !occursin("+3", verbose_plain)
 
             progress_plain = _queue_tty_strip_ansi(status_progress_tty)
-            # Queue `--progress` expands hosts (chrome), not Run's live bar.
             @test occursin("child:host4:1", progress_plain)
 
             quiet_plain = _queue_tty_strip_ansi(status_quiet_tty)
@@ -220,7 +245,6 @@ using DistSSHQueue
             final = _queue_tty_strip_ansi(_queue_tty_visible_screen(watch_tty))
             @test occursin("Store", final) || occursin("serve", final)
             @test occursin(short_id, final) || occursin("queued", lowercase(final))
-            # Watch frames are rendered into a buffer first, so the TTY bytes are uncolored.
             @test !occursin(r"\e\[[0-9;]*m", watch_tty)
             quiet_watch = _queue_tty_strip_ansi(_queue_tty_visible_screen(watch_quiet_tty))
             @test occursin(short_id, quiet_watch)
@@ -230,7 +254,9 @@ using DistSSHQueue
         @testset "pipe contracts (no TTY control sequences)" begin
             pipe_env = _queue_child_env(base_env)
             size_pipe = _queue_pipe_capture(size_cmd; env = pipe_env)
+            size_quiet_pipe = _queue_pipe_capture(size_quiet_cmd; env = pipe_env)
             pool_pipe = _queue_pipe_capture(pool_cmd; env = pipe_env)
+            pool_quiet_pipe = _queue_pipe_capture(pool_quiet_cmd; env = pipe_env)
             status_pipe = _queue_pipe_capture(status_cmd; env = pipe_env)
             watch_pipe_env = copy(pipe_env)
             watch_pipe_env["DISTSSHQUEUE_WATCH_TICKS"] = "1"
@@ -239,28 +265,37 @@ using DistSSHQueue
             @info "Queue progress_tty pipe walls" size = size_pipe.elapsed pool = pool_pipe.elapsed status =
                 status_pipe.elapsed watch = watch_pipe.elapsed
 
-            # Pipe default is Run `:verbose`: title / Project headings are present.
-            # Run `writeln_both` may still emit SGR via printstyled when
-            # `Base.have_color` is true on a pipe; that is Run's current behavior.
-            # Assert no redraw/cursor control sequences here.
+            @test size_pipe.exitcode == 0
+            @test size_quiet_pipe.exitcode == 0
+            @test pool_pipe.exitcode == 1
+            @test pool_quiet_pipe.exitcode == 1
+            @test status_pipe.exitcode == 0
+            @test watch_pipe.exitcode == 0
+
             @test occursin("DistSSHQueue size", size_pipe.stdout) ||
                 occursin("Project:", size_pipe.stdout)
             @test occursin("parent", size_pipe.stdout)
             @test !_queue_tty_has_screen_clear(size_pipe.stdout)
             @test !occursin(r"\e\[[0-9]*[AJKH]", size_pipe.stdout)
+            @test occursin("parent", size_quiet_pipe.stdout)
+            @test !occursin("DistSSHQueue size", size_quiet_pipe.stdout)
+            @test !occursin(r"(?m)^Project:", size_quiet_pipe.stdout)
 
+            pool_pipe_lines = split(pool_pipe.stdout, '\n')
             @test occursin("host1", pool_pipe.stdout)
             @test occursin("host2", pool_pipe.stdout)
-            @test occursin("fail", pool_pipe.stdout)
+            @test any(l -> _queue_host_fail_line(l, "host1"), pool_pipe_lines)
+            @test any(l -> _queue_host_fail_line(l, "host2"), pool_pipe_lines)
+            @test occursin("parent", pool_pipe.stdout)
             @test !_queue_tty_has_screen_clear(pool_pipe.stdout)
             @test !occursin(r"\e\[[0-9]*[AJKH]", pool_pipe.stdout)
+            @test occursin("host1", pool_quiet_pipe.stdout)
+            @test occursin("host2", pool_quiet_pipe.stdout)
 
-            # status / watch: Queue chrome gates color on use_colors(); pipe has no CSI.
             @test occursin(short_id, status_pipe.stdout)
             @test occursin("+3", status_pipe.stdout) || occursin("+ 3", status_pipe.stdout)
             @test !_queue_tty_has_csi(status_pipe.stdout)
 
-            # Pipe watch without -q: compact line, no screen clear.
             @test occursin("serve", watch_pipe.stdout)
             @test occursin("running", watch_pipe.stdout)
             @test occursin("queued", watch_pipe.stdout)
@@ -272,8 +307,6 @@ using DistSSHQueue
             DistSSHQueue.save_jobs(store, DistSSHQueue.Job[])
             serve_runner = joinpath(dir, "serve_runner.sh")
             serve_cmd = _queue_cli_cmd(["serve", "--interval", "0.05"])
-            # Foreground under script(1) so stdout stays a TTY (background `&`
-            # can drop the spinner). Parent sends SIGINT after the idle frame.
             write(
                 serve_runner,
                 """
@@ -298,61 +331,55 @@ using DistSSHQueue
             )
             chmod(serve_runner, 0o755)
             serve_dest = joinpath(dir, "serve_typescript.txt")
-            rm(serve_dest; force = true)
-            _queue_require_pty_tool!()
-            serve_script_cmd = if Sys.isapple()
-                `script -q $serve_dest /bin/sh $serve_runner`
-            else
-                `script -q -c $serve_runner $serve_dest`
-            end
             t0 = time()
-            serve_proc = run(ignorestatus(setenv(serve_script_cmd, env)); wait = false)
+            serve_proc = _queue_start_script(serve_runner, serve_dest; env = env)
             saw_idle = false
-            deadline = time() + 60.0
-            while time() < deadline && process_running(serve_proc)
-                if isfile(serve_dest)
-                    text = read(serve_dest, String)
-                    if occursin("idle", text) || any(c -> occursin(c, text), "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
-                        saw_idle = true
-                        sleep(0.35)
-                        break
+            try
+                deadline = time() + 60.0
+                while time() < deadline && process_running(serve_proc)
+                    if isfile(serve_dest)
+                        text = read(serve_dest, String)
+                        if occursin("idle", text) || any(c -> occursin(c, text), "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
+                            saw_idle = true
+                            sleep(0.35)
+                            break
+                        end
                     end
+                    sleep(0.05)
                 end
-                sleep(0.05)
+                @test saw_idle
+                if process_running(serve_proc)
+                    _queue_kill_capture_tree!(serve_proc; sig = Base.SIGINT)
+                end
+                done = timedwait(() -> !process_running(serve_proc), 30.0; pollint = 0.2)
+                if done !== :ok
+                    _queue_kill_capture_tree!(serve_proc; sig = Base.SIGTERM)
+                    error("serve graceful SIGINT did not exit; hang cleanup used")
+                end
+                wait(serve_proc)
+            finally
+                if process_running(serve_proc)
+                    _queue_kill_capture_tree!(serve_proc; sig = Base.SIGKILL)
+                end
             end
-            @test saw_idle
-            # Graceful SIGINT to the script tree only (not a hang-timeout kill).
-            if process_running(serve_proc)
-                pid = getpid(serve_proc)
-                _queue_terminate_tree!(pid; sig = Base.SIGINT)
-            end
-            done = timedwait(() -> !process_running(serve_proc), 30.0; pollint = 0.2)
-            if done !== :ok
-                _queue_reap_proc!(serve_proc; hang_s = 5.0)
-                error("serve graceful SIGINT did not exit; hang cleanup used")
-            end
-            wait(serve_proc)
             serve_elapsed = time() - t0
             serve_raw = isfile(serve_dest) ? read(serve_dest, String) : ""
             serve_ec = Int(serve_proc.exitcode)
             @info "Queue progress_tty serve script wall" elapsed = serve_elapsed exitcode = serve_ec
 
-            # Controlled SIGINT: server/script status, not the hang wrapper.
-            # Julia may report 0 (caught in serve!) or 130 (SIGINT default).
             @test serve_ec in (0, 130)
             @test !occursin("pseudo-TTY script exceeded", serve_raw)
 
             serve_plain = _queue_tty_strip_ansi(serve_raw)
             @test occursin("idle", serve_plain) || _queue_tty_spinner_char(serve_plain)
-            # After shutdown, erase-line clears the spinner.
             @test occursin("\r\e[K", serve_raw) || occursin("\e[K", serve_raw)
             @test DistSSHQueue.serve_pid(store) === nothing
             @test DistSSHQueue.serve_alive(store) == false
         end
 
-        @testset "serve/setup display interaction probe (report only)" begin
-            # Safe isolated probe: Queue spinner + a fake setup-like bar on the
-            # same TTY. Does not contact hosts or run a real Kit setup.
+        @testset "synthetic two-writer TTY (not production setup!)" begin
+            # Queue spinner and a fake setup-like bar on one TTY. Does not run
+            # DistSSHRun.setup! or claim serve↔setup coordination is fixed.
             DistSSHQueue.save_jobs(store, DistSSHQueue.Job[])
             probe = joinpath(dir, "collision_probe.jl")
             write(
@@ -412,27 +439,17 @@ using DistSSHQueue
             chmod(probe_runner, 0o755)
             probe_dest = joinpath(dir, "collision_typescript.txt")
             probe_cap = _queue_pty_capture(probe_runner, probe_dest; env = env)
-            @info "Queue serve/setup collision probe wall" elapsed = probe_cap.elapsed
-            has_idle = occursin("idle", _queue_tty_strip_ansi(probe_cap.raw)) ||
-                occursin("running", _queue_tty_strip_ansi(probe_cap.raw))
-            has_setup_bar = occursin("setup", _queue_tty_strip_ansi(probe_cap.raw)) &&
-                (occursin("━", probe_cap.raw) || occursin("╺", probe_cap.raw))
-            glued = any(
-                l -> occursin("idle", l) && occursin("setup", l),
-                _queue_tty_lines(probe_cap.raw),
-            )
-            # Evidence for the PR report. Do not change production coordination here.
-            @test has_idle || has_setup_bar || !isempty(probe_cap.raw)
-            if has_idle && has_setup_bar
-                @info "serve/setup TTY probe: both spinner and fake setup bar present" glued
-            else
-                @info "serve/setup TTY probe inconclusive or partial" has_idle has_setup_bar glued nbytes =
-                    sizeof(probe_cap.raw)
-            end
-            # Keep a short raw excerpt for humans reading the log.
-            # Byte indices can land inside a multi-byte glyph (e.g. ━); use chars.
-            excerpt = first(probe_cap.raw, min(length(probe_cap.raw), 200))
-            @info "serve/setup TTY probe raw excerpt" excerpt
+            @info "Queue synthetic two-writer TTY wall" elapsed = probe_cap.elapsed
+            @test probe_cap.exitcode == 0
+            raw = probe_cap.raw
+            plain = _queue_tty_strip_ansi(raw)
+            @test occursin("setup", plain)
+            @test occursin("━", raw) || occursin("╺", raw)
+            @test occursin("idle", plain) || occursin("running", plain) ||
+                _queue_tty_spinner_char(plain)
+            visible_lines = split(_queue_tty_strip_ansi(_queue_tty_visible_screen(raw)), '\n')
+            @test !any(l -> occursin("idle", l) && occursin("setup", l), visible_lines)
+            @test !any(l -> occursin("running", l) && occursin("setup", l), visible_lines)
         end
     end
 end

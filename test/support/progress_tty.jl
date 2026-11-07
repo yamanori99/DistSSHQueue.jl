@@ -232,62 +232,56 @@ if !isdefined(Main, :_queue_tty_strip_ansi)
         return env
     end
 
-    function _queue_pgrep_children(pid::Integer)::Vector{Int}
-        out = Int[]
-        try
-            text = read(`pgrep -P $(Int(pid))`, String)
-            for line in eachline(IOBuffer(text))
-                n = tryparse(Int, strip(line))
-                n === nothing || push!(out, n)
-            end
-        catch
+    # Linux util-linux: `-f` flushes the typescript while the child runs
+    # (serve polls the file before exit). `-e` / `--return` is the inner
+    # command status. Apple/BSD: `-t 0` flushes each character; there is no
+    # `-e`. Do not signal PIDs outside this detached process group.
+    function _queue_script_cmd(script_path::AbstractString, dest::AbstractString)::Cmd
+        return if Sys.isapple()
+            `script -q -t 0 $dest /bin/sh $script_path`
+        else
+            `script -q -f -e -c $script_path $dest`
         end
-        return out
     end
 
-    # Terminate only `root` and its descendants. Never signals unrelated PIDs.
-    function _queue_terminate_tree!(root::Integer; sig = Base.SIGTERM)
-        kids = _queue_pgrep_children(root)
-        for kid in kids
-            _queue_terminate_tree!(kid; sig = sig)
+    function _queue_kill_capture_tree!(proc::Base.Process; sig = Base.SIGTERM)
+        process_running(proc) || return nothing
+        pid = Int(getpid(proc))
+        if Sys.isunix()
+            ccall(:kill, Cint, (Cint, Cint), Cint(-pid), sig)
+            timedwait(() -> !process_running(proc), 5.0; pollint = 0.2)
+            if process_running(proc)
+                ccall(:kill, Cint, (Cint, Cint), Cint(-pid), Base.SIGKILL)
+                timedwait(() -> !process_running(proc), 5.0; pollint = 0.2)
+            end
+        else
+            kill(proc, sig)
+            timedwait(() -> !process_running(proc), 5.0; pollint = 0.2)
+            process_running(proc) && kill(proc, Base.SIGKILL)
+            timedwait(() -> !process_running(proc), 5.0; pollint = 0.2)
         end
-        try
-            run(pipeline(`kill -$(Int(sig)) $(Int(root))`; stdout = devnull, stderr = devnull))
+        process_running(proc) || try
+            wait(proc)
         catch
         end
         return nothing
     end
 
-    function _queue_reap_proc!(proc::Base.Process; hang_s::Real)
-        deadline = time() + Float64(hang_s)
-        while process_running(proc) && time() < deadline
-            sleep(0.05)
-        end
-        if process_running(proc)
-            pid = try
-                getpid(proc)
-            catch
-                nothing
-            end
-            pid === nothing || _queue_terminate_tree!(pid; sig = Base.SIGTERM)
-            timedwait(() -> !process_running(proc), 5.0; pollint = 0.2)
-        end
-        if process_running(proc)
-            pid = try
-                getpid(proc)
-            catch
-                nothing
-            end
-            pid === nothing || _queue_terminate_tree!(pid; sig = Base.SIGKILL)
-            timedwait(() -> !process_running(proc), 5.0; pollint = 0.2)
-        end
-        process_running(proc) || wait(proc)
-        return nothing
+    function _queue_start_script(
+            script_path::AbstractString,
+            dest::AbstractString;
+            env::AbstractDict = _queue_child_env(),
+        )::Base.Process
+        _queue_require_pty_tool!()
+        rm(dest; force = true)
+        cmd = _queue_script_cmd(script_path, dest)
+        launched = Cmd(setenv(cmd, env); detach = true)
+        return run(ignorestatus(launched); wait = false)::Base.Process
     end
 
     # Run `script_path` under `script(1)`. Returns `(raw, elapsed, exitcode)`.
-    # `exitcode` is the `script` wrapper status. Hang cleanup is scoped to that
-    # process tree only. Elapsed time is diagnostic; it is not a pass/fail gate.
+    # `exitcode` is the wrapper status (`-e` on Linux). Hang cleanup is the
+    # detached process group only. Elapsed time is diagnostic, not a gate.
     function _queue_pty_capture(
             script_path::AbstractString,
             dest::AbstractString;
@@ -295,24 +289,30 @@ if !isdefined(Main, :_queue_tty_strip_ansi)
             env::AbstractDict = _queue_child_env(),
         )::NamedTuple{(:raw, :elapsed, :exitcode), Tuple{String, Float64, Int}}
         hang = Float64(hang_s)
-        _queue_require_pty_tool!()
-        rm(dest; force = true)
-        cmd = if Sys.isapple()
-            `script -q $dest /bin/sh $script_path`
-        else
-            `script -q -c $script_path $dest`
-        end
         t0 = time()
-        proc = run(ignorestatus(setenv(cmd, env)); wait = false)
-        done = timedwait(() -> !process_running(proc), hang; pollint = 0.5)
-        if done !== :ok
-            _queue_reap_proc!(proc; hang_s = 10.0)
-            error("pseudo-TTY script exceeded $(hang)s (wrapper still running)")
+        proc = _queue_start_script(script_path, dest; env = env)
+        timed_out = false
+        try
+            done = timedwait(() -> !process_running(proc), hang; pollint = 0.5)
+            if done !== :ok
+                timed_out = true
+                _queue_kill_capture_tree!(proc; sig = Base.SIGTERM)
+                error("pseudo-TTY script exceeded $(hang)s (wrapper still running)")
+            end
+            wait(proc)
+            elapsed = time() - t0
+            raw = isfile(dest) ? read(dest, String) : ""
+            return (raw = raw, elapsed = elapsed, exitcode = Int(proc.exitcode))
+        finally
+            if process_running(proc)
+                _queue_kill_capture_tree!(proc; sig = Base.SIGKILL)
+            elseif timed_out
+                try
+                    wait(proc)
+                catch
+                end
+            end
         end
-        wait(proc)
-        elapsed = time() - t0
-        raw = isfile(dest) ? read(dest, String) : ""
-        return (raw = raw, elapsed = elapsed, exitcode = Int(proc.exitcode))
     end
 
     function _queue_pipe_capture(
@@ -323,20 +323,55 @@ if !isdefined(Main, :_queue_tty_strip_ansi)
         out = IOBuffer()
         err = IOBuffer()
         t0 = time()
+        # Not detached: `kill(-pid)` would be this test process group.
         proc = run(ignorestatus(setenv(cmd, env)), devnull, out, err; wait = false)
-        done = timedwait(() -> !process_running(proc), Float64(hang_s); pollint = 0.5)
-        if done !== :ok
-            _queue_reap_proc!(proc; hang_s = 10.0)
-            error("pipe child exceeded $(hang_s)s")
+        timed_out = false
+        try
+            done = timedwait(() -> !process_running(proc), Float64(hang_s); pollint = 0.5)
+            if done !== :ok
+                timed_out = true
+                process_running(proc) && kill(proc, Base.SIGTERM)
+                timedwait(() -> !process_running(proc), 5.0; pollint = 0.2)
+                process_running(proc) && kill(proc, Base.SIGKILL)
+                timedwait(() -> !process_running(proc), 5.0; pollint = 0.2)
+                error("pipe child exceeded $(hang_s)s")
+            end
+            wait(proc)
+            elapsed = time() - t0
+            return (
+                stdout = String(take!(out)),
+                stderr = String(take!(err)),
+                elapsed = elapsed,
+                exitcode = Int(proc.exitcode),
+            )
+        finally
+            if process_running(proc)
+                kill(proc, Base.SIGKILL)
+                timedwait(() -> !process_running(proc), 5.0; pollint = 0.2)
+            elseif timed_out
+                try
+                    wait(proc)
+                catch
+                end
+            end
         end
-        wait(proc)
-        elapsed = time() - t0
-        return (
-            stdout = String(take!(out)),
-            stderr = String(take!(err)),
-            elapsed = elapsed,
-            exitcode = Int(proc.exitcode),
-        )
+    end
+
+    # Body and optional `___EC:N___` marker from one shared-script section.
+    function _queue_section_exit(part::AbstractString)::Tuple{String, Union{Nothing, Int}}
+        s = String(part)
+        m = match(r"___EC:(-?\d+)___", s)
+        m === nothing && return s, nothing
+        body = s[1:(m.offset - 1)]
+        return body, parse(Int, m.captures[1])
+    end
+
+    # Host failure on the same stripped line (`fail` / `✗` / Permission denied).
+    function _queue_host_fail_line(line::AbstractString, host::AbstractString)::Bool
+        s = String(line)
+        occursin(String(host), s) || return false
+        return occursin("fail", s) || occursin("✗", s) ||
+            occursin("Permission denied", s) || occursin("publickey", s)
     end
 
     function _queue_stty_prefix()::String
