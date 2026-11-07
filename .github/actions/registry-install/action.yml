@@ -19,7 +19,8 @@ runs:
       env:
         REGISTRY_INSTALL_PACKAGE: ${{ inputs.package }}
         REGISTRY_INSTALL_REV: ${{ inputs.rev }}
-        # DistSSHQueue has no JULIA_PKGEVAL short mode. This job runs the full suite.
+        # Skip only the pseudo-TTY suite. Do not set JULIA_PKGEVAL here.
+        DISTSSHQUEUE_SKIP_PSEUDOTTY: "1"
         LANG: C.UTF-8
       run: |
         set -euo pipefail

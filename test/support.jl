@@ -1,5 +1,7 @@
 import DistSSHRun
 
+include(joinpath(@__DIR__, "support", "progress_tty.jl"))
+
 # Seconds live here. DistSSHBase resolves the name and any environment override.
 const WAIT_SECONDS = Dict{Symbol, Float64}(
     :child_reply => 300.0,
