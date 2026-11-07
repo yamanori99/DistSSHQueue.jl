@@ -430,7 +430,8 @@ using DistSSHQueue
                     sizeof(probe_cap.raw)
             end
             # Keep a short raw excerpt for humans reading the log.
-            excerpt = probe_cap.raw[1:min(end, 400)]
+            # Byte indices can land inside a multi-byte glyph (e.g. ━); use chars.
+            excerpt = first(probe_cap.raw, min(length(probe_cap.raw), 200))
             @info "serve/setup TTY probe raw excerpt" excerpt
         end
     end
