@@ -119,6 +119,7 @@ EOF
           - "test/unit/commands.jl"
           - "test/unit/queue.jl"
           - "test/integration/cli.jl"
+          - "test/integration/progress_tty.jl"
 
 "area:client":
   - changed-files:
