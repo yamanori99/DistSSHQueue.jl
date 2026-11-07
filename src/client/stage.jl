@@ -79,7 +79,7 @@ function hop_print(
                 detect = auto,
                 tty = false,
             )
-            code = Int(something(proc.exitcode, 1))
+            code = shell_status(proc)
             if code == 127
                 throw(
                     ArgumentError(

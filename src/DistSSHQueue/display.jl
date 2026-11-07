@@ -785,6 +785,7 @@ function queue_command_help(verb::AbstractString)
         ("  cancel ID",),
         (
             ("", "A setup step runs to the end, then the job stops. A detached Kit job is stopped."),
+            ("", "A live Kit job gets SIGINT, then SIGTERM. Unreachable hosts do not hold the reap open."),
             h,
         ),
     )
@@ -885,7 +886,8 @@ function print_teardown_usage(io::IO = stdout)
     print_help_lines(
         io,
         help_verb_line("--confirm-path PATH", "Repeat once per quoted path from Would remove"),
-        help_verb_line("-y / --yes", "Still deletes. Removed in 0.10"),
+        help_verb_line("-y / --yes", "Does not delete"),
+        help_verb_line("--stop-jobs", "Stop live jobs, only with a matching --confirm-path"),
         help_verb_line("--write-only", "Do not stop serve or unload the OS unit"),
         help_verb_line("--home DIR", "Home for ~/.distsshqueue"),
         help_verb_line("--bindir DIR", "Leftover dskq shim path"),

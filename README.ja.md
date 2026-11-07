@@ -174,6 +174,8 @@ config では `DISTRIBUTED_REMOTE_PROJECT_ROOT` を設定しない。`child:`
   jobs.toml.log
   jobs.toml.pid         serve 中
   jobs.toml.stopped     stop 後、serve まで
+  run-toml/<job-id>/    コントローラ run.toml のバイトコピー
+    run.toml
   env/                  qhost: 既定 --project=。enable はあれば使う
     Project.toml
     Manifest.toml
@@ -184,6 +186,8 @@ config では `DISTRIBUTED_REMOTE_PROJECT_ROOT` を設定しない。`child:`
     .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  result_path (実行層かスクリプトが決める)
     .distsshkit/setup/*.log         setup logs
 ```
+
+終了または cancel されたジョブは、コントローラの `run.toml` を `run-toml/<job-id>/` にバイト単位で残し、その SHA-256 をジョブ行に置く。Run が `provenance.shipped` を書いたとき、ship のハッシュも残す。
 
 `enable` (任意。この端末の `serve` だけなら不要):
 
@@ -233,7 +237,9 @@ julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
 `submit` は、`serve` が無ければキューホスト上で起動する。`serve` が
-ジョブ木をそこで `Pkg.instantiate` し、`child:` には
+ジョブ木をそこで `Pkg.instantiate` する。Manifest の `julia_version` が
+無い、Julia の版でない、または minor が `serve` の Julia と違うときは
+この段階で失敗する。`child:` には
 `setup!` を走らせる (stage で `setup` を手で打たない)。
 `:check` は `child:` で常に走る。`qhost:` の stage は `.git/`
 を送らないが、無いときは fail ではなく警告にする。

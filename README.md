@@ -177,6 +177,8 @@ ext4, or the WSL2 Linux filesystem). NFS and a WSL drvfs mount such as
   jobs.toml.log
   jobs.toml.pid         while serve is up
   jobs.toml.stopped     after stop, until serve
+  run-toml/<job-id>/    byte copy of the controller run.toml
+    run.toml
   env/                  qhost: default --project=; enable if present
     Project.toml
     Manifest.toml
@@ -187,6 +189,8 @@ ext4, or the WSL2 Linux filesystem). NFS and a WSL drvfs mount such as
     .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  result_path (run or script picks it)
     .distsshkit/setup/*.log         setup logs
 ```
+
+A finished or cancelled job keeps a byte copy of the controller `run.toml` under that `run-toml/<job-id>/` directory, with its SHA-256 on the job row. The ship hash is recorded when Run wrote `provenance.shipped`.
 
 `enable` (optional; skip if you only `serve` in a terminal):
 
@@ -236,7 +240,9 @@ julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 ```
 
 `submit` starts `serve` on the queue host if none is running. `serve`
-instantiates the job project there and runs `setup!`
+instantiates the job project there. That step fails when Manifest
+`julia_version` is missing, is not a Julia version, or its minor differs
+from the Julia running `serve`. `serve` runs `setup!`
 on `child:` hosts before each job (you do not hand-run
 `setup` on the stage tree). `:check` always runs there
 (a `qhost:` stage with no `.git/` warns). Job ids are a

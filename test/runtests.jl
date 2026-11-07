@@ -18,7 +18,7 @@ get!(ENV, DistSSHQueue.NO_KIT_SETUP_ENV, "1")
 get!(ENV, DistSSHQueue.NO_STOP_BOOTOUT_ENV, "1")
 install_serve_reaper!()
 
-const _RUNTEST_N = 9
+const _RUNTEST_N = 10
 const _RUNTEST_I = Ref(0)
 function _runtest_announce(rel::AbstractString)
     _RUNTEST_I[] += 1
@@ -49,5 +49,9 @@ end
     @testset "integration" verbose = true begin
         _runtest_announce("integration/cli.jl")
         include(joinpath(@__DIR__, "integration", "cli.jl"))
+        _runtest_announce("integration/progress_tty.jl")
+        if !_queue_skip_pseudotty("integration/progress_tty.jl")
+            include(joinpath(@__DIR__, "integration", "progress_tty.jl"))
+        end
     end
 end

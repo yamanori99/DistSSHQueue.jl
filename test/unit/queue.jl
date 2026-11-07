@@ -23,7 +23,7 @@ end
 
 function (p::_KitSetupFail)(_, mode::Symbol; gitignore::Bool = true)
     mode === p.bad || return (; ok = true, gitignore)
-    p.throw_on_bad && error(mode === :rsync ? "rsync failed" : "failed")
+    p.throw_on_bad && error(mode === :ship_tree ? "ship-tree failed" : "failed")
     return (; ok = false, gitignore)
 end
 
@@ -48,7 +48,7 @@ end
 
 function (p::_StageRsyncProbe)(_, mode::Symbol; gitignore::Bool = true)
     push!(p.modes, mode)
-    if mode === :rsync
+    if mode === :ship_tree
         empty!(p.gitignore)
         push!(p.gitignore, gitignore)
     end
@@ -63,7 +63,7 @@ function _stage_rsync_setup!(proj::String)
         kind = :go,
         script = script,
         hosts = ["child:w1:1"],
-        kwargs = Dict{String, Any}("project" => proj),
+        kwargs = Dict{String, Any}("project" => proj, "remote" => "/custom/root"),
     )
     manifest = joinpath(proj, "Manifest.toml")
     modes = Symbol[]
@@ -424,7 +424,7 @@ end
                 cancel_requested = Returns(true),
             )
         end
-        @test modes == [:rsync]
+        @test modes == [:ship_tree]
         bare = DistSSHQueue.Job(;
             kind = :go,
             script = "a.jl",
@@ -438,6 +438,8 @@ end
             DistSSHQueue.show_usage(; command = "cancel")
         end
         @test occursin("setup step runs to the end", help_out)
+        @test occursin("SIGINT, then SIGTERM", help_out)
+        @test occursin("Unreachable hosts do not hold the reap open", help_out)
     end
 end
 
@@ -590,7 +592,9 @@ end
         child = Base.run(`sleep 60`; wait = false)
         write(joinpath(run, "kit.pid"), string(getpid(child)))
         try
-            @test cancel!(q, id)
+            withenv("HOME" => d) do
+                @test cancel!(q, id)
+            end
             @test job(q, id).result_path == art
             @test !process_running(child)
         finally
@@ -964,7 +968,10 @@ end
             kind = :go,
             script = script,
             hosts = ["child:w1:1"],
-            kwargs = Dict{String, Any}("project" => String(d)),
+            kwargs = Dict{String, Any}(
+                "project" => String(d),
+                "remote" => "/custom/root",
+            ),
         )
         modes = Symbol[]
         phases = String[]
@@ -975,29 +982,47 @@ end
                 kit_setup! = _KitSetupOk(modes),
             )
         end
-        @test modes == [:rsync, :instantiate, :check]
-        @test phases == ["rsync", "instantiate", "check"]
+        @test modes == [:remote_root, :ship_tree, :instantiate, :check]
+        @test phases == ["remote-root", "ship-tree", "instantiate", "check"]
+        @test DistSSHQueue._absolute_remote_path("/custom/root")
+        @test DistSSHQueue._absolute_remote_path("  /custom/root")
+        @test !DistSSHQueue._absolute_remote_path("jobs/app")
+        @test !DistSSHQueue._absolute_remote_path("~/jobs")
+        @test !DistSSHQueue._absolute_remote_path(nothing)
+        rel = DistSSHQueue.Job(;
+            kind = :go,
+            script = script,
+            hosts = ["child:w1:1"],
+            kwargs = Dict{String, Any}("project" => String(d), "remote" => "jobs/app"),
+        )
+        rel_modes = Symbol[]
+        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+            DistSSHQueue._queue_kit_setup!(
+                rel, Returns(nothing); kit_setup! = _KitSetupOk(rel_modes),
+            )
+        end
+        @test rel_modes == [:ship_tree, :instantiate, :check]
     end
 end
 
-@testset "stage rsync skips gitignore and stays before instantiate" begin
+@testset "stage ship uses gitignore and stays before instantiate" begin
     mktempdir() do d
         stage = joinpath(d, ".distsshqueue", "stage", "11111111-1111-4111-8111-111111111111")
         mkpath(stage)
         write(joinpath(stage, "Project.toml"), "[deps]\n")
         got = _stage_rsync_setup!(stage)
-        @test got.gitignore === false
-        @test got.modes == [:rsync, :instantiate, :check]
-        @test got.phases == ["rsync", "instantiate", "check"]
-        @test got.manifest_at[:rsync] === false
+        @test got.gitignore === true
+        @test got.modes == [:remote_root, :ship_tree, :instantiate, :check]
+        @test got.phases == ["remote-root", "ship-tree", "instantiate", "check"]
+        @test got.manifest_at[:ship_tree] === false
         @test got.manifest_at[:instantiate] === true
     end
     mktempdir() do d
         write(joinpath(d, "Project.toml"), "[deps]\n")
         got = _stage_rsync_setup!(d)
         @test got.gitignore === true
-        @test got.modes == [:rsync, :instantiate, :check]
-        @test got.phases == ["rsync", "instantiate", "check"]
+        @test got.modes == [:remote_root, :ship_tree, :instantiate, :check]
+        @test got.phases == ["remote-root", "ship-tree", "instantiate", "check"]
     end
 end
 
@@ -1052,7 +1077,7 @@ end
         @test leaf isa String
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
-                j, Returns(nothing); kit_setup! = _KitSetupFail(:rsync, true),
+                j, Returns(nothing); kit_setup! = _KitSetupFail(:ship_tree, true),
             )
         end
         @test !isfile(joinpath(leaf, "setup_failure.log"))
@@ -1284,6 +1309,65 @@ end
             empty!(DEPOT_PATH)
             append!(DEPOT_PATH, old)
         end
+    end
+end
+
+@testset "queue-host instantiate refuses a foreign Manifest minor" begin
+    minor = "$(VERSION.major).$(VERSION.minor).0"
+    other = "$(VERSION.major).$(VERSION.minor + 1).0"
+    function _lock(julia_version::AbstractString)::String
+        return "manifest_format = \"2.0\"\njulia_version = \"$(julia_version)\"\n"
+    end
+    mktempdir() do dir
+        write(joinpath(dir, "Project.toml"), "[deps]\n")
+        path = joinpath(dir, "Manifest.toml")
+        foreign = _lock(other)
+        write(path, foreign)
+        thrown = @test_throws ErrorException DistSSHQueue._queue_local_instantiate!(dir)
+        @test thrown.value.msg ==
+            "Manifest julia_version $(other) does not match this Julia $(VERSION). See help setup."
+        @test read(path, String) == foreign
+    end
+    mktempdir() do dir
+        write(joinpath(dir, "Project.toml"), "[deps]\n")
+        path = joinpath(dir, "Manifest.toml")
+        write(path, "manifest_format = \"2.0\"\n")
+        before = read(path, String)
+        thrown = @test_throws ErrorException DistSSHQueue._queue_local_instantiate!(dir)
+        @test thrown.value.msg == "Manifest julia_version is missing. See help setup."
+        @test read(path, String) == before
+    end
+    mktempdir() do dir
+        write(joinpath(dir, "Project.toml"), "[deps]\n")
+        path = joinpath(dir, "Manifest.toml")
+        write(path, _lock("not-a-version"))
+        before = read(path, String)
+        thrown = @test_throws ErrorException DistSSHQueue._queue_local_instantiate!(dir)
+        @test thrown.value.msg == "Manifest julia_version is not a Julia version. See help setup."
+        @test read(path, String) == before
+    end
+    mktempdir() do dir
+        write(joinpath(dir, "Project.toml"), "[deps]\n")
+        write(joinpath(dir, "Manifest.toml"), _lock(minor))
+        @test DistSSHQueue._queue_local_instantiate!(dir) === nothing
+        @test isfile(joinpath(dir, "Manifest.toml"))
+    end
+    mktempdir() do dir
+        @test DistSSHQueue._queue_local_instantiate!(dir) === nothing
+        @test !isfile(joinpath(dir, "Manifest.toml"))
+    end
+    mktempdir() do dir
+        write(joinpath(dir, "Project.toml"), "[deps]\n")
+        @test DistSSHQueue._queue_local_instantiate!(dir) === nothing
+    end
+    mktempdir() do dir
+        write(joinpath(dir, "Project.toml"), "[deps]\n")
+        foreign = _lock(other)
+        write(joinpath(dir, "Manifest.toml"), foreign)
+        vername = "Manifest-v$(VERSION.major).$(VERSION.minor).toml"
+        write(joinpath(dir, vername), _lock(minor))
+        @test DistSSHQueue._queue_local_instantiate!(dir) === nothing
+        @test read(joinpath(dir, "Manifest.toml"), String) == foreign
     end
 end
 
@@ -1774,7 +1858,8 @@ end
                 @test occursin("unknown status option: help", err_word_help)
                 td_h = sprint(DistSSHQueue.print_teardown_usage)
                 @test occursin("--confirm-path PATH", td_h)
-                @test occursin("Still deletes. Removed in 0.10", td_h)
+                @test occursin("Does not delete", td_h)
+                @test occursin("--stop-jobs", td_h)
                 @test occursin("$(DistSSHQueue.cli_m()) $(DistSSHQueue.cli_qhost())teardown", td_h)
                 @test !occursin("teardown -y", td_h)
                 code_sh, out_sh, _ = capture_stdio() do
@@ -2589,6 +2674,24 @@ end
     @test code_flag == 1
     @test occursin("was removed", err_flag)
     @test !occursin("unknown subcommand", err_flag)
+    mktempdir() do d
+        p = joinpath(d, "jobs.toml")
+        withenv(
+            "DISTSSHQUEUE_STORE" => p,
+            "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
+            "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
+            "DISTRIBUTED_PROJECT_ROOT" => nothing,
+        ) do
+            code, _, err = capture_stdio() do
+                DistSSHQueue.main(["plan", "echo.jl"])
+            end
+            @test code == 1
+            @test occursin("was removed", err)
+            @test occursin("parent:N", err)
+            @test !occursin("unknown subcommand: plan", err)
+            @test !isfile(p)
+        end
+    end
 end
 
 @testset "pool help does not enqueue" begin
@@ -3442,5 +3545,197 @@ end
         @test got.code == 0
         @test !occursin("no Manifest.toml", got.stderr)
         @test got.job.kwargs["warnings"][1]["kind"] == "manifest_absent"
+    end
+end
+
+function _shipped_run_toml(dir::AbstractString; hash = nothing, run_id = nothing)
+    mkpath(dir)
+    lines = String[
+        "schema = 1",
+        "writer = \"DistSSHRun test\"",
+        "kind = \"go\"",
+        "output_dir = $(repr(dir))",
+    ]
+    if hash !== nothing || run_id !== nothing
+        push!(lines, "", "[provenance.shipped]")
+        hash !== nothing && push!(lines, "content_tree_hash = $(repr(hash))")
+        run_id !== nothing && push!(lines, "run_id = $(repr(run_id))")
+    end
+    write(joinpath(dir, "run.toml"), join(lines, "\n") * "\n")
+    return nothing
+end
+
+function _kit_result_at(dir::AbstractString; ok::Bool = true)
+    return DistSSHRun.KitRunResult(
+        ok, :go, dir, nothing, ok ? nothing : "go", ok ? 0 : 1;
+        run_dir = dir,
+    )
+end
+
+@testset "controller run.toml is archived on the job" begin
+    mktempdir() do home
+        withenv("HOME" => home, DistSSHQueue.NO_KIT_SETUP_ENV => "1") do
+            src = joinpath(home, "src-run")
+            _shipped_run_toml(src; hash = "hash-aaa", run_id = "run-aaa")
+            original = read(joinpath(src, "run.toml"))
+            result = _kit_result_at(src)
+            j = DistSSHQueue.Job(;
+                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kwargs = Dict{String, Any}("run_dir" => src),
+            )
+            @test DistSSHQueue._archive_controller_run_toml!(j, result) === nothing
+            archived = j.kwargs["run_toml_archive"]
+            @test archived == joinpath(home, ".distsshqueue", "run-toml", j.id, "run.toml")
+            @test read(archived) == original
+            @test j.kwargs["run_toml_sha256"] == DistSSHRun.file_sha256(archived)
+            @test j.kwargs["content_tree_hash"] == "hash-aaa"
+            @test j.kwargs["remote_run_id"] == "run-aaa"
+            @test !haskey(j.kwargs, "run_toml")
+
+            blank = joinpath(home, "blank-run")
+            _shipped_run_toml(blank; hash = "", run_id = "")
+            bare = DistSSHQueue.Job(;
+                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kwargs = Dict{String, Any}("run_dir" => blank),
+            )
+            DistSSHQueue._archive_controller_run_toml!(bare, _kit_result_at(blank))
+            @test haskey(bare.kwargs, "run_toml_sha256")
+            @test !haskey(bare.kwargs, "content_tree_hash")
+            @test !haskey(bare.kwargs, "remote_run_id")
+
+            missing = DistSSHQueue.Job(;
+                kind = :go, script = "a.jl", hosts = ["parent:1"],
+            )
+            nowhere = joinpath(home, "missing-run")
+            mkpath(nowhere)
+            DistSSHQueue._archive_controller_run_toml!(missing, _kit_result_at(nowhere))
+            @test !haskey(missing.kwargs, "run_toml_sha256")
+            @test !haskey(missing.kwargs, "content_tree_hash")
+
+            failed_dir = joinpath(home, "failed-run")
+            _shipped_run_toml(failed_dir; hash = "hash-fail", run_id = "run-fail")
+            proc = Base.run(`/usr/bin/false`; wait = false)::Base.Process
+            kp = DistSSHRun.KitProcess(proc; kind = :go, run_dir = failed_dir)
+            failed = DistSSHQueue.Job(;
+                kind = :go, script = "a.jl", hosts = ["parent:1"],
+            )
+            @test_throws ErrorException DistSSHQueue.run_kit(
+                failed, Returns(nothing);
+                execute = (args...; kwargs...) -> (_ = kwargs; kp),
+            )
+            @test failed.kwargs["content_tree_hash"] == "hash-fail"
+            @test failed.kwargs["remote_run_id"] == "run-fail"
+            @test read(failed.kwargs["run_toml_archive"]) == read(joinpath(failed_dir, "run.toml"))
+
+            cancel_dir = joinpath(home, "cancel-run")
+            _shipped_run_toml(cancel_dir; hash = "hash-cancel", run_id = "run-cancel")
+            held = Base.run(`/usr/bin/true`; wait = false)::Base.Process
+            wait(held)
+            held_kp = DistSSHRun.KitProcess(held; kind = :go, run_dir = cancel_dir)
+            armed = Ref(false)
+            cancelled = DistSSHQueue.Job(;
+                kind = :go, script = "a.jl", hosts = ["parent:1"],
+            )
+            @test_throws DistSSHQueue._JobCancelled DistSSHQueue.run_kit(
+                cancelled, Returns(nothing);
+                cancel_requested = () -> armed[],
+                execute = (args...; kwargs...) -> (_ = kwargs; armed[] = true; held_kp),
+                terminate = (side; kind) -> (_ = (side, kind); _kit_result_at(cancel_dir; ok = false)),
+            )
+            @test cancelled.kwargs["content_tree_hash"] == "hash-cancel"
+            @test cancelled.kwargs["remote_run_id"] == "run-cancel"
+
+            plain_dir = joinpath(home, "plain-run")
+            _shipped_run_toml(plain_dir; hash = "hash-plain", run_id = "run-plain")
+            plain_proc = Base.run(`/usr/bin/true`; wait = false)::Base.Process
+            wait(plain_proc)
+            plain_kp = DistSSHRun.KitProcess(plain_proc; kind = :go, run_dir = plain_dir)
+            armed_plain = Ref(false)
+            plain_job = DistSSHQueue.Job(;
+                kind = :go, script = "a.jl", hosts = ["parent:1"],
+            )
+            @test_throws DistSSHQueue._JobCancelled DistSSHQueue.run_kit(
+                plain_job, Returns(nothing);
+                cancel_requested = () -> armed_plain[],
+                execute = (args...; kwargs...) -> (_ = kwargs; armed_plain[] = true; plain_kp),
+                terminate = (side; kind) -> (_ = (side, kind); nothing),
+            )
+            @test haskey(plain_job.kwargs, "run_toml_sha256")
+            @test !haskey(plain_job.kwargs, "content_tree_hash")
+            @test !haskey(plain_job.kwargs, "remote_run_id")
+
+            store = joinpath(home, "jobs.toml")
+            script = joinpath(home, "hold.jl")
+            write(script, "1\n")
+            ev = Base.Event()
+            q = Queue(; store, runner = _ -> wait(ev))
+            id = submit!(q, script, "parent:1"; project = home, submission = "batch-1")
+            @test job(q, id).kwargs["submission"] == "batch-1"
+            @test !haskey(DistSSHQueue.execute_kwargs(job(q, id)), :submission)
+            mem = Queue(; runner = _ -> nothing)
+            lone = submit!(mem, script, "parent:1")
+            @test job(mem, lone).kwargs["submission"] == lone
+            @test step!(q) == 1
+            side = joinpath(home, "side-run")
+            _shipped_run_toml(side; hash = "hash-side", run_id = "run-side")
+            DistSSHRun._write_kit_result_file(_kit_result_at(side))
+            DistSSHQueue._set_running_kit_meta!(q, id; run_dir = side)
+            child = Base.run(`sleep 60`; wait = false)
+            write(joinpath(side, "kit.pid"), string(getpid(child)))
+            try
+                @test cancel!(q, id)
+            finally
+                process_running(child) && kill(child)
+                wait(child)
+            end
+            row = job(q, id)
+            @test row.state === :cancelled
+            @test read(row.kwargs["run_toml_archive"]) == read(joinpath(side, "run.toml"))
+            @test row.kwargs["run_toml_sha256"] == DistSSHRun.file_sha256(row.kwargs["run_toml_archive"])
+            @test row.kwargs["content_tree_hash"] == "hash-side"
+            @test row.kwargs["remote_run_id"] == "run-side"
+            @test !haskey(row.kwargs, "warnings")
+            notify(ev)
+
+            same_a = joinpath(home, "same-a")
+            same_b = joinpath(home, "same-b")
+            _shipped_run_toml(same_a; hash = "hash-one", run_id = "run-one")
+            _shipped_run_toml(same_b; hash = "hash-two", run_id = "run-two")
+            Div = DistSSHQueue.Job
+            first = Div(;
+                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kwargs = Dict{String, Any}(
+                    "submission" => "shared",
+                    "content_tree_hash" => "hash-one",
+                ),
+            )
+            second = Div(;
+                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kwargs = Dict{String, Any}(
+                    "submission" => "shared",
+                    "content_tree_hash" => "hash-two",
+                ),
+            )
+            other = Div(;
+                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kwargs = Dict{String, Any}(
+                    "submission" => "other",
+                    "content_tree_hash" => "hash-nine",
+                ),
+            )
+            _, _, err = capture_stdio() do
+                @test DistSSHQueue._warn_content_tree_divergence!([first], first) === nothing
+                @test DistSSHQueue._warn_content_tree_divergence!([first, other], other) === nothing
+                @test DistSSHQueue._warn_content_tree_divergence!([first, second], second) === nothing
+            end
+            @test !haskey(first.kwargs, "warnings")
+            @test !haskey(other.kwargs, "warnings")
+            @test second.kwargs["warnings"][1]["kind"] == "content_tree_hash"
+            @test occursin("content_tree_hash differs across submission shared", err)
+            capture_stdio() do
+                DistSSHQueue._warn_content_tree_divergence!([first, second], first)
+            end
+            @test !haskey(first.kwargs, "warnings")
+        end
     end
 end

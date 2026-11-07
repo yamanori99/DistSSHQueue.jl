@@ -23,7 +23,8 @@ using DistSSHRun.DistSSHBase: PARENT_HOST_NAME, _ssh_host_args, _test_doubles_on
     format_placement_token, get_remote_julia_version_full,
     is_sigint, julia_project_rel, parse_julia_version_full,
     parse_placement_token, remote_env_project_root, resolve_remote_julia,
-    resolve_remote_project_root, shield_sigint, with_cli_entry, without_cancel
+    resolve_remote_project_root, shell_status, shield_sigint, with_cli_entry,
+    without_cancel
 using DistSSHRun.DistSSHUp: juliaup_add_host!, juliaup_default_host!,
     juliaup_default_patch, juliaup_status_lines, juliaup_update_host!
 
@@ -77,7 +78,6 @@ struct CliContext
     julia::Union{Nothing, String}
     queue_env::Union{Nothing, String}
     explicit::Bool
-    process_yes::Bool
 end
 
 """How one subcommand is reached. The callable stays in `_QUEUE_CALLS`, not here, so this stays concrete."""
@@ -96,8 +96,8 @@ function _fetch(ctx::CliContext, rest::Vector{String})::Cint
     return fetch_cli(hop, ctx.julia, ctx.queue_env, rest; explicit = ctx.explicit)
 end
 
-function _teardown(ctx::CliContext, rest::Vector{String})::Cint
-    return teardown_main(rest; process_yes = ctx.process_yes)
+function _teardown(::CliContext, rest::Vector{String})::Cint
+    return teardown_main(rest)
 end
 
 function _payload(rest::Vector{String})::Vector{String}
@@ -263,8 +263,8 @@ function _submit_requests_help(rest::Vector{String})::Bool
 end
 
 function _main(args::Vector{String})::Cint
-    # teardown YES is the process value. Config `[env]` is applied below.
-    process_yes = teardown_yes()
+    # Default config `[env]` is applied here, before `--config` is parsed.
+    # `teardown` drops those inserted keys and applies only the selected file.
     try
         apply_config_env!(load_config())
         qhost, gjulia, gqenv, after, explicit = extract_remote_opts(args)
@@ -305,7 +305,7 @@ function _main(args::Vector{String})::Cint
         require_queue_target!(sub; explicit = explicit)
         call = get(_QUEUE_CALLS, sub, nothing)
         call === nothing && return _reject_subcommand(sub)
-        ctx = CliContext(qhost, gjulia, gqenv, explicit, process_yes)
+        ctx = CliContext(qhost, gjulia, gqenv, explicit)
         # `call` is a `Function` from the table, so this does not infer the other commands.
         return call(ctx, rest)::Cint
     catch e

@@ -241,6 +241,116 @@ function capture_kit_run_toml!(j::Job)
     return nothing
 end
 
+"""Store `value` on `j` when it is a non-empty string. Does not write `""`."""
+function _store_kw_string!(j::Job, key::AbstractString, value)
+    value isa AbstractString || return nothing
+    text = String(value)
+    isempty(text) && return nothing
+    j.kwargs[String(key)] = text
+    return nothing
+end
+
+"""Controller `run.toml` for `result`, else the job's recorded run dir."""
+function _controller_run_toml_file(j::Job, result)::Union{Nothing, String}
+    rd = nothing
+    if result isa DistSSHRun.KitRunResult || result isa DistSSHRun.KitProcess
+        rd = DistSSHRun.result_run_dir(result)
+    end
+    if !(rd isa AbstractString) || isempty(strip(String(rd)))
+        rd = kit_run_dir(j)
+    end
+    rd isa AbstractString || return nothing
+    path = joinpath(String(rd), "run.toml")
+    return isfile(path) ? path : nothing
+end
+
+"""Byte-copy the controller `run.toml` under [`queue_data_dir`](@ref).
+
+Does not rewrite the file. A missing file leaves the archive and ship keys
+unset. `content_tree_hash` and `remote_run_id` come from the public
+accessors on a `KitRunResult` and are omitted when those return `nothing`.
+"""
+function _archive_controller_run_toml!(j::Job, result = nothing)
+    src = _controller_run_toml_file(j, result)
+    src === nothing && return nothing
+    dest_dir = joinpath(queue_data_dir(), "run-toml", j.id)
+    mkpath(dest_dir)
+    dest = joinpath(dest_dir, "run.toml")
+    write(dest, read(src))
+    j.kwargs["run_toml_sha256"] = DistSSHRun.file_sha256(dest)
+    j.kwargs["run_toml_archive"] = abspath(dest)
+    result isa DistSSHRun.KitRunResult || return nothing
+    _store_kw_string!(j, "content_tree_hash", DistSSHRun.result_content_tree_hash(result))
+    _store_kw_string!(j, "remote_run_id", DistSSHRun.result_remote_run_id(result))
+    return nothing
+end
+
+"""Copy archive keys from the runner snapshot onto the persisted row."""
+function _copy_archived_run_toml!(j::Job, snap)
+    snap isa Job || return nothing
+    for key in ("run_toml_sha256", "run_toml_archive", "content_tree_hash", "remote_run_id")
+        _store_kw_string!(j, key, get(snap.kwargs, key, nothing))
+    end
+    return nothing
+end
+
+function _submission_id(j::Job)::Union{Nothing, String}
+    raw = get(j.kwargs, "submission", nothing)
+    raw isa AbstractString || return nothing
+    text = strip(String(raw))
+    return isempty(text) ? nothing : String(raw)
+end
+
+function _content_tree_hash_kw(j::Job)::Union{Nothing, String}
+    raw = get(j.kwargs, "content_tree_hash", nothing)
+    raw isa AbstractString || return nothing
+    text = String(raw)
+    return isempty(text) ? nothing : text
+end
+
+function _has_content_tree_warning(j::Job)::Bool
+    raw = get(j.kwargs, "warnings", nothing)
+    raw isa AbstractVector || return false
+    for w in raw
+        w isa AbstractDict || continue
+        get(w, "kind", "") == "content_tree_hash" && return true
+    end
+    return false
+end
+
+"""One `content_tree_hash` warning for a `submission` whose hashes differ.
+
+A single job does not warn. The job still finishes.
+"""
+function _warn_content_tree_divergence!(jobs, j::Job)
+    sub = _submission_id(j)
+    sub === nothing && return nothing
+    mine = _content_tree_hash_kw(j)
+    mine === nothing && return nothing
+    differ = false
+    for other in jobs
+        other.id == j.id && continue
+        _submission_id(other) == sub || continue
+        theirs = _content_tree_hash_kw(other)
+        theirs === nothing && continue
+        theirs == mine && continue
+        differ = true
+        break
+    end
+    differ || return nothing
+    for other in jobs
+        _submission_id(other) == sub || continue
+        _has_content_tree_warning(other) && return nothing
+    end
+    msg = "content_tree_hash differs across submission $(sub)"
+    DistSSHRun.print_warn(msg; io = stderr)
+    _append_warning_dicts!(
+        j,
+        [Dict{String, Any}("kind" => "content_tree_hash", "message" => msg)],
+    )
+    return nothing
+end
+
 function kit_result_path(j::Job, result)::Union{Nothing, String}
     p = kit_result_path(result)
     p !== nothing && return p
@@ -319,6 +429,7 @@ function execute_kwargs(j::Job)
         k === :run_toml && continue
         k === :setup_logs && continue
         k === :warnings && continue
+        k === :submission && continue
         k === :cancel && continue
         DistSSHRun.execute_detached_accepts(k; kind = j.kind) || continue
         push!(acc, k => v)
@@ -405,6 +516,7 @@ function settle_lost_kit_child!(j::Job)
     art = kit_artifact_from_sidecar(dir)
     art !== nothing && (j.result_path = art)
     capture_kit_run_toml!(j)
+    rec !== nothing && _archive_controller_run_toml!(j, rec)
     if rec === nothing
         if _job_cancel_flag(j)
             j.state = :cancelled
@@ -483,22 +595,29 @@ function run_kit(
         job_id = j.id,
         execute_kwargs(j)...,
     )::DistSSHRun.KitProcess
-    rd = kp.run_dir
+    rd = DistSSHRun.result_run_dir(kp)
     if rd !== nothing
         j.kwargs["run_dir"] = rd
     end
     on_spawn((; run_dir = rd, output_dir = kit_result_path(kp)))
     if cancel_requested()
         side = kit_sidecar_dir(j)
+        term_result = nothing
         if side !== nothing
             try
-                terminate(side; kind = j.kind)
+                term_result = terminate(side; kind = j.kind)
             catch
             end
+        end
+        if term_result isa DistSSHRun.KitRunResult
+            _archive_controller_run_toml!(j, term_result)
+        else
+            _archive_controller_run_toml!(j, kp)
         end
         throw(_JobCancelled())
     end
     result = wait(kp)
+    _archive_controller_run_toml!(j, result)
     require_kit_ok(result)
     return kit_result_path(j, result)
 end
@@ -581,17 +700,68 @@ function _with_pkg_depots(f)
     end
 end
 
+"""Throw unless Manifest `julia_version` is a Julia version of this minor.
+
+The path is `Base.active_manifest` (a versioned Manifest when Julia selects one).
+A missing key, a non-string, an unparseable version, or a different minor
+throws before `Pkg.instantiate`. A matching minor returns.
+"""
+function _refuse_manifest_julia_minor!(manifest_path::AbstractString)
+    parsed = TOML.parsefile(String(manifest_path))
+    julia_version = parsed isa AbstractDict ? get(parsed, "julia_version", nothing) : nothing
+    if !(julia_version isa AbstractString)
+        error("Manifest julia_version is missing. See help setup.")
+    end
+    parsed_version = try
+        VersionNumber(String(julia_version))
+    catch
+        nothing
+    end
+    if !(parsed_version isa VersionNumber)
+        error("Manifest julia_version is not a Julia version. See help setup.")
+    end
+    if Base.thisminor(parsed_version) != Base.thisminor(VERSION)
+        error(
+            "Manifest julia_version $(julia_version) does not match this Julia $(VERSION). See help setup.",
+        )
+    end
+    return nothing
+end
+
+"""`Pkg.instantiate` the job tree on this host.
+
+No `Project.toml`: return. An active Manifest whose `julia_version` is missing,
+not a Julia version, or a different minor fails the step. A matching minor
+instantiates that Manifest and does not update registries. No Manifest keeps
+the previous `Pkg.instantiate()` call.
+"""
 function _queue_local_instantiate!(proj::AbstractString)
     root = canonical_local_path(proj)
     isfile(joinpath(root, "Project.toml")) || return nothing
     _with_pkg_depots() do
         Pkg.activate(root) do
-            Pkg.instantiate()
+            manifest = Base.active_manifest()
+            if manifest isa AbstractString
+                _refuse_manifest_julia_minor!(manifest)
+                Pkg.instantiate(;
+                    manifest = true,
+                    update_registry = false,
+                    julia_version_strict = true,
+                )
+            else
+                Pkg.instantiate()
+            end
             return nothing
         end
         return nothing
     end
     return nothing
+end
+
+"""True when `remote` is an absolute path Run can pass to `setup! :remote_root`."""
+function _absolute_remote_path(remote)::Bool
+    remote isa AbstractString || return false
+    return startswith(strip(String(remote)), "/")
 end
 
 """Throw unless Kit `setup!` reported `ok` (instantiate / check)."""
@@ -692,9 +862,16 @@ function _queue_kit_setup!(
         return nothing
     end
     try
-        on_phase("rsync")
-        # Kit rsync refuses a nonempty remote. Later jobs still instantiate.
-        kit_setup!(session, :rsync; gitignore = !is_qhost_stage_project(String(proj)))
+        # Run 0.2 `:ship_tree` refuses a missing remote root. `:remote_root`
+        # creates an absolute one. A relative or missing remote is left alone.
+        if _absolute_remote_path(session.remote)
+            on_phase("remote-root")
+            _require_kit_setup_ok!(kit_setup!(session, :remote_root), "remote-root")
+            _throw_if_cancelled(cancel_requested)
+        end
+        on_phase("ship-tree")
+        # Run 0.2 rejects `:rsync` and `gitignore=false`. `.gitignore` is the filter.
+        kit_setup!(session, :ship_tree)
         _throw_if_cancelled(cancel_requested)
         on_phase("instantiate")
         _queue_local_instantiate!(String(proj))
@@ -850,6 +1027,12 @@ function _submit!(q::Queue, kind::Symbol, script::AbstractString, hosts; kwargs.
             else
                 Job(; id = String(raw_id), kind = kind, script = script_path, hosts = toks, kwargs = kw)
             end
+            sub = get(j.kwargs, "submission", nothing)
+            if sub isa AbstractString && !isempty(strip(String(sub)))
+                j.kwargs["submission"] = String(sub)
+            else
+                j.kwargs["submission"] = j.id
+            end
             push!(q.jobs, j)
             _persist!(q)
             return j.id
@@ -877,7 +1060,7 @@ function submit!(q::Queue, script::AbstractString, hosts::AbstractVector{<:Abstr
     return _submit!(q, kind, script, hosts; kwargs...)
 end
 
-"""Cancel `:queued` now. A `:running` job with no live `kit.pid` stays `:running` and records a cancel flag, so the slot stays taken until setup stops. A live `kit.pid` under the run dir or `output_dir` is `terminate_run!` and `:cancelled`.
+"""Cancel `:queued` now. A `:running` job with no live `kit.pid` stays `:running` and records a cancel flag, so the slot stays taken until setup stops. A live `kit.pid` under the run dir or `output_dir` is `terminate_run!` and `:cancelled`. That stop sends SIGINT once, waits 30 seconds or `DISTSSHKIT_WAIT_SIGINT_GRACE` in this process (`0` sends no SIGINT), then SIGTERM. The tagged-worker reap has its own bound and still returns when a host is unreachable.
 
 A setup step (`rsync`, `instantiate`, `check`) runs to the end. The flag is read again before the next step and before `execute!`.
 """
@@ -908,10 +1091,13 @@ function cancel!(q::Queue, id::AbstractString)::Bool
     end
     if action isa Tuple{String, Union{Nothing, String}, Symbol, String}
         running_side, running_out, running_kind, running_id = action
-        DistSSHRun.terminate_run!(running_side; kind = running_kind)
+        term_result = DistSSHRun.terminate_run!(running_side; kind = running_kind)
         path = kit_artifact_from_sidecar(running_side)
         path === nothing && (path = running_out)
-        _finish!(q, running_id, :cancelled, nothing; result_path = path)
+        _finish!(
+            q, running_id, :cancelled, nothing;
+            result_path = path, kit_result = term_result,
+        )
         return true
     end
     return action === :queued || action === :stopping
@@ -954,6 +1140,7 @@ function _finish!(
         err;
         result_path = nothing,
         snap = nothing,
+        kit_result = nothing,
     )
     return _with_store(q) do
         lock(q.lock) do
@@ -977,7 +1164,11 @@ function _finish!(
                 j.result_path = String(result_path)
             end
             copy_setup_logs!(j, snap)
+            _copy_archived_run_toml!(j, snap)
+            kit_result isa DistSSHRun.KitRunResult &&
+                _archive_controller_run_toml!(j, kit_result)
             capture_kit_run_toml!(j)
+            _warn_content_tree_divergence!(q.jobs, j)
             q.live_id == id && (q.live_id = nothing)
             _persist!(q)
             return nothing
@@ -1107,10 +1298,10 @@ function adopt_running!(q::Queue)
         else
             try
                 require_kit_ok(rec)
-                _finish!(q, id, :done, nothing; result_path = path)
+                _finish!(q, id, :done, nothing; result_path = path, kit_result = rec)
             catch e
                 msg = e isa ErrorException ? e.msg : sprint(showerror, e)
-                _finish!(q, id, :failed, msg; result_path = path)
+                _finish!(q, id, :failed, msg; result_path = path, kit_result = rec)
             end
         end
     end
