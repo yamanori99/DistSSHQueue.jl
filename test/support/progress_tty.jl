@@ -363,7 +363,9 @@ if !isdefined(Main, :_queue_tty_strip_ansi)
         m = match(r"___EC:(-?\d+)___", s)
         m === nothing && return s, nothing
         body = s[1:(m.offset - 1)]
-        return body, parse(Int, m.captures[1])
+        cap = m.captures[1]
+        cap === nothing && return body, nothing
+        return body, parse(Int, cap)
     end
 
     # Host failure on the same stripped line (`fail` / `✗` / Permission denied).
