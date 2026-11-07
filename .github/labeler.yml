@@ -38,6 +38,7 @@
           - "test/README.md"
           - "test/e2e.jl"
           - "test/runtests.jl"
+          - "test/support/**"
           - "test/support.jl"
           - "test/unit/idle.jl"
 
@@ -56,6 +57,7 @@
           - "test/unit/commands.jl"
           - "test/unit/queue.jl"
           - "test/integration/cli.jl"
+          - "test/integration/progress_tty.jl"
 
 "area:client":
   - changed-files:
