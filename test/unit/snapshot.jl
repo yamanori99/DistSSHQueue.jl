@@ -45,11 +45,28 @@ function (p::_SnapProbe)(_, mode::Symbol; gitignore::Bool = true, snapshot = not
     return (; ok = true)
 end
 
+# Live argv on Linux (`/proc`) and macOS (`ps`). `Process.cmd` is always
+# included so a finished child or a missing `/proc` still shows `--snapshot`.
 function _proc_cmdline(proc::Base.Process)::String
-    pid = getpid(proc)
-    path = "/proc/$(pid)/cmdline"
-    isfile(path) || return ""
-    return replace(String(read(path)), '\0' => ' ')
+    parts = String[string(proc.cmd)]
+    pid = Int(getpid(proc))
+    linux = "/proc/$(pid)/cmdline"
+    if isfile(linux)
+        push!(parts, replace(String(read(linux)), '\0' => ' '))
+    else
+        text = try
+            strip(
+                read(
+                    addenv(`ps -ww -o args= -p $(pid)`, "LC_ALL" => "C"),
+                    String,
+                ),
+            )
+        catch
+            ""
+        end
+        isempty(text) || push!(parts, text)
+    end
+    return join(parts, " ")
 end
 
 @testset "ship snapshot is pinned and not the job id" begin
