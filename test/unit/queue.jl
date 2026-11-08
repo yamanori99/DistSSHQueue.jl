@@ -7,13 +7,31 @@ struct _KitOdd end
 Base.hasproperty(::_KitOdd, s::Symbol) = s === :ok
 Base.getproperty(::_KitOdd, ::Symbol) = throw(KeyError(:ok))
 
+const _TEST_SNAP_A = "20260101T000000Z-aaaaaa"
+const _TEST_SNAP_B = "20260102T000000Z-bbbbbb"
+
+function _ship_sync_ok(
+        run_id::AbstractString = _TEST_SNAP_A;
+        hosts = DistSSHRun.HostResult[],
+    )
+    return DistSSHRun.SyncResult(
+        true,
+        Vector{DistSSHRun.HostResult}(hosts),
+        false,
+        DistSSHRun.SetupWarning[],
+        "0"^40,
+        String(run_id),
+    )
+end
+
 struct _KitSetupOk
     modes::Vector{Symbol}
 end
 
-function (p::_KitSetupOk)(_, mode::Symbol; gitignore::Bool = true)
+function (p::_KitSetupOk)(_, mode::Symbol; gitignore::Bool = true, snapshot = nothing)
     push!(p.modes, mode)
-    return (; ok = true, gitignore)
+    mode === :ship_tree && return _ship_sync_ok()
+    return (; ok = true, gitignore, snapshot)
 end
 
 struct _KitSetupFail
@@ -21,8 +39,12 @@ struct _KitSetupFail
     throw_on_bad::Bool
 end
 
-function (p::_KitSetupFail)(_, mode::Symbol; gitignore::Bool = true)
-    mode === p.bad || return (; ok = true, gitignore)
+function (p::_KitSetupFail)(_, mode::Symbol; gitignore::Bool = true, snapshot = nothing)
+    _ = snapshot
+    if mode !== p.bad
+        mode === :ship_tree && return _ship_sync_ok()
+        return (; ok = true, gitignore)
+    end
     p.throw_on_bad && error(mode === :ship_tree ? "ship-tree failed" : "failed")
     return (; ok = false, gitignore)
 end
@@ -34,7 +56,9 @@ struct _KitSetupWarn
     warnings::Vector{_SetupNote}
 end
 
-function (p::_KitSetupWarn)(_, mode::Symbol; gitignore::Bool = true)
+function (p::_KitSetupWarn)(_, mode::Symbol; gitignore::Bool = true, snapshot = nothing)
+    _ = snapshot
+    mode === :ship_tree && return _ship_sync_ok()
     mode === :check || return (; ok = true, gitignore)
     return (; ok = p.ok, gitignore, warnings = p.warnings)
 end
@@ -46,11 +70,14 @@ struct _StageRsyncProbe
     manifest::String
 end
 
-function (p::_StageRsyncProbe)(_, mode::Symbol; gitignore::Bool = true)
+function (p::_StageRsyncProbe)(_, mode::Symbol; gitignore::Bool = true, snapshot = nothing)
+    _ = snapshot
     push!(p.modes, mode)
     if mode === :ship_tree
         empty!(p.gitignore)
         push!(p.gitignore, gitignore)
+        p.manifest_at[mode] = isfile(p.manifest)
+        return _ship_sync_ok()
     end
     p.manifest_at[mode] = isfile(p.manifest)
     return (; ok = true)

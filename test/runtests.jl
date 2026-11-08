@@ -18,7 +18,7 @@ get!(ENV, DistSSHQueue.NO_KIT_SETUP_ENV, "1")
 get!(ENV, DistSSHQueue.NO_STOP_BOOTOUT_ENV, "1")
 install_serve_reaper!()
 
-const _RUNTEST_N = 10
+const _RUNTEST_N = 11
 const _RUNTEST_I = Ref(0)
 function _runtest_announce(rel::AbstractString)
     _RUNTEST_I[] += 1
@@ -33,6 +33,8 @@ end
         include(joinpath(@__DIR__, "unit", "idle.jl"))
         _runtest_announce("unit/queue.jl")
         include(joinpath(@__DIR__, "unit", "queue.jl"))
+        _runtest_announce("unit/snapshot.jl")
+        include(joinpath(@__DIR__, "unit", "snapshot.jl"))
         _runtest_announce("unit/config.jl")
         include(joinpath(@__DIR__, "unit", "config.jl"))
         _runtest_announce("unit/stage.jl")
