@@ -108,6 +108,27 @@ end
     @test !haskey(DistSSHQueue.execute_kwargs(loaded), :snapshot)
 end
 
+@testset "jobs do not share snapshot kwargs" begin
+    q = Queue(; runner = _ -> nothing)
+    a = submit!(q, "a.jl", "parent:1")
+    b = submit!(q, "b.jl", "parent:1")
+    ja = job(q, a)
+    jb = job(q, b)
+    @test ja.kwargs !== jb.kwargs
+    DistSSHQueue._record_job_snapshot!(q.jobs[1], _SNAP_A, String[], ".", nothing)
+    @test q.jobs[1].kwargs["snapshot"] == _SNAP_A
+    @test !haskey(q.jobs[2].kwargs, "snapshot")
+    @test q.jobs[1].kwargs !== q.jobs[2].kwargs
+end
+
+@testset "explicit snapshot without context still reaches execute_kwargs" begin
+    q = Queue(; runner = _ -> nothing)
+    id = submit!(q, "s.jl", "parent:1"; snapshot = _SNAP_A)
+    kw = DistSSHQueue.execute_kwargs(job(q, id))
+    @test kw.snapshot == _SNAP_A
+    @test !haskey(kw, :snapshot_hosts)
+end
+
 @testset "A remains A after B ships" begin
     mktempdir() do d
         write(joinpath(d, "Project.toml"), "[deps]\n")

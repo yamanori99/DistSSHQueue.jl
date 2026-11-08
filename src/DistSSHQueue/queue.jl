@@ -910,7 +910,12 @@ function _host_result_name(h)::Union{Nothing, String}
     raw = getproperty(h, :host)
     raw isa AbstractString || return nothing
     text = strip(String(raw))
-    return isempty(text) ? nothing : text
+    isempty(text) && return nothing
+    # Ship `HostResult.host` is an SSH alias. A placement token is normalized.
+    if startswith(text, "parent") || startswith(text, "child:")
+        return kit_ssh_name(text)
+    end
+    return text
 end
 
 function _host_result_ok(h)::Bool
@@ -1031,7 +1036,7 @@ function _record_job_snapshot!(
     else
         nothing
     end
-    if prev === id
+    if prev == id
         _assert_snapshot_context!(
             j,
             proj,
@@ -1057,7 +1062,11 @@ function copy_job_snapshot!(j::Job, snap)
     hosts = get(snap.kwargs, _SNAPSHOT_HOSTS_KW, String[])
     hosts isa AbstractVector || (hosts = String[])
     proj = get(snap.kwargs, _SNAPSHOT_PROJECT_KW, nothing)
-    proj isa AbstractString || return nothing
+    if !(proj isa AbstractString) || isempty(strip(String(proj)))
+        fallback = get(j.kwargs, "project", nothing)
+        fallback isa AbstractString || return nothing
+        proj = fallback
+    end
     _record_job_snapshot!(
         j,
         id,
