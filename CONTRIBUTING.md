@@ -283,8 +283,9 @@ FIFO enqueue calls DistSSHRun `execute!` for the kinds in Queue's
 turns that argv into Run's `parse_go_args`, `parse_drive_args`, or
 `parse_ride_args`. A new kind needs a row in `kit_parse_args`, an entry
 in `KIT_EXECUTE_KINDS`, the Queue CLI, and that kind already on Run
-`execute!`. Inspect verbs (`size` / `pool`) do not enqueue; copy
-[src/client/size.jl](src/client/size.jl).
+`execute!`. Inspect `pool` does not enqueue; copy
+[src/client/pool.jl](src/client/pool.jl). Do not add a Queue `hostinfo`
+command; that stays Kit → Run.
 
 ## Issues
 

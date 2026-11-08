@@ -605,7 +605,6 @@ const QUEUE_HOST_COMMAND_LINES = (
     help_verb_line("qhost enable", "Start serve after reboot"),
     help_verb_line("qhost disable", "Remove that OS registration"),
     help_verb_line("qhost teardown", "Stop serve and remove ~/.distsshqueue"),
-    help_verb_line("qhost size", "Estimate worker counts on the queue host"),
     help_verb_line("qhost pool", "Cluster cores and RAM on the queue host"),
 )
 public QUEUE_HOST_COMMAND_LINES
@@ -661,7 +660,6 @@ function print_queue_client_usage(io::IO = stdout)
     print_help_lines(
         io,
         help_verb_line("list-host", "Inventory (juliaup default + SSH)"),
-        help_verb_line("size", "Kit size on the queue host"),
         help_verb_line("pool", "Kit pool on the queue host"),
     )
     print_help_blank(io)
@@ -706,7 +704,6 @@ function print_queue_host_usage(io::IO = stdout)
     print_help_section("Inspect"; io = io)
     print_help_lines(
         io,
-        help_verb_line("size", "Estimate worker counts"),
         help_verb_line("pool", "Cluster cores and RAM"),
     )
     print_help_blank(io)

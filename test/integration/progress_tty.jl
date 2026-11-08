@@ -3,7 +3,8 @@ using Dates
 using DistSSHQueue
 
 # Pseudo-TTY (`script`) versus pipe coverage for Queue CLI display contracts.
-# size/pool use Run verbosity (`:progress` on TTY, `:verbose` on pipes).
+# size is a removed-contract error (exit 1). pool uses Run verbosity
+# (`:progress` on TTY, `:verbose` on pipes).
 # status/watch/serve keep Queue-owned flags and spinner behavior.
 # This file must not change product display policy.
 
@@ -56,10 +57,10 @@ using DistSSHQueue
         size_cmd = _queue_cli_cmd(["size", "parent", "--gb-per-worker", "0.5"])
         size_quiet_cmd = _queue_cli_cmd(["size", "-q", "parent", "--gb-per-worker", "0.5"])
         pool_cmd = _queue_cli_cmd(
-            ["pool", "parent", "child:host1", "child:host2", "--gb-per-worker", "0.5"],
+            ["pool", "parent", "child:host1", "child:host2"],
         )
         pool_quiet_cmd = _queue_cli_cmd(
-            ["pool", "-q", "parent", "child:host1", "child:host2", "--gb-per-worker", "0.5"],
+            ["pool", "-q", "parent", "child:host1", "child:host2"],
         )
         status_cmd = _queue_cli_cmd(["status"])
         status_verbose_cmd = _queue_cli_cmd(["status", "--verbose"])
@@ -163,8 +164,8 @@ using DistSSHQueue
         watch_quiet_tty, watch_quiet_ec = take_n(10)
 
         @testset "per-command exit codes on TTY" begin
-            @test size_ec == 0
-            @test size_quiet_ec == 0
+            @test size_ec == 1
+            @test size_quiet_ec == 1
             @test pool_ec == 1
             @test pool_quiet_ec == 1
             @test status_ec == 0
@@ -175,22 +176,14 @@ using DistSSHQueue
             @test watch_quiet_ec == 0
         end
 
-        @testset "size parent on TTY keeps table; hides :progress headings" begin
+        @testset "size reports the removed contract on TTY" begin
             size_plain = _queue_tty_strip_ansi(size_tty)
-            size_lines = _queue_tty_lines(size_tty)
-            @test occursin("parent", size_plain)
-            @test occursin("Host", size_plain) || occursin("Workers", size_plain) ||
-                occursin("worker", lowercase(size_plain))
-            # Product contract: verbose-only title / Project are absent at TTY :progress.
-            @test !occursin("DistSSHQueue size", size_plain)
-            @test !occursin(r"(?m)^Project:", size_plain)
-            @test !any(l -> startswith(strip(l), "Project:"), size_lines)
-            @test occursin(r"Total:\s*\d+\s*workers", size_plain) ||
-                occursin("workers", lowercase(size_plain))
             quiet_plain = _queue_tty_strip_ansi(size_quiet_tty)
-            @test occursin("parent", quiet_plain)
-            @test !occursin("DistSSHQueue size", quiet_plain)
-            @test !occursin(r"(?m)^Project:", quiet_plain)
+            @test occursin("was removed", size_plain)
+            @test occursin("parent:N", size_plain)
+            @test occursin("was removed", quiet_plain)
+            @test !occursin("DistSSHQueue size", size_plain)
+            @test !occursin(r"Total:\s*\d+\s*workers", size_plain)
         end
 
         @testset "pool parent local + two-host SSH failures on TTY" begin
@@ -265,21 +258,21 @@ using DistSSHQueue
             @info "Queue progress_tty pipe walls" size = size_pipe.elapsed pool = pool_pipe.elapsed status =
                 status_pipe.elapsed watch = watch_pipe.elapsed
 
-            @test size_pipe.exitcode == 0
-            @test size_quiet_pipe.exitcode == 0
+            @test size_pipe.exitcode == 1
+            @test size_quiet_pipe.exitcode == 1
             @test pool_pipe.exitcode == 1
             @test pool_quiet_pipe.exitcode == 1
             @test status_pipe.exitcode == 0
             @test watch_pipe.exitcode == 0
 
-            @test occursin("DistSSHQueue size", size_pipe.stdout) ||
-                occursin("Project:", size_pipe.stdout)
-            @test occursin("parent", size_pipe.stdout)
-            @test !_queue_tty_has_screen_clear(size_pipe.stdout)
+            size_pipe_text = size_pipe.stdout * size_pipe.stderr
+            size_quiet_pipe_text = size_quiet_pipe.stdout * size_quiet_pipe.stderr
+            @test occursin("was removed", size_pipe_text)
+            @test occursin("parent:N", size_pipe_text)
+            @test !_queue_tty_has_screen_clear(size_pipe_text)
             @test !occursin(r"\e\[[0-9]*[AJKH]", size_pipe.stdout)
-            @test occursin("parent", size_quiet_pipe.stdout)
-            @test !occursin("DistSSHQueue size", size_quiet_pipe.stdout)
-            @test !occursin(r"(?m)^Project:", size_quiet_pipe.stdout)
+            @test occursin("was removed", size_quiet_pipe_text)
+            @test !occursin("DistSSHQueue size", size_pipe_text)
 
             pool_pipe_lines = split(pool_pipe.stdout, '\n')
             @test occursin("host1", pool_pipe.stdout)

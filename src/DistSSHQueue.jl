@@ -54,7 +54,6 @@ include("client/fetch.jl")
 include("client/status.jl")
 include("client/list_host.jl")
 include("client/inspect.jl")
-include("client/size.jl")
 include("client/pool.jl")
 include("client/edit_hosts.jl")
 include("client/cancel.jl")
@@ -160,7 +159,6 @@ function _queue_tables()
         "stop" => _queue_command(:forward, _argv(stop_cli), "stop"),
         "status" => _queue_command(:forward, _argv(status_cli), "status"; label_qhost = true, watch_tty = true),
         "list-host" => _queue_command(:forward, _argv(list_host_cli), "list-host"; label_qhost = true),
-        "size" => _queue_command(:forward, _argv(size_cli), "size"),
         "pool" => _queue_command(:forward, _argv(pool_cli), "pool"),
         "add-host" => _queue_command(:local, _argv(add_host_cli), "add-host"),
         "remove-host" => _queue_command(:local, _argv(remove_host_cli), "remove-host"),
@@ -193,7 +191,21 @@ function main(args::Vector{String} = copy(ARGS))::Cint
     end
 end
 
+function _removed_inspect_message(sub::AbstractString)::String
+    if sub == "size"
+        return "size: worker-count sizing was removed; pool reports cores and RAM. Submit with explicit parent:N / child:NAME:N (or pool:N)."
+    elseif sub == "plan"
+        return "plan: script inspect was removed; enqueue with submit and explicit parent:N / child:NAME:N."
+    else
+        return "$sub was removed"
+    end
+end
+
 function _reject_subcommand(sub::AbstractString)::Cint
+    if sub in ("size", "plan")
+        DistSSHRun.print_cli_error(_removed_inspect_message(sub))
+        return 1
+    end
     if is_kit_execute_kind(Symbol(sub))
         DistSSHRun.print_cli_error(
             "$sub is DistSSHRun. Enqueue with submit: $(cli_m()) [qhost:HOST] submit $sub …",
@@ -267,6 +279,7 @@ function _main(args::Vector{String})::Cint
         after = _help_command_argv(after)
         if isempty(after) || after[1] in ("-h", "--help", "help")
             topic = length(after) >= 2 ? String(after[2]) : nothing
+            topic in ("size", "plan") && return _reject_subcommand(topic)
             print_queue_usage(; topic = topic)
             return 0
         end
@@ -275,6 +288,9 @@ function _main(args::Vector{String})::Cint
             return 0
         end
         sub, rest = String(after[1]), String[String(a) for a in after[2:end]]
+        if sub in ("size", "plan")
+            return _reject_subcommand(sub)
+        end
         if command_help_argv(sub, rest)
             print_queue_command_usage(stdout, sub)
             return 0

@@ -191,7 +191,7 @@ end
 const QHOST_LOCAL_VERBS = ("setup", "up", "serve", "enable", "disable", "service", "add-host", "remove-host")
 
 const CLIENT_REMOTE_VERBS = (
-    "status", "list-host", "size", "pool", "watch", "submit",
+    "status", "list-host", "pool", "watch", "submit",
     "cancel", "fetch", "stop", "teardown",
 )
 

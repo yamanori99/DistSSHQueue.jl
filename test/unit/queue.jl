@@ -1569,7 +1569,7 @@ end
     wid = submit!(q, "w.jl", "child:h1:1"; kind = :drive, workers = 4, mem_headroom = 0.5)
     wkw = DistSSHQueue.execute_kwargs(job(q, wid))
     @test wkw.workers == 4
-    @test wkw.mem_headroom == 0.5
+    @test !haskey(wkw, :mem_headroom)
     @test !haskey(DistSSHQueue.execute_kwargs(job(q, gid)), :workers)
     rid = submit!(q, "r.jl", "parent:1"; kind = :go, repeat = 8)
     @test DistSSHQueue.execute_kwargs(job(q, rid)).repeat == 8
@@ -1662,7 +1662,7 @@ end
                 @test !occursin("--help client", help)
                 @test !occursin("--help qhost", help)
                 @test length(DistSSHQueue.CLIENT_COMMAND_LINES) == 9
-                @test length(DistSSHQueue.QUEUE_HOST_COMMAND_LINES) == 11
+                @test length(DistSSHQueue.QUEUE_HOST_COMMAND_LINES) == 10
                 @test Base.ispublic(DistSSHQueue, :CLIENT_COMMAND_LINES)
                 @test Base.ispublic(DistSSHQueue, :QUEUE_HOST_COMMAND_LINES)
                 @test Base.ispublic(DistSSHQueue, :KIT_EXECUTE_KINDS)
@@ -1699,13 +1699,13 @@ end
                 @test occursin("Hosts", client_h)
                 @test occursin("list-host", client_h)
                 @test occursin("juliaup default", client_h)
-                @test occursin("  size ", client_h)
+                @test !occursin("  size ", client_h)
                 @test occursin("watch", client_h)
                 @test occursin(DistSSHQueue.help_verb_line("status", "Snapshot of the store"), client_h)
                 @test occursin(DistSSHQueue.help_verb_line("watch", "Live status"), client_h)
                 @test occursin("fetch", client_h)
                 @test occursin("Copy a finished Kit leaf", client_h)
-                @test occursin("size", client_h)
+                @test !occursin("size", client_h)
                 @test !occursin("plan", client_h)
                 @test occursin("pool", client_h)
                 @test occursin("ride", client_h)
@@ -1733,7 +1733,7 @@ end
                 @test occursin("Danger", queue_h)
                 @test occursin(DistSSHQueue.help_verb_line("teardown", "Stop serve and remove ~/.distsshqueue"), queue_h)
                 @test occursin(DistSSHQueue.help_verb_line("", "Would remove, then --confirm-path. ~/.distsshqueue goes, including stage."), queue_h)
-                @test occursin("size", queue_h)
+                @test !occursin("size", queue_h)
                 @test !occursin("plan", queue_h)
                 @test occursin("pool", queue_h)
                 @test !occursin("teardown -y", queue_h)
@@ -2638,31 +2638,42 @@ end
     end
 end
 
-@testset "size uses Kit argv or config hosts" begin
+@testset "pool uses Kit argv or config hosts" begin
     allow = DistSSHQueue.HostAllow("parent" => nothing, "host1" => 4)
-    inc, hosts = DistSSHQueue.size_hosts_from_allow(false, String[], allow)
+    inc, hosts = DistSSHQueue.pool_hosts_from_allow(false, String[], allow)
     @test inc
     @test hosts == ["host1"]
-    inc2, hosts2 = DistSSHQueue.size_hosts_from_allow(true, String["w"], allow)
+    inc2, hosts2 = DistSSHQueue.pool_hosts_from_allow(true, String["w"], allow)
     @test inc2
     @test hosts2 == ["w"]
-    @test_throws ArgumentError DistSSHQueue.size_hosts_from_allow(false, String[], nothing)
-    @test_throws ArgumentError DistSSHQueue.size_hosts_from_allow(
+    @test_throws ArgumentError DistSSHQueue.pool_hosts_from_allow(false, String[], nothing)
+    @test_throws ArgumentError DistSSHQueue.pool_hosts_from_allow(
         false,
         String[],
         DistSSHQueue.HostAllow(),
     )
-    code, out, _ = capture_stdio() do
-        DistSSHQueue.main(["size", "-h"])
-    end
-    @test code == 0
-    @test occursin("DistSSHQueue size", out)
-    @test occursin("Queue", out)
-    @test occursin("qhost:HOST", out)
-    @test occursin("Does not enqueue", out)
 end
 
-@testset "plan is an unknown subcommand and does not enqueue" begin
+@testset "size and plan report the removed contract" begin
+    for verb in ("size", "plan")
+        code, _, err = capture_stdio() do
+            DistSSHQueue.main([verb, "-h"])
+        end
+        @test code == 1
+        @test occursin("was removed", err)
+        @test occursin("parent:N", err)
+        code_h, _, err_h = capture_stdio() do
+            DistSSHQueue.main(["help", verb])
+        end
+        @test code_h == 1
+        @test occursin("was removed", err_h)
+    end
+    code_flag, _, err_flag = capture_stdio() do
+        DistSSHQueue.main(["size", "--gb-per-worker", "1.5"])
+    end
+    @test code_flag == 1
+    @test occursin("was removed", err_flag)
+    @test !occursin("unknown subcommand", err_flag)
     mktempdir() do d
         p = joinpath(d, "jobs.toml")
         withenv(
@@ -2675,7 +2686,9 @@ end
                 DistSSHQueue.main(["plan", "echo.jl"])
             end
             @test code == 1
-            @test occursin("unknown subcommand: plan", err)
+            @test occursin("was removed", err)
+            @test occursin("parent:N", err)
+            @test !occursin("unknown subcommand: plan", err)
             @test !isfile(p)
         end
     end
@@ -2697,75 +2710,62 @@ end
             @test occursin("DistSSHQueue pool", out)
             @test occursin("Queue", out)
             @test occursin("Does not enqueue", out)
+            @test occursin("parent:N", out)
             @test !isfile(p)
+            code_flag, _, err_flag = capture_stdio() do
+                DistSSHQueue.main(["pool", "--gb-per-worker", "1.5"])
+            end
+            @test code_flag == 1
+            @test occursin("worker-count sizing was removed", err_flag)
+            @test occursin("cores and RAM", err_flag)
+            jobdir = mktempdir()
+            write(joinpath(jobdir, "Project.toml"), "[deps]\n")
+            cd(jobdir) do
+                code_p, out_p, _ = capture_stdio() do
+                    DistSSHQueue.main(["pool", "parent"])
+                end
+                @test code_p == 0
+                @test occursin("DistSSHQueue pool", out_p)
+                @test occursin("Pool:", out_p)
+                @test occursin("parent is this queue host", out_p)
+                @test !occursin("slots", lowercase(out_p))
+                @test !occursin("Suggested submit", out_p)
+                @test !occursin("GB/worker", out_p)
+            end
         end
     end
 end
 
 @testset "inspect CLI chrome" begin
-    _, out, _ = capture_stdio() do
-        DistSSHQueue.with_cli_entry(:DistSSHQueue) do
-            DistSSHQueue.print_inspect_submit_template("drive", String["parent:2", "child:host1:4"])
-        end
-    end
-    @test occursin("Suggested submit (template):", out)
-    @test occursin(
-        "julia --project=. -m DistSSHQueue submit drive parent:2 child:host1:4 SCRIPT.jl",
-        out,
-    )
-    @test !occursin("-m DistSSHKit submit", out)
-    _, empty_out, _ = capture_stdio() do
-        DistSSHQueue.with_cli_entry(:DistSSHQueue) do
-            DistSSHQueue.print_inspect_submit_template("go", String[])
-        end
-    end
-    @test occursin("julia --project=. -m DistSSHQueue submit go SCRIPT.jl", empty_out)
-    @test !occursin("-m DistSSHKit submit", empty_out)
-
-    line = DistSSHQueue.pool_sizing_assumption_line(;
-        gb_per_worker = nothing,
-        mem_headroom = DistSSHRun.DEFAULT_MEM_HEADROOM,
-        parent_gb = DistSSHRun.DEFAULT_PARENT_GB,
-    )
-    @test occursin("1.5 GB/worker", line)
-    @test occursin("no RSS; use size to measure", line)
-
     _, notes, _ = capture_stdio() do
-        DistSSHQueue.print_pool_inventory_notes!(;
-            gb_per_worker = 2.0,
-            mem_headroom = 0.75,
-            parent_gb = 0.4,
-        )
+        DistSSHQueue.print_pool_inventory_notes!()
     end
-    @test occursin("2.0 GB/worker", notes)
     @test occursin("parent is this queue host", notes)
-    @test occursin("not free queue capacity", notes)
+    @test !occursin("GB/worker", notes)
+    @test !occursin("Suggested submit", notes)
+    @test !occursin("not free queue capacity", notes)
 end
 
-@testset "pool submit template respects Queue host caps" begin
+@testset "pool inventory has no estimated slots" begin
     pool = DistSSHRun.ResourcePool(
         true,
         [
-            DistSSHRun.HostInventory(DistSSHQueue.PARENT_HOST_NAME, true, 8, 64.0, 8, ""),
-            DistSSHRun.HostInventory("host1", true, 8, 64.0, 8, ""),
+            DistSSHRun.HostInventory(DistSSHQueue.PARENT_HOST_NAME, true, 8, 64.0, "ok"),
+            DistSSHRun.HostInventory("host1", true, nothing, nothing, "ok"),
         ],
-        16,
-        128.0,
-        16,
+        8,
+        64.0,
     )
-    allow = DistSSHQueue.HostAllow("parent" => 2, "host1" => 4)
-    _, out, _ = capture_stdio() do
-        DistSSHQueue.with_cli_entry(:DistSSHQueue) do
-            DistSSHQueue.print_queue_pool_submit(pool, allow)
-        end
-    end
-    @test occursin("Suggested submit (template):", out)
-    @test occursin("julia --project=. -m DistSSHQueue submit drive", out)
-    @test !occursin("-m DistSSHKit submit", out)
-    @test occursin("parent:2", out)
-    @test occursin("child:host1:4", out)
-    @test !occursin("parent:8", out)
-    @test !occursin("child:host1:8", out)
+    @test !hasfield(typeof(pool), :slots)
+    @test pool.hosts[2].nproc === nothing
+    @test pool.hosts[2].total_gb === nothing
+    buf = IOBuffer()
+    DistSSHRun.print_pool(pool; io = buf)
+    txt = String(take!(buf))
+    @test occursin("ok", txt)
+    @test occursin("-", txt)
+    @test !occursin("slots", txt)
+    @test DistSSHQueue.clamp_pool_slots(8, DistSSHQueue.HostAllow("host1" => 4), "host1") == 4
 end
 
 @testset "watch reprints status then exits on DISTSSHQUEUE_WATCH_TICKS" begin
