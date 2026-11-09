@@ -8,8 +8,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 [sources]
 DistSSHQueue = { path = ".." }
 # Same rev as the root project. Drop both at the 0.10.0 cut.
-# Temporary pin: DistSSHRun #357. Restore `rev = "main"` after that PR merges.
-DistSSHRun = { url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "9e977b08aa4989fc9af58802dd74be38372e4431" }
+DistSSHRun = { url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "main" }
 
 [compat]
 DistSSHRun = "0.2.0"

@@ -19,10 +19,7 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 [sources]
 # DistSSHRun 0.2.0-DEV is not on General yet. Drop this at the 0.10.0 cut,
 # after DistSSHRun 0.2.0 is on General.
-# Temporary pin: DistSSHRun #357 (`9e977b08`, snapshot= / result_remote_run_id).
-# Restore `rev = "main"` after that PR merges. This companion is not
-# independently mergeable before that prerequisite.
-DistSSHRun = { url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "9e977b08aa4989fc9af58802dd74be38372e4431" }
+DistSSHRun = { url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "main" }
 
 [compat]
 Dates = "1.11"
