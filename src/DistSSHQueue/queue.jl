@@ -431,11 +431,28 @@ function execute_kwargs(j::Job)
         k === :warnings && continue
         k === :submission && continue
         k === :cancel && continue
+        k === :phase && continue
+        k === :remote_run_id && continue
+        k === :content_tree_hash && continue
+        k === :run_toml_archive && continue
+        k === :run_toml_sha256 && continue
+        k === :snapshot_hosts && continue
+        k === :snapshot_project && continue
+        k === :snapshot_remote && continue
         DistSSHRun.execute_detached_accepts(k; kind = j.kind) || continue
         push!(acc, k => v)
     end
     push!(acc, :yes => true)
-    return (; acc...)
+    kw = (; acc...)
+    snap = _job_snapshot_id(j)
+    if snap !== nothing && !haskey(kw, :snapshot)
+        throw(
+            ErrorException(
+                "job $(j.id) has snapshot $(snap) but DistSSHRun.execute!(:$(j.kind); detached=true) does not accept snapshot=; DistSSHRun PR 357 is required",
+            ),
+        )
+    end
+    return kw
 end
 
 """`output_dir` already recorded, else the job bag (Kit may still pick a default)."""
@@ -580,10 +597,17 @@ function run_kit(
         still_running = Returns(true),
         cancel_requested = Returns(false),
         on_warnings = Returns(nothing),
+        on_snapshot = Returns(nothing),
         execute = DistSSHRun.execute!,
         terminate = DistSSHRun.terminate_run!,
     )
-    _queue_kit_setup!(j, on_phase; cancel_requested = cancel_requested, on_warnings = on_warnings)
+    _queue_kit_setup!(
+        j,
+        on_phase;
+        cancel_requested = cancel_requested,
+        on_warnings = on_warnings,
+        on_snapshot = on_snapshot,
+    )
     on_phase(nothing)
     _throw_if_cancelled(cancel_requested)
     still_running() || return something(kit_output_dir(j), "")
@@ -842,12 +866,297 @@ function copy_setup_logs!(j::Job, snap)
     return nothing
 end
 
+const _SNAPSHOT_KW = "snapshot"
+const _SNAPSHOT_HOSTS_KW = "snapshot_hosts"
+const _SNAPSHOT_PROJECT_KW = "snapshot_project"
+const _SNAPSHOT_REMOTE_KW = "snapshot_remote"
+
+function _job_snapshot_id(j::Job)::Union{Nothing, String}
+    raw = get(j.kwargs, _SNAPSHOT_KW, nothing)
+    raw isa AbstractString || return nothing
+    text = strip(String(raw))
+    return isempty(text) ? nothing : text
+end
+
+"""DistSSHRun ship id from `result_remote_run_id`. Missing API is a Run prerequisite."""
+function _ship_result_run_id(result)::Union{Nothing, String}
+    isdefined(DistSSHRun, :result_remote_run_id) || throw(
+        ErrorException(
+            "DistSSHRun.result_remote_run_id is required; DistSSHRun PR 357 must merge first",
+        ),
+    )
+    return DistSSHRun.result_remote_run_id(result)
+end
+
+function _validate_job_snapshot_id(raw)::String
+    isdefined(DistSSHRun, :validate_snapshot_id) || throw(
+        ErrorException(
+            "DistSSHRun.validate_snapshot_id is required; DistSSHRun PR 357 must merge first",
+        ),
+    )
+    return DistSSHRun.validate_snapshot_id(raw)
+end
+
+function _session_remote_text(session)::Union{Nothing, String}
+    hasproperty(session, :remote) || return nothing
+    raw = getproperty(session, :remote)
+    raw isa AbstractString || return nothing
+    text = strip(String(raw))
+    return isempty(text) ? nothing : text
+end
+
+function _host_result_name(h)::Union{Nothing, String}
+    hasproperty(h, :host) || return nothing
+    raw = getproperty(h, :host)
+    raw isa AbstractString || return nothing
+    text = strip(String(raw))
+    isempty(text) && return nothing
+    # Ship `HostResult.host` is an SSH alias. A placement token is normalized.
+    if startswith(text, "parent") || startswith(text, "child:")
+        return kit_ssh_name(text)
+    end
+    return text
+end
+
+function _host_result_ok(h)::Bool
+    hasproperty(h, :ok) || return true
+    return getproperty(h, :ok) === true
+end
+
+"""SSH names that failed on a ship result, or `nothing` when the result has no host list."""
+function _ship_failed_hosts(result)::Union{Nothing, Vector{String}}
+    hasproperty(result, :hosts) || return nothing
+    raw = getproperty(result, :hosts)
+    raw isa AbstractVector || return nothing
+    failed = String[]
+    for h in raw
+        name = _host_result_name(h)
+        name === nothing && continue
+        _host_result_ok(h) || push!(failed, name)
+    end
+    return failed
+end
+
+function _ship_ok_host_names(result)::Union{Nothing, Vector{String}}
+    hasproperty(result, :hosts) || return nothing
+    raw = getproperty(result, :hosts)
+    raw isa AbstractVector || return nothing
+    out = String[]
+    for h in raw
+        name = _host_result_name(h)
+        name === nothing && continue
+        _host_result_ok(h) && push!(out, name)
+    end
+    return out
+end
+
+function _child_ssh_names(hosts::AbstractVector{<:AbstractString})::Vector{String}
+    out = String[]
+    for raw in _kit_setup_child_tokens(hosts)
+        push!(out, kit_ssh_name(raw))
+    end
+    return out
+end
+
+function _same_name_set(a::AbstractVector{<:AbstractString}, b::AbstractVector{<:AbstractString})::Bool
+    return Set(String.(a)) == Set(String.(b))
+end
+
+function _snapshot_context_remote(j::Job)::Union{Nothing, String}
+    raw = get(j.kwargs, _SNAPSHOT_REMOTE_KW, nothing)
+    raw isa AbstractString || return nothing
+    text = strip(String(raw))
+    return isempty(text) ? nothing : text
+end
+
+"""Refuse a recorded snapshot that belongs to another job, host set, project, or deploy root."""
+function _assert_snapshot_context!(
+        j::Job,
+        proj::AbstractString,
+        session,
+        children::AbstractVector{<:AbstractString},
+    )
+    id = _job_snapshot_id(j)
+    id === nothing && return nothing
+    stored_hosts = get(j.kwargs, _SNAPSHOT_HOSTS_KW, nothing)
+    if stored_hosts isa AbstractVector
+        stored = String[String(h) for h in stored_hosts]
+        now_hosts = String[String(h) for h in children]
+        _same_name_set(stored, now_hosts) || throw(
+            ErrorException(
+                "job $(j.id) snapshot $(id) was recorded for hosts $(stored), not $(now_hosts)",
+            ),
+        )
+    end
+    stored_proj = get(j.kwargs, _SNAPSHOT_PROJECT_KW, nothing)
+    if stored_proj isa AbstractString && !isempty(strip(String(stored_proj)))
+        String(stored_proj) == canonical_local_path(proj) || throw(
+            ErrorException(
+                "job $(j.id) snapshot $(id) was recorded for project $(stored_proj), not $(canonical_local_path(proj))",
+            ),
+        )
+    end
+    if haskey(j.kwargs, _SNAPSHOT_REMOTE_KW)
+        stored_remote = _snapshot_context_remote(j)
+        now_remote = _session_remote_text(session)
+        stored_remote == now_remote || throw(
+            ErrorException(
+                "job $(j.id) snapshot $(id) was recorded for remote $(repr(stored_remote)), not $(repr(now_remote))",
+            ),
+        )
+    end
+    return nothing
+end
+
+function _record_job_snapshot!(
+        j::Job,
+        snapshot_id::AbstractString,
+        children::AbstractVector{<:AbstractString},
+        proj::AbstractString,
+        remote,
+    )
+    id = _validate_job_snapshot_id(snapshot_id)
+    id == j.id && throw(
+        ErrorException(
+            "snapshot id $(id) is this job's Queue id; DistSSHRun ship ids are not DistSSHQueue job ids",
+        ),
+    )
+    prev = _job_snapshot_id(j)
+    if prev !== nothing && prev != id
+        throw(
+            ErrorException(
+                "job $(j.id) already has snapshot $(prev); refusing $(id)",
+            ),
+        )
+    end
+    host_names = String[String(h) for h in children]
+    now_remote = if remote isa AbstractString
+        s = strip(String(remote))
+        isempty(s) ? nothing : s
+    else
+        nothing
+    end
+    if prev == id
+        _assert_snapshot_context!(
+            j,
+            proj,
+            (; remote = now_remote),
+            host_names,
+        )
+    end
+    j.kwargs[_SNAPSHOT_KW] = id
+    j.kwargs[_SNAPSHOT_HOSTS_KW] = host_names
+    j.kwargs[_SNAPSHOT_PROJECT_KW] = canonical_local_path(proj)
+    if now_remote === nothing
+        delete!(j.kwargs, _SNAPSHOT_REMOTE_KW)
+    else
+        j.kwargs[_SNAPSHOT_REMOTE_KW] = now_remote
+    end
+    return id
+end
+
+function copy_job_snapshot!(j::Job, snap)
+    snap isa Job || return nothing
+    id = _job_snapshot_id(snap)
+    id === nothing && return nothing
+    hosts = get(snap.kwargs, _SNAPSHOT_HOSTS_KW, String[])
+    hosts isa AbstractVector || (hosts = String[])
+    proj = get(snap.kwargs, _SNAPSHOT_PROJECT_KW, nothing)
+    if !(proj isa AbstractString) || isempty(strip(String(proj)))
+        fallback = get(j.kwargs, "project", nothing)
+        fallback isa AbstractString || return nothing
+        proj = fallback
+    end
+    _record_job_snapshot!(
+        j,
+        id,
+        String[String(h) for h in hosts],
+        String(proj),
+        get(snap.kwargs, _SNAPSHOT_REMOTE_KW, nothing),
+    )
+    return nothing
+end
+
+function _persist_job_snapshot!(
+        q::Queue,
+        id::AbstractString,
+        snapshot_id::AbstractString,
+        children,
+        proj::AbstractString,
+        remote,
+    )
+    _with_store(q) do
+        lock(q.lock) do
+            reload_keep_live!(q)
+            i = _index_id(q.jobs, id)
+            i === nothing && return nothing
+            _record_job_snapshot!(q.jobs[i], snapshot_id, children, proj, remote)
+            _persist!(q)
+            return nothing
+        end
+    end
+    return nothing
+end
+
+function _pin_ship_snapshot!(
+        j::Job,
+        result,
+        session,
+        proj::AbstractString;
+        on_snapshot = Returns(nothing),
+    )::String
+    _require_kit_setup_ok!(result, "ship-tree")
+    failed = _ship_failed_hosts(result)
+    if failed !== nothing && !isempty(failed)
+        throw(
+            ErrorException(
+                "DistSSHKit setup! ship-tree failed on hosts $(failed); not pinning a snapshot",
+            ),
+        )
+    end
+    children = _kit_setup_child_tokens(j.hosts)
+    wanted = _child_ssh_names(j.hosts)
+    ok_names = _ship_ok_host_names(result)
+    if ok_names !== nothing && !isempty(ok_names) && !isempty(wanted) &&
+            !_same_name_set(ok_names, wanted)
+        throw(
+            ErrorException(
+                "DistSSHKit setup! ship-tree host set $(ok_names) does not match job $(j.id) children $(wanted); not pinning a snapshot",
+            ),
+        )
+    end
+    raw = _ship_result_run_id(result)
+    if !(raw isa AbstractString)
+        throw(
+            ErrorException(
+                "DistSSHKit setup! ship-tree succeeded without a ship id (result_remote_run_id); DistSSHRun PR 357 is required",
+            ),
+        )
+    end
+    text = String(raw::AbstractString)
+    isempty(strip(text)) && throw(
+        ErrorException(
+            "DistSSHKit setup! ship-tree succeeded without a ship id (result_remote_run_id); DistSSHRun PR 357 is required",
+        ),
+    )
+    id = _record_job_snapshot!(
+        j,
+        text,
+        children,
+        proj,
+        _session_remote_text(session),
+    )
+    on_snapshot(id, children, proj, _session_remote_text(session))
+    return id
+end
+
 function _queue_kit_setup!(
         j::Job,
         on_phase;
         kit_setup! = DistSSHRun.setup!,
         cancel_requested = Returns(false),
         on_warnings = Returns(nothing),
+        on_snapshot = Returns(nothing),
     )
     _queue_env_on(NO_KIT_SETUP_ENV) && return nothing
     proj = get(j.kwargs, "project", nothing)
@@ -871,14 +1180,21 @@ function _queue_kit_setup!(
         end
         on_phase("ship-tree")
         # Run 0.2 rejects `:rsync` and `gitignore=false`. `.gitignore` is the filter.
-        kit_setup!(session, :ship_tree)
+        shipped = kit_setup!(session, :ship_tree)
+        snap = _pin_ship_snapshot!(
+            j, shipped, session, String(proj); on_snapshot = on_snapshot,
+        )
         _throw_if_cancelled(cancel_requested)
+        _assert_snapshot_context!(j, String(proj), session, children)
         on_phase("instantiate")
         _queue_local_instantiate!(String(proj))
-        _require_kit_setup_ok!(kit_setup!(session, :instantiate), "instantiate")
+        _require_kit_setup_ok!(
+            kit_setup!(session, :instantiate; snapshot = snap),
+            "instantiate",
+        )
         _throw_if_cancelled(cancel_requested)
         on_phase("check")
-        checked = kit_setup!(session, :check)
+        checked = kit_setup!(session, :check; snapshot = snap)
         added = _setup_warning_dicts(checked)
         _append_warning_dicts!(j, added)
         on_warnings(added)
@@ -1164,6 +1480,7 @@ function _finish!(
                 j.result_path = String(result_path)
             end
             copy_setup_logs!(j, snap)
+            copy_job_snapshot!(j, snap)
             _copy_archived_run_toml!(j, snap)
             kit_result isa DistSSHRun.KitRunResult &&
                 _archive_controller_run_toml!(j, kit_result)
@@ -1205,6 +1522,12 @@ function _start!(q::Queue, j::Job)
                     still_running = () -> _job_still_running(q, id),
                     cancel_requested = () -> _job_cancel_requested(q, id),
                     on_warnings = entries -> _persist_job_warnings!(q, id, entries),
+                    on_snapshot = function (snapshot_id, children, proj, remote)
+                        _persist_job_snapshot!(
+                            q, id, snapshot_id, children, proj, remote,
+                        )
+                        return nothing
+                    end,
                 )
             else
                 runner(snap)
