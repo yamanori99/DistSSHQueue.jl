@@ -132,7 +132,11 @@ function runner_distsshrun_portable_lock(manifest::AbstractString)::Dict{String,
     path = get(entry, "path", nothing)
     if path isa String && !isempty(strip(path))
         repo_url = _distsshrun_repo_url(entry)
-        head, tree_sha = git_dev_distsshrun_pin(strip(path), repo_url)
+        dev_path = String(strip(path))
+        if !isabspath(dev_path)
+            dev_path = normpath(joinpath(dirname(abspath(String(manifest))), dev_path))
+        end
+        head, tree_sha = git_dev_distsshrun_pin(dev_path, repo_url)
         deps = get(entry, "deps", nothing)
         deps isa AbstractVector ||
             throw(ArgumentError("runner DistSSHRun manifest entry has no deps list"))

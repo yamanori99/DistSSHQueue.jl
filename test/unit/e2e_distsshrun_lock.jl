@@ -1,5 +1,4 @@
 using Test
-using TOML
 
 include(joinpath(@__DIR__, "..", "e2e_distsshrun_lock.jl"))
 
@@ -53,6 +52,37 @@ end
             @test portable["git-tree-sha1"] == tree
             @test !haskey(portable, "path")
             @test portable["repo-rev"] == "main"
+        end
+    end
+
+    @testset "relative develop path resolves against manifest directory" begin
+        mktempdir() do root
+            bare = joinpath(root, "remote.git")
+            _init_git_repo(bare; bare = true)
+            url = "file://" * abspath(bare)
+            clone = abspath(joinpath(root, "clone"))
+            _git_quiet(`git clone -q $url $clone`)
+            write(joinpath(clone, "Project.toml"), "name = \"DistSSHRun\"\n")
+            _git_quiet(`git -C $clone config user.email test@example.com`)
+            _git_quiet(`git -C $clone config user.name Test`)
+            _commit_all(clone, "init")
+            _git_quiet(`git -C $clone push -q -u origin HEAD`)
+            runner = joinpath(root, "locks", "runner.toml")
+            mkpath(dirname(runner))
+            dev_rel = relpath(clone, dirname(runner))
+            _write_manifest(
+                runner,
+                Dict{String, Any}(
+                    "uuid" => EXAMPLE_DISTSSHRUN_UUID,
+                    "version" => "0.2.0-DEV",
+                    "deps" => ["Dates"],
+                    "path" => dev_rel,
+                    "repo-url" => url,
+                ),
+            )
+            portable = runner_distsshrun_portable_lock(runner)
+            @test portable["repo-rev"] == readchomp(`git -C $clone rev-parse HEAD`)
+            @test !haskey(portable, "path")
         end
     end
 
