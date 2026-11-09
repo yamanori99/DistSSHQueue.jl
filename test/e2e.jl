@@ -161,7 +161,9 @@ end
 
 const JOB_PROJECT = isolate_job_git_root(JOB_SOURCE)
 
-const E2E_RUNNER_PROJECT = joinpath(QUEUE_ROOT, "test")
+# Workspace (`[workspace] projects = ["test", …]`): `julia --project=test` locks DistSSHRun
+# in the repo-root `Manifest.toml`, not `test/Manifest.toml`.
+const E2E_RUNNER_MANIFEST = joinpath(QUEUE_ROOT, "Manifest.toml")
 const _EXAMPLE_DISTSSHRUN_UUID = "b568025c-2759-4ef1-8b14-17d00e2cd000"
 
 """Resolve `proj` in this process's depot so `setup!` has a Manifest to send.
@@ -201,10 +203,11 @@ Copy the E2E runner's DistSSHRun lock onto the isolated example job.
 
 The job tree resolves Run on its own (`rev = main` in `Project.toml`). The
 detached Kit child on a staged `qhost:` tree must see the same revision as
-`julia --project=test` (fail-closed snapshot selection after Run #357).
+`julia --project=test` (workspace root `Manifest.toml`; fail-closed snapshot
+selection after Run #357).
 """
 function align_example_job_distsshrun!(job_proj::AbstractString)
-    src = joinpath(E2E_RUNNER_PROJECT, "Manifest.toml")
+    src = E2E_RUNNER_MANIFEST
     isfile(src) || error("E2E runner Manifest missing: $src (run with --project=test)")
     dst = joinpath(job_proj, "Manifest.toml")
     isfile(dst) || error("example job Manifest missing: $dst")
@@ -228,7 +231,7 @@ end
 
 """True when `job_manifest` locks DistSSHRun to the same tree as the E2E runner."""
 function example_job_distsshrun_aligned(job_manifest::AbstractString)::Bool
-    runner = joinpath(E2E_RUNNER_PROJECT, "Manifest.toml")
+    runner = E2E_RUNNER_MANIFEST
     isfile(runner) || return false
     want = distsshrun_git_tree_sha1(runner)
     want === nothing && return false
