@@ -11,7 +11,8 @@
 #     not a product-test tree). Do not emit `!` globs into
 #     any-glob-to-any-file: labeler ORs them as "not this path" and tags
 #     unrelated files (CONTRIBUTING.md → area:test).
-#   - SSH E2E entry (`test/e2e.jl`) also gets area:client and area:qhost.
+#   - SSH E2E (`test/e2e.jl`, `test/e2e_distsshrun_lock.jl`, and
+#     `test/unit/e2e_distsshrun_lock.jl`) also get area:client and area:qhost.
 #   - Documenter → area:docs (docs/**)
 #   - GitHub / repo prose → area:project-docs (README, NEWS, CONTRIBUTING,
 #     SECURITY, AGENTS, REVIEW, CODEOWNERS, changelog.d)
@@ -130,12 +131,16 @@ EOF
           - "test/unit/fetch.jl"
           - "test/unit/local_queue.jl"
           - "test/e2e.jl"
+          - "test/e2e_distsshrun_lock.jl"
+          - "test/unit/e2e_distsshrun_lock.jl"
 
 "area:qhost":
   - changed-files:
       - any-glob-to-any-file:
           - "src/qhost/**"
           - "test/e2e.jl"
+          - "test/e2e_distsshrun_lock.jl"
+          - "test/unit/e2e_distsshrun_lock.jl"
 EOF
 } >"$tmp"
 

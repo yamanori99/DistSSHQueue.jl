@@ -164,7 +164,8 @@ const JOB_PROJECT = isolate_job_git_root(JOB_SOURCE)
 # Workspace (`[workspace] projects = ["test", …]`): `julia --project=test` locks DistSSHRun
 # in the repo-root `Manifest.toml`, not `test/Manifest.toml`.
 const E2E_RUNNER_MANIFEST = joinpath(QUEUE_ROOT, "Manifest.toml")
-const _EXAMPLE_DISTSSHRUN_UUID = "b568025c-2759-4ef1-8b14-17d00e2cd000"
+
+include(joinpath(@__DIR__, "e2e_distsshrun_lock.jl"))
 
 """Resolve `proj` in this process's depot so `setup!` has a Manifest to send.
 
@@ -179,96 +180,12 @@ function instantiate_example_job!(proj::AbstractString)
     return nothing
 end
 
-function _distsshrun_manifest_entry(manifest::AbstractString)
-    data = TOML.parsefile(String(manifest))
-    deps = get(data, "deps", nothing)
-    deps isa AbstractDict || return nothing
-    raw = get(deps, "DistSSHRun", nothing)
-    raw === nothing && return nothing
-    raw isa AbstractVector || return raw
-    length(raw) == 1 || return nothing
-    return first(raw)
-end
-
-"""DistSSHRun `git-tree-sha1` from a resolved `Manifest.toml`, or `nothing`."""
-function distsshrun_git_tree_sha1(manifest::AbstractString)::Union{Nothing, String}
-    entry = _distsshrun_manifest_entry(manifest)
-    entry isa AbstractDict || return nothing
-    tree = get(entry, "git-tree-sha1", nothing)
-    return tree isa String && !isempty(strip(tree)) ? strip(tree) : nothing
-end
-
-"""
-Copy the E2E runner's DistSSHRun lock onto the isolated example job.
-
-The job tree resolves Run on its own (`rev = main` in `Project.toml`). The
-detached Kit child on a staged `qhost:` tree must see the same revision as
-`julia --project=test` (workspace root `Manifest.toml`; fail-closed snapshot
-selection after Run #357).
-"""
-function align_example_job_distsshrun!(job_proj::AbstractString)
-    src = E2E_RUNNER_MANIFEST
-    isfile(src) || error("E2E runner Manifest missing: $src (run with --project=test)")
-    dst = joinpath(job_proj, "Manifest.toml")
-    isfile(dst) || error("example job Manifest missing: $dst")
-    want = distsshrun_git_tree_sha1(src)
-    want === nothing &&
-        error("E2E runner Manifest has no DistSSHRun git-tree-sha1 (instantiate test env first)")
-    have = distsshrun_git_tree_sha1(dst)
-    have == want && return nothing
-    src_data = TOML.parsefile(src)
-    dst_data = TOML.parsefile(dst)
-    src_deps = get(src_data, "deps", nothing)
-    src_deps isa AbstractDict || error("E2E runner Manifest has no [deps]")
-    haskey(src_deps, "DistSSHRun") || error("E2E runner Manifest does not lock DistSSHRun")
-    dst_deps = get!(dst_data, "deps", Dict{String, Any}())
-    dst_deps["DistSSHRun"] = src_deps["DistSSHRun"]
-    open(dst, "w") do io
-        TOML.print(io, dst_data)
-    end
-    return nothing
-end
-
-"""True when `job_manifest` locks DistSSHRun to the same tree as the E2E runner."""
-function example_job_distsshrun_aligned(job_manifest::AbstractString)::Bool
-    runner = E2E_RUNNER_MANIFEST
-    isfile(runner) || return false
-    want = distsshrun_git_tree_sha1(runner)
-    want === nothing && return false
-    have = distsshrun_git_tree_sha1(job_manifest)
-    return have == want
-end
-
 """True when `regs` is the General registry and no other registry."""
 function _general_registry(regs)::Bool
     regs == "General" && return true
     regs isa AbstractVector || return false
     length(regs) == 1 || return false
     return first(regs) == "General"
-end
-
-"""True when `manifest` locks DistSSHRun to Run `main`.
-
-Revert at the 0.10.0 cut: assert a General lock again
-(`_general_registry`, no `repo-url` / `repo-rev`).
-"""
-function distsshrun_general_lock(manifest::AbstractString)::Bool
-    data = TOML.parsefile(String(manifest))
-    deps = get(data, "deps", nothing)
-    deps isa Dict || return false
-    entries = get(deps, "DistSSHRun", nothing)
-    entries isa Vector || return false
-    length(entries) == 1 || return false
-    entry = entries[1]
-    entry isa Dict || return false
-    haskey(entry, "path") && return false
-    get(entry, "uuid", nothing) == _EXAMPLE_DISTSSHRUN_UUID || return false
-    get(entry, "repo-url", nothing) == "https://github.com/yamanori99/DistSSHRun.jl" ||
-        return false
-    get(entry, "repo-rev", nothing) == "main" || return false
-    ver = get(entry, "version", nothing)
-    tree = get(entry, "git-tree-sha1", nothing)
-    return ver isa String && !isempty(ver) && tree isa String && !isempty(tree)
 end
 
 """`git check-ignore` for `Manifest.toml`, with `core.excludesFile` unset.
@@ -712,11 +629,11 @@ end
             # Run's `_require_manifest!` refuses this tree until a Manifest
             # exists. Resolve here, in the test depot, before ship.
             instantiate_example_job!(JOB_PROJECT)
-            align_example_job_distsshrun!(JOB_PROJECT)
+            align_example_job_distsshrun!(JOB_PROJECT; runner_manifest = E2E_RUNNER_MANIFEST)
             manifest = joinpath(JOB_PROJECT, "Manifest.toml")
             @test isfile(manifest)
-            @test example_job_distsshrun_aligned(manifest)
-            @test distsshrun_general_lock(manifest)
+            @test example_job_distsshrun_aligned(manifest, E2E_RUNNER_MANIFEST)
+            @test distsshrun_general_lock(manifest; runner_manifest = E2E_RUNNER_MANIFEST)
             @test manifest_check_ignore_status(JOB_PROJECT) == 1
             session = KitSession(
                 project = JOB_PROJECT,
