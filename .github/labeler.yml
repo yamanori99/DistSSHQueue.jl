@@ -37,6 +37,7 @@
           - "test/Project.toml"
           - "test/README.md"
           - "test/e2e.jl"
+          - "test/e2e_distsshrun_lock.jl"
           - "test/runtests.jl"
           - "test/support/**"
           - "test/support.jl"
@@ -68,9 +69,13 @@
           - "test/unit/fetch.jl"
           - "test/unit/local_queue.jl"
           - "test/e2e.jl"
+          - "test/e2e_distsshrun_lock.jl"
+          - "test/unit/e2e_distsshrun_lock.jl"
 
 "area:qhost":
   - changed-files:
       - any-glob-to-any-file:
           - "src/qhost/**"
           - "test/e2e.jl"
+          - "test/e2e_distsshrun_lock.jl"
+          - "test/unit/e2e_distsshrun_lock.jl"
