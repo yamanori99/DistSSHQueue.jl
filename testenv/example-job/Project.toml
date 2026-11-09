@@ -4,6 +4,8 @@ version = "0.0.1"
 
 # Host project `setup!` ships this tree to workers. Job scripts are copied from
 # DistSSHRun `demos/` at E2E start (not kept in git). with_kit drivers `using DistSSHRun`.
+# SSH E2E copies this tree to an isolated git root; `test/e2e.jl` then aligns its
+# DistSSHRun lock to `test/Manifest.toml` so detached children match the runner.
 # Drop the `[sources]` entry at the 0.10.0 cut, after DistSSHRun 0.2.0 is on General.
 [deps]
 DistSSHRun = "b568025c-2759-4ef1-8b14-17d00e2cd000"

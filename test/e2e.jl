@@ -161,6 +161,7 @@ end
 
 const JOB_PROJECT = isolate_job_git_root(JOB_SOURCE)
 
+const E2E_RUNNER_PROJECT = joinpath(QUEUE_ROOT, "test")
 const _EXAMPLE_DISTSSHRUN_UUID = "b568025c-2759-4ef1-8b14-17d00e2cd000"
 
 """Resolve `proj` in this process's depot so `setup!` has a Manifest to send.
@@ -174,6 +175,65 @@ function instantiate_example_job!(proj::AbstractString)
         return nothing
     end
     return nothing
+end
+
+function _distsshrun_manifest_entry(manifest::AbstractString)
+    data = TOML.parsefile(String(manifest))
+    deps = get(data, "deps", nothing)
+    deps isa AbstractDict || return nothing
+    raw = get(deps, "DistSSHRun", nothing)
+    raw === nothing && return nothing
+    raw isa AbstractVector || return raw
+    length(raw) == 1 || return nothing
+    return first(raw)
+end
+
+"""DistSSHRun `git-tree-sha1` from a resolved `Manifest.toml`, or `nothing`."""
+function distsshrun_git_tree_sha1(manifest::AbstractString)::Union{Nothing, String}
+    entry = _distsshrun_manifest_entry(manifest)
+    entry isa AbstractDict || return nothing
+    tree = get(entry, "git-tree-sha1", nothing)
+    return tree isa String && !isempty(strip(tree)) ? strip(tree) : nothing
+end
+
+"""
+Copy the E2E runner's DistSSHRun lock onto the isolated example job.
+
+The job tree resolves Run on its own (`rev = main` in `Project.toml`). The
+detached Kit child on a staged `qhost:` tree must see the same revision as
+`julia --project=test` (fail-closed snapshot selection after Run #357).
+"""
+function align_example_job_distsshrun!(job_proj::AbstractString)
+    src = joinpath(E2E_RUNNER_PROJECT, "Manifest.toml")
+    isfile(src) || error("E2E runner Manifest missing: $src (run with --project=test)")
+    dst = joinpath(job_proj, "Manifest.toml")
+    isfile(dst) || error("example job Manifest missing: $dst")
+    want = distsshrun_git_tree_sha1(src)
+    want === nothing &&
+        error("E2E runner Manifest has no DistSSHRun git-tree-sha1 (instantiate test env first)")
+    have = distsshrun_git_tree_sha1(dst)
+    have == want && return nothing
+    src_data = TOML.parsefile(src)
+    dst_data = TOML.parsefile(dst)
+    src_deps = get(src_data, "deps", nothing)
+    src_deps isa AbstractDict || error("E2E runner Manifest has no [deps]")
+    haskey(src_deps, "DistSSHRun") || error("E2E runner Manifest does not lock DistSSHRun")
+    dst_deps = get!(dst_data, "deps", Dict{String, Any}())
+    dst_deps["DistSSHRun"] = src_deps["DistSSHRun"]
+    open(dst, "w") do io
+        TOML.print(io, dst_data)
+    end
+    return nothing
+end
+
+"""True when `job_manifest` locks DistSSHRun to the same tree as the E2E runner."""
+function example_job_distsshrun_aligned(job_manifest::AbstractString)::Bool
+    runner = joinpath(E2E_RUNNER_PROJECT, "Manifest.toml")
+    isfile(runner) || return false
+    want = distsshrun_git_tree_sha1(runner)
+    want === nothing && return false
+    have = distsshrun_git_tree_sha1(job_manifest)
+    return have == want
 end
 
 """True when `regs` is the General registry and no other registry."""
@@ -649,8 +709,10 @@ end
             # Run's `_require_manifest!` refuses this tree until a Manifest
             # exists. Resolve here, in the test depot, before ship.
             instantiate_example_job!(JOB_PROJECT)
+            align_example_job_distsshrun!(JOB_PROJECT)
             manifest = joinpath(JOB_PROJECT, "Manifest.toml")
             @test isfile(manifest)
+            @test example_job_distsshrun_aligned(manifest)
             @test distsshrun_general_lock(manifest)
             @test manifest_check_ignore_status(JOB_PROJECT) == 1
             session = KitSession(
@@ -1254,6 +1316,8 @@ end
                         write(joinpath(JOB_PROJECT, ".distsshqueue-backup"), "keep\n")
                         mkpath(joinpath(JOB_PROJECT, ".distsshqueue"))
                         write(joinpath(JOB_PROJECT, ".distsshqueue", "ticket"), "nope\n")
+                        # Staged `qhost:` rows need per-job `ship_tree` snapshot pins
+                        # (Run #357 fail-closed). Other E2E blocks keep `NO_KIT_SETUP`.
                         remote_env = Dict{String, String}(
                             "HOME" => e2e_home,
                             "JULIA_DEPOT_PATH" => julia_depot_path_env(),
@@ -1264,7 +1328,6 @@ end
                             "DISTSSHKIT_QUIET" => get(ENV, "DISTSSHKIT_QUIET", "1"),
                             "DISTRIBUTED_SSH_OPTS" => "-F $(SSH_CONFIG)",
                             "DISTRIBUTED_REMOTE_PROJECT_ROOT" => REMOTE_ROOT,
-                            DistSSHQueue.NO_KIT_SETUP_ENV => "1",
                         )
                         wrapper = write_remote_julia(joinpath(d, "remote-julia"), remote_env)
                         client_env = Dict{String, String}(
@@ -1316,7 +1379,9 @@ end
                         @test isfile(joinpath(stage, ".distsshqueue-backup"))
                         @test read(joinpath(stage, ".distsshqueue-backup"), String) == "keep\n"
                         @test !ispath(joinpath(stage, ".distsshqueue"))
-                        wait_store_job(qh_store, id1, (:done,); tries = GO_WAIT_TRIES)
+                        row1 = wait_store_job(qh_store, id1, (:done,); tries = GO_WAIT_TRIES)
+                        snap1 = get(row1.kwargs, "snapshot", nothing)
+                        @test snap1 isa String && !isempty(strip(snap1))
                         listed = read_cli(addenv(qh(["status"]), client_env...))
                         @test status_shows_id(listed, id1)
                         @test occursin("done", listed)
