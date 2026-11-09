@@ -66,15 +66,20 @@ function _ensure_head_reachable_from_remote!(
         stderr_buf = IOBuffer()
         fetch_cmd = `git -C $probe fetch --quiet --no-tags $remote $head`
         proc = run(pipeline(ignorestatus(fetch_cmd); stdout = devnull, stderr = stderr_buf))
+        develop = String(strip(abspath(String(path))))
         if proc.exitcode != 0
             detail = strip(String(take!(stderr_buf)))
-            msg = "commit $head is not reachable from $remote (push it first)"
+            msg =
+                "commit $head from $develop is not reachable from $remote (push it first)"
             !isempty(detail) && (msg *= ": $detail")
             throw(ArgumentError(msg))
         end
         fetched = strip(read(`git -C $probe rev-parse FETCH_HEAD`, String))
-        fetched == head ||
-            throw(ArgumentError("commit $head is not reachable from $remote (push it first)"))
+        fetched == head || throw(
+            ArgumentError(
+                "commit $head from $develop is not reachable from $remote (push it first)",
+            ),
+        )
     finally
         rm(probe; recursive = true, force = true)
     end
