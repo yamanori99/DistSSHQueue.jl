@@ -5,6 +5,7 @@ using TOML
 
 const DISTSSHRUN_REPO_URL = "https://github.com/yamanori99/DistSSHRun.jl"
 const EXAMPLE_DISTSSHRUN_UUID = "b568025c-2759-4ef1-8b14-17d00e2cd000"
+const _DISTSSHRUN_HEAD_SHA = r"^[0-9a-f]{40}$"
 
 """True when `DISTSSHQUEUE_DEV_RUN` developed Run into the test project before E2E."""
 function e2e_dev_run_active()::Bool
@@ -53,6 +54,33 @@ function _distsshrun_repo_url(entry::AbstractDict)::String
     return DISTSSHRUN_REPO_URL
 end
 
+function _ensure_head_reachable_from_remote!(
+        path::AbstractString,
+        remote::AbstractString,
+        head::AbstractString,
+    )
+    # Probe in an empty repo so a local ODB hit cannot mask an unpushed commit.
+    probe = mktempdir()
+    try
+        run(`git -C $probe init -q`)
+        stderr_buf = IOBuffer()
+        fetch_cmd = `git -C $probe fetch --quiet --no-tags $remote $head`
+        proc = run(pipeline(ignorestatus(fetch_cmd); stdout = devnull, stderr = stderr_buf))
+        if proc.exitcode != 0
+            detail = strip(String(take!(stderr_buf)))
+            msg = "commit $head is not reachable from $remote (push it first)"
+            !isempty(detail) && (msg *= ": $detail")
+            throw(ArgumentError(msg))
+        end
+        fetched = strip(read(`git -C $probe rev-parse FETCH_HEAD`, String))
+        fetched == head ||
+            throw(ArgumentError("commit $head is not reachable from $remote (push it first)"))
+    finally
+        rm(probe; recursive = true, force = true)
+    end
+    return nothing
+end
+
 """
 Read `HEAD` and `HEAD^{tree}` from a clean `path` checkout and verify `HEAD` is on `repo_url`.
 
@@ -82,25 +110,18 @@ function git_dev_distsshrun_pin(path::AbstractString, repo_url::AbstractString)
     head = _nonempty_git_line(`git -C $path rev-parse HEAD`)
     tree = _nonempty_git_line(Cmd(["git", "-C", path, "rev-parse", "HEAD^{tree}"]))
     remote = strip(String(repo_url))
-    ls = try
-        strip(read(`git ls-remote $remote`, String))
+    try
+        _ensure_head_reachable_from_remote!(path, remote, head)
     catch e
+        if e isa ArgumentError
+            throw(e)
+        end
         throw(
             ArgumentError(
-                "could not query $remote for commit $head ($(sprint(showerror, e))); check network access for SSH E2E",
+                "commit $head is not reachable from $remote (push it first): $(sprint(showerror, e))",
             ),
         )
     end
-    advertised = any(split(ls, '\n')) do line
-        s = strip(line)
-        (isempty(s) || !occursin('\t', s)) && return false
-        return strip(first(split(s, '\t'))) == head
-    end
-    !advertised && throw(
-        ArgumentError(
-            "DistSSHRun develop checkout HEAD $head is not on $remote (push the commit or use a published ref); workers instantiate from that remote, not the host path (DISTSSHQUEUE_DEV_RUN)",
-        ),
-    )
     return head, tree
 end
 
@@ -225,8 +246,9 @@ end
 True when `manifest` locks DistSSHRun the way SSH E2E expects on workers.
 
 Outside DISTSSHQUEUE_DEV_RUN, `repo-rev` must be `main` (url source in Project.toml).
-With DISTSSHQUEUE_DEV_RUN, `repo-rev` may be the full commit SHA when `git-tree-sha1`
-matches the runner's portable lock (path develop on the host; git lock on the job).
+With DISTSSHQUEUE_DEV_RUN, `repo-rev` must be the lowercase 40-hex commit SHA
+`align_example_job_distsshrun!` writes from `git rev-parse HEAD`, and `git-tree-sha1`
+must match the runner's portable lock.
 """
 function distsshrun_general_lock(
         manifest::AbstractString;
@@ -252,6 +274,8 @@ function distsshrun_general_lock(
     if e2e_dev_run_active()
         runner = runner_manifest
         runner === nothing && return false
+        rev = strip(String(rev))
+        occursin(_DISTSSHRUN_HEAD_SHA, rev) || return false
         want_tree = try
             runner_distsshrun_tree_sha1(runner)
         catch

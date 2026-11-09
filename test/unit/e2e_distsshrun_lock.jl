@@ -34,6 +34,12 @@ function _commit_all(dir::AbstractString, msg::AbstractString)
     return readchomp(`git -C $dir rev-parse HEAD`)
 end
 
+function _git_refs_under(repo::AbstractString)
+    out = strip(read(Cmd(["git", "-C", repo, "for-each-ref", "--format=%(refname)", "refs"]), String))
+    lines = filter(!isempty, split(out, '\n'))
+    return sort!(String[strip(line) for line in lines])
+end
+
 @testset "e2e_distsshrun_lock" verbose = true begin
     @testset "git runner entry yields portable lock without path" begin
         mktempdir() do d
@@ -138,7 +144,50 @@ end
                 err = e
             end
             @test err isa ArgumentError
-            @test occursin("not on", err.msg)
+            @test occursin("not reachable", err.msg)
+            @test occursin("push it first", err.msg)
+        end
+    end
+
+    @testset "reachable ancestor that is not a remote ref tip" begin
+        mktempdir() do root
+            bare = joinpath(root, "remote.git")
+            clone = joinpath(root, "clone")
+            mkpath(clone)
+            _init_git_repo(bare; bare = true)
+            url = "file://" * abspath(bare)
+            _init_git_repo(clone; remote = url)
+            write(joinpath(clone, "Project.toml"), "name = \"DistSSHRun\"\n")
+            ancestor = _commit_all(clone, "init")
+            _git_quiet(`git -C $clone push -q -u origin HEAD`)
+            write(joinpath(clone, "two.txt"), "2\n")
+            _commit_all(clone, "two")
+            _git_quiet(`git -C $clone push -q origin HEAD`)
+            _git_quiet(`git -C $clone checkout -q $ancestor`)
+            refs_before = _git_refs_under(clone)
+            head, tree = git_dev_distsshrun_pin(clone, url)
+            refs_after = _git_refs_under(clone)
+            @test head == ancestor
+            @test !isempty(tree)
+            @test refs_before == refs_after
+        end
+    end
+
+    @testset "reachability fetch does not add refs under refs" begin
+        mktempdir() do root
+            bare = joinpath(root, "remote.git")
+            clone = joinpath(root, "clone")
+            mkpath(clone)
+            _init_git_repo(bare; bare = true)
+            url = "file://" * abspath(bare)
+            _init_git_repo(clone; remote = url)
+            write(joinpath(clone, "Project.toml"), "name = \"DistSSHRun\"\n")
+            _commit_all(clone, "init")
+            _git_quiet(`git -C $clone push -q -u origin HEAD`)
+            refs_before = _git_refs_under(clone)
+            git_dev_distsshrun_pin(clone, url)
+            refs_after = _git_refs_under(clone)
+            @test refs_before == refs_after
         end
     end
 
@@ -231,9 +280,80 @@ end
         end
     end
 
-    @testset "distsshrun_general_lock DEV vs main rev rule" begin
+    @testset "distsshrun_general_lock DEV rejects non-SHA repo-rev" begin
         mktempdir() do root
-            tree = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            tree = "b"^40
+            head_sha = "c0ffee" * "0"^34
+            runner = joinpath(root, "runner.toml")
+            job_manifest = joinpath(root, "job.toml")
+            _write_manifest(
+                runner,
+                Dict{String, Any}(
+                    "uuid" => EXAMPLE_DISTSSHRUN_UUID,
+                    "version" => "0.2.0-DEV",
+                    "deps" => ["Dates"],
+                    "repo-url" => DISTSSHRUN_REPO_URL,
+                    "repo-rev" => head_sha,
+                    "git-tree-sha1" => tree,
+                ),
+            )
+            withenv("DISTSSHQUEUE_DEV_RUN" => "1") do
+                for bad_rev in ("main", "c"^39, uppercase(head_sha))
+                    _write_manifest(
+                        job_manifest,
+                        Dict{String, Any}(
+                            "uuid" => EXAMPLE_DISTSSHRUN_UUID,
+                            "version" => "0.2.0-DEV",
+                            "deps" => ["Dates"],
+                            "repo-url" => DISTSSHRUN_REPO_URL,
+                            "repo-rev" => bad_rev,
+                            "git-tree-sha1" => tree,
+                        ),
+                    )
+                    @test !distsshrun_general_lock(job_manifest; runner_manifest = runner)
+                end
+            end
+        end
+    end
+
+    @testset "distsshrun_general_lock DEV accepts full SHA and tree match" begin
+        mktempdir() do root
+            tree = "b"^40
+            head_sha = "c0ffee" * "0"^34
+            runner = joinpath(root, "runner.toml")
+            job_manifest = joinpath(root, "job.toml")
+            _write_manifest(
+                runner,
+                Dict{String, Any}(
+                    "uuid" => EXAMPLE_DISTSSHRUN_UUID,
+                    "version" => "0.2.0-DEV",
+                    "deps" => ["Dates"],
+                    "repo-url" => DISTSSHRUN_REPO_URL,
+                    "repo-rev" => head_sha,
+                    "git-tree-sha1" => tree,
+                ),
+            )
+            _write_manifest(
+                job_manifest,
+                Dict{String, Any}(
+                    "uuid" => EXAMPLE_DISTSSHRUN_UUID,
+                    "version" => "0.2.0-DEV",
+                    "deps" => ["Dates"],
+                    "repo-url" => DISTSSHRUN_REPO_URL,
+                    "repo-rev" => head_sha,
+                    "git-tree-sha1" => tree,
+                ),
+            )
+            withenv("DISTSSHQUEUE_DEV_RUN" => "1") do
+                @test distsshrun_general_lock(job_manifest; runner_manifest = runner)
+            end
+        end
+    end
+
+    @testset "distsshrun_general_lock non-DEV requires repo-rev main" begin
+        mktempdir() do root
+            tree = "b"^40
+            head_sha = "c0ffee" * "0"^34
             job_manifest = joinpath(root, "job.toml")
             _write_manifest(
                 job_manifest,
@@ -242,27 +362,12 @@ end
                     "version" => "0.2.0-DEV",
                     "deps" => ["Dates"],
                     "repo-url" => DISTSSHRUN_REPO_URL,
-                    "repo-rev" => "deadbeef"^5,
+                    "repo-rev" => head_sha,
                     "git-tree-sha1" => tree,
                 ),
             )
-            runner = joinpath(root, "runner.toml")
-            _write_manifest(
-                runner,
-                Dict{String, Any}(
-                    "uuid" => EXAMPLE_DISTSSHRUN_UUID,
-                    "version" => "0.2.0-DEV",
-                    "deps" => ["Dates"],
-                    "repo-url" => DISTSSHRUN_REPO_URL,
-                    "repo-rev" => "main",
-                    "git-tree-sha1" => tree,
-                ),
-            )
-            withenv("DISTSSHQUEUE_DEV_RUN" => "1") do
-                @test distsshrun_general_lock(job_manifest; runner_manifest = runner)
-            end
             withenv("DISTSSHQUEUE_DEV_RUN" => "") do
-                @test !distsshrun_general_lock(job_manifest; runner_manifest = runner)
+                @test !distsshrun_general_lock(job_manifest; runner_manifest = nothing)
                 _write_manifest(
                     job_manifest,
                     Dict{String, Any}(
@@ -274,7 +379,7 @@ end
                         "git-tree-sha1" => tree,
                     ),
                 )
-                @test distsshrun_general_lock(job_manifest; runner_manifest = runner)
+                @test distsshrun_general_lock(job_manifest; runner_manifest = nothing)
             end
         end
     end
