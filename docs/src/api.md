@@ -47,7 +47,7 @@ submit!
 cancel!
 ```
 
-`cancel!` of a running job sends SIGINT, then SIGTERM. The wait is 30 seconds, or `DISTSSHKIT_WAIT_SIGINT_GRACE` in the calling process. Unreachable hosts do not hold the reap open.
+`cancel!` of a running job sends SIGINT, then SIGTERM. The wait is 30 seconds, or `DISTSSH_WAIT_SIGINT_GRACE` in the calling process. Unreachable hosts do not hold the reap open.
 
 ## Table
 
