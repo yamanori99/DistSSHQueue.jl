@@ -1274,7 +1274,7 @@ end
                         @test listed isa Vector{String}
                         if listed isa Vector{String}
                             env = DistSSHRun.resolve_pkg_env(JOB_PROJECT)
-                            raw = DistSSHRun.rsync_send_list(env.env_dir, env)
+                            raw = DistSSHRun.git_send_list(env.env_dir, env)
                             @test raw isa Vector
                             if raw isa Vector
                                 want = String[

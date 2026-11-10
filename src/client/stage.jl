@@ -2,7 +2,7 @@
 #
 # Omit `qhost:` is unchanged (cwd / `DISTRIBUTED_PROJECT_ROOT` on this box).
 # Kit still copies queue host → workers. Inside a git work tree the file list
-# is DistSSHRun's `rsync_send_list` (the same list as `setup --rsync`). Outside
+# is DistSSHRun's `git_send_list` (the same list as `setup --rsync`). Outside
 # one, rsync keeps its per-directory `.gitignore` filter. `.distsshqueue/`
 # stays off the queue host either way. The send list and extra files are
 # checked before `ssh mkdir`, so a local error leaves no empty stage directory.
@@ -218,7 +218,7 @@ An empty list throws `ArgumentError`.
 """
 function stage_send_list(local_root::AbstractString)::Union{Nothing, Vector{String}}
     env = resolve_pkg_env(local_root)
-    listed = DistSSHRun.rsync_send_list(env.env_dir, env; warn = true)
+    listed = DistSSHRun.git_send_list(env.env_dir, env; warn = true)
     listed === nothing && return nothing
     filtered = String[String(rel) for rel in listed if !_stage_rel_is_queue(rel)]
     isempty(filtered) && throw(
