@@ -134,15 +134,15 @@ julia -m DistSSHRun drive parent:4 SCRIPT.jl
   `~/.distsshqueue/stage/<uuid>`.
 - The client keeps `.distsshqueue/tickets/<uuid>`.
 - The script owns result files.
-- The run owns the `.distsshkit/` bundle on that machine.
+- The run owns the `.distssh/` bundle on that machine (legacy `.distsshkit/` is read-only).
 - The queue owns scheduling and the fetched `.distsshqueue/` copy.
 
-The stage excludes `.git/`, `.distsshkit/`, and `.distsshqueue/`.
+The stage excludes `.git/`, `.distssh/`, legacy `.distsshkit/`, and `.distsshqueue/`.
 Inside a git work tree the file list matches `setup --rsync`
 (negation, and a `.gitignore` above the project). Outside one, rsync
 still applies each directory's `.gitignore`. A name such as
 `.distsshqueue-backup` is sent. Files that `qhost:` put on that stage
-reach `child:` as well, except `.git/` and `.distsshkit/`. Details:
+reach `child:` as well, except `.git/` and local state dirs (`.distssh/`, legacy `.distsshkit/`). Details:
 [Artifacts and paths](https://yamanori99.github.io/DistSSHKit.jl/stable/queue/artifacts/).
 
 #### Client
@@ -156,8 +156,8 @@ reach `child:` as well, except `.git/` and `.distsshkit/`. Details:
   .distsshqueue/<kind>/<stem>_<id8>/  after fetch
     .distsshqueue-fetch-id
     ...                              primary artifact copy
-    .distsshkit/logs/...
-    .distsshkit/collect/...
+    .distssh/logs/...
+    .distssh/collect/...
 ```
 
 #### Queue host
@@ -185,9 +185,9 @@ ext4, or the WSL2 Linux filesystem). NFS and a WSL drvfs mount such as
   stage/<uuid>/         client tree after each qhost: submit
     Project.toml        compute deps
     SCRIPT.jl
-    .distsshkit/runs/<kind>/<run>/  run.toml, kit.pid, kit.result
-    .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  result_path (run or script picks it)
-    .distsshkit/setup/*.log         setup logs
+    .distssh/runs/<kind>/<run>/  run.toml, kit.pid, kit.result
+    .distssh/<kind>/SCRIPT_<UTC>_<id>/  result_path (run or script picks it)
+    .distssh/setup/*.log         setup logs
 ```
 
 A finished or cancelled job keeps a byte copy of the controller `run.toml` under that `run-toml/<job-id>/` directory, with its SHA-256 on the job row. The ship hash is recorded when Run wrote `provenance.selection`.
@@ -212,7 +212,7 @@ and instantiated before the run:
 - After `qhost:` the copy is `~/stage/<uuid>` (unique per job). Do not
   pin a shared `DISTRIBUTED_REMOTE_PROJECT_ROOT` in `config.toml`.
 - Artifacts do not stay here: results are collected back to the queue
-  host. The default leaf is `.distsshkit/<kind>/` shown above; a custom
+  host. The default leaf is `.distssh/<kind>/` shown above; a custom
   `output_dir` lands wherever it points, and that path is stored as
   `result_path` (fetch follows it, even outside the project).
 
@@ -246,7 +246,7 @@ from the Julia running `serve`. `serve` runs `setup!`
 on `child:` hosts before each job (you do not hand-run
 `setup` on the stage tree). `:check` always runs there
 (a `qhost:` stage with no `.git/` warns). Job ids are a
-bare stdout line; stderr shows `Queued  N` unless `DISTSSHKIT_QUIET` is set.
+bare stdout line; stderr shows `Queued  N` unless `DISTSSH_QUIET` is set.
 `fetch` copies the finished result to
 `.distsshqueue/<kind>/<stem>_<id8>/` in this job tree.
 

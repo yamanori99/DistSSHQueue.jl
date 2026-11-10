@@ -15,25 +15,25 @@ end
 
 """Kit verbosity for `status` / `watch`. `:quiet` hides chrome; anything else is chrome.
 
-`--progress` / `--verbose` / `DISTSSHKIT_PROGRESS` / `DISTSSHKIT_VERBOSE` are accepted
+`--progress` / `--verbose` / `DISTSSH_PROGRESS` / `DISTSSH_VERBOSE` are accepted
 (same exclusive rule as DistSSHKit) but Queue has no live Kit run.
 """
 function peel_status_watch_verbosity(args::Vector{String})
     mode = nothing
     n = count(
         identity, (
-            _kit_env_on("DISTSSHKIT_QUIET"),
-            _kit_env_on("DISTSSHKIT_PROGRESS"),
-            _kit_env_on("DISTSSHKIT_VERBOSE"),
+            _kit_env_on("DISTSSH_QUIET"),
+            _kit_env_on("DISTSSH_PROGRESS"),
+            _kit_env_on("DISTSSH_VERBOSE"),
         )
     )
     n > 1 && throw(
         ArgumentError(
-            "cannot combine DISTSSHKIT_QUIET, DISTSSHKIT_PROGRESS, and DISTSSHKIT_VERBOSE",
+            "cannot combine DISTSSH_QUIET, DISTSSH_PROGRESS, and DISTSSH_VERBOSE",
         )
     )
-    _kit_env_on("DISTSSHKIT_QUIET") && (mode = _set_status_watch_mode(mode, :quiet))
-    (_kit_env_on("DISTSSHKIT_PROGRESS") || _kit_env_on("DISTSSHKIT_VERBOSE")) &&
+    _kit_env_on("DISTSSH_QUIET") && (mode = _set_status_watch_mode(mode, :quiet))
+    (_kit_env_on("DISTSSH_PROGRESS") || _kit_env_on("DISTSSH_VERBOSE")) &&
         (mode = _set_status_watch_mode(mode, :chrome))
     rest = String[]
     i = 1

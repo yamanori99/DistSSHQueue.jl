@@ -208,7 +208,7 @@ function submit_cli(store::AbstractString, kind::Symbol, script::AbstractString,
         rethrow()
     end
     println(id)
-    if !_kit_env_on("DISTSSHKIT_QUIET")
+    if !_kit_env_on("DISTSSH_QUIET")
         qh = qhost_display_from_env()
         if qh !== nothing && !isempty(strip(qh))
             println(stderr, "qhost: local ($(gethostname()))")

@@ -205,12 +205,12 @@ if !isdefined(Main, :_queue_tty_strip_ansi)
         drop = Set(
             (
                 "NO_COLOR",
-                "DISTSSHKIT_QUIET",
-                "DISTSSHKIT_PROGRESS",
-                "DISTSSHKIT_VERBOSE",
+                "DISTSSH_QUIET",
+                "DISTSSH_PROGRESS",
+                "DISTSSH_VERBOSE",
                 "JULIA_LOAD_PATH",
                 "JULIA_PROJECT",
-                "DISTSSHKIT_CLI_SUBCOMMAND_DONE",
+                "DISTSSH_CLI_SUBCOMMAND_DONE",
                 "DIST_SSH_KIT_CLI_INCLUDE",
                 "COLUMNS",
                 "LINES",
@@ -225,7 +225,7 @@ if !isdefined(Main, :_queue_tty_strip_ansi)
         env["JULIA_LOAD_PATH"] = Sys.iswindows() ? "@;@stdlib" : "@:@stdlib"
         env["JULIA_PKG_PRECOMPILE_AUTO"] = get(ENV, "JULIA_PKG_PRECOMPILE_AUTO", "0")
         env["DISTSSHQUEUE_NO_AUTOSERVE"] = "1"
-        env["DISTSSHKIT_TEST"] = "1"
+        env["DISTSSH_TEST"] = "1"
         for (k, v) in extra
             env[String(k)] = String(v)
         end

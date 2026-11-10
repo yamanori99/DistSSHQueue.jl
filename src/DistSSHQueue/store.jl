@@ -610,7 +610,7 @@ function claim_serve!(store::AbstractString)::Union{Nothing, Int}
     end
 end
 
-"""If tests set `DISTSSHQUEUE_TEST_PIDS` and `DISTSSHKIT_TEST=1`, append this serve pid.
+"""If tests set `DISTSSHQUEUE_TEST_PIDS` and `DISTSSH_TEST=1`, append this serve pid.
 
 Harness `atexit` / parent-death reaper reads that list. Production leaves the
 env unset, so this is a no-op.

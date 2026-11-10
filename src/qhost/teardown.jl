@@ -5,16 +5,16 @@
 #
 # Does not `Pkg.rm` or delete a git clone. Kit `.distsshkit/` next to a clone stays.
 # Deletion needs every existing target in `confirm_paths` (CLI `--confirm-path`).
-# `-y` / `--yes` / `DISTSSHKIT_YES` do not authorize it. `up default` still honors
-# `DISTSSHKIT_YES`. A live `kit.pid` blocks deletion unless `stop_jobs` is set
+# `-y` / `--yes` / `DISTSSH_YES` do not authorize it. `up default` still honors
+# `DISTSSH_YES`. A live `kit.pid` blocks deletion unless `stop_jobs` is set
 # with that same confirm set. `--stop-jobs` with `--write-only` signals nothing.
 function teardown_yes()::Bool
-    v = strip(get(ENV, "DISTSSHKIT_YES", ""))
+    v = strip(get(ENV, "DISTSSH_YES", ""))
     return v in ("1", "true", "yes", "on")
 end
 
 const _TEARDOWN_YES_REFUSAL =
-    "  -y, --yes, and DISTSSHKIT_YES do not authorize teardown. Nothing deleted. Pass --confirm-path PATH."
+    "  -y, --yes, and DISTSSH_YES do not authorize teardown. Nothing deleted. Pass --confirm-path PATH."
 
 function teardown_store(; home::AbstractString = homedir(), config::AbstractString = config_path(; home = home))::String
     env = _process_env_value("DISTSSHQUEUE_STORE")

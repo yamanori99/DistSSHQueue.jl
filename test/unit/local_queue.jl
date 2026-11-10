@@ -63,7 +63,7 @@ end
             DistSSHQueue.QHOST_DEFAULT_ENV => nothing,
             "DISTSSHQUEUE_CONFIG" => nothing,
             "DISTSSHQUEUE_STORE" => nothing,
-            "DISTSSHKIT_YES" => nothing,
+            "DISTSSH_YES" => nothing,
         ) do
             code_setup, _, _ = capture_stdio() do
                 DistSSHQueue.main(["setup"])

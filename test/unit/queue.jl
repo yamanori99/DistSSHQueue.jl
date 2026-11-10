@@ -1053,7 +1053,33 @@ end
     end
 end
 
-@testset "kit setup failure records setup log paths" begin
+@testset "kit setup failure records setup log paths under .distssh" begin
+    mktempdir() do d
+        write(joinpath(d, "Project.toml"), "[deps]\n")
+        script = joinpath(d, "s.jl")
+        write(script, "1\n")
+        logdir = joinpath(d, ".distssh", "setup")
+        mkpath(logdir)
+        write(joinpath(logdir, "setup_new.log"), "instantiate failed\n")
+        j = DistSSHQueue.Job(;
+            kind = :drive,
+            script = script,
+            hosts = ["child:w1:1"],
+            kwargs = Dict{String, Any}("project" => String(d)),
+        )
+        DistSSHQueue._allocate_queue_leaf!(j)
+        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+            @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
+                j, Returns(nothing); kit_setup! = _KitSetupFail(:instantiate, false),
+            )
+        end
+        logs = j.kwargs["setup_logs"]
+        @test logs isa AbstractVector
+        @test any(p -> occursin("setup_new.log", String(p)), logs)
+    end
+end
+
+@testset "kit setup failure records legacy setup log paths" begin
     mktempdir() do d
         write(joinpath(d, "Project.toml"), "[deps]\n")
         script = joinpath(d, "s.jl")
@@ -1981,7 +2007,7 @@ end
                 @test !occursin("(empty)", out_q)
                 @test !occursin("Store", out_q)
                 @test !occursin("qhost", out_q)
-                withenv("DISTSSHKIT_QUIET" => "1") do
+                withenv("DISTSSH_QUIET" => "1") do
                     code_qe, out_qe, _ = capture_stdio() do
                         DistSSHQueue.main(["status"])
                     end
@@ -2337,7 +2363,7 @@ end
                 @test code2 == 0
                 @test occursin(r"Queued\s+3\b", err2)
                 @test strip(out2) != id1
-                withenv("DISTSSHKIT_QUIET" => "1") do
+                withenv("DISTSSH_QUIET" => "1") do
                     code_q, out_q, err_q = capture_stdio() do
                         DistSSHQueue.main(["submit", "go", "parent:1", "job.jl"])
                     end
@@ -2538,8 +2564,8 @@ end
         withenv(
             "DISTSSHQUEUE_CONFIG" => cfg,
             "PATH" => path,
-            "DISTSSHKIT_TEST" => "1",
-            "DISTSSHKIT_TEST_LOCAL_JULIAUP" => ju,
+            "DISTSSH_TEST" => "1",
+            "DISTSSH_TEST_LOCAL_JULIAUP" => ju,
         ) do
             code, out, _ = capture_stdio() do
                 DistSSHQueue.main(["list-host"])
@@ -2640,7 +2666,7 @@ end
             @test occursin("instantiate", out)
             @test DistSSHQueue.config_host_names(DistSSHQueue.load_config()) ==
                 DistSSHQueue.HostAllow("parent" => nothing, "host1" => nothing)
-            withenv("DISTSSHKIT_QUIET" => "1") do
+            withenv("DISTSSH_QUIET" => "1") do
                 code_q, out_q, _ = capture_stdio() do
                     DistSSHQueue.main(["add-host", "child:host2"])
                 end
@@ -2894,12 +2920,12 @@ end
 end
 
 @testset "qhost hop forwards NO_COLOR" begin
-    withenv("NO_COLOR" => "1", "DISTSSHKIT_QUIET" => nothing) do
+    withenv("NO_COLOR" => "1", "DISTSSH_QUIET" => nothing) do
         assigns = String[]
         DistSSHQueue.append_hop_forwarded_env!(assigns)
         @test any(a -> occursin("NO_COLOR", a), assigns)
     end
-    withenv("NO_COLOR" => nothing, "DISTSSHKIT_QUIET" => nothing) do
+    withenv("NO_COLOR" => nothing, "DISTSSH_QUIET" => nothing) do
         assigns = String[]
         DistSSHQueue.append_hop_forwarded_env!(assigns)
         @test !any(a -> occursin("NO_COLOR", a), assigns)
@@ -3566,7 +3592,7 @@ end
         @test !haskey(got.job.kwargs, "warnings")
     end
     mktempdir() do dir
-        got = withenv("DISTSSHKIT_QUIET" => "1") do
+        got = withenv("DISTSSH_QUIET" => "1") do
             _submit_manifest_tree(dir, :deps)
         end
         @test got.code == 0

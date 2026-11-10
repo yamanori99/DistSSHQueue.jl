@@ -100,11 +100,11 @@ end
         store = joinpath(d, "jobs.toml")
         list = joinpath(d, "pids")
         write(list, "")
-        withenv("DISTSSHKIT_TEST" => nothing, "DISTSSHQUEUE_TEST_PIDS" => list) do
+        withenv("DISTSSH_TEST" => nothing, "DISTSSHQUEUE_TEST_PIDS" => list) do
             DistSSHQueue.write_pid_file(store)
         end
         @test !occursin(string(getpid()), read(list, String))
-        withenv("DISTSSHKIT_TEST" => "1", "DISTSSHQUEUE_TEST_PIDS" => list) do
+        withenv("DISTSSH_TEST" => "1", "DISTSSHQUEUE_TEST_PIDS" => list) do
             DistSSHQueue.write_pid_file(store)
         end
         @test occursin(string(getpid()), read(list, String))
@@ -750,7 +750,7 @@ end
 end
 
 _teardown_yes_warn()::String =
-    "  -y, --yes, and DISTSSHKIT_YES do not authorize teardown. Nothing deleted. Pass --confirm-path PATH."
+    "  -y, --yes, and DISTSSH_YES do not authorize teardown. Nothing deleted. Pass --confirm-path PATH."
 
 function _teardown_confirm_args(home::AbstractString)::Vector{String}
     args = String[]
@@ -788,7 +788,7 @@ end
         withenv(
             "DISTSSHQUEUE_CONFIG" => nothing,
             "DISTSSHQUEUE_STORE" => nothing,
-            "DISTSSHKIT_YES" => nothing,
+            "DISTSSH_YES" => nothing,
         ) do
             code1, out1, err1 = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "--write-only"])
@@ -829,7 +829,7 @@ end
         withenv(
             "DISTSSHQUEUE_CONFIG" => nothing,
             "DISTSSHQUEUE_STORE" => nothing,
-            "DISTSSHKIT_YES" => "1",
+            "DISTSSH_YES" => "1",
         ) do
             code0, out0, _ = capture_stdio() do
                 DistSSHQueue.teardown(; home = home, apply = false)
@@ -889,7 +889,7 @@ end
         withenv(
             "DISTSSHQUEUE_CONFIG" => nothing,
             "DISTSSHQUEUE_STORE" => nothing,
-            "DISTSSHKIT_YES" => nothing,
+            "DISTSSH_YES" => nothing,
         ) do
             confirm = String[]
             for p in DistSSHQueue.teardown_targets(; home = home)
@@ -906,7 +906,7 @@ end
     end
 end
 
-@testset "teardown DISTSSHKIT_YES does not delete" begin
+@testset "teardown DISTSSH_YES does not delete" begin
     mktempdir() do home::String
         data = joinpath(home, ".distsshqueue")
         mkpath(data)
@@ -917,7 +917,7 @@ end
         withenv(
             "DISTSSHQUEUE_CONFIG" => nothing,
             "DISTSSHQUEUE_STORE" => nothing,
-            "DISTSSHKIT_YES" => "true",
+            "DISTSSH_YES" => "true",
         ) do
             code, out, err = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "--write-only"])
@@ -930,18 +930,18 @@ end
     end
 end
 
-@testset "teardown DISTSSHKIT_YES from target config [env] does not delete" begin
+@testset "teardown DISTSSH_YES from target config [env] does not delete" begin
     mktempdir() do home::String
         data = joinpath(home, ".distsshqueue")
         mkpath(data)
         cfg = joinpath(data, "config.toml")
         store = joinpath(data, "jobs.toml")
-        write(cfg, "store = $(repr(store))\n\n[env]\nDISTSSHKIT_YES = \"1\"\n")
+        write(cfg, "store = $(repr(store))\n\n[env]\nDISTSSH_YES = \"1\"\n")
         write(store, "jobs = []\n")
         withenv(
             "DISTSSHQUEUE_CONFIG" => nothing,
             "DISTSSHQUEUE_STORE" => nothing,
-            "DISTSSHKIT_YES" => nothing,
+            "DISTSSH_YES" => nothing,
         ) do
             code, out, err = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "--write-only"])
@@ -962,8 +962,8 @@ end
         store = joinpath(data, "jobs.toml")
         write(
             cfg,
-            "store = $(repr(store))\n\n[env]\nDISTSSHKIT_YES = \"1\"\n" *
-                "DISTSSHKIT_TEST = \"1\"\nDISTSSHKIT_TEST_SSH = \"/tmp/not-ssh.jl\"\n" *
+            "store = $(repr(store))\n\n[env]\nDISTSSH_YES = \"1\"\n" *
+                "DISTSSH_TEST = \"1\"\nDISTSSH_TEST_SSH = \"/tmp/not-ssh.jl\"\n" *
                 "DISTSSHQUEUE_TEST_PIDS = \"/tmp/not-pids\"\n",
         )
         write(store, "jobs = []\n")
@@ -972,9 +972,9 @@ end
                 "HOME" => home,
                 "DISTSSHQUEUE_CONFIG" => nothing,
                 "DISTSSHQUEUE_STORE" => nothing,
-                "DISTSSHKIT_YES" => nothing,
-                "DISTSSHKIT_TEST" => nothing,
-                "DISTSSHKIT_TEST_SSH" => nothing,
+                "DISTSSH_YES" => nothing,
+                "DISTSSH_TEST" => nothing,
+                "DISTSSH_TEST_SSH" => nothing,
                 "DISTSSHQUEUE_TEST_PIDS" => nothing,
             ) do
                 code, out, err = capture_stdio() do
@@ -982,9 +982,9 @@ end
                 end
                 @test code == 1
                 @test chomp(err) == _teardown_yes_warn()
-                @test get(ENV, "DISTSSHKIT_YES", "") == "1"
-                @test get(ENV, "DISTSSHKIT_TEST", "") == ""
-                @test get(ENV, "DISTSSHKIT_TEST_SSH", "") == ""
+                @test get(ENV, "DISTSSH_YES", "") == "1"
+                @test get(ENV, "DISTSSH_TEST", "") == ""
+                @test get(ENV, "DISTSSH_TEST_SSH", "") == ""
                 @test get(ENV, "DISTSSHQUEUE_TEST_PIDS", "") == ""
                 @test !occursin("Pass --confirm-path for each quoted path above.", out)
                 @test ispath(data)
@@ -1000,8 +1000,8 @@ end
     clear = (
         "DISTSSHQUEUE_CONFIG" => nothing,
         "DISTSSHQUEUE_STORE" => nothing,
-        "DISTSSHKIT_YES" => nothing,
-        "DISTSSHKIT_QUIET" => nothing,
+        "DISTSSH_YES" => nothing,
+        "DISTSSH_QUIET" => nothing,
     )
     mktempdir() do home::String
         data = _seed_teardown_home(home)
@@ -1018,7 +1018,7 @@ end
     for val in ("1", "yes", "on", " 1 ")
         mktempdir() do home::String
             data = _seed_teardown_home(home)
-            withenv(clear..., "DISTSSHKIT_YES" => val) do
+            withenv(clear..., "DISTSSH_YES" => val) do
                 code, out, err = capture_stdio() do
                     DistSSHQueue.teardown_main(["--home", home, "--write-only"])
                 end
@@ -1032,7 +1032,7 @@ end
     for val in ("TRUE", "Yes", "0", "")
         mktempdir() do home::String
             data = _seed_teardown_home(home)
-            withenv(clear..., "DISTSSHKIT_YES" => val) do
+            withenv(clear..., "DISTSSH_YES" => val) do
                 code, out, err = capture_stdio() do
                     DistSSHQueue.teardown_main(["--home", home, "--write-only"])
                 end
@@ -1044,7 +1044,7 @@ end
         end
     end
     mktempdir() do home::String
-        data = _seed_teardown_home(home; extra = "\n[env]\nDISTSSHKIT_YES = true\n")
+        data = _seed_teardown_home(home; extra = "\n[env]\nDISTSSH_YES = true\n")
         withenv(clear...) do
             code, _, err = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "--write-only"])
@@ -1056,7 +1056,7 @@ end
     end
     mktempdir() do home::String
         data = _seed_teardown_home(home)
-        withenv(clear..., "DISTSSHKIT_QUIET" => "1") do
+        withenv(clear..., "DISTSSH_QUIET" => "1") do
             code, _, err = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "-y", "--write-only"])
             end
@@ -1095,7 +1095,7 @@ end
     end
     mktempdir() do home::String
         data = _seed_teardown_home(home)
-        withenv(clear..., "DISTSSHKIT_YES" => "1") do
+        withenv(clear..., "DISTSSH_YES" => "1") do
             args = String["--home", home, "--write-only"]
             for p in DistSSHQueue.teardown_targets(; home = home)
                 ispath(p) || continue
@@ -1123,7 +1123,7 @@ end
         withenv(
             "DISTSSHQUEUE_CONFIG" => nothing,
             "DISTSSHQUEUE_STORE" => nothing,
-            "DISTSSHKIT_YES" => nothing,
+            "DISTSSH_YES" => nothing,
         ) do
             err = try
                 DistSSHQueue.teardown_main(["--home", home, "--write-only"])
@@ -1164,7 +1164,7 @@ end
         withenv(
             "DISTSSHQUEUE_CONFIG" => nothing,
             "DISTSSHQUEUE_STORE" => nothing,
-            "DISTSSHKIT_YES" => nothing,
+            "DISTSSH_YES" => nothing,
         ) do
             listed = String[p for p in DistSSHQueue.teardown_targets(; home = home) if ispath(p)]
             @test startp in listed
@@ -1777,7 +1777,7 @@ end
         withenv(
             "DISTSSHQUEUE_CONFIG" => nothing,
             "DISTSSHQUEUE_STORE" => nothing,
-            "DISTSSHKIT_YES" => nothing,
+            "DISTSSH_YES" => nothing,
         ) do
             code, _, err = capture_stdio() do
                 DistSSHQueue.teardown_main(
@@ -1826,7 +1826,7 @@ end
         other = joinpath(root, "other-home")
         def_data = _seed_teardown_home(
             def;
-            extra = "\n[env]\nDISTSSHKIT_YES = \"1\"\nDISTSSHQUEUE_STORE = " *
+            extra = "\n[env]\nDISTSSH_YES = \"1\"\nDISTSSHQUEUE_STORE = " *
                 "$(repr(joinpath(def, ".distsshqueue", "jobs.toml")))\n",
         )
         other_data = _seed_teardown_home(other)
@@ -1837,7 +1837,7 @@ end
                 "HOME" => def,
                 "DISTSSHQUEUE_CONFIG" => nothing,
                 "DISTSSHQUEUE_STORE" => nothing,
-                "DISTSSHKIT_YES" => nothing,
+                "DISTSSH_YES" => nothing,
             ) do
                 code, out, err = capture_stdio() do
                     DistSSHQueue._main(
@@ -1867,7 +1867,7 @@ end
         withenv(
             "DISTSSHQUEUE_CONFIG" => nothing,
             "DISTSSHQUEUE_STORE" => store,
-            "DISTSSHKIT_YES" => nothing,
+            "DISTSSH_YES" => nothing,
         ) do
             listed = DistSSHQueue.teardown_targets(; home = home)
             @test store in listed
@@ -1911,7 +1911,7 @@ end
             withenv(
                 "DISTSSHQUEUE_CONFIG" => nothing,
                 "DISTSSHQUEUE_STORE" => nothing,
-                "DISTSSHKIT_YES" => nothing,
+                "DISTSSH_YES" => nothing,
             ) do
                 code, _, err = capture_stdio() do
                     DistSSHQueue.teardown_main(["--home", home, "--write-only"])
@@ -2062,7 +2062,7 @@ end
     mktempdir() do d::String
         ssh = joinpath(d, "ssh.jl")
         write(ssh, "println(\"     *  1.13     1.13.2+0\")\n")
-        env = ("DISTSSHKIT_TEST" => "1", "DISTSSHKIT_TEST_SSH" => ssh)
+        env = ("DISTSSH_TEST" => "1", "DISTSSH_TEST_SSH" => ssh)
         code, out, _ = withenv(env...) do
             capture_stdio() do
                 DistSSHQueue._up_run_on_hosts(
@@ -2235,7 +2235,7 @@ end
             ["parent:1"]; io = buf, store = store, home = home,
         )
         @test isempty(String(take!(buf)))
-        withenv("DISTSSHKIT_QUIET" => "1") do
+        withenv("DISTSSH_QUIET" => "1") do
             _warn_serve_pid!(store, "1.13.2")
             DistSSHQueue.warn_worker_julia(
                 ["child:box:1"]; io = buf, store = store, home = home,
@@ -2256,8 +2256,8 @@ end
             "HOME" => home,
             "DISTSSHQUEUE_CONFIG" => nothing,
             "DISTSSHQUEUE_STORE" => store,
-            "DISTSSHKIT_QUIET" => nothing,
-            "DISTSSHKIT_YES" => nothing,
+            "DISTSSH_QUIET" => nothing,
+            "DISTSSH_YES" => nothing,
         ) do
             capture_stdio() do
                 DistSSHQueue.add_host_cli(["child:box:1"])
@@ -2281,10 +2281,10 @@ end
         try
             DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
             withenv(
-                "DISTSSHKIT_TEST" => "1",
-                "DISTSSHKIT_TEST_SSH" => script,
+                "DISTSSH_TEST" => "1",
+                "DISTSSH_TEST_SSH" => script,
                 "PATH" => bin * ":" * get(ENV, "PATH", ""),
-                "DISTSSHKIT_QUIET" => nothing,
+                "DISTSSH_QUIET" => nothing,
             ) do
                 DistSSHQueue.warn_worker_julia(
                     ["child:box:1", "child:box:2", "parent:1"];
@@ -2310,10 +2310,10 @@ end
         try
             DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
             withenv(
-                "DISTSSHKIT_TEST" => "1",
-                "DISTSSHKIT_TEST_SSH" => script,
+                "DISTSSH_TEST" => "1",
+                "DISTSSH_TEST_SSH" => script,
                 "PATH" => bin * ":" * get(ENV, "PATH", ""),
-                "DISTSSHKIT_QUIET" => nothing,
+                "DISTSSH_QUIET" => nothing,
             ) do
                 DistSSHQueue.warn_worker_julia(
                     ["child:box:1"]; io = buf, store = store, home = home,
@@ -2335,10 +2335,10 @@ end
         try
             DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
             withenv(
-                "DISTSSHKIT_TEST" => "1",
-                "DISTSSHKIT_TEST_SSH" => script,
+                "DISTSSH_TEST" => "1",
+                "DISTSSH_TEST_SSH" => script,
                 "PATH" => bin * ":" * get(ENV, "PATH", ""),
-                "DISTSSHKIT_QUIET" => nothing,
+                "DISTSSH_QUIET" => nothing,
             ) do
                 DistSSHQueue.warn_worker_julia(
                     ["child:box:1"]; io = buf, store = store, home = home,
@@ -2363,10 +2363,10 @@ end
         try
             DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
             withenv(
-                "DISTSSHKIT_TEST" => "1",
-                "DISTSSHKIT_TEST_SSH" => script,
+                "DISTSSH_TEST" => "1",
+                "DISTSSH_TEST_SSH" => script,
                 "PATH" => bin * ":" * get(ENV, "PATH", ""),
-                "DISTSSHKIT_QUIET" => nothing,
+                "DISTSSH_QUIET" => nothing,
             ) do
                 DistSSHQueue.warn_worker_julia(
                     ["child:box:1"]; io = buf, store = store, home = home,
@@ -2390,10 +2390,10 @@ end
         try
             DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
             withenv(
-                "DISTSSHKIT_TEST" => "1",
-                "DISTSSHKIT_TEST_SSH" => script,
+                "DISTSSH_TEST" => "1",
+                "DISTSSH_TEST_SSH" => script,
                 "PATH" => bin * ":" * get(ENV, "PATH", ""),
-                "DISTSSHKIT_QUIET" => nothing,
+                "DISTSSH_QUIET" => nothing,
             ) do
                 DistSSHQueue.warn_worker_julia(
                     ["child:box:1"]; io = buf, store = store, home = home,

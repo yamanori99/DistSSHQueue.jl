@@ -74,8 +74,8 @@ using DistSSHQueue
             "DISTSSHQUEUE_STORE" => store,
             "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
             "DISTRIBUTED_PROJECT_ROOT" => jobdir,
-            "DISTSSHKIT_TEST" => "1",
-            "DISTSSHKIT_TEST_SSH" => fail_ssh,
+            "DISTSSH_TEST" => "1",
+            "DISTSSH_TEST_SSH" => fail_ssh,
             DistSSHQueue.LOCAL_QUEUE_ENV => "1",
             DistSSHQueue.NO_KIT_SETUP_ENV => "1",
             DistSSHQueue.NO_STAGE_ENV => "1",
@@ -90,15 +90,15 @@ using DistSSHQueue
                 # Record each command's status; the wrapper's last status is watch.
                 $(_queue_stty_prefix())
                 unset NO_COLOR
-                unset DISTSSHKIT_QUIET
-                unset DISTSSHKIT_PROGRESS
-                unset DISTSSHKIT_VERBOSE
+                unset DISTSSH_QUIET
+                unset DISTSSH_PROGRESS
+                unset DISTSSH_VERBOSE
                 export DISTSSHQUEUE_CONFIG=$(_queue_sh_quote(cfg))
                 export DISTSSHQUEUE_STORE=$(_queue_sh_quote(store))
                 export DISTSSHQUEUE_NO_AUTOSERVE=1
                 export DISTRIBUTED_PROJECT_ROOT=$(_queue_sh_quote(jobdir))
-                export DISTSSHKIT_TEST=1
-                export DISTSSHKIT_TEST_SSH=$(_queue_sh_quote(fail_ssh))
+                export DISTSSH_TEST=1
+                export DISTSSH_TEST_SSH=$(_queue_sh_quote(fail_ssh))
                 export $(DistSSHQueue.LOCAL_QUEUE_ENV)=1
                 export $(DistSSHQueue.NO_KIT_SETUP_ENV)=1
                 export $(DistSSHQueue.NO_STAGE_ENV)=1
@@ -306,14 +306,14 @@ using DistSSHQueue
                 #!/bin/sh
                 $(_queue_stty_prefix())
                 unset NO_COLOR
-                unset DISTSSHKIT_QUIET
-                unset DISTSSHKIT_PROGRESS
-                unset DISTSSHKIT_VERBOSE
+                unset DISTSSH_QUIET
+                unset DISTSSH_PROGRESS
+                unset DISTSSH_VERBOSE
                 export DISTSSHQUEUE_CONFIG=$(_queue_sh_quote(cfg))
                 export DISTSSHQUEUE_STORE=$(_queue_sh_quote(store))
                 export DISTSSHQUEUE_NO_AUTOSERVE=1
                 export DISTRIBUTED_PROJECT_ROOT=$(_queue_sh_quote(jobdir))
-                export DISTSSHKIT_TEST=1
+                export DISTSSH_TEST=1
                 export $(DistSSHQueue.LOCAL_QUEUE_ENV)=1
                 export $(DistSSHQueue.NO_KIT_SETUP_ENV)=1
                 export $(DistSSHQueue.NO_STAGE_ENV)=1
@@ -421,7 +421,7 @@ using DistSSHQueue
                 export DISTSSHQUEUE_CONFIG=$(_queue_sh_quote(cfg))
                 export DISTSSHQUEUE_STORE=$(_queue_sh_quote(store))
                 export DISTSSHQUEUE_NO_AUTOSERVE=1
-                export DISTSSHKIT_TEST=1
+                export DISTSSH_TEST=1
                 export $(DistSSHQueue.LOCAL_QUEUE_ENV)=1
                 export $(DistSSHQueue.NO_KIT_SETUP_ENV)=1
                 export $(DistSSHQueue.NO_STAGE_ENV)=1
