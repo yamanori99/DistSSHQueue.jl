@@ -18,8 +18,8 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [sources]
 # DistSSHRun 0.2.0-DEV is not on General yet. Drop this at the 0.10.0 cut,
-# after DistSSHRun 0.2.0 is on General. (PR3 lockstep: restore rev = "main" before merge.)
-DistSSHRun = { url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "breaking/snapshot-vocabulary-pr3-ff28" }
+# after DistSSHRun 0.2.0 is on General.
+DistSSHRun = { url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "main" }
 
 [compat]
 Dates = "1.11"
