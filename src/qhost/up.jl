@@ -44,7 +44,7 @@ function up_main(args::Vector{String})::Cint
         ArgumentError("$(cli_qhost())up needs add-host first"),
     )
     names = sorted_kit_ssh_names(allow)
-    confirm = verb == "default" && !_queue_env_on("DISTSSHKIT_YES")
+    confirm = verb == "default" && !_queue_env_on("DISTSSH_YES")
     return _up_run_on_hosts(names; verb = verb, channel = channel, confirm = confirm)
 end
 

@@ -144,6 +144,7 @@ end
     @test !("--info=progress2" in opts)
     @test ":- .gitignore" in opts
     @test ".distsshqueue/" in opts
+    @test ".distssh/" in opts
     @test ".distsshkit/" in opts
     @test ".git/" in opts
     @test "--info=progress2" in DistSSHQueue.stage_rsync_push_opts("ssh"; progress = true)
@@ -153,16 +154,16 @@ end
     buf2 = IOBuffer()
     DistSSHQueue.print_rsync_start("qh", "/tmp/leaf"; pulling = true, io = buf2)
     @test occursin("rsync ← qh:", String(take!(buf2)))
-    withenv("DISTSSHKIT_QUIET" => "1") do
+    withenv("DISTSSH_QUIET" => "1") do
         bufq = IOBuffer()
         DistSSHQueue.print_rsync_start("qh", "/x"; io = bufq)
         @test isempty(String(take!(bufq)))
         @test !DistSSHQueue.rsync_progress_on(["--progress"])
     end
-    withenv("DISTSSHKIT_QUIET" => nothing, "DISTSSHKIT_PROGRESS" => "1") do
+    withenv("DISTSSH_QUIET" => nothing, "DISTSSH_PROGRESS" => "1") do
         @test DistSSHQueue.rsync_progress_on()
     end
-    withenv("DISTSSHKIT_QUIET" => nothing, "DISTSSHKIT_PROGRESS" => nothing) do
+    withenv("DISTSSH_QUIET" => nothing, "DISTSSH_PROGRESS" => nothing) do
         @test !DistSSHQueue.rsync_progress_on()
         @test DistSSHQueue.rsync_progress_on(["go", "--progress", "S.jl"])
     end

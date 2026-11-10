@@ -93,7 +93,7 @@ end
 
 """Warn when a worker's Julia differs from serve.
 
-Silent when `DISTSSHKIT_QUIET` is set. An unreachable worker is skipped.
+Silent when `DISTSSH_QUIET` is set. An unreachable worker is skipped.
 The baseline is the running serve's Julia, then the next serve's Julia.
 When neither can be read, this says so and does not compare. No serve and
 no `enable` unit also says to start serve, or enable, so a later `add-host`
@@ -107,7 +107,7 @@ function warn_worker_julia(
         store::AbstractString = store_path(),
         home::AbstractString = homedir(),
     )
-    _queue_env_on("DISTSSHKIT_QUIET") && return nothing
+    _queue_env_on("DISTSSH_QUIET") && return nothing
     seen = Set{String}()
     kids = String[]
     for raw in tokens
@@ -155,7 +155,7 @@ end
 Silent if quiet or the argv is parent-only. Not a confirm prompt.
 """
 function warn_child_submit_reach(tokens; io::IO = stdout)
-    _queue_env_on("DISTSSHKIT_QUIET") && return nothing
+    _queue_env_on("DISTSSH_QUIET") && return nothing
     kids = String[]
     seen = Set{String}()
     for raw in tokens

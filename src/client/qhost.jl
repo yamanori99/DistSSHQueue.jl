@@ -29,7 +29,7 @@ end
 """SSH name shown on `status` / `watch`. Set by `qhost:`; not a CLI flag."""
 const QHOST_DISPLAY_ENV = "DISTSSHQUEUE_QHOST"
 
-"""Parsed SSH name when argv has no `qhost:` token. Not `DISTSSHKIT_HOSTS` (workers).
+"""Parsed SSH name when argv has no `qhost:` token. Not `DISTSSH_HOSTS` (workers).
 
 Does **not** hop by itself: client verbs still need `qhost:HOST` on the
 command line (`explicit`). Not forwarded on `qhost:` (`DISTSSHQUEUE_QHOST` is
@@ -232,7 +232,7 @@ end
 when the client is a TTY so watch can still clear the screen.
 """
 function append_hop_forwarded_env!(assigns::Vector{String})
-    for name in ("DISTSSHKIT_QUIET", "DISTSSHKIT_PROGRESS", "DISTSSHKIT_VERBOSE")
+    for name in ("DISTSSH_QUIET", "DISTSSH_PROGRESS", "DISTSSH_VERBOSE")
         v = strip(get(ENV, name, ""))
         isempty(v) && continue
         push!(assigns, "ENV[$(repr(name))] = $(repr(v))")
@@ -346,7 +346,7 @@ function warn_remote_queue_version!(
         spec::AbstractString,
         queue_env::AbstractString,
     )
-    _queue_env_on("DISTSSHKIT_QUIET") && return nothing
+    _queue_env_on("DISTSSH_QUIET") && return nothing
     line = try
         mktemp() do path, io
             redirect_stdout(io) do

@@ -37,15 +37,15 @@ missing config directory. A killed process can leave `path.tmp.*`.
 """
 with_config_lock(f, path::AbstractString) = with_store_lock(f, String(path))
 
-"""Test hooks stay out of config `[env]`. `DISTSSHKIT_YES` still applies (`up default`)."""
+"""Test hooks stay out of config `[env]`. `DISTSSH_YES` still applies (`up default`)."""
 function _config_env_skipped(key::AbstractString)::Bool
     k = String(key)
-    return k == "DISTSSHKIT_TEST" || startswith(k, "DISTSSHKIT_TEST_") || k == "DISTSSHQUEUE_TEST_PIDS"
+    return k == "DISTSSH_TEST" || startswith(k, "DISTSSH_TEST_") || k == "DISTSSHQUEUE_TEST_PIDS"
 end
 
 # Keys this process inserted from config `[env]`. `teardown` drops them
 # before it reads the selected file, and does not use them to pick a path.
-# `up default` still reads `ENV`, including `DISTSSHKIT_YES`.
+# `up default` still reads `ENV`, including `DISTSSH_YES`.
 const _config_env_set = Set{String}()
 
 function _forget_absent_config_env!()
@@ -349,7 +349,7 @@ function default_config_body(; store::AbstractString = default_store_path())::St
 
     [env]
     # DISTRIBUTED_SSH_OPTS = "-F /path/to/ssh_config"
-    # DISTSSHKIT_YES = "1"
+    # DISTSSH_YES = "1"   # up default only; not teardown
     # Do not set DISTRIBUTED_REMOTE_PROJECT_ROOT here on a shared queue host:
     # every job would deploy to that one worker path. Kit default is
     # ~/basename(parent)/basename(project) from the queue-host clone.

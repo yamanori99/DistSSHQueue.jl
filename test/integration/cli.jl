@@ -147,11 +147,11 @@ function cli_env(d::AbstractString; distsshrun::Bool = false)
     end
     write(joinpath(jobdir, "hello.jl"), "write(joinpath(@__DIR__, \"hello.ran\"), \"cli-local\\n\")\nprintln(\"cli-local\")\n")
     write(joinpath(jobdir, "hold.jl"), "while true; sleep(1); end\n")
-    write(cfg, "store = $(repr(store))\nhosts = [\"parent\"]\n\n[env]\nDISTSSHKIT_YES = \"1\"\n")
+    write(cfg, "store = $(repr(store))\nhosts = [\"parent\"]\n\n[env]\nDISTSSH_YES = \"1\"\n")
     env = Dict(
         "DISTSSHQUEUE_CONFIG" => cfg,
         "DISTSSHQUEUE_STORE" => store,
-        "DISTSSHKIT_YES" => "1",
+        "DISTSSH_YES" => "1",
         DistSSHQueue.NO_STAGE_ENV => "1",
         DistSSHQueue.LOCAL_QUEUE_ENV => "1",
         DistSSHQueue.NO_KIT_SETUP_ENV => "1",
@@ -538,7 +538,7 @@ end
                 path = dir * ":" * get(ENV, "PATH", "")
                 withenv(
                     "PATH" => path,
-                    "DISTSSHKIT_QUIET" => "1",
+                    "DISTSSH_QUIET" => "1",
                     "DISTSSHQUEUE_CONFIG" => joinpath(dir, "no-config.toml"),
                     "DISTSSHQUEUE_HOST" => nothing,
                     DistSSHQueue.NO_STAGE_ENV => "1",

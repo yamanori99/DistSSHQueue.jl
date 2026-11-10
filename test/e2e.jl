@@ -108,8 +108,8 @@ const GO_WAIT_TRIES = wait_tries(:go_job, 0.2)
 const DRIVE_WAIT_TRIES = wait_tries(:drive_job, 0.2)
 
 const SSH_ENV = Dict(
-    "DISTSSHKIT_YES" => "1",
-    "DISTSSHKIT_QUIET" => get(ENV, "DISTSSHKIT_QUIET", "1"),
+    "DISTSSH_YES" => "1",
+    "DISTSSH_QUIET" => get(ENV, "DISTSSH_QUIET", "1"),
     "DISTRIBUTED_SSH_OPTS" => "-F $(SSH_CONFIG)",
     "DISTRIBUTED_REMOTE_PROJECT_ROOT" => REMOTE_ROOT,
     # E2E already runs Kit setup! in its own testset. Per-job setup! would
@@ -877,8 +877,8 @@ end
                         "JULIA_DEPOT_PATH" => julia_depot_path_env(),
                         "DISTSSHQUEUE_CONFIG" => cfg,
                         "DISTSSHQUEUE_STORE" => store,
-                        "DISTSSHKIT_YES" => "",
-                        "DISTSSHKIT_QUIET" => "1",
+                        "DISTSSH_YES" => "",
+                        "DISTSSH_QUIET" => "1",
                         "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
                     )
                     @test capture_cli(addenv(qcmd(["setup"]), env...))[1] == 0
@@ -1039,8 +1039,8 @@ end
                         "JULIA_DEPOT_PATH" => julia_depot_path_env(),
                         "DISTSSHQUEUE_CONFIG" => cfg,
                         "DISTSSHQUEUE_STORE" => store,
-                        "DISTSSHKIT_YES" => "1",
-                        "DISTSSHKIT_QUIET" => "1",
+                        "DISTSSH_YES" => "1",
+                        "DISTSSH_QUIET" => "1",
                         "DISTSSHQUEUE_NO_AUTOSERVE" => "",
                         DistSSHQueue.NO_KIT_SETUP_ENV => "1",
                     )
@@ -1115,8 +1115,8 @@ end
                     "JULIA_DEPOT_PATH" => julia_depot_path_env(),
                     "DISTSSHQUEUE_CONFIG" => cfg,
                     "DISTSSHQUEUE_STORE" => store,
-                    "DISTSSHKIT_YES" => "1",
-                    "DISTSSHKIT_QUIET" => get(ENV, "DISTSSHKIT_QUIET", "1"),
+                    "DISTSSH_YES" => "1",
+                    "DISTSSH_QUIET" => get(ENV, "DISTSSH_QUIET", "1"),
                     "DISTSSHQUEUE_WATCH_TICKS" => "1",
                     "DISTRIBUTED_SSH_OPTS" => "-F $(SSH_CONFIG)",
                     # Kit project is the example job, not the CLI's cwd. Over `qhost:`
@@ -1161,7 +1161,7 @@ end
                     @test !isfile(unit)
 
                     # Glue only: Queue header + inventory notes. Table layout is Kit E2E.
-                    size_env = merge(env, Dict("DISTSSHKIT_QUIET" => "0"))
+                    size_env = merge(env, Dict("DISTSSH_QUIET" => "0"))
                     inspect_hosts = ["parent"; ["child:$(h)" for h in HOSTS]]
                     code_sz, _, size_err = capture_cli(
                         addenv(qcmd(["size", "--gb-per-worker", "1.5", inspect_hosts...]), size_env...),
@@ -1195,7 +1195,7 @@ end
                         listed = read_cli(addenv(qcmd(["status"]), env...))
                         @test status_shows_id(listed, id)
                         @test occursin("done", listed)
-                        wout = read_cli(addenv(qcmd(["watch", "--interval", "0.05"]), merge(env, Dict("DISTSSHKIT_QUIET" => "0"))...))
+                        wout = read_cli(addenv(qcmd(["watch", "--interval", "0.05"]), merge(env, Dict("DISTSSH_QUIET" => "0"))...))
                         @test occursin("serve", wout)
                         @test occursin("running", wout)
                     finally
@@ -1244,14 +1244,14 @@ end
                             "JULIA_PROJECT" => test_project,
                             "DISTSSHQUEUE_CONFIG" => cfg,
                             "DISTSSHQUEUE_STORE" => qh_store,
-                            "DISTSSHKIT_YES" => "1",
-                            "DISTSSHKIT_QUIET" => get(ENV, "DISTSSHKIT_QUIET", "1"),
+                            "DISTSSH_YES" => "1",
+                            "DISTSSH_QUIET" => get(ENV, "DISTSSH_QUIET", "1"),
                             "DISTRIBUTED_SSH_OPTS" => "-F $(SSH_CONFIG)",
                             "DISTRIBUTED_REMOTE_PROJECT_ROOT" => REMOTE_ROOT,
                         )
                         wrapper = write_remote_julia(joinpath(d, "remote-julia"), remote_env)
                         client_env = Dict{String, String}(
-                            "DISTSSHKIT_YES" => "1",
+                            "DISTSSH_YES" => "1",
                             "DISTSSHQUEUE_WATCH_TICKS" => "1",
                             "DISTRIBUTED_SSH_OPTS" => "-F $ssh_cfg",
                             "DISTRIBUTED_PROJECT_ROOT" => JOB_PROJECT,
@@ -1305,7 +1305,7 @@ end
                         listed = read_cli(addenv(qh(["status"]), client_env...))
                         @test status_shows_id(listed, id1)
                         @test occursin("done", listed)
-                        wout = read_cli(addenv(qh(["watch", "--interval", "0.05"]), client_env..., "DISTSSHKIT_QUIET" => "0"))
+                        wout = read_cli(addenv(qh(["watch", "--interval", "0.05"]), client_env..., "DISTSSH_QUIET" => "0"))
                         @test occursin("serve", wout)
                         @test occursin("running", wout)
 

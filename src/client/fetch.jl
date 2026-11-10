@@ -9,8 +9,8 @@ function posix_dir(path::AbstractString)::String
     return rstrip(replace(String(path), '\\' => '/'), '/')
 end
 
-function path_has_distsshkit(path::AbstractString)::Bool
-    return any(p -> p == ".distsshkit", split(posix_dir(path), '/'; keepempty = false))
+function path_has_local_state_dir(path::AbstractString)::Bool
+    return any(is_local_state_dir_name, split(posix_dir(path), '/'; keepempty = false))
 end
 
 function path_has_queue_leaf(path::AbstractString)::Bool
@@ -20,12 +20,12 @@ function path_has_queue_leaf(path::AbstractString)::Bool
     return parts[end - 2] == ".distsshqueue"
 end
 
-"""Kit `{.distsshkit,go|ride|drive,leaf}` or a Queue setup-fail leaf. Not `runs/`."""
+"""Kit `{state_dir,go|ride|drive,leaf}` or a Queue setup-fail leaf. Not `runs/`."""
 function path_has_kit_artifact_leaf(path::AbstractString)::Bool
     parts = split(posix_dir(path), '/'; keepempty = false)
     length(parts) >= 3 || return false
     parts[end - 1] in ("go", "ride", "drive") || return false
-    return parts[end - 2] in (".distsshkit", ".distsshqueue")
+    return is_local_state_dir_name(parts[end - 2]) || parts[end - 2] == ".distsshqueue"
 end
 
 """`result_path` relative to `root`. Refuses `..` and off-tree paths."""
@@ -146,7 +146,7 @@ function fetch_hidden_dest(dest::AbstractString, spec::AbstractString)::Tuple{Ch
     isempty(src) && throw(ArgumentError("fetch: bad extra $(repr(spec))"))
     base = require_fetch_extra_leaf(basename(posix_dir(src)))
     sub = kind == 'd' ? "collect" : "logs"
-    return kind, src, joinpath(String(dest), ".distsshkit", sub, base)
+    return kind, src, joinpath(local_state_write_root(dest), sub, base)
 end
 
 function require_fetch_extra_leaf(name::AbstractString)::String
@@ -156,7 +156,7 @@ function require_fetch_extra_leaf(name::AbstractString)::String
     return n
 end
 
-"""Leaf name under `.distsshkit/logs|collect`. Same basename keeps a parent prefix."""
+"""Leaf name under `{LOCAL_STATE_DIR}/logs|collect`. Same basename keeps a parent prefix."""
 function fetch_extra_leaf(src::AbstractString, taken::Set{String})::String
     parts = split(posix_dir(src), '/'; keepempty = false)
     isempty(parts) && throw(ArgumentError("fetch: bad extra $(repr(src))"))
@@ -198,7 +198,7 @@ function fetch_hidden_dests(
         taken = kind == 'd' ? taken_dirs : taken_logs
         leaf = fetch_extra_leaf(src, taken)
         sub = kind == 'd' ? "collect" : "logs"
-        push!(out, (kind, src, joinpath(String(dest), ".distsshkit", sub, leaf)))
+        push!(out, (kind, src, joinpath(local_state_write_root(dest), sub, leaf)))
     end
     return out
 end
@@ -315,7 +315,7 @@ function _fetch_note_field(j::Job)::String
 end
 
 function _print_fetch_notes(notes::AbstractString)
-    _queue_env_on("DISTSSHKIT_QUIET") && return nothing
+    _queue_env_on("DISTSSH_QUIET") && return nothing
     isempty(notes) && return nothing
     code = String[]
     warns = Tuple{String, String}[]
@@ -629,7 +629,7 @@ function fetch_cli(
     end
     staging_enabled() || throw(
         ArgumentError(
-            "qhost fetch needs rsync (unset DISTSSHQUEUE_NO_STAGE / DISTSSHKIT_TEST_SSH)",
+            "qhost fetch needs rsync (unset DISTSSHQUEUE_NO_STAGE / DISTSSH_TEST_SSH)",
         )
     )
     expr = fetch_source_expr(id)
@@ -640,7 +640,7 @@ function fetch_cli(
     out = fetch_dest_target(job_id, path, qroot; into = into, dest_rel = dest_rel)
     if check_fetch_dest(out, job_id; force = force) === :skip
         write_fetch_marker!(out, job_id)
-        !_queue_env_on("DISTSSHKIT_QUIET") && println(stderr, "already fetched (use --force to replace)")
+        !_queue_env_on("DISTSSH_QUIET") && println(stderr, "already fetched (use --force to replace)")
         _print_fetch_notes(notes)
         println(out)
         return 0

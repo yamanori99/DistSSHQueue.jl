@@ -29,7 +29,7 @@ say there is nothing to fix.
   user did not confirm. Library `teardown` deletes only when
   `confirm_paths` matches every existing target and no live `kit.pid`
   is running, unless `stop_jobs` is set. `-y`, `--yes`, and
-  `DISTSSHKIT_YES` do not authorize deletion. `--stop-jobs` does not
+  `DISTSSH_YES` do not authorize deletion. `--stop-jobs` does not
   either, without that match.
 - **Public behavior.** Flags, confirmation, exit codes, or what is deleted
   changed, and the pull request is not labeled `breaking`, or that

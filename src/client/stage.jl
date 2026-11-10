@@ -6,7 +6,7 @@
 # one, rsync keeps its per-directory `.gitignore` filter. `.distsshqueue/`
 # stays off the queue host either way. The send list and extra files are
 # checked before `ssh mkdir`, so a local error leaves no empty stage directory.
-# Stderr gets `rsync → HOST:path` when the copy starts (`DISTSSHKIT_QUIET`
+# Stderr gets `rsync → HOST:path` when the copy starts (`DISTSSH_QUIET`
 # hides it). `DISTSSHQUEUE_NO_STAGE=1` skips (tests with a fake `ssh`).
 const NO_STAGE_ENV = "DISTSSHQUEUE_NO_STAGE"
 
@@ -104,7 +104,7 @@ end
 
 function staging_enabled()::Bool
     get(ENV, NO_STAGE_ENV, "") == "1" && return false
-    if _test_doubles_on() && !isempty(strip(get(ENV, "DISTSSHKIT_TEST_SSH", "")))
+    if _test_doubles_on() && !isempty(strip(get(ENV, "DISTSSH_TEST_SSH", "")))
         return false
     end
     return true
@@ -229,6 +229,14 @@ function stage_send_list(local_root::AbstractString)::Union{Nothing, Vector{Stri
     return filtered
 end
 
+function _append_local_state_dir_excludes!(opts::Vector{String})
+    for name in local_state_dir_names()
+        push!(opts, "--exclude")
+        push!(opts, name * "/")
+    end
+    return opts
+end
+
 """rsync flags for a non-git stage (dir-merge `.gitignore`, plus `.distsshqueue/`)."""
 function stage_rsync_push_opts(transport::AbstractString; progress::Bool = false)::Vector{String}
     opts = String["-az"]
@@ -241,14 +249,12 @@ function stage_rsync_push_opts(transport::AbstractString; progress::Bool = false
             "--exclude",
             ".git/",
             "--exclude",
-            ".distsshkit/",
-            "--exclude",
             ".distsshqueue/",
             "--filter",
             ":- .gitignore",
         ]
     )
-    return opts
+    return _append_local_state_dir_excludes!(opts)
 end
 
 """rsync flags for a git send list. `.distsshqueue/` is still excluded."""
@@ -262,12 +268,10 @@ function stage_rsync_files_from_opts(transport::AbstractString; progress::Bool =
             "--exclude",
             ".git/",
             "--exclude",
-            ".distsshkit/",
-            "--exclude",
             ".distsshqueue/",
         ]
     )
-    return opts
+    return _append_local_state_dir_excludes!(opts)
 end
 
 function _stage_rsync_files_from!(
@@ -292,19 +296,19 @@ function _stage_rsync_files_from!(
 end
 
 function rsync_progress_on(args::Vector{String} = String[])::Bool
-    _queue_env_on("DISTSSHKIT_QUIET") && return false
-    _queue_env_on("DISTSSHKIT_PROGRESS") && return true
+    _queue_env_on("DISTSSH_QUIET") && return false
+    _queue_env_on("DISTSSH_PROGRESS") && return true
     return any(isequal("--progress"), args)
 end
 
-"""One stderr line when a `qhost:` rsync starts. `DISTSSHKIT_QUIET` skips it."""
+"""One stderr line when a `qhost:` rsync starts. `DISTSSH_QUIET` skips it."""
 function print_rsync_start(
         host::AbstractString,
         remote_path::AbstractString;
         pulling::Bool = false,
         io::IO = stderr,
     )
-    _queue_env_on("DISTSSHKIT_QUIET") && return nothing
+    _queue_env_on("DISTSSH_QUIET") && return nothing
     arrow = pulling ? "←" : "→"
     println(io, "rsync $(arrow) $(host):$(_q_short(remote_path))")
     return nothing

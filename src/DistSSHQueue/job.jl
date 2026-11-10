@@ -31,7 +31,7 @@ new_job_id()::String = string(Base.UUID(rand(UInt128)))
 """Hop ENV: stage dir UUID must match `jobs.toml`."""
 const JOB_ID_ENV = "DISTSSHQUEUE_JOB_ID"
 
-"""Client git snapshot for a `qhost:` submit. Not Run's `DISTSSHKIT_SOURCE_*`."""
+"""Client git snapshot for a `qhost:` submit. Not Run's `DISTSSH_SOURCE_*`."""
 const SOURCE_COMMIT_ENV = "DISTSSHQUEUE_SOURCE_COMMIT"
 const SOURCE_DIRTY_ENV = "DISTSSHQUEUE_SOURCE_DIRTY"
 const SOURCE_DIFF_SHA256_ENV = "DISTSSHQUEUE_SOURCE_DIFF_SHA256"

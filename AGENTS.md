@@ -4,7 +4,7 @@ Users run `julia -m DistSSHKit`. This repository is DistSSHQueue.
 
 Library `teardown` deletes only when `confirm_paths` is exactly the set of existing targets. Use the CLI and `--confirm-path`.
 
-Agents must not pass `-y`, `--yes`, or set `DISTSSHKIT_YES` for `teardown`. Use `--confirm-path` with each path the command printed.
+Agents must not pass `-y`, `--yes`, or set `DISTSSH_YES` for `teardown`. Use `--confirm-path` with each path the command printed.
 
 Read [DistSSHKit releasing](https://github.com/yamanori99/DistSSHKit.jl/blob/main/docs/src/developers/releasing.md) before a pull request that raises the version or changes public behavior.
 

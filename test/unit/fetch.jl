@@ -32,8 +32,12 @@ end
     )
     kit_go = "/job/.distsshkit/go/S_20260101T000000Z"
     @test DistSSHQueue.path_has_kit_artifact_leaf(kit_go)
+    @test DistSSHQueue.path_has_local_state_dir(kit_go)
     @test !DistSSHQueue.path_has_queue_leaf(kit_go)
     DistSSHQueue.require_fetchable_leaf("807e3753-0000-4000-8000-000000000001", kit_go)
+    kit_go_new = "/job/.distssh/go/S_20260101T000000Z"
+    @test DistSSHQueue.path_has_kit_artifact_leaf(kit_go_new)
+    @test DistSSHQueue.path_has_local_state_dir(kit_go_new)
     runs = "/job/.distsshkit/runs/go/S_20260101T000000Z"
     @test !DistSSHQueue.path_has_kit_artifact_leaf(runs)
     @test_throws ArgumentError DistSSHQueue.require_fetchable_leaf(
@@ -270,7 +274,7 @@ end
             "DISTSSHQUEUE_NO_STAGE" => "1",
             DistSSHQueue.LOCAL_QUEUE_ENV => "1",
             "DISTRIBUTED_PROJECT_ROOT" => proj,
-            "DISTSSHKIT_TEST_SSH" => nothing,
+            "DISTSSH_TEST_SSH" => nothing,
         ) do
             code, out, err = capture_stdio() do
                 DistSSHQueue.main(["fetch", id])
@@ -462,14 +466,14 @@ end
         @test "d:" * cold in specs
         @test "f:" * setup in specs
         _, _, hid = DistSSHQueue.fetch_hidden_dest("/dest", "f:" * logf)
-        @test endswith(replace(hid, '\\' => '/'), "/.distsshkit/logs/kit.out")
+        @test endswith(replace(hid, '\\' => '/'), "/.distssh/logs/kit.out")
         a = "/run/a/output.log"
         b = "/run/b/output.log"
         hids = DistSSHQueue.fetch_hidden_dests("/dest", ["f:" * a, "f:" * b])
         @test hids[1][2] == a
         @test hids[2][2] == b
-        @test endswith(replace(hids[1][3], '\\' => '/'), "/.distsshkit/logs/output.log")
-        @test endswith(replace(hids[2][3], '\\' => '/'), "/.distsshkit/logs/b_output.log")
+        @test endswith(replace(hids[1][3], '\\' => '/'), "/.distssh/logs/output.log")
+        @test endswith(replace(hids[2][3], '\\' => '/'), "/.distssh/logs/b_output.log")
         @test hids[1][3] != hids[2][3]
         case = DistSSHQueue.fetch_hidden_dests(
             "/dest", ["f:/run/a/output.log", "f:/run/c/OUTPUT.LOG"],
@@ -553,7 +557,7 @@ end
         @test parsed6[6] == notes
         out_io_path, err_text, code_line = mktemp() do _, out_io
             mktemp() do _, err_io
-                code = withenv("DISTSSHQUEUE_STORE" => store, "DISTSSHKIT_QUIET" => nothing) do
+                code = withenv("DISTSSHQUEUE_STORE" => store, "DISTSSH_QUIET" => nothing) do
                     redirect_stdout(out_io) do
                         redirect_stderr(err_io) do
                             DistSSHQueue.fetch_cli(nothing, nothing, nothing, [id])
@@ -585,7 +589,7 @@ end
         box_at = at("! box: Julia patch version differs")
         @test 0 < code_at < head_at < man_at < box_at
         quiet = mktemp() do _, err_io
-            withenv("DISTSSHKIT_QUIET" => "1") do
+            withenv("DISTSSH_QUIET" => "1") do
                 redirect_stderr(err_io) do
                     DistSSHQueue._print_fetch_notes(notes)
                 end

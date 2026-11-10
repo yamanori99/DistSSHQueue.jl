@@ -132,10 +132,10 @@ julia -m DistSSHRun drive parent:4 SCRIPT.jl
   `~/.distsshqueue/stage/<uuid>` へ送る。
 - クライアントには `.distsshqueue/tickets/<uuid>` が残る。
 - 成果物はスクリプトが所有する。
-- キューホストの `.distsshkit/` は実行層が持つ。
+- キューホストの `.distssh/` は実行層が持つ (旧 `.distsshkit/` は読み取り専用)。
 - スケジュールと取得後の `.distsshqueue/` copy はキューが持つ。
 
-stage では `.git/`、`.distsshkit/`、`.distsshqueue/` を除外する。
+stage では `.git/`、`.distssh/`、旧 `.distsshkit/`、`.distsshqueue/` を除外する。
 git work tree の中では、送るファイルは `setup --rsync` と同じである
 (否定パターンと、プロジェクトより上の `.gitignore` を含む)。外では、
 rsync が各ディレクトリの `.gitignore` を使う。`.distsshqueue-backup`
@@ -153,8 +153,8 @@ rsync が各ディレクトリの `.gitignore` を使う。`.distsshqueue-backup
   .distsshqueue/<kind>/<stem>_<id8>/  fetch のあと
     .distsshqueue-fetch-id
     ...                              primary artifact copy
-    .distsshkit/logs/...
-    .distsshkit/collect/...
+    .distssh/logs/...
+    .distssh/collect/...
 ```
 
 #### キューホスト
@@ -182,9 +182,9 @@ config では `DISTRIBUTED_REMOTE_PROJECT_ROOT` を設定しない。`child:`
   stage/<uuid>/         qhost: submit のたび (ジョブ id)
     Project.toml        計算の依存
     SCRIPT.jl
-    .distsshkit/runs/<kind>/<run>/  run.toml, kit.pid, kit.result
-    .distsshkit/<kind>/SCRIPT_<UTC>_<id>/  result_path (実行層かスクリプトが決める)
-    .distsshkit/setup/*.log         setup logs
+    .distssh/runs/<kind>/<run>/  run.toml, kit.pid, kit.result
+    .distssh/<kind>/SCRIPT_<UTC>_<id>/  result_path (実行層かスクリプトが決める)
+    .distssh/setup/*.log         setup logs
 ```
 
 終了または cancel されたジョブは、コントローラの `run.toml` を `run-toml/<job-id>/` にバイト単位で残し、その SHA-256 をジョブ行に置く。Run が `provenance.selection` を書いたとき、ship のハッシュも残す。
@@ -209,7 +209,7 @@ rsync し、実行前にそこで instantiate する。
 - `qhost:` ならコピー先は `~/stage/<uuid>` でジョブごとに違う。共有
   `config.toml` に `DISTRIBUTED_REMOTE_PROJECT_ROOT` は書かない。
 - 成果物はここに残らない。キューホストへ収集する。既定 leaf は
-  上の `.distsshkit/<kind>/` だが、custom な `output_dir` はその先へ
+  上の `.distssh/<kind>/` だが、custom な `output_dir` はその先へ
   落ち、そのパスは `result_path` として残る (fetch は
   プロジェクト外でもそこを辿る)。
 
@@ -244,7 +244,7 @@ julia --project=. -m DistSSHQueue qhost:HOST fetch .distsshqueue/tickets/<uuid>
 `:check` は `child:` で常に走る。`qhost:` の stage は `.git/`
 を送らないが、無いときは fail ではなく警告にする。
 ジョブ id は
-stdout 1 行。stderr に `Queued  N` (`DISTSSHKIT_QUIET` で隠す)。
+stdout 1 行。stderr に `Queued  N` (`DISTSSH_QUIET` で隠す)。
 `fetch` は終わった結果をこのジョブ木の
 `.distsshqueue/<kind>/<stem>_<id8>/` へ戻す。
 
