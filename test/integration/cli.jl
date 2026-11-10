@@ -88,6 +88,7 @@ function read_cli(
     # `pipeline` builds a `CmdRedirect`. Inference then includes `Vector{Process}`.
     # A `Cmd` with stdio arguments stays a `Process`, which this child is.
     proc = run(cmd, devnull, out, err; wait = false)
+    child_pid = cli_child_pid(proc)
     idle_s = Float64(seconds)
     max_wall = idle_s + CLI_READ_WALL_MARGIN
     wall_deadline = time() + max_wall
@@ -119,10 +120,9 @@ function read_cli(
     text = String(take!(out))
     etext = String(take!(err))
     if timed_out || !success(proc)
-        pid = cli_child_pid(proc)
         why = timed_out ? "timed out ($(mark))" : "failed"
         error(
-            "$label $why (exit=$(proc.exitcode), pid=$pid, " *
+            "$label $why (exit=$(proc.exitcode), pid=$child_pid, " *
                 "stdout_bytes=$(sizeof(text)), stderr_bytes=$(sizeof(etext)), " *
                 "max_wall=$(max_wall)s): stdout=$(repr(text)) stderr=$(repr(etext))",
         )
@@ -204,8 +204,9 @@ function sigint_stopped(proc::Base.Process; seconds::Real = wait_seconds(:sigint
     while process_running(proc) && time() < deadline
         sleep(0.05)
     end
-    process_running(proc) && terminate_child!(proc)
-    return !process_running(proc)
+    stopped = !process_running(proc)
+    stopped || terminate_child!(proc)
+    return stopped
 end
 
 function reap_child(proc::Base.Process)
