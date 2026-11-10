@@ -43,6 +43,32 @@ function wait_kit_pid(path::AbstractString; tries = wait_tries(:child_reply, 0.1
     error("timeout waiting for $path")
 end
 
+const CLI_READ_WALL_MARGIN = 60.0
+const _CLI_LAST_READ_LABEL = Ref("")
+
+function cli_child_pid(proc::Base.Process)::Union{Int, Nothing}
+    try
+        return getpid(proc)
+    catch
+        return nothing
+    end
+end
+
+function cli_testset_begin(name::AbstractString)
+    println("integration/cli.jl: begin ", name, "; last read_cli=", _CLI_LAST_READ_LABEL[])
+    flush(stdout)
+    return nothing
+end
+
+function wait_child!(proc::Base.Process)
+    if process_running(proc)
+        terminate_child!(proc)
+    else
+        wait(proc)
+    end
+    return nothing
+end
+
 # `read(cmd)` returns only when the child exits. A child that never exits
 # sits near 0% CPU until PkgEval's inactivity kill, with no test name. This
 # names that wait. `:child_reply` is how long the child may stay under a few
@@ -55,24 +81,51 @@ function read_cli(
         label::AbstractString,
         seconds::Real = wait_seconds(:child_reply),
     )::String
+    _CLI_LAST_READ_LABEL[] = label
     cmd = addenv(qcli(args), env...)
     out = IOBuffer()
     err = IOBuffer()
     # `pipeline` builds a `CmdRedirect`. Inference then includes `Vector{Process}`.
     # A `Cmd` with stdio arguments stays a `Process`, which this child is.
     proc = run(cmd, devnull, out, err; wait = false)
-    mark = wait_while_progressing(() -> out.size + err.size, proc; seconds)
-    timed_out = mark === :idle || mark === :wall
+    child_pid = cli_child_pid(proc)
+    idle_s = Float64(seconds)
+    max_wall = idle_s + CLI_READ_WALL_MARGIN
+    wall_deadline = time() + max_wall
+    watch = IdleWatch(idle_s)
+    seen = Dict{Int, Int}()
+    procs = Base.Process[proc]
+    mark = :busy
+    while any(process_running, procs)
+        if time() >= wall_deadline
+            mark = :wall_cap
+            break
+        end
+        mark = observe_progress!(
+            watch;
+            cpu = monotonic_group_cpu!(seen, procs),
+            output = out.size + err.size,
+            now = time(),
+        )
+        mark === :busy || break
+        sleep(CHILD_POLL_S)
+    end
+    !process_running(proc) && mark === :busy && (mark = :exited)
+    timed_out = mark in (:idle, :wall, :wall_cap)
     if timed_out
         terminate_child!(proc)
     else
-        wait(proc)
+        wait_child!(proc)
     end
     text = String(take!(out))
     etext = String(take!(err))
     if timed_out || !success(proc)
         why = timed_out ? "timed out ($(mark))" : "failed"
-        error("$label $why (exit=$(proc.exitcode)): stdout=$(repr(text)) stderr=$(repr(etext))")
+        error(
+            "$label $why (exit=$(proc.exitcode), pid=$child_pid, " *
+                "stdout_bytes=$(sizeof(text)), stderr_bytes=$(sizeof(etext)), " *
+                "max_wall=$(max_wall)s): stdout=$(repr(text)) stderr=$(repr(etext))",
+        )
     end
     return text
 end
@@ -151,12 +204,13 @@ function sigint_stopped(proc::Base.Process; seconds::Real = wait_seconds(:sigint
     while process_running(proc) && time() < deadline
         sleep(0.05)
     end
-    return !process_running(proc)
+    stopped = !process_running(proc)
+    stopped || terminate_child!(proc)
+    return stopped
 end
 
 function reap_child(proc::Base.Process)
-    process_running(proc) && kill(proc, Base.SIGTERM)
-    wait(proc)
+    terminate_child!(proc)
     return nothing
 end
 
@@ -187,6 +241,7 @@ end
 
 @testset "CLI (parent:1)" begin
     @testset "setup submit status parent:1 (explicit serve)" begin
+        cli_testset_begin("setup submit status parent:1 (explicit serve)")
         mktempdir() do d
             base, _, store, jobdir = cli_env(d; distsshrun = true)
             env = merge(base, Dict("DISTSSHQUEUE_NO_AUTOSERVE" => "1"))
@@ -212,8 +267,7 @@ end
             finally
                 DistSSHQueue.stop_serve!(store)
                 try
-                    kill(proc)
-                    wait(proc)
+                    terminate_child!(proc)
                 catch
                 end
             end
@@ -221,6 +275,7 @@ end
     end
 
     @testset "auto-serve submit and cancel queued" begin
+        cli_testset_begin("auto-serve submit and cancel queued")
         mktempdir() do d
             env, _, store, jobdir = cli_env(d; distsshrun = true)
             try
@@ -260,6 +315,7 @@ end
     end
 
     @testset "cancel running parent:1" begin
+        cli_testset_begin("cancel running parent:1")
         mktempdir() do d
             env, _, store, jobdir = cli_env(d; distsshrun = true)
             try
@@ -303,6 +359,7 @@ end
     end
 
     @testset "qhost:HOST ssh argv (no remote exec)" begin
+        cli_testset_begin("qhost:HOST ssh argv (no remote exec)")
         mktempdir() do d
             env, _, _, _ = cli_env(d)
             log = joinpath(d, "ssh.log")
@@ -366,6 +423,7 @@ end
     end
 
     @testset "instantiate subprocess skips queue-env depot" begin
+        cli_testset_begin("instantiate subprocess skips queue-env depot")
         mktempdir() do d
             qenv = joinpath(d, "env")
             job = joinpath(d, "job")
@@ -393,6 +451,7 @@ end
     end
 
     @testset "teardown -y after setup" begin
+        cli_testset_begin("teardown -y after setup")
         mktempdir() do home::String
             data = joinpath(home, ".distsshqueue")
             bindir = joinpath(home, ".local", "bin")
@@ -426,6 +485,7 @@ end
     end
 
     @testset "SIGINT stops serve" begin
+        cli_testset_begin("SIGINT stops serve")
         mktempdir() do d
             base, _, store, _ = cli_env(d)
             env = merge(base, Dict("DISTSSHQUEUE_NO_AUTOSERVE" => "1"))
@@ -446,6 +506,7 @@ end
     end
 
     @testset "SIGINT stops watch" begin
+        cli_testset_begin("SIGINT stops watch")
         mktempdir() do d
             store = joinpath(d, "jobs.toml")
             logf = joinpath(d, "watch.out")
@@ -463,6 +524,7 @@ end
     end
 
     @testset "qhost ssh signal is failure" begin
+        cli_testset_begin("qhost ssh signal is failure")
         function write_ssh(dir::AbstractString, script::AbstractString)
             path = joinpath(dir, "ssh")
             write(path, "#!/bin/sh\n" * script)
