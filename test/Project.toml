@@ -8,7 +8,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
 DistSSHQueue = { path = ".." }
-# Same rev as the root project (DistSSHRun PR 402). Restore `main` before merge.
+# Same rev as the root project. Drop both at the 0.10.0 cut.
 DistSSHRun = { url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "breaking/snapshot-vocabulary-pr3-ff28" }
 
 [compat]
