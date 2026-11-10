@@ -123,8 +123,8 @@ function read_cli(
         why = timed_out ? "timed out ($(mark))" : "failed"
         error(
             "$label $why (exit=$(proc.exitcode), pid=$pid, " *
-            "stdout_bytes=$(sizeof(text)), stderr_bytes=$(sizeof(etext)), " *
-            "max_wall=$(max_wall)s): stdout=$(repr(text)) stderr=$(repr(etext))",
+                "stdout_bytes=$(sizeof(text)), stderr_bytes=$(sizeof(etext)), " *
+                "max_wall=$(max_wall)s): stdout=$(repr(text)) stderr=$(repr(etext))",
         )
     end
     return text
