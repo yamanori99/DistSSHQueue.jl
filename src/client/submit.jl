@@ -189,10 +189,45 @@ function _print_manifest_absent!(io::IO, kw::Dict{String, Any})
     return nothing
 end
 
+function _record_stage_content_tree_hash!(kw::Dict{String, Any})
+    h = strip(get(ENV, STAGE_CONTENT_TREE_HASH_ENV, ""))
+    isempty(h) && return nothing
+    kw["content_tree_hash"] = h
+    return nothing
+end
+
+function _record_stage_pack_warnings!(kw::Dict{String, Any})
+    raw = strip(get(ENV, STAGE_PACK_WARNINGS_ENV, ""))
+    isempty(raw) && return nothing
+    entries = Dict{String, Any}[]
+    for line in split(raw, '\n'; keepempty = false)
+        push!(entries, Dict{String, Any}("kind" => "pack_ship", "message" => String(line)))
+    end
+    isempty(entries) && return nothing
+    prev = get(kw, "warnings", nothing)
+    kw["warnings"] = prev isa AbstractVector ? Any[prev..., entries...] : Any[entries...]
+    return nothing
+end
+
+function _print_stage_pack_warnings!(io::IO, kw::Dict{String, Any})
+    raw = get(kw, "warnings", nothing)
+    raw isa AbstractVector || return nothing
+    for w in raw
+        w isa AbstractDict || continue
+        get(w, "kind", "") == "pack_ship" || continue
+        msg = get(w, "message", nothing)
+        msg isa AbstractString || continue
+        println(io, strip(String(msg)))
+    end
+    return nothing
+end
+
 function submit_cli(store::AbstractString, kind::Symbol, script::AbstractString, hosts, kw::Dict{String, Any})
     kw = Dict{String, Any}(String(k) => v for (k, v) in kw)
     src = _source_from_queue_env()
     src === nothing || (kw["source"] = src)
+    _record_stage_content_tree_hash!(kw)
+    _record_stage_pack_warnings!(kw)
     _record_manifest_absent!(kw)
     q = Queue(; store = store, follow_config = true)
     nt = isempty(kw) ? NamedTuple() : (; (Symbol(k) => v for (k, v) in kw)...)
@@ -215,6 +250,7 @@ function submit_cli(store::AbstractString, kind::Symbol, script::AbstractString,
         else
             println(stderr, "queue: local ($(gethostname()))")
         end
+        _print_stage_pack_warnings!(stderr, kw)
         _print_manifest_absent!(stderr, kw)
         nq = count(j -> j.state === :queued, q.jobs)
         nr = count(j -> j.state === :running, q.jobs)
