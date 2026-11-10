@@ -28,10 +28,10 @@ struct _KitSetupOk
     modes::Vector{Symbol}
 end
 
-function (p::_KitSetupOk)(_, mode::Symbol; gitignore::Bool = true, snapshot = nothing)
+function (p::_KitSetupOk)(_, mode::Symbol; gitignore::Bool = true, run_id = nothing)
     push!(p.modes, mode)
     mode === :ship_tree && return _ship_sync_ok()
-    return (; ok = true, gitignore, snapshot)
+    return (; ok = true, gitignore, run_id)
 end
 
 struct _KitSetupFail
@@ -39,8 +39,8 @@ struct _KitSetupFail
     throw_on_bad::Bool
 end
 
-function (p::_KitSetupFail)(_, mode::Symbol; gitignore::Bool = true, snapshot = nothing)
-    _ = snapshot
+function (p::_KitSetupFail)(_, mode::Symbol; gitignore::Bool = true, run_id = nothing)
+    _ = run_id
     if mode !== p.bad
         mode === :ship_tree && return _ship_sync_ok()
         return (; ok = true, gitignore)
@@ -56,8 +56,8 @@ struct _KitSetupWarn
     warnings::Vector{_SetupNote}
 end
 
-function (p::_KitSetupWarn)(_, mode::Symbol; gitignore::Bool = true, snapshot = nothing)
-    _ = snapshot
+function (p::_KitSetupWarn)(_, mode::Symbol; gitignore::Bool = true, run_id = nothing)
+    _ = run_id
     mode === :ship_tree && return _ship_sync_ok()
     mode === :check || return (; ok = true, gitignore)
     return (; ok = p.ok, gitignore, warnings = p.warnings)
@@ -70,8 +70,8 @@ struct _StageRsyncProbe
     manifest::String
 end
 
-function (p::_StageRsyncProbe)(_, mode::Symbol; gitignore::Bool = true, snapshot = nothing)
-    _ = snapshot
+function (p::_StageRsyncProbe)(_, mode::Symbol; gitignore::Bool = true, run_id = nothing)
+    _ = run_id
     push!(p.modes, mode)
     if mode === :ship_tree
         empty!(p.gitignore)
@@ -3584,7 +3584,7 @@ function _shipped_run_toml(dir::AbstractString; hash = nothing, run_id = nothing
         "output_dir = $(repr(dir))",
     ]
     if hash !== nothing || run_id !== nothing
-        push!(lines, "", "[provenance.shipped]")
+        push!(lines, "", "[provenance.selection]")
         hash !== nothing && push!(lines, "content_tree_hash = $(repr(hash))")
         run_id !== nothing && push!(lines, "run_id = $(repr(run_id))")
     end

@@ -190,7 +190,7 @@ ext4, or the WSL2 Linux filesystem). NFS and a WSL drvfs mount such as
     .distsshkit/setup/*.log         setup logs
 ```
 
-A finished or cancelled job keeps a byte copy of the controller `run.toml` under that `run-toml/<job-id>/` directory, with its SHA-256 on the job row. The ship hash is recorded when Run wrote `provenance.shipped`.
+A finished or cancelled job keeps a byte copy of the controller `run.toml` under that `run-toml/<job-id>/` directory, with its SHA-256 on the job row. The ship hash is recorded when Run wrote `provenance.selection`.
 
 `enable` (optional; skip if you only `serve` in a terminal):
 

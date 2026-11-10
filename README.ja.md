@@ -187,7 +187,7 @@ config では `DISTRIBUTED_REMOTE_PROJECT_ROOT` を設定しない。`child:`
     .distsshkit/setup/*.log         setup logs
 ```
 
-終了または cancel されたジョブは、コントローラの `run.toml` を `run-toml/<job-id>/` にバイト単位で残し、その SHA-256 をジョブ行に置く。Run が `provenance.shipped` を書いたとき、ship のハッシュも残す。
+終了または cancel されたジョブは、コントローラの `run.toml` を `run-toml/<job-id>/` にバイト単位で残し、その SHA-256 をジョブ行に置く。Run が `provenance.selection` を書いたとき、ship のハッシュも残す。
 
 `enable` (任意。この端末の `serve` だけなら不要):
 

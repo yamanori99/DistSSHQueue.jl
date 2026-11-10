@@ -407,6 +407,7 @@ function _job_row(row, path::AbstractString)::Job
             k isa AbstractString || throw(_jobs_store_bad_row(path))
             cleaned_kw[String(k)] = v
         end
+        _validate_run_id_kw!(cleaned_kw)
         started = get(row, "started_at", "")
         finished = get(row, "finished_at", "")
         err = get(row, "error", "")
@@ -432,6 +433,21 @@ function _job_row(row, path::AbstractString)::Job
         end
         rethrow()
     end
+end
+
+"""Normalize a persisted `run_id` with DistSSHRun when the key is present."""
+function _validate_run_id_kw!(kwargs::Dict{String, Any})
+    raw = get(kwargs, "run_id", nothing)
+    raw isa AbstractString || return nothing
+    text = strip(String(raw))
+    isempty(text) && return nothing
+    isdefined(DistSSHRun, :validate_run_id) || throw(
+        ErrorException(
+            "DistSSHRun.validate_run_id is required; lockstep with DistSSHRun PR 402",
+        ),
+    )
+    kwargs["run_id"] = DistSSHRun.validate_run_id(text)
+    return nothing
 end
 
 function _row_text(v, path::AbstractString)::String
