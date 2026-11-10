@@ -1300,7 +1300,7 @@ end
                         @test read(joinpath(stage, ".distsshqueue-backup"), String) == "keep\n"
                         @test !ispath(joinpath(stage, ".distsshqueue"))
                         row1 = wait_store_job(qh_store, id1, (:done,); tries = GO_WAIT_TRIES)
-                        snap1 = get(row1.kwargs, "snapshot", nothing)
+                        snap1 = get(row1.kwargs, "run_id", nothing)
                         @test snap1 isa String && !isempty(strip(snap1))
                         listed = read_cli(addenv(qh(["status"]), client_env...))
                         @test status_shows_id(listed, id1)
