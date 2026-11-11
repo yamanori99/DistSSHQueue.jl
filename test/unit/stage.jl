@@ -222,7 +222,7 @@ end
             write(joinpath(tmp, ".distsshqueue-backup"), "keep\n")
             env = DistSSHRun.resolve_pkg_env(tmp)
             want = String[
-                rel for rel in DistSSHRun.rsync_send_list(env.env_dir, env)
+                rel for rel in DistSSHRun.git_send_list(env.env_dir, env)
                     if !(".distsshqueue" in split(rel, '/'))
             ]
             listed = DistSSHQueue.stage_send_list(tmp)
