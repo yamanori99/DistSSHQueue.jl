@@ -223,7 +223,9 @@ function align_example_job_distsshrun!(
     portable = runner_distsshrun_portable_lock(runner_manifest)
     want = strip(string(portable["git-tree-sha1"]))
     have = distsshrun_git_tree_sha1(dst)
-    have == want && return nothing
+    if !e2e_dev_run_active() && have == want
+        return nothing
+    end
     dst_data = TOML.parsefile(dst)
     _write_distsshrun_entry!(dst_data, portable)
     open(dst, "w") do io

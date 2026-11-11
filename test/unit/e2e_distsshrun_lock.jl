@@ -280,6 +280,84 @@ end
         end
     end
 
+    @testset "align DEV_RUN overwrites main repo-rev when tree already matches" begin
+        mktempdir() do root
+            tree = "d"^40
+            head_sha = "deadbeef" * "0"^32
+            runner = joinpath(root, "runner.toml")
+            job = joinpath(root, "job")
+            job_manifest = joinpath(job, "Manifest.toml")
+            mkpath(job)
+            _write_manifest(
+                runner,
+                Dict{String, Any}(
+                    "uuid" => EXAMPLE_DISTSSHRUN_UUID,
+                    "version" => "0.2.0-DEV",
+                    "deps" => ["Dates"],
+                    "repo-url" => DISTSSHRUN_REPO_URL,
+                    "repo-rev" => head_sha,
+                    "git-tree-sha1" => tree,
+                ),
+            )
+            _write_manifest(
+                job_manifest,
+                Dict{String, Any}(
+                    "uuid" => EXAMPLE_DISTSSHRUN_UUID,
+                    "version" => "0.2.0-DEV",
+                    "deps" => ["Dates"],
+                    "repo-url" => DISTSSHRUN_REPO_URL,
+                    "repo-rev" => "main",
+                    "git-tree-sha1" => tree,
+                ),
+            )
+            withenv("DISTSSHQUEUE_DEV_RUN" => "1") do
+                align_example_job_distsshrun!(job; runner_manifest = runner)
+                entry = first(TOML.parsefile(job_manifest)["deps"]["DistSSHRun"])
+                @test entry["repo-rev"] == head_sha
+                @test distsshrun_general_lock(job_manifest; runner_manifest = runner)
+            end
+        end
+    end
+
+    @testset "align non-DEV_RUN leaves main repo-rev when tree already matches" begin
+        mktempdir() do root
+            tree = "e"^40
+            head_sha = "cafebabe" * "0"^32
+            runner = joinpath(root, "runner.toml")
+            job = joinpath(root, "job")
+            job_manifest = joinpath(job, "Manifest.toml")
+            mkpath(job)
+            _write_manifest(
+                runner,
+                Dict{String, Any}(
+                    "uuid" => EXAMPLE_DISTSSHRUN_UUID,
+                    "version" => "0.2.0-DEV",
+                    "deps" => ["Dates"],
+                    "repo-url" => DISTSSHRUN_REPO_URL,
+                    "repo-rev" => head_sha,
+                    "git-tree-sha1" => tree,
+                ),
+            )
+            _write_manifest(
+                job_manifest,
+                Dict{String, Any}(
+                    "uuid" => EXAMPLE_DISTSSHRUN_UUID,
+                    "version" => "0.2.0-DEV",
+                    "deps" => ["Dates"],
+                    "repo-url" => DISTSSHRUN_REPO_URL,
+                    "repo-rev" => "main",
+                    "git-tree-sha1" => tree,
+                ),
+            )
+            withenv("DISTSSHQUEUE_DEV_RUN" => "") do
+                align_example_job_distsshrun!(job; runner_manifest = runner)
+                entry = first(TOML.parsefile(job_manifest)["deps"]["DistSSHRun"])
+                @test entry["repo-rev"] == "main"
+                @test distsshrun_general_lock(job_manifest; runner_manifest = nothing)
+            end
+        end
+    end
+
     @testset "distsshrun_general_lock DEV rejects non-SHA repo-rev" begin
         mktempdir() do root
             tree = "b"^40
