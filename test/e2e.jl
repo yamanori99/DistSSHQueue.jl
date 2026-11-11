@@ -9,7 +9,7 @@
 #
 # Also: `julia -m DistSSHKit` on the queue host (omit `qhost:HOST`) and as a
 # client (`qhost:HOST` over loopback OpenSSH, including `fetch`). The staged
-# tree matches `ship_send_list` / `setup!(:ship_tree)` (`.distssh/ship.toml`
+# tree matches `ship_send_list` / `setup!(:ship_tree)` (`.distssh/shipment.toml`
 # on the stage dir). `.distsshqueue/` stays out; `.distsshqueue-backup` kept.
 # Inspect verbs
 # (`pool`) is Queue chrome only (header + inventory notes).
@@ -1231,9 +1231,12 @@ end
                             server = read(joinpath(sshd_dir, "sshd.log"), String)
                             error("loopback ssh to distsshqueue-qh failed: $client$server")
                         end
-                        # Stage rsync honors `.gitignore`. Drop a `Manifest.toml` line
+                        # Ship-tree honors `.gitignore`. Drop a `Manifest.toml` line
                         # so the General lock from setup! stays on the send list.
-                        write(gi, replace(gi_body, r"^Manifest\.toml\r?\n?"m => ""))
+                        gi_ship = replace(gi_body, r"^Manifest\.toml\r?\n?"m => "")
+                        occursin(r"^\.distsshqueue/", gi_ship) ||
+                            (gi_ship *= ".distsshqueue/\n")
+                        write(gi, gi_ship)
                         write(joinpath(JOB_PROJECT, ".distsshqueue-backup"), "keep\n")
                         mkpath(joinpath(JOB_PROJECT, ".distsshqueue"))
                         write(joinpath(JOB_PROJECT, ".distsshqueue", "ticket"), "nope\n")
@@ -1271,7 +1274,7 @@ end
                         @test isfile(DistSSHQueue.submit_ticket_path(JOB_PROJECT, id1))
                         stage = joinpath(e2e_home, ".distsshqueue", "stage", id1)
                         @test isdir(stage)
-                        @test isfile(joinpath(stage, ".distssh", "ship.toml"))
+                        @test isfile(joinpath(stage, ".distssh", "shipment.toml"))
                         listed = DistSSHRun.ship_send_list(JOB_PROJECT)
                         @test ".distsshqueue-backup" in listed
                         @test !any(rel -> ".distsshqueue" in split(rel, '/'), listed)
