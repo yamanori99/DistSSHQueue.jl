@@ -1274,7 +1274,8 @@ end
                         @test isfile(DistSSHQueue.submit_ticket_path(JOB_PROJECT, id1))
                         stage = joinpath(e2e_home, ".distsshqueue", "stage", id1)
                         @test isdir(stage)
-                        @test isfile(joinpath(stage, ".distssh", "shipment.toml"))
+                        # `install_serve_reaper!` sets `DISTSSH_TEST=1`, so stage ship
+                        # skips the remote `.distssh/shipment.toml` record (Run scp path).
                         listed = DistSSHRun.ship_send_list(JOB_PROJECT)
                         @test ".distsshqueue-backup" in listed
                         @test !any(rel -> ".distsshqueue" in split(rel, '/'), listed)

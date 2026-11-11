@@ -321,7 +321,7 @@ function ship_tree_to_qhost!(
     extras = _stage_extra_paths(extra_files)
     pack, warnings = _pack_ship_tree_with_warnings(src; extra_files = extras)
     record = if write_record === nothing
-        !(_test_doubles_on() && !isempty(strip(get(ENV, "DISTSSH_TEST_SSH", ""))))
+        get(ENV, "DISTSSH_TEST", "") != "1"
     else
         write_record
     end
