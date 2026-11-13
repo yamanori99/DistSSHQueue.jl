@@ -10,7 +10,7 @@ From the Queue checkout root:
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-That is `test/runtests.jl` (unit + integration). Each included file prints `[i/N]` at start (update `_RUNTEST_N` when adding one). It tags autoserve `serve` pids and SIGTERMs them on exit or if `Pkg.test`'s parent dies, so Ctrl-C does not leave `nohup` `serve` on this machine. `Pkg.test()` on this checkout is not the PkgEval sandbox. Real `ssh` spawn runs only when that binary is on `PATH` (tests inject a fake `ssh` when they need `-G`); real SSH clusters stay in `e2e.jl`. Pseudo-TTY coverage lives in `integration/progress_tty.jl` (`script(1)`). Ordinary GitHub Actions keeps it. PkgEval skips it when `JULIA_PKGEVAL=true`. Registry install skips only that file via `DISTSSHQUEUE_SKIP_PSEUDOTTY=1` (not by labeling the job as PkgEval). Reproduce that sandbox: [PkgEval](#pkgeval). Real SSH:
+That is `test/runtests.jl` (unit + integration). Each included file prints `[i/N]` at start (update `_RUNTEST_N` when adding one). It tags autoserve `serve` pids and SIGTERMs them on exit or if `Pkg.test`'s parent dies, so Ctrl-C does not leave `nohup` `serve` on this machine. `Pkg.test()` on this checkout is not the PkgEval sandbox. Real `ssh` spawn runs only when that binary is on `PATH` (tests inject a fake `ssh` when they need `-G`); real SSH clusters stay in `e2e.jl`. Pseudo-TTY coverage lives in `integration/messages/progress_tty.jl` (`script(1)`). Ordinary GitHub Actions keeps it. PkgEval skips it when `JULIA_PKGEVAL=true`. Registry install skips only that file via `DISTSSHQUEUE_SKIP_PSEUDOTTY=1` (not by labeling the job as PkgEval). Reproduce that sandbox: [PkgEval](#pkgeval). Real SSH:
 
 ```bash
 testenv/docker-ssh/scripts/up.sh --e2e
@@ -39,7 +39,7 @@ Green on one layer does not imply the others. `Pkg.test()` does not run `e2e.jl`
 | JETLS | types / hints on entry files | runtime |
 | Aqua | ambiguities, exports, compat | CLI / workers |
 | unit | in-process queue / config | child julia, SSH |
-| integration | child CLI (`-m DistSSHQueue`) and **parent:1**; pseudo-TTY (`progress_tty.jl`) | real SSH / rsync |
+| integration | child CLI (`-m DistSSHQueue`) and **parent:1**; pseudo-TTY (`messages/progress_tty.jl`) | real SSH / rsync |
 | e2e | docker-ssh workers, `serve` API, and `-m DistSSHQueue` (`qhost:` over loopback OpenSSH). Prints `[i/N]` at the start of each inner `@testset` (SSH can sit silent for minutes otherwise); update `_E2E_N` when adding a case | local-only CLI wiring |
 | e2e weekly | same `e2e.jl` from Linux, macOS Intel, or WSL2 (not a PR check; Intel / WSL watchers). Register when the required checks are green | macOS workers |
 

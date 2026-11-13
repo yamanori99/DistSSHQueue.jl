@@ -277,7 +277,7 @@ Cut rules:
 
 FIFO enqueue calls DistSSHRun `execute!` for the kinds in Queue's
 `KIT_EXECUTE_KINDS`
-([src/DistSSHQueue/job.jl](src/DistSSHQueue/job.jl)).
+([src/job.jl](src/job.jl)).
 `kit_parse_args`
 ([src/client/submit.jl](src/client/submit.jl))
 turns that argv into Run's `parse_go_args`, `parse_drive_args`, or
@@ -314,7 +314,7 @@ Every tracked path must match some `area:*` glob (`gen-labeler.sh --check`). Glo
 | --- | --- |
 | `src/client/**` | `area:client` |
 | `src/qhost/**` | `area:qhost` |
-| Leftover queue (`src/DistSSHQueue.jl`, `src/DistSSHQueue/**`, matching unit tests, shared `test/integration/cli.jl`, package meta including `.git-blame-ignore-revs`) | `area:queue` |
+| Leftover queue (`src/DistSSHQueue.jl`, `src/job.jl`, `src/store.jl`, `src/paths.jl`, `src/config.jl`, `src/queue.jl`, `src/messages/**`, matching unit tests, shared `test/integration/cli.jl`, package meta including `.git-blame-ignore-revs`) | `area:queue` |
 | Harness under `test/` (not `unit/` / `integration/`) and `testenv/**` | `area:test` |
 | `test/e2e.jl` | `area:client` and `area:qhost` as well |
 | `docs/**` | `area:docs` |
