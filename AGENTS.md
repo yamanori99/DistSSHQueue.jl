@@ -2,6 +2,20 @@
 
 Users run `julia -m DistSSHKit`. This repository is DistSSHQueue.
 
+## Queue entry principles
+
+Queue must not reimplement Run job logic (setup, drive, up/juliaup verbs); call Run's single implementation instead. Each feature has exactly one implementation. CLI entry scripts stay thin and must not duplicate queue orchestration or a second job path.
+
+Job hand-off to workers uses one versioned serialized form, not ad-hoc kwargs. Queued jobs run with the job's own settings (for example its Julia), not values re-detected on the worker.
+
+Read process environment for defaults in exactly one place per invocation; pass the result downstream. Explicit argv and session fields override those defaults. Parsing and normalization on the queue side must not execute jobs; worker job execution must not read ENV for job defaults.
+
+A feature reachable from more than one entry (CLI, bang API, worker dispatch, Run) needs a parity test across those entries. Keep such tests out of PkgEval.
+
+User-facing errors, hints, and help belong in the dedicated messages layer. Do not hard-code a product or launcher module name in queue logic or normalization code.
+
+Public API breaking renames ship without compatibility aliases. Cross-repo redesign work tracks each repository's main; do not rely on release tags or General registrations until that work has landed.
+
 Library `teardown` deletes only when `confirm_paths` is exactly the set of existing targets. Use the CLI and `--confirm-path`.
 
 Agents must not pass `-y`, `--yes`, or set `DISTSSH_YES` for `teardown`. Use `--confirm-path` with each path the command printed.
