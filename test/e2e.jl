@@ -635,7 +635,7 @@ end
             @test example_job_distsshrun_aligned(manifest, E2E_RUNNER_MANIFEST)
             @test distsshrun_general_lock(manifest; runner_manifest = E2E_RUNNER_MANIFEST)
             @test manifest_check_ignore_status(JOB_PROJECT) == 1
-            session = KitSession(
+            session = DistSSHSession(
                 project = JOB_PROJECT,
                 workers = ["child:$(h)" for h in HOSTS],
                 remote = REMOTE_ROOT,

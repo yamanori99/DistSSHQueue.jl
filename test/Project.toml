@@ -9,7 +9,8 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 [sources]
 DistSSHQueue = { path = ".." }
 # Same rev as the root project. Drop both at the 0.10.0 cut.
-DistSSHRun = { url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "main" }
+# Until DistSSHRun #431 merges; then restore `rev = "main"`.
+DistSSHRun = { url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "breaking/kit-neutral-public-names-54ef" }
 
 [compat]
 DistSSHRun = "0.2.0"
