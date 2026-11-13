@@ -253,7 +253,7 @@ end
 """Controller `run.toml` for `result`, else the job's recorded run dir."""
 function _controller_run_toml_file(j::Job, result)::Union{Nothing, String}
     rd = nothing
-    if result isa DistSSHRun.KitRunResult || result isa DistSSHRun.KitProcess
+    if result isa DistSSHRun.DistSSHJobResult || result isa DistSSHRun.DetachedProcess
         rd = DistSSHRun.result_run_dir(result)
     end
     if !(rd isa AbstractString) || isempty(strip(String(rd)))
@@ -268,7 +268,7 @@ end
 
 Does not rewrite the file. A missing file leaves the archive and ship keys
 unset. `content_tree_hash` and `remote_run_id` come from the public
-accessors on a `KitRunResult` and are omitted when those return `nothing`.
+accessors on a `DistSSHJobResult` and are omitted when those return `nothing`.
 """
 function _archive_controller_run_toml!(j::Job, result = nothing)
     src = _controller_run_toml_file(j, result)
@@ -279,7 +279,7 @@ function _archive_controller_run_toml!(j::Job, result = nothing)
     write(dest, read(src))
     j.kwargs["run_toml_sha256"] = DistSSHRun.file_sha256(dest)
     j.kwargs["run_toml_archive"] = abspath(dest)
-    result isa DistSSHRun.KitRunResult || return nothing
+    result isa DistSSHRun.DistSSHJobResult || return nothing
     _store_kw_string!(j, "content_tree_hash", DistSSHRun.result_content_tree_hash(result))
     _store_kw_string!(j, "remote_run_id", DistSSHRun.result_remote_run_id(result))
     return nothing
@@ -398,7 +398,7 @@ function kit_artifact_from_sidecar(dir::Union{Nothing, AbstractString})::Union{N
     return kit_artifact_from_run_dir(dir)
 end
 
-"""Throw with the richest detail the result carries (`KitRunResult`: `failed_step`
+"""Throw with the richest detail the result carries (`DistSSHJobResult`: `failed_step`
 / `exit_code`), so `Job.error` and the status `ERROR` column are actionable."""
 function require_kit_ok(result)
     hasproperty(result, :ok) || return nothing
@@ -525,7 +525,7 @@ end
 
 kit_run_error_text(::Job, result) = kit_run_error_text(result)
 
-"""Pid gone: prefer `kit.result`, else `:failed` (`serve` lost `KitProcess`)."""
+"""Pid gone: prefer `kit.result`, else `:failed` (`serve` lost `DetachedProcess`)."""
 function settle_lost_kit_child!(j::Job)
     dir = kit_sidecar_dir(j)
     rec = dir === nothing ? nothing : DistSSHRun.kit_result_from_dir(dir)
@@ -618,7 +618,7 @@ function run_kit(
         detached = true,
         job_id = j.id,
         execute_kwargs(j)...,
-    )::DistSSHRun.KitProcess
+    )::DistSSHRun.DetachedProcess
     rd = DistSSHRun.result_run_dir(kp)
     if rd !== nothing
         j.kwargs["run_dir"] = rd
@@ -633,7 +633,7 @@ function run_kit(
             catch
             end
         end
-        if term_result isa DistSSHRun.KitRunResult
+        if term_result isa DistSSHRun.DistSSHJobResult
             _archive_controller_run_toml!(j, term_result)
         else
             _archive_controller_run_toml!(j, kp)
@@ -671,7 +671,7 @@ end
 function _kit_setup_session(j::Job, proj::AbstractString; workers = j.hosts)
     r = get(j.kwargs, "remote", nothing)
     remote = r isa AbstractString && !isempty(strip(String(r))) ? String(r) : nothing
-    return DistSSHRun.KitSession(;
+    return DistSSHRun.DistSSHSession(;
         project = String(proj),
         workers = workers,
         remote = remote,
@@ -1489,7 +1489,7 @@ function _finish!(
             copy_setup_logs!(j, snap)
             copy_job_run_id!(j, snap)
             _copy_archived_run_toml!(j, snap)
-            kit_result isa DistSSHRun.KitRunResult &&
+            kit_result isa DistSSHRun.DistSSHJobResult &&
                 _archive_controller_run_toml!(j, kit_result)
             capture_kit_run_toml!(j)
             _warn_content_tree_divergence!(q.jobs, j)
@@ -1588,7 +1588,7 @@ function _start!(q::Queue, j::Job)
 end
 
 const _ADOPT_LOST =
-    "serve restarted; kit child exited (KitProcess lost; inspect RESULT / kit.result)"
+    "serve restarted; kit child exited (DetachedProcess lost; inspect RESULT / kit.result)"
 
 """If load kept a `:running` row because `kit.pid` is live, poll until it dies.
 

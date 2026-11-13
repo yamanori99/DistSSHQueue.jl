@@ -74,7 +74,7 @@ function pool_cli(args::Vector{String})::Cint
     DistSSHRun.print_header(cli_heading("pool"))
     DistSSHRun.writeln_field("Project", short_path(project))
     DistSSHRun.kit_println()
-    session = DistSSHRun.KitSession(;
+    session = DistSSHRun.DistSSHSession(;
         project = project,
         workers = tokens,
         quiet = opts.cli_session.quiet,

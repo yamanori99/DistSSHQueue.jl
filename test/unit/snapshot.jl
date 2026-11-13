@@ -360,8 +360,8 @@ end
             job_id = loaded.id,
             kw...,
         )
-        launched isa DistSSHRun.KitProcess || error("detached execute! did not return KitProcess")
-        kp = launched::DistSSHRun.KitProcess
+        launched isa DistSSHRun.DetachedProcess || error("detached execute! did not return DetachedProcess")
+        kp = launched::DistSSHRun.DetachedProcess
         cmd = _proc_cmdline(kp.process)
         try
             @test occursin("--run-id", cmd)
