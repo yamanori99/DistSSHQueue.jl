@@ -252,7 +252,9 @@ end
 """
 True when `manifest` locks DistSSHRun the way SSH E2E expects on workers.
 
-Outside DISTSSHQUEUE_DEV_RUN, `repo-rev` must be `main` (url source in Project.toml).
+Outside DISTSSHQUEUE_DEV_RUN, `repo-rev` must be `main` when Project.toml uses `rev = "main"`.
+When the runner temporarily pins another git `rev`, pass `runner_manifest` so
+this checks the job lock matches that runner (`repo-rev` and `git-tree-sha1`).
 With DISTSSHQUEUE_DEV_RUN, `repo-rev` must be the lowercase 40-hex commit SHA
 `align_example_job_distsshrun!` writes from `git rev-parse HEAD`, and `git-tree-sha1`
 must match the runner's portable lock.
@@ -290,5 +292,22 @@ function distsshrun_general_lock(
         end
         return strip(tree) == want_tree
     end
-    return strip(rev) == "main"
+    rev = strip(String(rev))
+    rev == "main" && return true
+    runner = runner_manifest
+    runner === nothing && return false
+    portable = try
+        runner_distsshrun_portable_lock(runner)
+    catch
+        return false
+    end
+    want_rev = get(portable, "repo-rev", nothing)
+    want_rev isa String && !isempty(strip(want_rev)) || return false
+    rev == strip(want_rev) || return false
+    want_tree = try
+        runner_distsshrun_tree_sha1(runner)
+    catch
+        return false
+    end
+    return strip(tree) == want_tree
 end

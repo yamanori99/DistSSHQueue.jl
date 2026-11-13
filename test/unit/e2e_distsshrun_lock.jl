@@ -461,4 +461,31 @@ end
             end
         end
     end
+
+    @testset "distsshrun_general_lock non-DEV accepts runner git rev pin" begin
+        mktempdir() do root
+            tree = "b"^40
+            branch_rev = "feature/example-run-rev-pin"
+            runner = joinpath(root, "runner.toml")
+            job_manifest = joinpath(root, "job.toml")
+            entry = Dict{String, Any}(
+                "uuid" => EXAMPLE_DISTSSHRUN_UUID,
+                "version" => "0.2.0-DEV",
+                "deps" => ["Dates"],
+                "repo-url" => DISTSSHRUN_REPO_URL,
+                "repo-rev" => branch_rev,
+                "git-tree-sha1" => tree,
+            )
+            _write_manifest(runner, entry)
+            _write_manifest(job_manifest, entry)
+            withenv("DISTSSHQUEUE_DEV_RUN" => "") do
+                @test !distsshrun_general_lock(job_manifest; runner_manifest = nothing)
+                @test distsshrun_general_lock(job_manifest; runner_manifest = runner)
+                bad = copy(entry)
+                bad["git-tree-sha1"] = "a"^40
+                _write_manifest(job_manifest, bad)
+                @test !distsshrun_general_lock(job_manifest; runner_manifest = runner)
+            end
+        end
+    end
 end
