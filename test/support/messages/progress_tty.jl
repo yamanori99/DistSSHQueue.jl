@@ -183,7 +183,10 @@ if !isdefined(Main, :_queue_tty_strip_ansi)
 
     function _queue_cli_project()::String
         p = Base.active_project()
-        return p === nothing ? dirname(@__DIR__) : dirname(p)
+        if p !== nothing
+            return dirname(p)
+        end
+        return normpath(joinpath(@__DIR__, "..", ".."))
     end
 
     function _queue_julia_exe()::String

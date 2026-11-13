@@ -2,7 +2,8 @@
 DistSSHQueue — FIFO `serve` for DistSSHKit (`go` / `ride` / `drive`).
 
 Package entry: exports, `include`s, `main` (`@main` on Julia 1.13+).
-FIFO: `src/DistSSHQueue/`. Client CLI: `src/client/`. Queue host CLI: `src/qhost/`.
+FIFO core: `src/job.jl`, `src/store.jl`, `src/paths.jl`, `src/config.jl`, `src/queue.jl`.
+Client CLI: `src/client/`. Queue host CLI: `src/qhost/`. Messages: `src/messages/`.
 `serve` runs DistSSHRun `execute!(...; detached=true)` for kinds in `KIT_EXECUTE_KINDS`.
 `--project=<queue-env>` loads this package; the Kit project is `job_project()`.
 Autoserve uses the Julia and `--project=` from the `enable` unit when that file exists.
@@ -41,12 +42,12 @@ export serve
 export job_project
 export default_store_path
 
-include("DistSSHQueue/job.jl")
-include("DistSSHQueue/store.jl")
-include("DistSSHQueue/paths.jl")
-include("DistSSHQueue/config.jl")
-include("DistSSHQueue/display.jl")
-include("DistSSHQueue/queue.jl")
+include("job.jl")
+include("store.jl")
+include("paths.jl")
+include("config.jl")
+include("messages/display.jl")
+include("queue.jl")
 include("client/qhost.jl")
 include("client/submit.jl")
 include("client/stage.jl")
@@ -213,7 +214,7 @@ function _reject_subcommand(sub::AbstractString)::Cint
         return 1
     end
     DistSSHRun.print_cli_error("unknown subcommand: $sub")
-    show_usage(io = stderr)
+    show_usage(; io = stderr)
     return 1
 end
 

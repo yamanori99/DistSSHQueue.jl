@@ -109,7 +109,12 @@ EOF
   - changed-files:
       - any-glob-to-any-file:
           - "src/DistSSHQueue.jl"
-          - "src/DistSSHQueue/**"
+          - "src/job.jl"
+          - "src/store.jl"
+          - "src/paths.jl"
+          - "src/config.jl"
+          - "src/queue.jl"
+          - "src/messages/**"
           - ".gitattributes"
           - ".gitignore"
           - ".git-blame-ignore-revs"
@@ -121,7 +126,7 @@ EOF
           - "test/unit/queue.jl"
           - "test/unit/snapshot.jl"
           - "test/integration/cli.jl"
-          - "test/integration/progress_tty.jl"
+          - "test/integration/messages/progress_tty.jl"
 
 "area:client":
   - changed-files:

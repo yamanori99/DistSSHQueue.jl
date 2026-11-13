@@ -53,9 +53,9 @@ end
     @testset "integration" verbose = true begin
         _runtest_announce("integration/cli.jl")
         include(joinpath(@__DIR__, "integration", "cli.jl"))
-        _runtest_announce("integration/progress_tty.jl")
-        if !_queue_skip_pseudotty("integration/progress_tty.jl")
-            include(joinpath(@__DIR__, "integration", "progress_tty.jl"))
+        _runtest_announce("integration/messages/progress_tty.jl")
+        if !_queue_skip_pseudotty("integration/messages/progress_tty.jl")
+            include(joinpath(@__DIR__, "integration", "messages", "progress_tty.jl"))
         end
     end
 end
