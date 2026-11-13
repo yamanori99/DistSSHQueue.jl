@@ -116,7 +116,7 @@ end
 
 function _cov_hold_kit(; run_dir, output_dir)
     proc = Base.run(`sleep 30`; wait = false)
-    kp = DistSSHRun.KitProcess(proc; kind = :go, run_dir = run_dir, output_dir = output_dir)
+    kp = DistSSHRun.DetachedProcess(proc; kind = :go, run_dir = run_dir, output_dir = output_dir)
     return proc::Base.Process, kp
 end
 
@@ -523,7 +523,7 @@ end
         outdir = joinpath(d, "out")
         mkpath(outdir)
         proc = Base.run(`/usr/bin/true`; wait = false)::Base.Process
-        kp = DistSSHRun.KitProcess(proc; kind = :go, output_dir = outdir)
+        kp = DistSSHRun.DetachedProcess(proc; kind = :go, output_dir = outdir)
         j = DistSSHQueue.Job(;
             kind = :go, script = "a.jl", hosts = ["parent:1"],
         )
@@ -553,14 +553,14 @@ end
 end
 
 @testset "kit_run_error_text and a failed kit.result" begin
-    ok = DistSSHRun.KitRunResult(true, :go, nothing, nothing, nothing, 0)
+    ok = DistSSHRun.DistSSHJobResult(true, :go, nothing, nothing, nothing, 0)
     @test DistSSHQueue.kit_run_error_text(ok) == ""
-    bad = DistSSHRun.KitRunResult(false, :go, nothing, nothing, "go", 2)
+    bad = DistSSHRun.DistSSHJobResult(false, :go, nothing, nothing, "go", 2)
     @test occursin("exit 2", DistSSHQueue.kit_run_error_text(bad))
     @test_throws KeyError DistSSHQueue.kit_run_error_text(_KitOdd())
     mktempdir() do d
         DistSSHRun._write_kit_result_file(
-            DistSSHRun.KitRunResult(false, :go, d, nothing, "go", 1),
+            DistSSHRun.DistSSHJobResult(false, :go, d, nothing, "go", 1),
         )
         j = DistSSHQueue.Job(;
             kind = :go,
@@ -1522,7 +1522,7 @@ end
         out = joinpath(d, "kit-out")
         mkpath(out)
         DistSSHRun._write_kit_result_file(
-            DistSSHRun.KitRunResult(
+            DistSSHRun.DistSSHJobResult(
                 true, :go, out, nothing, nothing, 0,
             )
         )
@@ -1548,7 +1548,7 @@ end
         out = joinpath(d, "kit-out")
         mkpath(out)
         DistSSHRun._write_kit_result_file(
-            DistSSHRun.KitRunResult(
+            DistSSHRun.DistSSHJobResult(
                 true, :drive, out, nothing, nothing, 0,
             )
         )
@@ -3619,7 +3619,7 @@ function _shipped_run_toml(dir::AbstractString; hash = nothing, run_id = nothing
 end
 
 function _kit_result_at(dir::AbstractString; ok::Bool = true)
-    return DistSSHRun.KitRunResult(
+    return DistSSHRun.DistSSHJobResult(
         ok, :go, dir, nothing, ok ? nothing : "go", ok ? 0 : 1;
         run_dir = dir,
     )
@@ -3668,7 +3668,7 @@ end
             failed_dir = joinpath(home, "failed-run")
             _shipped_run_toml(failed_dir; hash = "hash-fail", run_id = "run-fail")
             proc = Base.run(`/usr/bin/false`; wait = false)::Base.Process
-            kp = DistSSHRun.KitProcess(proc; kind = :go, run_dir = failed_dir)
+            kp = DistSSHRun.DetachedProcess(proc; kind = :go, run_dir = failed_dir)
             failed = DistSSHQueue.Job(;
                 kind = :go, script = "a.jl", hosts = ["parent:1"],
             )
@@ -3684,7 +3684,7 @@ end
             _shipped_run_toml(cancel_dir; hash = "hash-cancel", run_id = "run-cancel")
             held = Base.run(`/usr/bin/true`; wait = false)::Base.Process
             wait(held)
-            held_kp = DistSSHRun.KitProcess(held; kind = :go, run_dir = cancel_dir)
+            held_kp = DistSSHRun.DetachedProcess(held; kind = :go, run_dir = cancel_dir)
             armed = Ref(false)
             cancelled = DistSSHQueue.Job(;
                 kind = :go, script = "a.jl", hosts = ["parent:1"],
@@ -3702,7 +3702,7 @@ end
             _shipped_run_toml(plain_dir; hash = "hash-plain", run_id = "run-plain")
             plain_proc = Base.run(`/usr/bin/true`; wait = false)::Base.Process
             wait(plain_proc)
-            plain_kp = DistSSHRun.KitProcess(plain_proc; kind = :go, run_dir = plain_dir)
+            plain_kp = DistSSHRun.DetachedProcess(plain_proc; kind = :go, run_dir = plain_dir)
             armed_plain = Ref(false)
             plain_job = DistSSHQueue.Job(;
                 kind = :go, script = "a.jl", hosts = ["parent:1"],
