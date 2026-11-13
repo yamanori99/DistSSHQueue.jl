@@ -465,7 +465,7 @@ end
     @testset "distsshrun_general_lock non-DEV accepts runner git rev pin" begin
         mktempdir() do root
             tree = "b"^40
-            branch_rev = "breaking/kit-neutral-public-names-54ef"
+            branch_rev = "feature/example-run-rev-pin"
             runner = joinpath(root, "runner.toml")
             job_manifest = joinpath(root, "job.toml")
             entry = Dict{String, Any}(
