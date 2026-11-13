@@ -1,13 +1,13 @@
-# Client `qhost:` submit: rsync the job tree onto the queue host.
+# Client `qhost:` submit: ship the job tree onto the queue host.
 #
 # Omit `qhost:` is unchanged (cwd / `DISTRIBUTED_PROJECT_ROOT` on this box).
-# Kit still copies queue host → workers. Inside a git work tree the file list
-# is DistSSHRun's `git_send_list` (the same list as `setup --rsync`). Outside
-# one, rsync keeps its per-directory `.gitignore` filter. `.distsshqueue/`
-# stays off the queue host either way. The send list and extra files are
-# checked before `ssh mkdir`, so a local error leaves no empty stage directory.
-# Stderr gets `rsync → HOST:path` when the copy starts (`DISTSSH_QUIET`
-# hides it). `DISTSSHQUEUE_NO_STAGE=1` skips (tests with a fake `ssh`).
+# Kit still copies queue host → workers with `setup!(:ship_tree)`. Staging
+# uses DistSSHRun `pack_ship_tree` and `pack_shipment` (same send rules as
+# `setup --rsync` / `:ship_tree`). Out-of-tree scripts land under
+# `_distsshrun_external/`. Pack runs before `ssh mkdir`, so a local error
+# leaves no empty stage directory. Stderr gets `ship-tree → HOST:path` when
+# the transfer starts (`DISTSSH_QUIET` hides it). Fetch still rsyncs.
+# `DISTSSHQUEUE_NO_STAGE=1` skips (tests with a fake `ssh`).
 const NO_STAGE_ENV = "DISTSSHQUEUE_NO_STAGE"
 
 """Queue-host dest for one client submit. Unique per job UUID.
@@ -203,105 +203,24 @@ function _ssh_mkdir!(host::AbstractString, remote_dir::AbstractString)
     return nothing
 end
 
-"""True when `rel` is `.distsshqueue` or a file under it."""
-function _stage_rel_is_queue(rel::AbstractString)::Bool
-    r = replace(String(rel), '\\' => '/')
-    return ".distsshqueue" in split(r, '/')
-end
-
-"""
-Send list for `local_root`'s Manifest directory.
-
-`nothing` outside a git work tree: the caller keeps rsync's dir-merge filter.
-Inside one, the same paths as `setup --rsync`, without `.distsshqueue/`.
-An empty list throws `ArgumentError`.
-"""
-function stage_send_list(local_root::AbstractString)::Union{Nothing, Vector{String}}
-    env = resolve_pkg_env(local_root)
-    listed = DistSSHRun.git_send_list(env.env_dir, env; warn = true)
-    listed === nothing && return nothing
-    filtered = String[String(rel) for rel in listed if !_stage_rel_is_queue(rel)]
-    isempty(filtered) && throw(
-        ArgumentError(
-            "qhost submit: nothing to send from $(env.env_dir) after dropping .distsshqueue",
-        ),
-    )
-    return filtered
-end
-
-function _append_local_state_dir_excludes!(opts::Vector{String})
-    for name in local_state_dir_names()
-        push!(opts, "--exclude")
-        push!(opts, name * "/")
-    end
-    return opts
-end
-
-"""rsync flags for a non-git stage (dir-merge `.gitignore`, plus `.distsshqueue/`)."""
-function stage_rsync_push_opts(transport::AbstractString; progress::Bool = false)::Vector{String}
-    opts = String["-az"]
-    progress && push!(opts, "--info=progress2")
-    append!(
-        opts, String[
-            "--delete",
-            "-e",
-            String(transport),
-            "--exclude",
-            ".git/",
-            "--exclude",
-            ".distsshqueue/",
-            "--filter",
-            ":- .gitignore",
-        ]
-    )
-    return _append_local_state_dir_excludes!(opts)
-end
-
-"""rsync flags for a git send list. `.distsshqueue/` is still excluded."""
-function stage_rsync_files_from_opts(transport::AbstractString; progress::Bool = false)::Vector{String}
-    opts = String["-az"]
-    progress && push!(opts, "--info=progress2")
-    append!(
-        opts, String[
-            "-e",
-            String(transport),
-            "--exclude",
-            ".git/",
-            "--exclude",
-            ".distsshqueue/",
-        ]
-    )
-    return _append_local_state_dir_excludes!(opts)
-end
-
-function _stage_rsync_files_from!(
-        rsync::Vector{String},
-        opts::Vector{String},
-        src::AbstractString,
-        dest::AbstractString,
-        files::Vector{String},
-    )
-    mktemp() do path, io
-        for rel in files
-            entry = !isempty(rel) && first(rel) in ('#', ';') ? string("./", rel) : rel
-            write(io, entry, '\0')
-        end
-        close(io)
-        cmd = Cmd(vcat(rsync, opts, String["--from0", "--files-from=$path", src * "/", dest]))
-        run(
-            pipeline(cmd; stdout = stderr, stderr = stderr),
-        )
-    end
-    return nothing
-end
-
 function rsync_progress_on(args::Vector{String} = String[])::Bool
     _queue_env_on("DISTSSH_QUIET") && return false
     _queue_env_on("DISTSSH_PROGRESS") && return true
     return any(isequal("--progress"), args)
 end
 
-"""One stderr line when a `qhost:` rsync starts. `DISTSSH_QUIET` skips it."""
+"""One stderr line when a `qhost:` ship-tree starts. `DISTSSH_QUIET` skips it."""
+function print_ship_tree_start(
+        host::AbstractString,
+        remote_path::AbstractString;
+        io::IO = stderr,
+    )
+    _queue_env_on("DISTSSH_QUIET") && return nothing
+    println(io, "ship-tree → $(host):$(_q_short(remote_path))")
+    return nothing
+end
+
+"""One stderr line when a `qhost:` rsync pull starts. `DISTSSH_QUIET` skips it."""
 function print_rsync_start(
         host::AbstractString,
         remote_path::AbstractString;
@@ -322,6 +241,104 @@ function _stage_extra_paths(extra_files)::Vector{String}
         push!(out, p)
     end
     return out
+end
+
+const _STAGE_EXTERNAL_DIR = "_distsshrun_external"
+
+function _remote_stage_external_path(remote_root::AbstractString, script::AbstractString)::String
+    return string(remote_root, "/", _STAGE_EXTERNAL_DIR, "/", basename(String(script)))
+end
+
+function _remote_julia_for_ship(rjulia::AbstractString)::Union{Nothing, String}
+    spec = strip(String(rjulia))
+    (isempty(spec) || spec == "auto") && return nothing
+    return spec
+end
+
+"""Stdout/stderr lines from `pack_ship_tree` warnings (Run `print_warn`)."""
+function _capture_pack_warnings(io::IO)::Vector{String}
+    seekstart(io)
+    out = String[]
+    for line in eachline(io; keep = true)
+        s = strip(String(line))
+        isempty(s) && continue
+        occursin("will not be shipped", s) || occursin("Warning:", s) || continue
+        push!(out, s)
+    end
+    return out
+end
+
+function _pack_ship_tree_with_warnings(
+        project::AbstractString;
+        extra_files::Vector{String} = String[],
+    )
+    return mktemp() do _, cap_io
+        pack = redirect_stdout(cap_io) do
+            redirect_stderr(cap_io) do
+                return DistSSHRun.pack_ship_tree(String(project); extra_files = extra_files)
+            end
+        end
+        flush(cap_io)
+        warnings = _capture_pack_warnings(cap_io)
+        return pack, warnings
+    end
+end
+
+function _ship_stage_error(host::AbstractString, result)::String
+    lines = String[]
+    for row in result.hosts
+        ok = hasproperty(row, :ok) ? Bool(getproperty(row, :ok)) : true
+        ok && continue
+        h = hasproperty(row, :host) ? String(getproperty(row, :host)) : String(host)
+        msg = if hasproperty(row, :message)
+            String(getproperty(row, :message))
+        else
+            "ship failed"
+        end
+        push!(lines, string(h, ": ", msg))
+    end
+    isempty(lines) && push!(lines, "qhost submit: ship-tree failed on $(host)")
+    return join(lines, "; ")
+end
+
+"""
+Pack and verified-ship `local_root` to `remote_root` on `host`.
+
+Returns `(content_tree_hash, pack_warnings)`. The pack directory is removed
+before return or throw.
+"""
+function ship_tree_to_qhost!(
+        host::AbstractString,
+        local_root::AbstractString,
+        remote_root::AbstractString,
+        extra_files::Vector{String},
+        rjulia::AbstractString,
+        transfer_id::AbstractString;
+        write_record::Union{Nothing, Bool} = nothing,
+    )::Tuple{String, Vector{String}}
+    src = canonical_local_path(local_root)
+    isdir(src) || throw(ArgumentError("qhost submit: job project is not a directory: $(repr(src))"))
+    extras = _stage_extra_paths(extra_files)
+    pack, warnings = _pack_ship_tree_with_warnings(src; extra_files = extras)
+    record = if write_record === nothing
+        get(ENV, "DISTSSH_TEST", "") != "1"
+    else
+        write_record
+    end
+    try
+        _ssh_mkdir!(host, remote_root)
+        print_ship_tree_start(host, remote_root)
+        result = DistSSHRun.pack_shipment(
+            pack, [String(host)], remote_root;
+            julia = _remote_julia_for_ship(rjulia),
+            transfer_id = String(transfer_id),
+            write_record = record,
+        )
+        result.ok || throw(ArgumentError(_ship_stage_error(host, result)))
+        return String(result.content_tree_hash), warnings
+    finally
+        isdir(pack.directory) && rm(pack.directory; force = true, recursive = true)
+    end
 end
 
 const _RSYNC_SHELL_SPECIAL = r"[[:space:]'\"\\$`;&|<>()*?\[]"
@@ -374,70 +391,6 @@ function _refuse_unprotected_rsync_path!(
             "rsync $(version) does not protect arguments, and the remote shell would change this path: $(path)",
         )
     )
-end
-
-function rsync_to_qhost!(
-        host::AbstractString,
-        local_root::AbstractString,
-        remote_root::AbstractString,
-        extra_files::Vector{String};
-        progress::Bool = false,
-    )
-    src = canonical_local_path(local_root)
-    isdir(src) || throw(ArgumentError("qhost submit: job project is not a directory: $(repr(src))"))
-    _refuse_unprotected_rsync_path!(remote_root)
-    for f in extra_files
-        _refuse_unprotected_rsync_path!(string(remote_root, "/", basename(String(f))))
-    end
-    listed = stage_send_list(src)
-    extras = _stage_extra_paths(extra_files)
-    _ssh_mkdir!(host, remote_root)
-    dest = string(host, ":", remote_root, "/")
-    rsync = _rsync_bin()
-    transport = _ssh_transport()
-    print_rsync_start(host, remote_root)
-    if listed === nothing
-        run(
-            pipeline(
-                Cmd(
-                    vcat(
-                        rsync,
-                        stage_rsync_push_opts(transport; progress = progress),
-                        String[src * "/", dest],
-                    ),
-                );
-                stdout = stderr,
-                stderr = stderr,
-            ),
-        )
-    else
-        _stage_rsync_files_from!(
-            rsync,
-            stage_rsync_files_from_opts(transport; progress = progress),
-            src,
-            dest,
-            listed,
-        )
-    end
-    extra_opts = String["-az"]
-    progress && push!(extra_opts, "--info=progress2")
-    append!(extra_opts, String["-e", transport])
-    for p in extras
-        run(
-            pipeline(
-                Cmd(
-                    vcat(
-                        rsync,
-                        extra_opts,
-                        String[p, string(host, ":", remote_root, "/", basename(p))],
-                    ),
-                );
-                stdout = stderr,
-                stderr = stderr,
-            ),
-        )
-    end
-    return nothing
 end
 
 """Pull one remote directory into `local_dest`. Additive: dest-only files stay."""
@@ -529,7 +482,7 @@ function queue_source_env(project::AbstractString)::Dict{String, String}
     )
 end
 
-"""Rsync the Manifest directory to `~/.distsshqueue/stage/<uuid>` on `host`.
+"""Ship the Manifest directory to `~/.distsshqueue/stage/<uuid>` on `host`.
 
 `DISTRIBUTED_PROJECT_ROOT` is the staged project directory, which is a
 subdirectory when the job project is a workspace member.
@@ -554,10 +507,12 @@ function stage_job_tree!(
     if !path_under_project(local_script, layout.env_dir)
         push!(extras, local_script)
     end
-    rsync_to_qhost!(host, layout.env_dir, remote_root, extras; progress = rsync_progress_on(payload))
+    tree_hash, pack_warnings = ship_tree_to_qhost!(
+        host, layout.env_dir, remote_root, extras, rjulia, key,
+    )
     staged = rewrite_payload_paths(payload, layout.env_dir, remote_root)
     if !isempty(extras)
-        want = string(remote_root, "/", basename(local_script))
+        want = _remote_stage_external_path(remote_root, local_script)
         staged = String[a == local_script || a == basename(local_script) ? want : a for a in staged]
         # relative extra: rewrite_one_path left it; replace parsed token
         raw = String(parsed.script_path)
@@ -566,7 +521,11 @@ function stage_job_tree!(
     env = Dict{String, String}(
         "DISTRIBUTED_PROJECT_ROOT" => layout.remote_proj,
         JOB_ID_ENV => key,
+        STAGE_CONTENT_TREE_HASH_ENV => tree_hash,
     )
     merge!(env, source_env)
+    if !isempty(pack_warnings)
+        env[STAGE_PACK_WARNINGS_ENV] = join(pack_warnings, '\n')
+    end
     return staged, env
 end

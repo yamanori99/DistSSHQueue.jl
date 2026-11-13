@@ -139,24 +139,15 @@ end
         @test startswith(t, "ssh ")
         @test occursin(Base.shell_escape("/tmp/cfg dir/config"), t)
     end
-    opts = DistSSHQueue.stage_rsync_push_opts("ssh -o BatchMode=yes")
-    @test opts[1] == "-az"
-    @test !("--info=progress2" in opts)
-    @test ":- .gitignore" in opts
-    @test ".distsshqueue/" in opts
-    @test ".distssh/" in opts
-    @test ".distsshkit/" in opts
-    @test ".git/" in opts
-    @test "--info=progress2" in DistSSHQueue.stage_rsync_push_opts("ssh"; progress = true)
     buf = IOBuffer()
-    DistSSHQueue.print_rsync_start("qh", "/Users/me/.distsshqueue/stage/abc"; io = buf)
-    @test occursin("rsync → qh:", String(take!(buf)))
+    DistSSHQueue.print_ship_tree_start("qh", "/Users/me/.distsshqueue/stage/abc"; io = buf)
+    @test occursin("ship-tree → qh:", String(take!(buf)))
     buf2 = IOBuffer()
     DistSSHQueue.print_rsync_start("qh", "/tmp/leaf"; pulling = true, io = buf2)
     @test occursin("rsync ← qh:", String(take!(buf2)))
     withenv("DISTSSH_QUIET" => "1") do
         bufq = IOBuffer()
-        DistSSHQueue.print_rsync_start("qh", "/x"; io = bufq)
+        DistSSHQueue.print_ship_tree_start("qh", "/x"; io = bufq)
         @test isempty(String(take!(bufq)))
         @test !DistSSHQueue.rsync_progress_on(["--progress"])
     end
@@ -204,10 +195,9 @@ end
             @test same.remote_proj == remote
         end
     end
-    @testset "stage send list matches setup --rsync" begin
+    @testset "stage ship send list matches pack" begin
         mktempdir() do tmp::String
-            write(joinpath(tmp, "Project.toml"), "name = \"App\"\n")
-            @test DistSSHQueue.stage_send_list(tmp) === nothing
+            write_min_stage_project!(tmp)
             run(pipeline(`git -C $tmp init -q`; stdout = devnull, stderr = devnull))
             run(pipeline(`git -C $tmp config user.email test@example.com`; stdout = devnull, stderr = devnull))
             run(pipeline(`git -C $tmp config user.name Test`; stdout = devnull, stderr = devnull))
@@ -217,16 +207,8 @@ end
             mkpath(joinpath(tmp, "build"))
             mkpath(joinpath(tmp, ".distsshqueue"))
             write(joinpath(tmp, ".distsshqueue", "ticket"), "nope\n")
-            mkpath(joinpath(tmp, "keep", ".distsshqueue"))
-            write(joinpath(tmp, "keep", ".distsshqueue", "nested"), "nope\n")
             write(joinpath(tmp, ".distsshqueue-backup"), "keep\n")
-            env = DistSSHRun.resolve_pkg_env(tmp)
-            want = String[
-                rel for rel in DistSSHRun.git_send_list(env.env_dir, env)
-                    if !(".distsshqueue" in split(rel, '/'))
-            ]
-            listed = DistSSHQueue.stage_send_list(tmp)
-            @test listed == want
+            listed = DistSSHRun.ship_send_list(tmp)
             @test "keep" in listed
             @test "keep/a.txt" in listed
             @test !("build" in listed)
@@ -235,212 +217,113 @@ end
         end
     end
 
-    @testset "stage drops a tree that is only .distsshqueue" begin
+    @testset "pack errors on gitignored Manifest-v1.13.0.toml" begin
         mktempdir() do tmp::String
             write(joinpath(tmp, "Project.toml"), "name = \"App\"\n")
-            write(joinpath(tmp, ".gitignore"), "*\n!.distsshqueue/\n!.distsshqueue/**\n")
-            mkpath(joinpath(tmp, ".distsshqueue"))
-            write(joinpath(tmp, ".distsshqueue", "ticket"), "nope\n")
+            write(joinpath(tmp, "Manifest.toml"), "julia_version = \"1.13.0\"\nmanifest_format = \"2.0\"\n")
+            write(joinpath(tmp, "Manifest-v1.13.0.toml"), "julia_version = \"1.13.0\"\nmanifest_format = \"2.0\"\n")
+            write(joinpath(tmp, ".gitignore"), "Manifest-v1.13.0.toml\n")
+            write(joinpath(tmp, "keep.jl"), "1\n")
             run(pipeline(`git -C $tmp init -q`; stdout = devnull, stderr = devnull))
             run(pipeline(`git -C $tmp config user.email test@example.com`; stdout = devnull, stderr = devnull))
             run(pipeline(`git -C $tmp config user.name Test`; stdout = devnull, stderr = devnull))
-            err = try
-                DistSSHQueue.stage_send_list(tmp)
-                nothing
+            err = nothing
+            try
+                DistSSHQueue._pack_ship_tree_with_warnings(tmp)
             catch e
-                e
-            end
-            @test err isa ArgumentError
-            @test occursin("after dropping .distsshqueue", sprint(showerror, err))
-        end
-    end
-
-    @testset "an empty git send list stays Run's error" begin
-        mktempdir() do tmp::String
-            write(joinpath(tmp, "Project.toml"), "name = \"App\"\n")
-            write(joinpath(tmp, ".gitignore"), "*\n")
-            run(pipeline(`git -C $tmp init -q`; stdout = devnull, stderr = devnull))
-            run(pipeline(`git -C $tmp config user.email test@example.com`; stdout = devnull, stderr = devnull))
-            run(pipeline(`git -C $tmp config user.name Test`; stdout = devnull, stderr = devnull))
-            err = try
-                DistSSHQueue.stage_send_list(tmp)
-                nothing
-            catch e
-                e
+                err = e
             end
             @test err isa ArgumentError
             msg = sprint(showerror, err)
-            @test occursin("nothing to send", msg)
-            @test !occursin("after dropping", msg)
+            @test occursin("Manifest-v1.13.0.toml", msg)
+            @test occursin("will not be shipped", msg)
         end
     end
 
-    @testset "ancestor gitignore warns once on stdout" begin
-        mktempdir() do tmp::String
-            write(joinpath(tmp, ".gitignore"), "dropped.txt\n")
-            sub = joinpath(tmp, "sub")
-            mkpath(sub)
-            write(joinpath(sub, "Project.toml"), "name = \"App\"\n")
-            write(joinpath(sub, "dropped.txt"), "nope\n")
-            write(joinpath(sub, "keep.txt"), "yes\n")
-            run(pipeline(`git -C $tmp init -q`; stdout = devnull, stderr = devnull))
-            run(pipeline(`git -C $tmp config user.email test@example.com`; stdout = devnull, stderr = devnull))
-            run(pipeline(`git -C $tmp config user.name Test`; stdout = devnull, stderr = devnull))
-            run(pipeline(`git -C $tmp add -A`; stdout = devnull, stderr = devnull))
-            run(pipeline(`git -C $tmp -c commit.gpgsign=false commit -q -m init`; stdout = devnull, stderr = devnull))
-            text = mktemp() do _, io
-                listed = redirect_stdout(io) do
-                    redirect_stderr(devnull) do
-                        DistSSHQueue.stage_send_list(sub)
-                    end
+    @testset "ship pack uses fake ssh (stdin tar)" begin
+        mktempdir() do state::String
+            mktempdir() do tmp::String
+                bin = joinpath(tmp, "bin")
+                mkpath(bin)
+                shelllog = joinpath(tmp, "shell-ssh.log")
+                write(shelllog, "")
+                write(
+                    joinpath(bin, "ssh"),
+                    """
+                    #!/bin/sh
+                    printf '%s\\n' "\$@" >> "\$FAKE_SHELL_SSH_LOG"
+                    exit 0
+                    """,
+                )
+                chmod(joinpath(bin, "ssh"), 0o755)
+                sshlog = joinpath(tmp, "ssh-scripts.log")
+                write(sshlog, "")
+                proj = joinpath(tmp, "gitproj")
+                mkpath(proj)
+                write_min_stage_project!(proj)
+                write(joinpath(proj, "a.txt"), "x\n")
+                run(pipeline(`git -C $proj init -q`; stdout = devnull, stderr = devnull))
+                run(pipeline(`git -C $proj config user.email test@example.com`; stdout = devnull, stderr = devnull))
+                run(pipeline(`git -C $proj config user.name Test`; stdout = devnull, stderr = devnull))
+                env = merge(
+                    fake_ship_remote_env(state),
+                    Dict(
+                        "DISTSSH_TEST_SSH_LOG" => sshlog,
+                        "FAKE_SHELL_SSH_LOG" => shelllog,
+                        "PATH" => bin * ":" * get(ENV, "PATH", ""),
+                    ),
+                )
+                pack = DistSSHRun.pack_ship_tree(proj)
+                hash = pack.content_tree_hash
+                rm(pack.directory; force = true, recursive = true)
+                withenv(merge(env, Dict("DISTSSH_TEST_EXPECT_TREE_HASH" => hash))...) do
+                    got_hash, _ = DistSSHQueue.ship_tree_to_qhost!(
+                        "qh", proj, "/stage/git", String[], "auto", "job-1"; write_record = false,
+                    )
+                    @test got_hash == hash
                 end
-                @test "keep.txt" in listed
-                @test !("dropped.txt" in listed)
-                flush(io)
-                seekstart(io)
-                return read(io, String)
+                log = read(sshlog, String)
+                @test occursin("Tar.extract", log)
+                shell = read(shelllog, String)
+                @test occursin("mkdir -p", shell)
+                DistSSHRun.DistSSHBase._clear_remote_posix_shell_cache!()
             end
-            @test count("Warning:", text) == 1
-            @test occursin("dropped.txt", text)
         end
-    end
-
-    @testset "stage lists a workspace member from the manifest directory" begin
-        mktempdir() do root
-            lab = joinpath(root, "lab")
-            member = joinpath(lab, "experiments", "run1")
-            mkpath(member)
-            write(
-                joinpath(lab, "Project.toml"),
-                """
-                name = "Lab"
-                [workspace]
-                projects = ["experiments/run1"]
-                """,
-            )
-            write(joinpath(member, "Project.toml"), "name = \"Run1\"\n[deps]\n")
-            write(joinpath(member, "job.jl"), "1\n")
-            write(joinpath(lab, "Manifest.toml"), "# lock\n")
-            run(pipeline(`git -C $lab init -q`; stdout = devnull, stderr = devnull))
-            run(pipeline(`git -C $lab config user.email test@example.com`; stdout = devnull, stderr = devnull))
-            run(pipeline(`git -C $lab config user.name Test`; stdout = devnull, stderr = devnull))
-            listed = DistSSHQueue.stage_send_list(member)
-            @test "experiments/run1/job.jl" in listed
-            @test "Project.toml" in listed
-        end
-    end
-
-    @testset "stage rsync argv and a local error skips ssh" begin
-        mktempdir() do tmp::String
-            bin = joinpath(tmp, "bin")
-            mkpath(bin)
-            sshlog = joinpath(tmp, "ssh.log")
-            rsynclog = joinpath(tmp, "rsync.log")
-            filesfrom = joinpath(tmp, "files-from")
-            write(sshlog, "")
-            write(
-                joinpath(bin, "ssh"),
-                """
-                #!/bin/sh
-                printf '%s\\n' "\$@" >> "\$FAKE_SSH_LOG"
-                exit 0
-                """,
-            )
-            write(
-                joinpath(bin, "rsync"),
-                """
-                #!/bin/sh
-                printf '%s\\n' "\$@" >> "\$FAKE_RSYNC_LOG"
-                for arg in "\$@"; do
-                  case "\$arg" in
-                    --files-from=*)
-                      cp "\${arg#--files-from=}" "\$FAKE_FILES_FROM"
-                      ;;
-                  esac
-                done
-                exit 0
-                """,
-            )
-            chmod(joinpath(bin, "ssh"), 0o755)
-            chmod(joinpath(bin, "rsync"), 0o755)
-            fakeenv = [
-                "PATH" => bin * ":" * get(ENV, "PATH", ""),
-                "FAKE_SSH_LOG" => sshlog,
-                "FAKE_RSYNC_LOG" => rsynclog,
-                "FAKE_FILES_FROM" => filesfrom,
-            ]
-
-            emptygit = joinpath(tmp, "emptygit")
-            mkpath(emptygit)
-            write(joinpath(emptygit, "Project.toml"), "name = \"App\"\n")
-            write(joinpath(emptygit, ".gitignore"), "*\n!.distsshqueue/\n!.distsshqueue/**\n")
-            mkpath(joinpath(emptygit, ".distsshqueue"))
-            write(joinpath(emptygit, ".distsshqueue", "ticket"), "nope\n")
-            run(pipeline(`git -C $emptygit init -q`; stdout = devnull, stderr = devnull))
-            run(pipeline(`git -C $emptygit config user.email test@example.com`; stdout = devnull, stderr = devnull))
-            run(pipeline(`git -C $emptygit config user.name Test`; stdout = devnull, stderr = devnull))
-            withenv(fakeenv...) do
-                @test_throws ArgumentError DistSSHQueue.rsync_to_qhost!(
-                    "qh", emptygit, "/stage/empty", String[]
+        mktempdir() do state::String
+            mktempdir() do tmp::String
+                bin = joinpath(tmp, "bin")
+                mkpath(bin)
+                write(joinpath(bin, "ssh"), "#!/bin/sh\nexit 0\n")
+                chmod(joinpath(bin, "ssh"), 0o755)
+                proj = joinpath(tmp, "plain")
+                mkpath(proj)
+                write_min_stage_project!(proj)
+                env = merge(
+                    fake_ship_remote_env(state),
+                    Dict(
+                        "DISTSSH_TEST_TAR_EXTRACT_FAIL" => "1",
+                        "PATH" => bin * ":" * get(ENV, "PATH", ""),
+                    ),
                 )
+                withenv(env...) do
+                    @test_throws ArgumentError DistSSHQueue.ship_tree_to_qhost!(
+                        "qh", proj, "/stage/fail", String[], "auto", "job-2"; write_record = false,
+                    )
+                end
             end
-            @test isempty(read(sshlog, String))
-
-            plain = joinpath(tmp, "plain")
-            mkpath(plain)
-            write(joinpath(plain, "Project.toml"), "name = \"App\"\n")
-            withenv(fakeenv...) do
-                @test_throws ArgumentError DistSSHQueue.rsync_to_qhost!(
-                    "qh", plain, "/stage/plain", [joinpath(tmp, "missing.jl")]
-                )
+        end
+        mktempdir() do state::String
+            mktempdir() do tmp::String
+                mkpath(tmp)
+                write(joinpath(tmp, "Project.toml"), "name = \"App\"\n")
+                withenv(fake_ship_remote_env(state)...) do
+                    @test_throws ArgumentError DistSSHQueue.ship_tree_to_qhost!(
+                        "qh", tmp, "/stage/noman", String[], "auto", "job-3"; write_record = false,
+                    )
+                end
             end
-            @test isempty(read(sshlog, String))
-
-            gitproj = joinpath(tmp, "gitproj")
-            mkpath(gitproj)
-            write(joinpath(gitproj, "Project.toml"), "name = \"App\"\n")
-            write(joinpath(gitproj, "a.txt"), "x\n")
-            write(joinpath(gitproj, "#hash.txt"), "hash\n")
-            write(joinpath(gitproj, ";semi.txt"), "semi\n")
-            run(pipeline(`git -C $gitproj init -q`; stdout = devnull, stderr = devnull))
-            run(pipeline(`git -C $gitproj config user.email test@example.com`; stdout = devnull, stderr = devnull))
-            run(pipeline(`git -C $gitproj config user.name Test`; stdout = devnull, stderr = devnull))
-            withenv(fakeenv...) do
-                DistSSHQueue.rsync_to_qhost!("qh", gitproj, "/stage/git", String[])
-            end
-            gitargv = read(rsynclog, String)
-            @test occursin("--from0", gitargv)
-            @test occursin("--files-from=", gitargv)
-            @test !occursin(":- .gitignore", gitargv)
-            listed = Set(split(read(filesfrom, String), '\0'; keepempty = false))
-            @test "a.txt" in listed
-            @test "Project.toml" in listed
-            @test "./#hash.txt" in listed
-            @test "./;semi.txt" in listed
-            @test !isempty(read(sshlog, String))
-
-            write(sshlog, "")
-            write(rsynclog, "")
-            nogit = joinpath(tmp, "nogit")
-            mkpath(nogit)
-            write(joinpath(nogit, "Project.toml"), "name = \"App\"\n")
-            withenv(fakeenv...) do
-                DistSSHQueue.rsync_to_qhost!("qh", nogit, "/stage/nogit", String[])
-            end
-            plainargv = read(rsynclog, String)
-            @test occursin(":- .gitignore", plainargv)
-            @test !occursin("--from0", plainargv)
-            @test !occursin("--files-from=", plainargv)
-            @test !isempty(read(sshlog, String))
         end
     end
-
-    files_opts = DistSSHQueue.stage_rsync_files_from_opts("ssh -o BatchMode=yes")
-    @test !(":- .gitignore" in files_opts)
-    @test !("--delete" in files_opts)
-    @test ".distsshqueue/" in files_opts
-    @test ".git/" in files_opts
-    @test "--info=progress2" in DistSSHQueue.stage_rsync_files_from_opts("ssh"; progress = true)
 
     fetch_h = sprint(io -> DistSSHQueue.print_queue_command_usage(io, "fetch"))
     @test occursin("--progress", fetch_h)
@@ -501,11 +384,10 @@ end
     end
 end
 
-@testset "hop_print and stage_job_tree use ssh on PATH" begin
+@testset "hop_print uses shell ssh on PATH" begin
     mktempdir() do tmp::String
         bin = joinpath(tmp, "bin")
         mkpath(bin)
-        rsynclog = joinpath(tmp, "rsync.log")
         write(
             joinpath(bin, "ssh"),
             """
@@ -514,60 +396,46 @@ end
             exit 0
             """,
         )
-        write(
-            joinpath(bin, "rsync"),
-            """
-            #!/bin/sh
-            if [ "\$1" = "--version" ]; then
-              echo "rsync  version 3.2.7  protocol version 31"
-              exit 0
-            fi
-            printf '%s\\n' "\$@" >> "\$FAKE_RSYNC_LOG"
-            exit 0
-            """,
-        )
         chmod(joinpath(bin, "ssh"), 0o755)
-        chmod(joinpath(bin, "rsync"), 0o755)
-        proj = joinpath(tmp, "job")
-        mkpath(proj)
-        write(joinpath(proj, "Project.toml"), "name = \"App\"\n")
-        write(joinpath(proj, "job.jl"), "1\n")
-        env = [
-            "PATH" => bin * ":" * get(ENV, "PATH", ""),
-            "FAKE_RSYNC_LOG" => rsynclog,
-            "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
-        ]
-        home = try
-            DistSSHQueue._RSYNC_VER_READY[] = false
-            withenv(env...) do
-                return DistSSHQueue.hop_print("qh", "/opt/julia", "print(homedir())")
-            end
-        finally
-            DistSSHQueue._RSYNC_VER_READY[] = false
+        env = Dict("PATH" => bin * ":" * get(ENV, "PATH", ""))
+        home = withenv(env...) do
+            return DistSSHQueue.hop_print("qh", "/opt/julia", "print(homedir())")
         end
         @test home == "/tmp/fakehome"
-        staged = String[]
-        extra = Dict{String, String}()
-        try
-            DistSSHQueue._RSYNC_VER_READY[] = false
+    end
+end
+
+@testset "ship failure before submit does not enqueue" begin
+    mktempdir() do state::String
+        mktempdir() do home
+            store = joinpath(home, ".distsshqueue", "jobs.toml")
+            proj = joinpath(home, "job")
+            mkpath(proj)
+            write_min_stage_project!(proj)
+            write(joinpath(proj, "job.jl"), "1\n")
+            bin = joinpath(home, "bin")
+            mkpath(bin)
+            write(
+                joinpath(bin, "ssh"),
+                "#!/bin/sh\nexit 0\n",
+            )
+            chmod(joinpath(bin, "ssh"), 0o755)
+            env = merge(
+                fake_ship_remote_env(state; remote_home = home),
+                Dict(
+                    "DISTSSH_TEST_TAR_EXTRACT_FAIL" => "1",
+                    "HOME" => home,
+                    "DISTRIBUTED_PROJECT_ROOT" => proj,
+                    "PATH" => bin * ":" * get(ENV, "PATH", ""),
+                ),
+            )
             withenv(env...) do
-                cd(proj) do
-                    got, more = DistSSHQueue.stage_job_tree!(
-                        "qh", "/opt/julia", "submit", ["go", "job.jl"],
-                    )
-                    append!(staged, got)
-                    merge!(extra, more)
-                    return nothing
-                end
+                @test_throws ArgumentError DistSSHQueue.stage_job_tree!(
+                    "qh", "auto", "submit", ["go", "job.jl", "parent:1"],
+                )
             end
-        finally
-            DistSSHQueue._RSYNC_VER_READY[] = false
+            @test !isfile(store)
         end
-        @test any(s -> startswith(s, "/tmp/fakehome/.distsshqueue/stage/"), staged)
-        @test startswith(extra["DISTRIBUTED_PROJECT_ROOT"], "/tmp/fakehome/.distsshqueue/stage/")
-        @test haskey(extra, DistSSHQueue.JOB_ID_ENV)
-        @test !haskey(extra, DistSSHQueue.SOURCE_COMMIT_ENV)
-        @test occursin("/tmp/fakehome/.distsshqueue/stage/", read(rsynclog, String))
     end
 end
 

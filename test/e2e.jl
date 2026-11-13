@@ -9,8 +9,9 @@
 #
 # Also: `julia -m DistSSHKit` on the queue host (omit `qhost:HOST`) and as a
 # client (`qhost:HOST` over loopback OpenSSH, including `fetch`). The staged
-# tree is the git send list (`setup --rsync`), with `.distsshqueue/` left
-# out and `.distsshqueue-backup` kept. Inspect verbs
+# tree matches `ship_send_list` / `setup!(:ship_tree)` (`.distssh/shipment.toml`
+# on the stage dir). `.distsshqueue/` stays out; `.distsshqueue-backup` kept.
+# Inspect verbs
 # (`pool`) is Queue chrome only (header + inventory notes).
 # Kit slots on docker-ssh (`child:child-1:1`).
 # Three roles, one suite: client = loopback, qhost = this host, child = containers.
@@ -1230,9 +1231,12 @@ end
                             server = read(joinpath(sshd_dir, "sshd.log"), String)
                             error("loopback ssh to distsshqueue-qh failed: $client$server")
                         end
-                        # Stage rsync honors `.gitignore`. Drop a `Manifest.toml` line
+                        # Ship-tree honors `.gitignore`. Drop a `Manifest.toml` line
                         # so the General lock from setup! stays on the send list.
-                        write(gi, replace(gi_body, r"^Manifest\.toml\r?\n?"m => ""))
+                        gi_ship = replace(gi_body, r"^Manifest\.toml\r?\n?"m => "")
+                        occursin(r"^\.distsshqueue/", gi_ship) ||
+                            (gi_ship *= ".distsshqueue/\n")
+                        write(gi, gi_ship)
                         write(joinpath(JOB_PROJECT, ".distsshqueue-backup"), "keep\n")
                         mkpath(joinpath(JOB_PROJECT, ".distsshqueue"))
                         write(joinpath(JOB_PROJECT, ".distsshqueue", "ticket"), "nope\n")
@@ -1270,32 +1274,26 @@ end
                         @test isfile(DistSSHQueue.submit_ticket_path(JOB_PROJECT, id1))
                         stage = joinpath(e2e_home, ".distsshqueue", "stage", id1)
                         @test isdir(stage)
-                        listed = DistSSHQueue.stage_send_list(JOB_PROJECT)
-                        @test listed isa Vector{String}
-                        if listed isa Vector{String}
-                            env = DistSSHRun.resolve_pkg_env(JOB_PROJECT)
-                            raw = DistSSHRun.git_send_list(env.env_dir, env)
-                            @test raw isa Vector
-                            if raw isa Vector
-                                want = String[
-                                    String(rel) for rel in raw if !(".distsshqueue" in split(String(rel), '/'))
-                                ]
-                                @test listed == want
-                            end
-                            @test ".distsshqueue-backup" in listed
-                            @test !any(rel -> ".distsshqueue" in split(rel, '/'), listed)
-                            for rel in listed
-                                @test ispath(joinpath(stage, rel))
-                            end
-                            want_set = Set(listed)
-                            for (root, _, files) in walkdir(stage)
-                                relroot = relpath(root, stage)
-                                for f in files
-                                    rel = relroot == "." ? f : joinpath(relroot, f)
-                                    @test replace(rel, '\\' => '/') in want_set
-                                end
+                        # `install_serve_reaper!` sets `DISTSSH_TEST=1`, so stage ship
+                        # skips the remote `.distssh/shipment.toml` record (Run scp path).
+                        listed = DistSSHRun.ship_send_list(JOB_PROJECT)
+                        @test ".distsshqueue-backup" in listed
+                        @test !any(rel -> ".distsshqueue" in split(rel, '/'), listed)
+                        for rel in listed
+                            @test ispath(joinpath(stage, rel))
+                        end
+                        want_set = Set(listed)
+                        for (root, _, files) in walkdir(stage)
+                            relroot = relpath(root, stage)
+                            relroot == ".distssh" && continue
+                            for f in files
+                                rel = relroot == "." ? f : joinpath(relroot, f)
+                                @test replace(rel, '\\' => '/') in want_set
                             end
                         end
+                        row1 = only(filter(j -> j.id == id1, DistSSHQueue.load_jobs(qh_store)))
+                        @test haskey(row1.kwargs, "content_tree_hash")
+                        @test !isempty(String(row1.kwargs["content_tree_hash"]))
                         @test isfile(joinpath(stage, ".distsshqueue-backup"))
                         @test read(joinpath(stage, ".distsshqueue-backup"), String) == "keep\n"
                         @test !ispath(joinpath(stage, ".distsshqueue"))

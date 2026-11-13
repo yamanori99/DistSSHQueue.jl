@@ -392,7 +392,7 @@ function maybe_remote(
     dest, spec = coalesce_remote(qhost, gjulia, host, rjulia)
     (explicit || rest_explicit) || return nothing
     dest === nothing && return nothing
-    # A local command returns above. A direct call would still infer rsync
+    # A local command returns above. A direct call would still infer ship
     # and ssh. `inferencebarrier` keeps that tree out of this method.
     return Base.inferencebarrier(_maybe_remote_hop)(
         dest,

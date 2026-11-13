@@ -484,3 +484,55 @@ function _registry_run_project()::String
     _REGISTRY_RUN_PROJECT[] = dir
     return dir
 end
+
+"""DistSSHRun `fake_setup_ssh.jl` for `pack_shipment` unit tests."""
+function distsshrun_fake_setup_ssh()::String
+    root = pkgdir(DistSSHRun)
+    root === nothing && error("DistSSHRun has no pkgdir")
+    return joinpath(root, "lib", "DistSSHBase", "test", "fixtures", "fake_setup_ssh.jl")
+end
+
+function write_stage_test_ssh_wrapper!(wrapper::AbstractString; remote_home::AbstractString = "/home/distsshkit")
+    inner = distsshrun_fake_setup_ssh()
+    write(
+        String(wrapper),
+        """
+        #!/usr/bin/env julia
+        const _INNER = $(repr(inner))
+        const _HOME = $(repr(String(remote_home)))
+        script = length(ARGS) >= 2 ? ARGS[2] : ""
+        if occursin("homedir()", script) && occursin("print", script)
+            println(_HOME)
+            exit(0)
+        end
+        proc = run(Cmd(vcat(["julia", _INNER], collect(ARGS))); wait = true)
+        exit(proc.exitcode)
+        """,
+    )
+    chmod(String(wrapper), 0o755)
+    return String(wrapper)
+end
+
+function fake_ship_remote_env(state_dir::AbstractString; remote_home::AbstractString = "/home/distsshkit")::Dict{String, String}
+    wrapper = joinpath(String(state_dir), "stage-test-ssh.jl")
+    write_stage_test_ssh_wrapper!(wrapper; remote_home = remote_home)
+    return Dict{String, String}(
+        "DISTSSH_TEST" => "1",
+        "DISTSSH_TEST_SSH" => wrapper,
+        "DISTSSH_TEST_STATE_ROOT" => abspath(String(state_dir)),
+        "DISTSSH_YES" => "1",
+        "DISTSSH_TEST_SNAP_GIT_YES" => "1",
+        "DISTSSH_TEST_JULIA_WHICH" => "/usr/bin/julia",
+        "DISTSSH_TEST_REMOTE_HOME" => String(remote_home),
+    )
+end
+
+function write_min_stage_project!(dir::AbstractString; manifest::AbstractString = "Manifest.toml")
+    write(joinpath(dir, "Project.toml"), "name = \"Stage\"\n")
+    write(
+        joinpath(dir, manifest),
+        "julia_version = \"1.13.0\"\nmanifest_format = \"2.0\"\n",
+    )
+    write(joinpath(dir, "keep.jl"), "1\n")
+    return nothing
+end

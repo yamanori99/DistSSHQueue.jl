@@ -31,6 +31,12 @@ new_job_id()::String = string(Base.UUID(rand(UInt128)))
 """Hop ENV: stage dir UUID must match `jobs.toml`."""
 const JOB_ID_ENV = "DISTSSHQUEUE_JOB_ID"
 
+"""Client ship-tree hash for this stage id (stored on the job row at submit)."""
+const STAGE_CONTENT_TREE_HASH_ENV = "DISTSSHQUEUE_STAGE_CONTENT_TREE_HASH"
+
+"""Newline-separated pack warnings from the client hop (`pack_ship_tree`)."""
+const STAGE_PACK_WARNINGS_ENV = "DISTSSHQUEUE_STAGE_PACK_WARNINGS"
+
 """Client git snapshot for a `qhost:` submit. Not Run's `DISTSSH_SOURCE_*`."""
 const SOURCE_COMMIT_ENV = "DISTSSHQUEUE_SOURCE_COMMIT"
 const SOURCE_DIRTY_ENV = "DISTSSHQUEUE_SOURCE_DIRTY"
