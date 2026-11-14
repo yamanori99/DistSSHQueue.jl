@@ -39,6 +39,8 @@ cd "${ROOT}"
 source "${ROOT}/scripts/julia-release.sh"
 # shellcheck source=retry.sh
 source "${ROOT}/scripts/retry.sh"
+# shellcheck source=host-julia-mount.sh
+source "${ROOT}/scripts/host-julia-mount.sh"
 
 ./scripts/gen-keys.sh
 
@@ -101,10 +103,13 @@ if [[ "${DISTSSHQUEUE_SKIP_UP:-}" == "1" ]]; then
   exit 0
 fi
 
+distsshqueue_export_host_julia_prefix
+distsshqueue_compose_files
+
 ./scripts/down.sh
 # Recreated sshd host keys must not fight BatchMode + a stale known_hosts.
 rm -f "${ROOT}/.generated/known_hosts"
-"${COMPOSE[@]}" -f compose.yml up -d --no-build
+"${COMPOSE[@]}" "${DISTSSHQUEUE_COMPOSE_FILES[@]}" up -d --no-build
 ./scripts/wait-ready.sh
 echo "Workers ready: child-1 (2222), child-2 (2223)"
 echo "SSH config: ${ROOT}/.generated/ssh_config"
