@@ -33,3 +33,15 @@ Serve-side children must not re-read placement from process environment when the
 A feature reachable from more than one entry between Queue and Run needs a parity test across those entries. Keep such tests out of PkgEval.
 
 Cross-repo redesign work tracks each repository's main; do not rely on release tags or General registrations until that work has landed.
+
+## Cloud Agent VM
+
+Cloud Agent environment builds run [`.cursor/install.sh`](.cursor/install.sh), which ends with [`.github/install-agent-tools.sh`](.github/install-agent-tools.sh) to install Runic and JETLS on Julia 1.13. Do not export `HOME` or `JULIA_DEPOT_PATH` in the shell profile for agent work; when you need an alternate depot or home, use per-command prefixes only (for example `HOME=/tmp/agent-home JULIA_DEPOT_PATH=/tmp/agent-depot julia +1.13 ...`).
+
+Before pushing, run the same static checks CI uses on Julia 1.13:
+
+- **Runic** (equivalent to the `Runic` job in [`.github/workflows/CI.yml`](.github/workflows/CI.yml)): `git ls-files -- '*.jl' | xargs runic --check --diff`
+- **JETLS**: `./.github/jetls-check.sh` (same flags as [`.github/actions/jetls-check`](.github/actions/jetls-check/action.yml); pass `--progress=none` for quieter output)
+- **Targeted tests** for the area you changed, for example `julia +1.13 --project=test -e 'using Pkg; Pkg.test("DistSSHQueue"; test_args=[...])'`
+
+Leave the full `Pkg.test` matrix across Julia versions, SSH E2E, and downstream jobs to CI.
