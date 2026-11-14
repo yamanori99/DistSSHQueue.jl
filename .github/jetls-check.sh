@@ -47,4 +47,5 @@ if [[ -z "${JULIA_APPS_JULIA_CMD:-}" ]]; then
     export JULIA_APPS_JULIA_CMD="$(command -v julia)"
 fi
 
-exec jetls --threads=auto -- check --exit-severity=hint --show-severity=hint "${jetls_args[@]}" "${files[@]}"
+# Match .github/actions/jetls-check: no `--threads=auto` (segfaults on Julia 1.13).
+exec jetls check --quiet --root=. --exit-severity=hint --show-severity=hint "${jetls_args[@]}" "${files[@]}"

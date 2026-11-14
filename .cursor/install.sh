@@ -138,3 +138,5 @@ for rel in ARGS[2:end]
     have_reg[] = true
 end
 ' -- "${repo_root}" . test
+
+bash "${repo_root}/.github/install-agent-tools.sh"
