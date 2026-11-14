@@ -60,12 +60,14 @@ end
 @testset "fetch_source exact id and states" begin
     mktempdir() do d
         proj = joinpath(d, "job")
-        mkpath(proj)
+        write_shippable_project!(proj)
         script = joinpath(proj, "S.jl")
         write(script, "1\n")
         queued_store = joinpath(d, "queued.toml")
         q = Queue(; store = queued_store, runner = _ -> nothing)
-        queued = submit!(q, script, "parent:1"; project = proj)
+        queued = withenv("DISTRIBUTED_PROJECT_ROOT" => proj) do
+            submit!(q, script, "parent:1"; project = proj)
+        end
         @test_throws ArgumentError DistSSHQueue.fetch_source(queued; store = queued_store)
         @test_throws ArgumentError DistSSHQueue.fetch_source("no-such-id"; store = queued_store)
 
@@ -78,7 +80,9 @@ end
                 return leaf[]
             end
         )
-        running = submit!(q2, script, "parent:1"; project = proj)
+        running = withenv("DISTRIBUTED_PROJECT_ROOT" => proj) do
+            submit!(q2, script, "parent:1"; project = proj)
+        end
         leaf[] = joinpath(d, ".distsshkit", "go", "S_" * first(running, 8))
         mkpath(leaf[])
         @test step!(q2) == 1
@@ -112,7 +116,9 @@ end
         stray_store = joinpath(d, "stray.toml")
         stray_id = Ref{String}()
         q3 = Queue(; store = stray_store, runner = _ -> "/tmp/go/S_" * first(stray_id[], 8))
-        stray_id[] = submit!(q3, script, "parent:1"; project = proj)
+        stray_id[] = withenv("DISTRIBUTED_PROJECT_ROOT" => proj) do
+            submit!(q3, script, "parent:1"; project = proj)
+        end
         @test step!(q3) == 1
         _wait_fetch_state(q3, stray_id[], :done)
         stray_line = DistSSHQueue.fetch_source(stray_id[]; store = stray_store)
@@ -249,7 +255,7 @@ end
 @testset "fetch CLI identity on the queue host" begin
     mktempdir() do d
         proj = joinpath(d, "job")
-        mkpath(proj)
+        write_shippable_project!(proj)
         script = joinpath(proj, "S.jl")
         write(script, "1\n")
         store = joinpath(d, "jobs.toml")
