@@ -1481,7 +1481,8 @@ end
         @test err2 isa ArgumentError
         @test read(store, String) == original
 
-        write(store, "jobs = [{id = \"only\"}]\n")
+        write(store, "store_format_version = 1\njobs = [{id = \"only\"}]\n")
+        expected = "store_format_version = 1\njobs = [{id = \"only\"}]\n"
         row = try
             DistSSHQueue.read_jobs(store)
             nothing
@@ -1490,7 +1491,7 @@ end
         end
         @test row isa ArgumentError
         @test occursin("missing a field or has the wrong type", row.msg)
-        @test read(store, String) == "jobs = [{id = \"only\"}]\n"
+        @test read(store, String) == expected
 
         write(store, "jobs = 1\n")
         kept = read(store, String)

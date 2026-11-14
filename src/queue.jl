@@ -439,6 +439,9 @@ function execute_kwargs(j::Job)
         k === :ship_hosts && continue
         k === :ship_project && continue
         k === :ship_deploy_root && continue
+        k === :job_format_version && continue
+        k === :enqueue_project && continue
+        k === :enqueue_content_tree_hash && continue
         DistSSHRun.execute_detached_accepts(k; kind = j.kind) || continue
         push!(acc, k => v)
     end
@@ -1159,6 +1162,7 @@ function _queue_kit_setup!(
         on_run_id = Returns(nothing),
     )
     _queue_env_on(NO_KIT_SETUP_ENV) && return nothing
+    _assert_enqueue_tree_unchanged!(j)
     proj = get(j.kwargs, "project", nothing)
     proj isa AbstractString || (proj = job_project())
     isdir(String(proj)) || return nothing
@@ -1316,7 +1320,6 @@ function _submit!(q::Queue, kind::Symbol, script::AbstractString, hosts; kwargs.
     toks = String[String(x) for x in hosts]
     fresh = q.follow_config ? config_host_names(load_config()) : nothing
     kw = Dict{String, Any}(String(k) => v for (k, v) in pairs(kwargs))
-    haskey(kw, "project") || (kw["project"] = job_project())
     script_path = resolve_script(script)
     return _with_store(q) do
         lock(q.lock) do
@@ -1333,7 +1336,10 @@ function _submit!(q::Queue, kind::Symbol, script::AbstractString, hosts; kwargs.
                 reject_host_token!(allow, t)
             end
             reload_keep_live!(q)
-            reject_worker_root_collision!(q.jobs, String(kw["project"]), kw)
+            proj = _resolve_enqueue_project(kw, script_path)
+            kw["project"] = proj
+            reject_worker_root_collision!(q.jobs, proj, kw)
+            _record_enqueue_fingerprint!(kw, proj, script_path)
             raw_id = pop!(kw, "id", nothing)
             if raw_id !== nothing && _index_id(q.jobs, String(raw_id)) !== nothing
                 throw(ArgumentError("job id already exists: $(repr(String(raw_id)))"))

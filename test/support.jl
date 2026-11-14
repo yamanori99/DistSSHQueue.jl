@@ -1,4 +1,5 @@
 import DistSSHRun
+import Pkg
 
 include(joinpath(@__DIR__, "support", "messages", "progress_tty.jl"))
 
@@ -15,6 +16,67 @@ const WAIT_SECONDS = Dict{Symbol, Float64}(
 function wait_seconds(name::Symbol)::Float64
     return DistSSHRun.DistSSHBase.wait_seconds(name, WAIT_SECONDS[name])
 end
+
+"""Minimal project tree `pack_ship_tree` and controller env gates accept."""
+function write_shippable_project!(dir::AbstractString; name::AbstractString = "ShipTest")
+    mkpath(dir)
+    pt = joinpath(dir, "Project.toml")
+    write(pt, "name = \"$name\"\n")
+    prev = Base.active_project()
+    try
+        Pkg.activate(dir) do
+            Pkg.resolve()
+            Pkg.instantiate(; update_registry = false)
+        end
+    finally
+        if prev === nothing
+            Pkg.activate()
+        else
+            Pkg.activate(dirname(prev))
+        end
+    end
+    return nothing
+end
+
+function stamp_enqueue_verify!(j)
+    proj = get(j.kwargs, "project", nothing)
+    proj isa AbstractString || (proj = String(DistSSHQueue.job_project()))
+    write_shippable_project!(proj)
+    isfile(j.script) || write(j.script, "1\n")
+    DistSSHQueue._record_enqueue_fingerprint!(j.kwargs, proj, j.script)
+    return j
+end
+
+function with_submit_project(f)
+    return mktempdir() do d
+        write_shippable_project!(d)
+        script = joinpath(d, "job.jl")
+        write(script, "1\n")
+        withenv("DISTRIBUTED_PROJECT_ROOT" => d) do
+            return f(d, script)
+        end
+    end
+end
+
+const _GLOBAL_SUBMIT_ROOT = Ref{Union{Nothing, String}}(nothing)
+
+"""One shippable project tree for in-memory `submit!` tests that still use `a.jl` script names."""
+function ensure_global_submit_project!()
+    root = _GLOBAL_SUBMIT_ROOT[]
+    if root === nothing
+        root = mktempdir(; prefix = "distsshqueue-submit-root-")
+        write_shippable_project!(root)
+        for name in ("a.jl", "b.jl", "c.jl", "d.jl", "g.jl", "m.jl", "old.jl", "s.jl", "x.jl", "job.jl")
+            p = joinpath(root, name)
+            isfile(p) || write(p, "1\n")
+        end
+        _GLOBAL_SUBMIT_ROOT[] = root
+    end
+    ENV["DISTRIBUTED_PROJECT_ROOT"] = root
+    return root
+end
+
+ensure_global_submit_project!()
 
 # Polls of `sleep_s` that fit in the named budget. A name with no finite
 # budget (`:until_exit`) is not a poll.

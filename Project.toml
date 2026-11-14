@@ -2,10 +2,7 @@ name = "DistSSHQueue"
 uuid = "24254401-70d8-4a51-8ea4-cfab19f5bc73"
 license = "MIT"
 version = "0.10.0-DEV"
-authors = [
-    "Yamamoto, Takanori <takanori.yamamoto.99@gmail.com>",
-    "Ampuku, Honoka <ampk.hono@gmail.com>",
-]
+authors = ["Yamamoto, Takanori <takanori.yamamoto.99@gmail.com>", "Ampuku, Honoka <ampk.hono@gmail.com>"]
 
 [workspace]
 projects = ["test", "docs"]
@@ -17,8 +14,6 @@ Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [sources]
-# DistSSHRun 0.2.0-DEV is not on General yet. Drop this at the 0.10.0 cut,
-# after DistSSHRun 0.2.0 is on General.
 DistSSHRun = { url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "main" }
 
 [compat]

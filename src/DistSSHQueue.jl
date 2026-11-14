@@ -43,6 +43,7 @@ export job_project
 export default_store_path
 
 include("job.jl")
+include("env_verify.jl")
 include("store.jl")
 include("paths.jl")
 include("config.jl")
