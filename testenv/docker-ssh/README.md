@@ -37,8 +37,6 @@ The host during `--e2e` is the **queue host**. docker-ssh containers are DistSSH
 
 Worker image pins Julia to **1.13** (the package floor) so DistSSHKit `setup --check` can run **without** `--ignore-julia-version`. `up.sh` resolves the newest release of that channel from `versions.json` and passes it as `JULIA_RELEASE`, so the image rebuilds when `1.13.1` becomes `1.13.2`.
 
-When `julia` is on the queue host, `up.sh` bind-mounts that Julia prefix into each worker (`compose.julia-mount.yml`) and `start.sh` points `/usr/local/bin/julia` at the mount. DistSSHRun env-verify compares resolved sysimage paths; without the mount, CI would compare `hostedtoolcache` on the host with juliaup paths in the container.
-
 ## Layout
 
 | Path | Role |
