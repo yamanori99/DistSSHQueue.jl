@@ -151,6 +151,7 @@ function cli_env(d::AbstractString; distsshrun::Bool = false)
     env = Dict(
         "DISTSSHQUEUE_CONFIG" => cfg,
         "DISTSSHQUEUE_STORE" => store,
+        "DISTRIBUTED_PROJECT_ROOT" => jobdir,
         "DISTSSH_YES" => "1",
         DistSSHQueue.NO_STAGE_ENV => "1",
         DistSSHQueue.LOCAL_QUEUE_ENV => "1",
