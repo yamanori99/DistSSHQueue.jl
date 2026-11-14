@@ -37,13 +37,18 @@ end
 struct _KitSetupFail
     bad::Symbol
     throw_on_bad::Bool
+    chmod_logdir::Union{Nothing, String}
 end
+_KitSetupFail(bad::Symbol, throw_on_bad::Bool) = _KitSetupFail(bad, throw_on_bad, nothing)
 
 function (p::_KitSetupFail)(_, mode::Symbol; gitignore::Bool = true, run_id = nothing)
     _ = run_id
     if mode !== p.bad
         mode === :ship_tree && return _ship_sync_ok()
         return (; ok = true, gitignore)
+    end
+    if p.chmod_logdir !== nothing && mode === p.bad
+        chmod(String(p.chmod_logdir), 0o000)
     end
     p.throw_on_bad && error(mode === :ship_tree ? "ship-tree failed" : "failed")
     return (; ok = false, gitignore)
@@ -84,6 +89,7 @@ function (p::_StageRsyncProbe)(_, mode::Symbol; gitignore::Bool = true, run_id =
 end
 
 function _stage_rsync_setup!(proj::String)
+    write_shippable_project!(proj)
     script = joinpath(proj, "s.jl")
     write(script, "1\n")
     j = DistSSHQueue.Job(;
@@ -92,6 +98,7 @@ function _stage_rsync_setup!(proj::String)
         hosts = ["child:w1:1"],
         kwargs = Dict{String, Any}("project" => proj, "remote" => "/custom/root"),
     )
+    stamp_enqueue_verify!(j)
     manifest = joinpath(proj, "Manifest.toml")
     modes = Symbol[]
     gitignore = Bool[]
@@ -160,32 +167,36 @@ function _wait_state(q, id, st; tries = 200)
 end
 
 @testset "submit! rejects pre-0.4 host tokens" begin
-    q = Queue(; runner = _ -> nothing)
-    @test_throws ArgumentError submit!(q, "a.jl", "parenthost:2")
-    @test_throws ArgumentError submit!(q, "a.jl", "worker:2")
-    @test_throws ArgumentError submit!(q, "a.jl", "h1")
-    @test_throws ArgumentError submit!(q, "a.jl", "64")
-    id = submit!(q, "a.jl", "parent:1", "child:w1:2")
-    @test job(q, id).hosts == ["parent:1", "child:w1:2"]
+    with_submit_project() do d, script
+        q = Queue(; runner = _ -> nothing)
+        @test_throws ArgumentError submit!(q, script, "parenthost:2")
+        @test_throws ArgumentError submit!(q, script, "worker:2")
+        @test_throws ArgumentError submit!(q, script, "h1")
+        @test_throws ArgumentError submit!(q, script, "64")
+        id = submit!(q, script, "parent:1", "child:w1:2")
+        @test job(q, id).hosts == ["parent:1", "child:w1:2"]
+    end
 end
 
 @testset "submit! rejects Kit names not on allowed" begin
-    q = Queue(; runner = _ -> nothing, allowed = ["parent", "child:host1"])
-    id = submit!(q, "a.jl", "parent:2", "child:host1:4")
-    @test job(q, id).hosts == ["parent:2", "child:host1:4"]
-    @test_throws ArgumentError submit!(q, "b.jl", "child:other:1")
-    tokened = Queue(; runner = _ -> nothing, allowed = ["child:host1"])
-    gid = submit!(tokened, "g.jl", "child:host1:4")
-    @test job(tokened, gid).hosts == ["child:host1:4"]
-    mixed = Queue(; runner = _ -> nothing, allowed = ["parent"])
-    @test_throws ArgumentError submit!(mixed, "m.jl", "parent:1", "child:other:1")
-    @test isempty(jobs(mixed))
-    closed = Queue(; runner = _ -> nothing, allowed = String[])
-    @test_throws ArgumentError submit!(closed, "c.jl", "parent:1")
-    open = Queue(; runner = _ -> nothing)
-    @test submit!(open, "d.jl", "child:any:1") isa String
-    @test_throws ArgumentError Queue(; allowed = ["host1"])
-    @test_throws ArgumentError Queue(; allowed = ["parent"], follow_config = true)
+    with_submit_project() do _, script
+        q = Queue(; runner = _ -> nothing, allowed = ["parent", "child:host1"])
+        id = submit!(q, script, "parent:2", "child:host1:4")
+        @test job(q, id).hosts == ["parent:2", "child:host1:4"]
+        @test_throws ArgumentError submit!(q, script, "child:other:1")
+        tokened = Queue(; runner = _ -> nothing, allowed = ["child:host1"])
+        gid = submit!(tokened, script, "child:host1:4")
+        @test job(tokened, gid).hosts == ["child:host1:4"]
+        mixed = Queue(; runner = _ -> nothing, allowed = ["parent"])
+        @test_throws ArgumentError submit!(mixed, script, "parent:1", "child:other:1")
+        @test isempty(jobs(mixed))
+        closed = Queue(; runner = _ -> nothing, allowed = String[])
+        @test_throws ArgumentError submit!(closed, script, "parent:1")
+        open = Queue(; runner = _ -> nothing)
+        @test submit!(open, script, "child:any:1") isa String
+        @test_throws ArgumentError Queue(; allowed = ["host1"])
+        @test_throws ArgumentError Queue(; allowed = ["parent"], follow_config = true)
+    end
 end
 
 @testset "submit! rejects two projects that share a worker path" begin
@@ -194,8 +205,8 @@ end
         b = joinpath(d, "b")
         mkpath(a)
         mkpath(b)
-        write(joinpath(a, "Project.toml"), "[deps]\n")
-        write(joinpath(b, "Project.toml"), "[deps]\n")
+        write_shippable_project!(a; name = "ProjA")
+        write_shippable_project!(b; name = "ProjB")
         write(joinpath(a, "x.jl"), "1\n")
         write(joinpath(b, "x.jl"), "1\n")
         q = Queue(; runner = _ -> nothing)
@@ -239,6 +250,8 @@ end
         s2 = joinpath(d, ".distsshqueue", "stage", DistSSHQueue.new_job_id())
         mkpath(s1)
         mkpath(s2)
+        write_shippable_project!(s1; name = "Stage1")
+        write_shippable_project!(s2; name = "Stage2")
         write(joinpath(s1, "x.jl"), "1\n")
         write(joinpath(s2, "x.jl"), "1\n")
         withenv("DISTRIBUTED_REMOTE_PROJECT_ROOT" => nothing) do
@@ -352,6 +365,7 @@ end
 
 @testset "cancel running without submit output_dir" begin
     mktempdir() do d
+        write_shippable_project!(d)
         script = joinpath(d, "hold.jl")
         write(script, "1\n")
         ev = Base.Event()
@@ -433,7 +447,7 @@ end
 
 @testset "kit setup stops after the current step when cancel is set" begin
     mktempdir() do d
-        write(joinpath(d, "Project.toml"), "[deps]\n")
+        write_shippable_project!(d)
         script = joinpath(d, "s.jl")
         write(script, "1\n")
         j = DistSSHQueue.Job(;
@@ -442,6 +456,7 @@ end
             hosts = ["child:w1:1"],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
+        stamp_enqueue_verify!(j)
         modes = Symbol[]
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             @test_throws DistSSHQueue._JobCancelled DistSSHQueue._queue_kit_setup!(
@@ -458,6 +473,7 @@ end
             hosts = ["parent:1"],
             kwargs = Dict{String, Any}("project" => joinpath(d, "missing")),
         )
+        stamp_enqueue_verify!(bare)
         @test_throws DistSSHQueue._JobCancelled DistSSHQueue.run_kit(
             bare, Returns(nothing); cancel_requested = Returns(true),
         )
@@ -484,13 +500,15 @@ end
             kind = :go, script = "a.jl", hosts = ["parent:1"],
         )
         try
-            @test_throws DistSSHQueue._JobCancelled DistSSHQueue.run_kit(
-                j,
-                p -> _cov_spawn_note!(j, p);
-                cancel_requested = () -> armed[],
-                execute = (args...; kwargs...) -> _cov_exec(armed, kp, args...; kwargs...),
-                terminate = (side; kind) -> _cov_term(seen, side; kind),
-            )
+            withenv(DistSSHQueue.NO_KIT_SETUP_ENV => "1") do
+                @test_throws DistSSHQueue._JobCancelled DistSSHQueue.run_kit(
+                    j,
+                    p -> _cov_spawn_note!(j, p);
+                    cancel_requested = () -> armed[],
+                    execute = (args...; kwargs...) -> _cov_exec(armed, kp, args...; kwargs...),
+                    terminate = (side; kind) -> _cov_term(seen, side; kind),
+                )
+            end
         finally
             _cov_stop(proc)
         end
@@ -507,13 +525,15 @@ end
             kind = :go, script = "a.jl", hosts = ["parent:1"],
         )
         try
-            @test_throws DistSSHQueue._JobCancelled DistSSHQueue.run_kit(
-                j,
-                p -> _cov_spawn_note!(j, p);
-                cancel_requested = () -> armed[],
-                execute = (args...; kwargs...) -> _cov_exec(armed, kp, args...; kwargs...),
-                terminate = (side; kind) -> _cov_term(seen, side; kind),
-            )
+            withenv(DistSSHQueue.NO_KIT_SETUP_ENV => "1") do
+                @test_throws DistSSHQueue._JobCancelled DistSSHQueue.run_kit(
+                    j,
+                    p -> _cov_spawn_note!(j, p);
+                    cancel_requested = () -> armed[],
+                    execute = (args...; kwargs...) -> _cov_exec(armed, kp, args...; kwargs...),
+                    terminate = (side; kind) -> _cov_term(seen, side; kind),
+                )
+            end
         finally
             _cov_stop(proc)
         end
@@ -527,12 +547,14 @@ end
         j = DistSSHQueue.Job(;
             kind = :go, script = "a.jl", hosts = ["parent:1"],
         )
-        out = DistSSHQueue.run_kit(
-            j,
-            p -> _cov_spawn_note!(j, p);
-            execute = (args...; kwargs...) -> _cov_exec_done(kp, args...; kwargs...),
-            terminate = _cov_term_unused,
-        )
+        out = withenv(DistSSHQueue.NO_KIT_SETUP_ENV => "1") do
+            DistSSHQueue.run_kit(
+                j,
+                p -> _cov_spawn_note!(j, p);
+                execute = (args...; kwargs...) -> _cov_exec_done(kp, args...; kwargs...),
+                terminate = _cov_term_unused,
+            )
+        end
         @test out == outdir
         @test !process_running(proc)
     end
@@ -603,6 +625,7 @@ end
 
 @testset "cancel running records run.toml output_dir not runs/" begin
     mktempdir() do d
+        write_shippable_project!(d)
         script = joinpath(d, "hold.jl")
         write(script, "1\n")
         ev = Base.Event()
@@ -635,6 +658,7 @@ end
 
 @testset "drive without output_dir does not pin a Queue leaf" begin
     mktempdir() do d
+        write_shippable_project!(d)
         script = joinpath(d, "hold.jl")
         write(script, "1\n")
         ev = Base.Event()
@@ -652,6 +676,7 @@ end
 
 @testset "go without output_dir does not pin a Queue leaf" begin
     mktempdir() do d
+        write_shippable_project!(d)
         script = joinpath(d, "hold.jl")
         write(script, "1\n")
         ev = Base.Event()
@@ -688,6 +713,7 @@ end
 
 @testset "serve snapshots run.toml onto the job row" begin
     mktempdir() do d
+        write_shippable_project!(d)
         store = joinpath(d, "jobs.toml")
         script = joinpath(d, "hold.jl")
         write(script, "1\n")
@@ -726,6 +752,7 @@ end
 
 @testset "load! keeps running without submit output_dir when kit.pid is live" begin
     mktempdir() do d
+        write_shippable_project!(d)
         script = joinpath(d, "hold.jl")
         write(script, "1\n")
         store = joinpath(d, "jobs.toml")
@@ -967,7 +994,7 @@ end
 
 @testset "kit setup instantiates the queue-host project without SSH" begin
     mktempdir() do d
-        write(joinpath(d, "Project.toml"), "[deps]\n")
+        write_shippable_project!(d)
         script = joinpath(d, "s.jl")
         write(script, "1\n")
         j = DistSSHQueue.Job(;
@@ -976,6 +1003,7 @@ end
             hosts = ["parent:1"],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
+        stamp_enqueue_verify!(j)
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             DistSSHQueue._queue_kit_setup!(j, Returns(nothing))
         end
@@ -988,7 +1016,7 @@ end
 
 @testset "kit setup always runs :check after instantiate" begin
     mktempdir() do d
-        write(joinpath(d, "Project.toml"), "[deps]\n")
+        write_shippable_project!(d)
         script = joinpath(d, "s.jl")
         write(script, "1\n")
         j = DistSSHQueue.Job(;
@@ -1000,6 +1028,7 @@ end
                 "remote" => "/custom/root",
             ),
         )
+        stamp_enqueue_verify!(j)
         modes = Symbol[]
         phases = String[]
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
@@ -1022,6 +1051,7 @@ end
             hosts = ["child:w1:1"],
             kwargs = Dict{String, Any}("project" => String(d), "remote" => "jobs/app"),
         )
+        stamp_enqueue_verify!(rel)
         rel_modes = Symbol[]
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             DistSSHQueue._queue_kit_setup!(
@@ -1036,16 +1066,16 @@ end
     mktempdir() do d
         stage = joinpath(d, ".distsshqueue", "stage", "11111111-1111-4111-8111-111111111111")
         mkpath(stage)
-        write(joinpath(stage, "Project.toml"), "[deps]\n")
+        write_shippable_project!(stage)
         got = _stage_rsync_setup!(stage)
         @test got.gitignore === true
         @test got.modes == [:remote_root, :ship_tree, :instantiate, :check]
         @test got.phases == ["remote-root", "ship-tree", "instantiate", "check"]
-        @test got.manifest_at[:ship_tree] === false
+        @test got.manifest_at[:ship_tree] === true
         @test got.manifest_at[:instantiate] === true
     end
     mktempdir() do d
-        write(joinpath(d, "Project.toml"), "[deps]\n")
+        write_shippable_project!(d)
         got = _stage_rsync_setup!(d)
         @test got.gitignore === true
         @test got.modes == [:remote_root, :ship_tree, :instantiate, :check]
@@ -1055,7 +1085,7 @@ end
 
 @testset "kit setup failure records setup log paths under .distssh" begin
     mktempdir() do d
-        write(joinpath(d, "Project.toml"), "[deps]\n")
+        write_shippable_project!(d)
         script = joinpath(d, "s.jl")
         write(script, "1\n")
         logdir = joinpath(d, ".distssh", "setup")
@@ -1067,6 +1097,7 @@ end
             hosts = ["child:w1:1"],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
+        stamp_enqueue_verify!(j)
         DistSSHQueue._allocate_queue_leaf!(j)
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
@@ -1081,7 +1112,7 @@ end
 
 @testset "kit setup failure records legacy setup log paths" begin
     mktempdir() do d
-        write(joinpath(d, "Project.toml"), "[deps]\n")
+        write_shippable_project!(d)
         script = joinpath(d, "s.jl")
         write(script, "1\n")
         logdir = joinpath(d, ".distsshkit", "setup")
@@ -1093,6 +1124,7 @@ end
             hosts = ["child:w1:1"],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
+        stamp_enqueue_verify!(j)
         DistSSHQueue._allocate_queue_leaf!(j)
         leaf = DistSSHQueue.kit_output_dir(j)::String
         @test leaf isa String
@@ -1113,7 +1145,7 @@ end
 
 @testset "kit setup rsync failure records setup log paths" begin
     mktempdir() do d
-        write(joinpath(d, "Project.toml"), "[deps]\n")
+        write_shippable_project!(d)
         script = joinpath(d, "s.jl")
         write(script, "1\n")
         logdir = joinpath(d, ".distsshkit", "setup")
@@ -1125,6 +1157,7 @@ end
             hosts = ["child:w1:1"],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
+        stamp_enqueue_verify!(j)
         DistSSHQueue._allocate_queue_leaf!(j)
         leaf = DistSSHQueue.kit_output_dir(j)::String
         @test leaf isa String
@@ -1141,6 +1174,7 @@ end
 function _running_setup_job(dir::AbstractString)
     proj = joinpath(dir, "proj")
     mkpath(proj)
+    write_shippable_project!(proj)
     store = joinpath(dir, "jobs.toml")
     script = joinpath(dir, "s.jl")
     write(script, "1\n")
@@ -1213,7 +1247,7 @@ end
 
 @testset "kit setup failure is kept if log record throws" begin
     mktempdir() do d
-        write(joinpath(d, "Project.toml"), "[deps]\n")
+        write_shippable_project!(d)
         script = joinpath(d, "s.jl")
         write(script, "1\n")
         logdir = joinpath(d, ".distsshkit", "setup")
@@ -1225,14 +1259,16 @@ end
             hosts = ["child:w1:1"],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
+        stamp_enqueue_verify!(j)
         DistSSHQueue._allocate_queue_leaf!(j)
         leaf = DistSSHQueue.kit_output_dir(j)
         @test leaf !== nothing
-        chmod(logdir, 0o000)
         thrown = try
             withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
                 @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
-                    j, Returns(nothing); kit_setup! = _KitSetupFail(:instantiate, false),
+                    j,
+                    Returns(nothing);
+                    kit_setup! = _KitSetupFail(:instantiate, false, logdir),
                 )
             end
         finally
@@ -1245,7 +1281,7 @@ end
 
 @testset "setup logs recorded when leaf allocation throws" begin
     mktempdir() do d
-        write(joinpath(d, "Project.toml"), "[deps]\n")
+        write_shippable_project!(d)
         script = joinpath(d, "s.jl")
         write(script, "1\n")
         logdir = joinpath(d, ".distsshkit", "setup")
@@ -1258,6 +1294,7 @@ end
             hosts = ["child:w1:1"],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
+        stamp_enqueue_verify!(j)
         thrown = withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
                 j, Returns(nothing); kit_setup! = _KitSetupFail(:instantiate, false),
@@ -1271,6 +1308,7 @@ end
 
 @testset "setup failure with explicit output_dir is fetchable" begin
     mktempdir() do d
+        write_shippable_project!(d)
         store = joinpath(d, "jobs.toml")
         script = joinpath(d, "s.jl")
         write(script, "1\n")
@@ -1298,6 +1336,7 @@ end
 
 @testset "setup failure persists setup_logs from runner snapshot" begin
     mktempdir() do d
+        write_shippable_project!(d)
         store = joinpath(d, "jobs.toml")
         script = joinpath(d, "s.jl")
         write(script, "1\n")
@@ -1328,11 +1367,11 @@ end
         job = joinpath(d, "job")
         mkpath(qenv)
         mkpath(job)
-        write(joinpath(qenv, "Project.toml"), "[deps]\n")
+        write_shippable_project!(qenv)
         env_manifest = joinpath(qenv, "Manifest.toml")
         write(env_manifest, "manifest_format = \"2.0\"\n")
         env_before = read(env_manifest, String)
-        write(joinpath(job, "Project.toml"), "[deps]\n")
+        write_shippable_project!(job)
         @test DistSSHQueue.pkg_depots_for_instantiate() isa Vector{String}
         old = copy(DEPOT_PATH)
         try
@@ -1372,7 +1411,7 @@ end
         return "manifest_format = \"2.0\"\njulia_version = \"$(julia_version)\"\n"
     end
     mktempdir() do dir
-        write(joinpath(dir, "Project.toml"), "[deps]\n")
+        write_shippable_project!(dir)
         path = joinpath(dir, "Manifest.toml")
         foreign = _lock(other)
         write(path, foreign)
@@ -1382,7 +1421,7 @@ end
         @test read(path, String) == foreign
     end
     mktempdir() do dir
-        write(joinpath(dir, "Project.toml"), "[deps]\n")
+        write_shippable_project!(dir)
         path = joinpath(dir, "Manifest.toml")
         write(path, "manifest_format = \"2.0\"\n")
         before = read(path, String)
@@ -1391,7 +1430,7 @@ end
         @test read(path, String) == before
     end
     mktempdir() do dir
-        write(joinpath(dir, "Project.toml"), "[deps]\n")
+        write_shippable_project!(dir)
         path = joinpath(dir, "Manifest.toml")
         write(path, _lock("not-a-version"))
         before = read(path, String)
@@ -1400,7 +1439,7 @@ end
         @test read(path, String) == before
     end
     mktempdir() do dir
-        write(joinpath(dir, "Project.toml"), "[deps]\n")
+        write_shippable_project!(dir)
         write(joinpath(dir, "Manifest.toml"), _lock(minor))
         @test DistSSHQueue._queue_local_instantiate!(dir) === nothing
         @test isfile(joinpath(dir, "Manifest.toml"))
@@ -1410,11 +1449,11 @@ end
         @test !isfile(joinpath(dir, "Manifest.toml"))
     end
     mktempdir() do dir
-        write(joinpath(dir, "Project.toml"), "[deps]\n")
+        write_shippable_project!(dir)
         @test DistSSHQueue._queue_local_instantiate!(dir) === nothing
     end
     mktempdir() do dir
-        write(joinpath(dir, "Project.toml"), "[deps]\n")
+        write_shippable_project!(dir)
         foreign = _lock(other)
         write(joinpath(dir, "Manifest.toml"), foreign)
         vername = "Manifest-v$(VERSION.major).$(VERSION.minor).toml"
@@ -1444,6 +1483,7 @@ end
 
 @testset "drive without Queue output_dir leaves init_output_dir! to the script" begin
     mktempdir() do d
+        write_shippable_project!(d)
         sdir = joinpath(d, "with_kit")
         mkpath(sdir)
         script = joinpath(sdir, "square_file.jl")
@@ -1689,7 +1729,7 @@ end
     mktempdir() do d
         p = joinpath(d, "jobs.toml")
         jobdir = mktempdir()
-        write(joinpath(jobdir, "Project.toml"), "[deps]\n")
+        write_shippable_project!(jobdir)
         write(joinpath(jobdir, "job.jl"), "1\n")
         write(joinpath(jobdir, "alias.jl"), "1\n")
         write(joinpath(jobdir, "drv.jl"), "1\n")
@@ -2328,7 +2368,7 @@ end
         cfg = joinpath(d, "config.toml")
         write(cfg, "store = $(repr(p))\nhosts = [\"parent\"]\n")
         jobdir = mktempdir()
-        write(joinpath(jobdir, "Project.toml"), "[deps]\n")
+        write_shippable_project!(jobdir)
         write(joinpath(jobdir, "job.jl"), "1\n")
         withenv(
             "DISTSSHQUEUE_STORE" => p,
@@ -2403,7 +2443,7 @@ end
         cfg = joinpath(d, "config.toml")
         write(cfg, "store = $(repr(p))\nhosts = [\"parent\", \"child:host1:4\"]\n")
         jobdir = mktempdir()
-        write(joinpath(jobdir, "Project.toml"), "[deps]\n")
+        write_shippable_project!(jobdir)
         write(joinpath(jobdir, "job.jl"), "1\n")
         withenv(
             "DISTSSHQUEUE_STORE" => p,
@@ -2440,7 +2480,7 @@ end
         cfg = joinpath(d, "config.toml")
         write(cfg, "store = $(repr(p))\nhosts = [\"parent\"]\n")
         jobdir = mktempdir()
-        write(joinpath(jobdir, "Project.toml"), "[deps]\n")
+        write_shippable_project!(jobdir)
         write(joinpath(jobdir, "job.jl"), "1\n")
         q = Queue(; store = p, runner = _ -> nothing)
         withenv(
@@ -2772,7 +2812,7 @@ end
             @test occursin("worker-count sizing was removed", err_flag)
             @test occursin("cores and RAM", err_flag)
             jobdir = mktempdir()
-            write(joinpath(jobdir, "Project.toml"), "[deps]\n")
+            write_shippable_project!(jobdir)
             cd(jobdir) do
                 code_p, out_p, _ = capture_stdio() do
                     DistSSHQueue.main(["pool", "parent"])
@@ -2826,6 +2866,7 @@ end
         p = joinpath(d, "jobs.toml")
         jobdir = joinpath(d, "jobtree")
         mkpath(jobdir)
+        write_shippable_project!(jobdir)
         write(joinpath(jobdir, "a.jl"), "1\n")
         write(joinpath(d, "config.toml"), "store = $(repr(p))\nhosts = [\"parent\"]\n")
         withenv(
@@ -3268,7 +3309,7 @@ end
         envdir = joinpath(d, "qenv")
         mkpath(home)
         mkpath(envdir)
-        write(joinpath(envdir, "Project.toml"), "[deps]\n")
+        write_shippable_project!(envdir)
         julia = DistSSHQueue.default_julia_bin()
         mac_unit = joinpath(home, "Library", "LaunchAgents", "org.distsshqueue.serve.plist")
         linux_unit = joinpath(home, ".config", "systemd", "user", "distsshqueue.serve.service")
@@ -3520,13 +3561,13 @@ function _submit_manifest_tree(dir::AbstractString, kind::Symbol)
             "name = \"Job\"\n[deps]\nExample = \"7876af07-990d-54b4-ab0e-df70d8e5d1c6\"\n",
         )
     elseif kind === :empty_deps
-        write(joinpath(proj, "Project.toml"), "name = \"Job\"\n[deps]\n")
+        write_shippable_project!(proj; name = "Job")
     elseif kind === :manifest
         write(
             joinpath(proj, "Project.toml"),
             "name = \"Job\"\n[deps]\nExample = \"7876af07-990d-54b4-ab0e-df70d8e5d1c6\"\n",
         )
-        write(joinpath(proj, "Manifest.toml"), "# lock\n")
+        write_shippable_project!(proj; name = "Job")
     end
     store = joinpath(dir, "jobs.toml")
     cfg = joinpath(dir, "config.toml")
@@ -3535,15 +3576,20 @@ function _submit_manifest_tree(dir::AbstractString, kind::Symbol)
     write(cfg, "store = $(repr(store))\nhosts = [\"parent\"]\n")
     stdout, stderr, code = mktemp() do _, out_io
         mktemp() do _, err_io
-            status = withenv("DISTSSHQUEUE_CONFIG" => cfg, "DISTSSHQUEUE_NO_AUTOSERVE" => "1") do
-                redirect_stdout(out_io) do
-                    redirect_stderr(err_io) do
-                        DistSSHQueue.submit_cli(
-                            store, :go, script, ["parent:1"],
-                            Dict{String, Any}("project" => proj),
-                        )
+            status = try
+                withenv("DISTSSHQUEUE_CONFIG" => cfg, "DISTSSHQUEUE_NO_AUTOSERVE" => "1") do
+                    redirect_stdout(out_io) do
+                        redirect_stderr(err_io) do
+                            DistSSHQueue.submit_cli(
+                                store, :go, script, ["parent:1"],
+                                Dict{String, Any}("project" => proj),
+                            )
+                        end
                     end
                 end
+                0
+            catch
+                1
             end
             flush(out_io)
             flush(err_io)
@@ -3553,51 +3599,40 @@ function _submit_manifest_tree(dir::AbstractString, kind::Symbol)
         end
     end
     loaded = DistSSHQueue.Queue(; store = store)
-    DistSSHQueue.load!(loaded)
-    return (; code, stdout, stderr, job = only(loaded.jobs))
+    isfile(store) && DistSSHQueue.load!(loaded)
+    job = length(loaded.jobs) == 1 ? only(loaded.jobs) : nothing
+    return (; code, stdout, stderr, job)
 end
 
-@testset "submit warns when dependencies have no Manifest" begin
+@testset "submit refuses enqueue without controller Manifest verification" begin
     mktempdir() do dir
         got = _submit_manifest_tree(dir, :deps)
-        @test got.code == 0
-        lines = split(chomp(got.stdout), '\n'; keepempty = false)
-        @test length(lines) == 1
-        @test lines[1] == got.job.id
-        @test occursin("no Manifest.toml", got.stderr)
-        @test occursin("A later minor will refuse", got.stderr)
-        @test occursin("Queued", got.stderr)
-        warnings = got.job.kwargs["warnings"]
-        @test length(warnings) == 1
-        @test warnings[1]["kind"] == "manifest_absent"
-        @test occursin("no Manifest.toml", warnings[1]["message"])
-        @test !haskey(DistSSHQueue.execute_kwargs(got.job), :warnings)
+        @test got.code != 0
+        @test got.job === nothing
     end
     mktempdir() do dir
         got = _submit_manifest_tree(dir, :manifest)
         @test got.code == 0
-        @test !occursin("no Manifest.toml", got.stderr)
+        @test got.job !== nothing
         @test !haskey(got.job.kwargs, "warnings")
     end
     mktempdir() do dir
         got = _submit_manifest_tree(dir, :none)
-        @test got.code == 0
-        @test !occursin("no Manifest.toml", got.stderr)
-        @test !haskey(got.job.kwargs, "warnings")
+        @test got.code != 0
+        @test got.job === nothing
     end
     mktempdir() do dir
         got = _submit_manifest_tree(dir, :empty_deps)
         @test got.code == 0
-        @test !occursin("no Manifest.toml", got.stderr)
+        @test got.job !== nothing
         @test !haskey(got.job.kwargs, "warnings")
     end
     mktempdir() do dir
         got = withenv("DISTSSH_QUIET" => "1") do
             _submit_manifest_tree(dir, :deps)
         end
-        @test got.code == 0
-        @test !occursin("no Manifest.toml", got.stderr)
-        @test got.job.kwargs["warnings"][1]["kind"] == "manifest_absent"
+        @test got.code != 0
+        @test got.job === nothing
     end
 end
 
@@ -3626,7 +3661,11 @@ function _kit_result_at(dir::AbstractString; ok::Bool = true)
 end
 
 @testset "controller run.toml is archived on the job" begin
-    mktempdir() do home
+    mktempdir() do root
+        home = joinpath(root, "fakehome")
+        mkpath(home)
+        proj = joinpath(root, "kitproj")
+        write_shippable_project!(proj)
         withenv("HOME" => home, DistSSHQueue.NO_KIT_SETUP_ENV => "1") do
             src = joinpath(home, "src-run")
             _shipped_run_toml(src; hash = "hash-aaa", run_id = "run-aaa")
@@ -3718,11 +3757,11 @@ end
             @test !haskey(plain_job.kwargs, "remote_run_id")
 
             store = joinpath(home, "jobs.toml")
-            script = joinpath(home, "hold.jl")
+            script = joinpath(proj, "hold.jl")
             write(script, "1\n")
             ev = Base.Event()
             q = Queue(; store, runner = _ -> wait(ev))
-            id = submit!(q, script, "parent:1"; project = home, submission = "batch-1")
+            id = submit!(q, script, "parent:1"; project = proj, submission = "batch-1")
             @test job(q, id).kwargs["submission"] == "batch-1"
             @test !haskey(DistSSHQueue.execute_kwargs(job(q, id)), :submission)
             mem = Queue(; runner = _ -> nothing)

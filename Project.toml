@@ -19,7 +19,7 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 [sources]
 # DistSSHRun 0.2.0-DEV is not on General yet. Drop this at the 0.10.0 cut,
 # after DistSSHRun 0.2.0 is on General.
-DistSSHRun = { url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "main" }
+DistSSHRun = { url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "breaking/worker-env-verification-pr2-2a8d" }
 
 [compat]
 Dates = "1.11"

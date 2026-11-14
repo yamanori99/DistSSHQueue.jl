@@ -296,8 +296,10 @@ function _dt(x)::Union{Nothing, DateTime}
 end
 
 function job_to_toml(j::Job)::Dict{String, Any}
+    jfv = get(j.kwargs, _JOB_FORMAT_KW, JOB_RECORD_FORMAT_VERSION)
     return Dict{String, Any}(
         "id" => j.id,
+        "job_format_version" => Int(jfv),
         "kind" => String(j.kind),
         "script" => j.script,
         "hosts" => copy(j.hosts),
@@ -346,6 +348,7 @@ function _jobs_table(path::AbstractString)::Tuple{Symbol, Any}
     end
     raw isa AbstractDict || return (:not_list, nothing)
     haskey(raw, "jobs") || return (:absent, nothing)
+    _require_store_format_version!(raw, path)
     rows = raw["jobs"]
     return rows isa AbstractVector ? (:list, rows) : (:not_list, nothing)
 end
@@ -408,6 +411,9 @@ function _job_row(row, path::AbstractString)::Job
             cleaned_kw[String(k)] = v
         end
         _validate_run_id_kw!(cleaned_kw)
+        row_ver = _job_record_format_version(row, path)
+        get(cleaned_kw, _JOB_FORMAT_KW, nothing) === nothing &&
+            (cleaned_kw[_JOB_FORMAT_KW] = row_ver)
         started = get(row, "started_at", "")
         finished = get(row, "finished_at", "")
         err = get(row, "error", "")
@@ -471,7 +477,10 @@ function save_jobs(path::AbstractString, jobs::AbstractVector{Job})
         throw(_jobs_store_not_list(p))
     end
     mkpath(dirname(p))
-    data = Dict{String, Any}("jobs" => [job_to_toml(j) for j in jobs])
+    data = Dict{String, Any}(
+        "store_format_version" => JOBS_STORE_FORMAT_VERSION,
+        "jobs" => [job_to_toml(j) for j in jobs],
+    )
     tmp = string(p, ".tmp.", getpid(), ".", time_ns())
     try
         open(tmp, "w") do io

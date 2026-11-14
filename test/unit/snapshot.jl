@@ -20,14 +20,16 @@ function _ok_ship(
 end
 
 function _snap_job(proj::AbstractString; hosts = ["child:w1:1"], remote = "/deploy/a", id = nothing)
+    write_shippable_project!(proj)
     script = joinpath(proj, "s.jl")
-    isfile(script) || write(script, "1\n")
+    write(script, "1\n")
     kw = Dict{String, Any}("project" => String(proj), "remote" => remote)
-    return if id === nothing
+    j = if id === nothing
         DistSSHQueue.Job(; kind = :go, script = script, hosts = hosts, kwargs = kw)
     else
         DistSSHQueue.Job(; id = id, kind = :go, script = script, hosts = hosts, kwargs = kw)
     end
+    return stamp_enqueue_verify!(j)
 end
 
 struct _SnapProbe
@@ -101,7 +103,7 @@ end
 
 @testset "parent-only setup does not invent a run_id" begin
     mktempdir() do d
-        write(joinpath(d, "Project.toml"), "[deps]\n")
+        write_shippable_project!(d)
         j = DistSSHQueue.Job(;
             kind = :go,
             script = joinpath(d, "s.jl"),
@@ -109,6 +111,7 @@ end
             kwargs = Dict{String, Any}("project" => String(d)),
         )
         write(j.script, "1\n")
+        stamp_enqueue_verify!(j)
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             DistSSHQueue._queue_kit_setup!(j, Returns(nothing))
         end
@@ -118,17 +121,20 @@ end
 end
 
 @testset "old jobs without run_id stay unpinned" begin
+    with_submit_project() do _, script
     q = Queue(; runner = _ -> nothing)
-    id = submit!(q, "old.jl", "parent:1")
+    id = submit!(q, script, "parent:1")
     loaded = job(q, id)
     @test !haskey(loaded.kwargs, "run_id")
     @test !haskey(DistSSHQueue.execute_kwargs(loaded), :run_id)
+    end
 end
 
 @testset "jobs do not share run_id kwargs" begin
+    with_submit_project() do d, script
     q = Queue(; runner = _ -> nothing)
-    a = submit!(q, "a.jl", "parent:1")
-    b = submit!(q, "b.jl", "parent:1")
+    a = submit!(q, script, "parent:1")
+    b = submit!(q, script, "parent:1")
     ja = job(q, a)
     jb = job(q, b)
     @test ja.kwargs !== jb.kwargs
@@ -136,19 +142,21 @@ end
     @test q.jobs[1].kwargs["run_id"] == _SNAP_A
     @test !haskey(q.jobs[2].kwargs, "run_id")
     @test q.jobs[1].kwargs !== q.jobs[2].kwargs
+    end
 end
 
 @testset "explicit run_id without context still reaches execute_kwargs" begin
+    with_submit_project() do _, script
     q = Queue(; runner = _ -> nothing)
-    id = submit!(q, "s.jl", "parent:1"; run_id = _SNAP_A)
+    id = submit!(q, script, "parent:1"; run_id = _SNAP_A)
     kw = DistSSHQueue.execute_kwargs(job(q, id))
     @test kw.run_id == _SNAP_A
     @test !haskey(kw, :ship_hosts)
+    end
 end
 
 @testset "A remains A after B ships" begin
     mktempdir() do d
-        write(joinpath(d, "Project.toml"), "[deps]\n")
         a = _snap_job(d; remote = "/deploy/a")
         b = _snap_job(d; remote = "/deploy/b")
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
@@ -174,11 +182,12 @@ end
 
 @testset "run_id survives jobs.toml reload" begin
     mktempdir() do d
-        write(joinpath(d, "Project.toml"), "[deps]\n")
+        write_shippable_project!(d)
+        script = joinpath(d, "s.jl")
+        write(script, "1\n")
         store = joinpath(d, "jobs.toml")
         q = Queue(; store, runner = _ -> nothing)
-        id = submit!(q, joinpath(d, "s.jl"), "child:w1:1"; project = String(d), remote = "/deploy/a")
-        write(joinpath(d, "s.jl"), "1\n")
+        id = submit!(q, script, "child:w1:1"; project = String(d), remote = "/deploy/a")
         j = job(q, id)
         DistSSHQueue._record_job_run_id!(j, _SNAP_A, ["child:w1:1"], d, "/deploy/a")
         DistSSHQueue.save_jobs(store, [j])
