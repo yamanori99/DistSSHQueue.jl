@@ -122,36 +122,36 @@ end
 
 @testset "old jobs without run_id stay unpinned" begin
     with_submit_project() do _, script
-    q = Queue(; runner = _ -> nothing)
-    id = submit!(q, script, "parent:1")
-    loaded = job(q, id)
-    @test !haskey(loaded.kwargs, "run_id")
-    @test !haskey(DistSSHQueue.execute_kwargs(loaded), :run_id)
+        q = Queue(; runner = _ -> nothing)
+        id = submit!(q, script, "parent:1")
+        loaded = job(q, id)
+        @test !haskey(loaded.kwargs, "run_id")
+        @test !haskey(DistSSHQueue.execute_kwargs(loaded), :run_id)
     end
 end
 
 @testset "jobs do not share run_id kwargs" begin
-    with_submit_project() do d, script
-    q = Queue(; runner = _ -> nothing)
-    a = submit!(q, script, "parent:1")
-    b = submit!(q, script, "parent:1")
-    ja = job(q, a)
-    jb = job(q, b)
-    @test ja.kwargs !== jb.kwargs
-    DistSSHQueue._record_job_run_id!(q.jobs[1], _SNAP_A, String[], ".", nothing)
-    @test q.jobs[1].kwargs["run_id"] == _SNAP_A
-    @test !haskey(q.jobs[2].kwargs, "run_id")
-    @test q.jobs[1].kwargs !== q.jobs[2].kwargs
+    with_submit_project() do _, script
+        q = Queue(; runner = _ -> nothing)
+        a = submit!(q, script, "parent:1")
+        b = submit!(q, script, "parent:1")
+        ja = job(q, a)
+        jb = job(q, b)
+        @test ja.kwargs !== jb.kwargs
+        DistSSHQueue._record_job_run_id!(q.jobs[1], _SNAP_A, String[], ".", nothing)
+        @test q.jobs[1].kwargs["run_id"] == _SNAP_A
+        @test !haskey(q.jobs[2].kwargs, "run_id")
+        @test q.jobs[1].kwargs !== q.jobs[2].kwargs
     end
 end
 
 @testset "explicit run_id without context still reaches execute_kwargs" begin
     with_submit_project() do _, script
-    q = Queue(; runner = _ -> nothing)
-    id = submit!(q, script, "parent:1"; run_id = _SNAP_A)
-    kw = DistSSHQueue.execute_kwargs(job(q, id))
-    @test kw.run_id == _SNAP_A
-    @test !haskey(kw, :ship_hosts)
+        q = Queue(; runner = _ -> nothing)
+        id = submit!(q, script, "parent:1"; run_id = _SNAP_A)
+        kw = DistSSHQueue.execute_kwargs(job(q, id))
+        @test kw.run_id == _SNAP_A
+        @test !haskey(kw, :ship_hosts)
     end
 end
 

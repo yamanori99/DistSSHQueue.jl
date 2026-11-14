@@ -48,7 +48,7 @@ function stamp_enqueue_verify!(j)
 end
 
 function with_submit_project(f)
-    mktempdir() do d
+    return mktempdir() do d
         write_shippable_project!(d)
         script = joinpath(d, "job.jl")
         write(script, "1\n")

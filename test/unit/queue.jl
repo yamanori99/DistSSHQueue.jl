@@ -167,7 +167,7 @@ function _wait_state(q, id, st; tries = 200)
 end
 
 @testset "submit! rejects pre-0.4 host tokens" begin
-    with_submit_project() do d, script
+    with_submit_project() do _, script
         q = Queue(; runner = _ -> nothing)
         @test_throws ArgumentError submit!(q, script, "parenthost:2")
         @test_throws ArgumentError submit!(q, script, "worker:2")
