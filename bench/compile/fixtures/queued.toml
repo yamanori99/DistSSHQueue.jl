@@ -1,3 +1,5 @@
+store_format_version = 1
+
 [[jobs]]
 finished_at = ""
 result_path = ""
@@ -7,7 +9,15 @@ kind = "go"
 id = "11111111-1111-1111-1111-111111111111"
 hosts = ["parent:1"]
 started_at = ""
-script = "hello.jl"
+script = "bench/compile/fixtures/jobenv/hello.jl"
+job_format_version = 1
 error = ""
 
     [jobs.kwargs]
+    enqueue_content_tree_hash = "9cad9820750d1e87f91e98c5228de74055f2dbda"
+    enqueue_project = "bench/compile/fixtures/jobenv"
+    job_format_version = 1
+    project = "bench/compile/fixtures/jobenv"
+    submission = "11111111-1111-1111-1111-111111111111"
+    quiet = false
+    verbosity = "verbose"
