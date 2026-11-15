@@ -127,6 +127,7 @@ EOF
           - "test/unit/queue.jl"
           - "test/unit/env_verify.jl"
           - "test/unit/snapshot.jl"
+          - "test/unit/vendor_distsshrun_copy.jl"
           - "test/integration/cli.jl"
           - "test/integration/messages/progress_tty.jl"
 
