@@ -36,7 +36,6 @@
           - "testenv/**"
           - "test/Project.toml"
           - "test/README.md"
-          - "test/a.jl"
           - "test/e2e.jl"
           - "test/e2e_distsshrun_lock.jl"
           - "test/runtests.jl"
