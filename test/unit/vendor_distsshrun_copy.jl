@@ -8,11 +8,11 @@ using Test
             write(joinpath(src, "Project.toml"), "name = \"DistSSHRun\"\n")
             write(joinpath(src, "src", "ok.jl"), "# ok\n")
             for name in (
-                "Manifest.toml",
-                "Manifest-v1.13.toml",
-                "JuliaManifest.toml",
-                "JuliaManifest-v1.13.toml",
-            )
+                    "Manifest.toml",
+                    "Manifest-v1.13.toml",
+                    "JuliaManifest.toml",
+                    "JuliaManifest-v1.13.toml",
+                )
                 write(joinpath(src, name), "# should not copy\n")
             end
             write(joinpath(src, "downstream", "Manifest.toml"), "# nested\n")
@@ -23,9 +23,9 @@ using Test
             for name in readdir(dest)
                 @test !(
                     name == "Manifest.toml" ||
-                    (startswith(name, "Manifest-v") && endswith(name, ".toml")) ||
-                    name == "JuliaManifest.toml" ||
-                    (startswith(name, "JuliaManifest-v") && endswith(name, ".toml"))
+                        (startswith(name, "Manifest-v") && endswith(name, ".toml")) ||
+                        name == "JuliaManifest.toml" ||
+                        (startswith(name, "JuliaManifest-v") && endswith(name, ".toml"))
                 )
             end
         end
