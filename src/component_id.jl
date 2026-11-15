@@ -26,7 +26,8 @@ const _QUEUE_SRC_FILES = (
     "qhost/serve.jl",
 )
 
-const _COMPONENT_SRC_DIGEST = DistSSHBase.src_component_digest(@__DIR__, _QUEUE_SRC_FILES)
+const _COMPONENT_SRC_DIGEST =
+    DistSSHRun.DistSSHBase.src_component_digest(@__DIR__, _QUEUE_SRC_FILES)
 
 const COMPONENT_ID = (
     schema = 1,
