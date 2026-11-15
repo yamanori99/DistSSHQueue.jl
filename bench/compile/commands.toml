@@ -1,6 +1,7 @@
 # Commands measured by bench/compile/measure.jl. No SSH.
-# `{work}` is a fresh copy of bench/compile/fixtures. `{store}` is a fresh jobs file.
-# The process cwd is that directory. A command that names `store` starts from that file.
+# Scripts live under bench/compile/fixtures. Child cwd is the repo root so the
+# CLI project root matches the Manifest (worker environment verification).
+# `{work}` is a fresh copy of fixtures for config/store paths; `{store}` is a fresh jobs file.
 package = "DistSSHQueue"
 
 [[command]]
@@ -19,7 +20,7 @@ DISTSSHQUEUE_STORE = "{store}"
 
 [[command]]
 name = "submit"
-args = ["submit", "go", "parent:1", "{work}/hello.jl"]
+args = ["submit", "go", "parent:1", "bench/compile/fixtures/jobenv/hello.jl"]
 
 [command.env]
 DISTSSHQUEUE_LOCAL = "1"

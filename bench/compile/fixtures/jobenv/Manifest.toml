@@ -1,0 +1,10 @@
+# This file is machine-generated - editing it directly is not advised
+
+julia_version = "1.13.4"
+manifest_format = "2.1"
+project_hash = "8cf1da5a0bf875a0179f85e8b8ec214af8b6a930"
+
+[[deps.CompileBenchJob]]
+path = "."
+uuid = "f8e3c2b1-4a5d-6e7f-8091-a2b3c4d5e6f7"
+version = "0.0.1"
