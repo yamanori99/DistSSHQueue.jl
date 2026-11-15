@@ -500,18 +500,30 @@ function _loaded_pkg()::Module
     error("Pkg is not loaded")
 end
 
+function _vendor_distsshrun_copy_skip(name::AbstractString)::Bool
+    name in (".git", "test", "docs", "testenv", ".github", "downstream") && return true
+    name == "Manifest.toml" && return true
+    startswith(name, "Manifest-v") && endswith(name, ".toml") && return true
+    name == "JuliaManifest.toml" && return true
+    startswith(name, "JuliaManifest-v") && endswith(name, ".toml") && return true
+    return false
+end
+
+function _copy_distsshrun_vendor_tree!(src::AbstractString, dest::AbstractString)
+    mkpath(dest)
+    for name in readdir(src)
+        _vendor_distsshrun_copy_skip(name) && continue
+        cp(joinpath(src, name), joinpath(dest, name); force = true)
+    end
+    isfile(joinpath(dest, "Project.toml")) || error("DistSSHRun vendor copy has no Project.toml")
+    isdir(joinpath(dest, "src")) || error("DistSSHRun vendor copy has no src")
+    return nothing
+end
+
 function _copy_loaded_distsshrun_src!(dest::AbstractString)
     src = pkgdir(DistSSHRun)
     src === nothing && error("DistSSHRun has no pkgdir")
-    mkpath(dest)
-    skip = (".git", "test", "docs", "testenv", ".github")
-    for name in readdir(src)
-        name in skip && continue
-        cp(joinpath(src, name), joinpath(dest, name); force = true)
-    end
-    isfile(joinpath(dest, "Project.toml")) || error("loaded DistSSHRun has no Project.toml")
-    isdir(joinpath(dest, "src")) || error("loaded DistSSHRun has no src")
-    return nothing
+    return _copy_distsshrun_vendor_tree!(src, dest)
 end
 
 function _registry_run_project()::String
