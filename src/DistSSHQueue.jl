@@ -64,6 +64,7 @@ include("qhost/setup.jl")
 include("qhost/up.jl")
 include("qhost/teardown.jl")
 include("qhost/serve.jl")
+include("component_id.jl")
 
 function show_usage(;
         io::IO = stdout,

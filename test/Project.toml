@@ -8,7 +8,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
 DistSSHQueue = {path = ".."}
-DistSSHRun = { url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "main" }
+DistSSHRun = { url = "https://github.com/yamanori99/DistSSHRun.jl", rev = "feat/fix/loaded-code-phase2-fef6" }
 
 [compat]
 DistSSHRun = "0.2.0"
