@@ -943,7 +943,7 @@ end
                         stdin = decline,
                     )
                     @test code == 0
-                    @test count("will exit 1", err) == 1
+                    @test count("will exit 1", out) == 1
                     @test !occursin("✓ juliaup", out)
 
                     code, out, err = capture_cli(
