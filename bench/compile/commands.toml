@@ -20,7 +20,7 @@ DISTSSHQUEUE_STORE = "{store}"
 
 [[command]]
 name = "submit"
-args = ["submit", "go", "parent:1", "bench/compile/fixtures/jobenv/hello.jl"]
+args = ["submit", "go", "--head-slots", "1", "bench/compile/fixtures/jobenv/hello.jl"]
 
 [command.env]
 DISTSSHQUEUE_LOCAL = "1"

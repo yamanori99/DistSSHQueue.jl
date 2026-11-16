@@ -77,8 +77,9 @@ function _kit_flag_takes_value(a::AbstractString)::Bool
     startswith(a, "--") || startswith(a, "-") || return false
     occursin('=', a) && return false
     return a in (
-        "--julia", "--output-dir", "--repeat", "--workers", "-w", "--hosts",
+        "--julia", "--output-dir", "--repeat", "--hosts",
         "--hosts-file", "--n", "--log-dir", "--package", "--project",
+        "--head-workers", "--head-slots",
     )
 end
 
@@ -90,11 +91,10 @@ function expand_pool_submit_hosts(slots::Int)::Vector{String}
         )
     )
     out = String[]
-    for name in sorted_kit_ssh_names(allow)
+    for name in sorted_registry_hosts(allow)
         n = clamp_pool_slots(slots, allow, name)
         n < 1 && continue
-        role = is_parent_host_name(name) ? :parent : :child
-        push!(out, format_placement_token(role, String(name), n))
+        push!(out, format_machine_token(n, name))
     end
     isempty(out) && throw(ArgumentError("pool:N: no hosts left after add-host max"))
     return out
@@ -102,8 +102,9 @@ end
 
 """Job `source` dict from `DISTSSHQUEUE_SOURCE_*`, or `nothing` when commit is unset."""
 function _source_from_queue_env()::Union{Nothing, Dict{String, Any}}
-    haskey(ENV, SOURCE_COMMIT_ENV) || return nothing
-    out = Dict{String, Any}("commit" => String(ENV[SOURCE_COMMIT_ENV]))
+    commit = strip(_process_env_value(SOURCE_COMMIT_ENV))
+    (isempty(commit) || commit == "1") && return nothing
+    out = Dict{String, Any}("commit" => commit)
     if haskey(ENV, SOURCE_DIRTY_ENV)
         out["dirty"] = ENV[SOURCE_DIRTY_ENV] == "true"
     end
@@ -274,6 +275,13 @@ function submit_kind(kind::Symbol, args::Vector{String}; pool_slots::Union{Nothi
         peeled
     end
     parsed = kit_parse_args(kind, rest)
+    if !isempty(parsed.cli_session.hosts_flag)
+        throw(
+            ArgumentError(
+                "`--hosts` was removed; pass Run machine tokens in argv (or `pool:N` on submit).",
+            )
+        )
+    end
     if parsed.help
         print_help_section("Queue"; io = stdout)
         print_help_lines(
@@ -284,7 +292,7 @@ function submit_kind(kind::Symbol, args::Vector{String}; pool_slots::Union{Nothi
         print_help_section("DistSSHKit"; io = stdout)
         print_help_lines(
             stdout,
-            "  Same argv as $(cli_m()) $(kind) … (parent:N / child:NAME:N).",
+            "  Same argv as $(cli_m()) $(kind) … (--head-workers / --head-slots and machine tokens).",
         )
         print_help_blank(stdout)
         kit_show_usage(kind)
@@ -292,11 +300,20 @@ function submit_kind(kind::Symbol, args::Vector{String}; pool_slots::Union{Nothi
     end
     parsed.show_version && (DistSSHRun.println_kit_version(); return 0)
     verb = String(kind)
+    cs = parsed.cli_session
+    has_head =
+        (cs.head_workers !== nothing && cs.head_workers > 0) ||
+        (cs.head_slots !== nothing && cs.head_slots > 0)
     hosts = submit_hosts(parsed; kind = kind)
     if slots !== nothing
+        has_head && throw(
+            ArgumentError(
+                "pool:N cannot mix with --head-workers / --head-slots",
+            )
+        )
         isempty(hosts) || throw(
             ArgumentError(
-                "pool:N cannot mix with parent / child tokens",
+                "pool:N cannot mix with placement tokens",
             )
         )
         hosts = expand_pool_submit_hosts(slots)

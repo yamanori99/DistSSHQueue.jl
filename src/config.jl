@@ -8,8 +8,13 @@ end
 
 queue_data_dir(; home::AbstractString = homedir())::String = joinpath(home, ".distsshqueue")
 
+function _env_path_override(key::AbstractString)::String
+    v = _process_env_value(key)
+    return (isempty(v) || v == "1") ? "" : v
+end
+
 function config_path(; home::AbstractString = homedir())::String
-    env = strip(get(ENV, "DISTSSHQUEUE_CONFIG", ""))
+    env = _env_path_override("DISTSSHQUEUE_CONFIG")
     return isempty(env) ? default_config_path(; home = home) : env
 end
 
@@ -86,7 +91,10 @@ function apply_config_env!(cfg::AbstractDict)
         v === nothing && continue
         key = String(k)
         _config_env_skipped(key) && continue
-        haskey(ENV, key) && continue
+        if haskey(ENV, key)
+            cur = strip(ENV[key])
+            cur != "1" && continue
+        end
         ENV[key] = v isa AbstractString ? String(v) : string(v)
         push!(_config_env_set, key)
     end
@@ -100,38 +108,98 @@ function config_store_path(cfg::AbstractDict)::Union{Nothing, String}
     return isempty(s) ? nothing : String(expanduser(s))
 end
 
-"""Inventory: Kit SSH name → optional max `:N` (`nothing` = no cap)."""
-const HostAllow = Dict{String, Union{Nothing, Int}}
+"""Registry: SSH host (machine token dest) → max workers from that token (`N*host` → N, bare host → 1)."""
+const HostAllow = Dict{String, Int}
 
-function _positive_n(n::Int, raw::AbstractString)::Int
-    n < 1 && throw(ArgumentError("max :N must be a positive integer, not $(repr(raw))"))
+const _LEGACY_CHILD_PREFIX = "child:"
+
+function _positive_workers(n::Int, raw::AbstractString)::Int
+    n < 1 && throw(ArgumentError("worker count must be >= 1, not $(repr(raw))"))
     return n
 end
 
-"""`parent[:N]` / `child:NAME[:N]` (same as Kit) → `(name, optional max :N)`."""
-function parse_host_cap(raw::AbstractString)::Pair{String, Union{Nothing, Int}}
+function _looks_like_legacy_registry_entry(s::AbstractString)::Bool
+    sx = strip(String(s))
+    sx == PARENT_HOST_NAME && return true
+    startswith(sx, PARENT_HOST_NAME * ":") && return true
+    return startswith(sx, _LEGACY_CHILD_PREFIX)
+end
+
+"""Suggest a Run machine-file `hosts` line (no silent migration)."""
+function _suggest_hosts_migration_line(entries::AbstractVector)::String
+    out = String[]
+    for x in entries
+        s = strip(String(x))
+        if s == PARENT_HOST_NAME || startswith(s, PARENT_HOST_NAME * ":")
+            continue
+        elseif startswith(s, _LEGACY_CHILD_PREFIX)
+            rest = String(strip(chopprefix(s, _LEGACY_CHILD_PREFIX)))
+            parts = split(rest, ':', limit = 2)
+            name = String(parts[1])
+            if length(parts) == 2
+                n = tryparse(Int, String(parts[2]))
+                n === nothing && throw(ArgumentError("legacy $(repr(s))"))
+                push!(out, format_machine_token(_positive_workers(n, s), name))
+            else
+                push!(out, name)
+            end
+        else
+            push!(out, s)
+        end
+    end
+    return "hosts = " * toml_string_array(out)
+end
+
+function _throw_legacy_registry_load!(raw::AbstractVector)
+    any(_looks_like_legacy_registry_entry, raw) || return nothing
+    hint = _suggest_hosts_migration_line(raw)
+    throw(
+        ArgumentError(
+            DistSSHRun.join_explained_message(
+                "config `hosts` uses removed parent / child: tokens",
+                "Rewrite $(hint). Head is not in hosts; use --head-workers or --head-slots on submit.",
+            ),
+        ),
+    )
+end
+
+"""Parse one registry machine token (`N*host` or bare host)."""
+function parse_registry_entry(raw::AbstractString)::Pair{String, Int}
     s = strip(String(raw))
-    isempty(s) && throw(ArgumentError("Kit SSH name is empty"))
-    p = parse_placement_token(s)
-    maxn = p.n === nothing ? nothing : _positive_n(p.n, s)
-    return p.name => maxn
+    isempty(s) && throw(ArgumentError("registry machine token is empty"))
+    throw_legacy_machine_token(s)
+    if is_parent_host_name(s) || startswith(s, PARENT_HOST_NAME * ":")
+        throw(
+            ArgumentError(
+                DistSSHRun.join_explained_message(
+                    "$(repr(s)) was removed",
+                    "Head is not in hosts; use --head-workers or --head-slots on submit.",
+                ),
+            ),
+        )
+    end
+    p = parse_machine_token(s)
+    is_parent_host_name(machine_ssh_label(p)) &&
+        throw(ArgumentError("$(repr(s)): head is not an SSH host; omit from hosts"))
+    key = String(p.dest)
+    return key => _positive_workers(p.workers, s)
 end
 
-"""Kit SSH name from a Kit placement token."""
-function kit_ssh_name(raw::AbstractString)::String
-    return first(parse_host_cap(raw))
+"""SSH host key from a job machine token."""
+function registry_host_key(raw::AbstractString)::String
+    throw_legacy_machine_token(String(strip(raw)))
+    return String(parse_machine_token(raw).dest)
 end
 
-function host_allow_item(name::AbstractString, cap::Union{Nothing, Int})::String
-    role = is_parent_host_name(name) ? :parent : :child
-    return format_placement_token(role, String(name), cap)
+function host_allow_item(name::AbstractString, workers::Int)::String
+    return format_machine_token(workers, String(name))
 end
 
-"""Kit placement tokens in `hosts`, with optional max `:N`.
+"""Machine tokens in `hosts` (Run hosts-file / `--machine-file` form).
 
-Missing `hosts`: CLI submit with a placement token errors (`add-host first`).
+Missing `hosts`: CLI submit with a remote token errors (`add-host first`).
 Empty array: allow none. Library `Queue(; allowed=nothing)` still skips the list.
-Same tokens as DistSSHKit: `parent[:N]` / `child:NAME[:N]`. Not a bare SSH name.
+Head is never listed; use submit `--head-workers` / `--head-slots`.
 A leftover `allowed` key is read the same way until `add-host` rewrites it to `hosts`.
 """
 function config_host_names(cfg::AbstractDict)::Union{Nothing, HostAllow}
@@ -141,30 +209,28 @@ function config_host_names(cfg::AbstractDict)::Union{Nothing, HostAllow}
     raw = has_hosts ? cfg["hosts"] : get(cfg, "allowed", nothing)
     raw === nothing && return nothing
     key = has_hosts ? "hosts" : "allowed"
-    raw isa AbstractVector || throw(ArgumentError("`$(key)` must be an array of Kit SSH names"))
+    raw isa AbstractVector || throw(ArgumentError("`$(key)` must be an array of machine tokens"))
+    _throw_legacy_registry_load!(raw)
     out = HostAllow()
     for x in raw
-        n, cap = parse_host_cap(String(x))
-        isempty(n) && continue
-        out[n] = cap
+        name, workers = parse_registry_entry(String(x))
+        out[name] = workers
     end
     return out
 end
 
-function sorted_kit_ssh_names(names::AbstractSet{<:AbstractString})::Vector{String}
-    v = String[String(n) for n in names]
-    sort!(v; by = n -> (is_parent_host_name(n) ? 0 : 1, n))
-    return v
+function sorted_registry_hosts(names::AbstractSet{<:AbstractString})::Vector{String}
+    return sort!(String[String(n) for n in names])
 end
 
-sorted_kit_ssh_names(allow::HostAllow) = sorted_kit_ssh_names(Set{String}(keys(allow)))
+sorted_registry_hosts(allow::HostAllow) = sorted_registry_hosts(Set{String}(keys(allow)))
 
 function toml_string_array(xs::AbstractVector{<:AbstractString})::String
     return "[" * join((repr(String(x)) for x in xs), ", ") * "]"
 end
 
 function hosts_toml_line(allow::HostAllow)::String
-    items = String[host_allow_item(n, allow[n]) for n in sorted_kit_ssh_names(allow)]
+    items = String[host_allow_item(n, allow[n]) for n in sorted_registry_hosts(allow)]
     return "hosts = " * toml_string_array(items)
 end
 
@@ -301,20 +367,16 @@ end
 function parse_host_caps(raws)::HostAllow
     out = HostAllow()
     for r in raws
-        n, cap = parse_host_cap(String(r))
-        isempty(n) && throw(ArgumentError("Kit SSH name is empty"))
-        out[n] = cap
+        name, workers = parse_registry_entry(String(r))
+        out[name] = workers
     end
     return out
 end
 
-"""First `add-host` creates `hosts` (CLI submit can name those tokens).
-
-Tokens are Kit's (`parent[:N]` / `child:NAME[:N]`). `:N` is an optional max.
-"""
+"""First `add-host` creates `hosts` (CLI submit can name those machine tokens)."""
 function add_host_names!(path::AbstractString, raws)
     extra = parse_host_caps(raws)
-    isempty(extra) && throw(ArgumentError("add-host needs a Kit token (`parent` / `child:NAME`)"))
+    isempty(extra) && throw(ArgumentError("add-host needs a machine token (`N*host` or bare host)"))
     return with_config_lock(path) do
         cur = isfile(path) ? config_host_names(load_config(; path = path)) : nothing
         names = cur === nothing ? extra : merge(HostAllow(), cur, extra)
@@ -324,13 +386,13 @@ end
 
 function remove_host_names!(path::AbstractString, raws)
     extra = parse_host_caps(raws)
-    isempty(extra) && throw(ArgumentError("remove-host needs a Kit token (`parent` / `child:NAME`)"))
+    isempty(extra) && throw(ArgumentError("remove-host needs a machine token (`N*host` or bare host)"))
     return with_config_lock(path) do
         isfile(path) || throw(ArgumentError("no config.toml; add-host first"))
         cur = config_host_names(load_config(; path = path))
         cur === nothing && throw(ArgumentError("no hosts= in config; add-host first"))
         for n in keys(extra)
-            haskey(cur, n) || throw(ArgumentError("Kit name $(repr(n)) is not on hosts"))
+            haskey(cur, n) || throw(ArgumentError("host $(repr(n)) is not on hosts"))
         end
         keep = HostAllow()
         for (n, cap) in cur
@@ -345,7 +407,7 @@ function default_config_body(; store::AbstractString = default_store_path())::St
     return """
     # DistSSHQueue. Override with DISTSSHQUEUE_CONFIG / DISTSSHQUEUE_STORE.
     store = $(repr(String(store)))
-    # hosts = ["parent", "child:host1:4"]   # Kit tokens; optional max :N
+    # hosts = ["4*host1", "host2"]   # Run machine-file tokens; head omitted
 
     [env]
     # DISTRIBUTED_SSH_OPTS = "-F /path/to/ssh_config"
@@ -390,7 +452,7 @@ function _warn_tilde_store!(path::AbstractString)
 end
 
 function store_path()::String
-    env = strip(get(ENV, "DISTSSHQUEUE_STORE", ""))
+    env = _env_path_override("DISTSSHQUEUE_STORE")
     if !isempty(env)
         _warn_tilde_store!(env)
         return env

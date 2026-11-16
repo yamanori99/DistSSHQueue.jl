@@ -111,8 +111,7 @@ function warn_worker_julia(
     seen = Set{String}()
     kids = String[]
     for raw in tokens
-        name = kit_ssh_name(String(raw))
-        is_parent_host_name(name) && continue
+        name = registry_host_key(String(raw))
         name in seen && continue
         push!(seen, name)
         push!(kids, name)
@@ -159,11 +158,10 @@ function warn_child_submit_reach(tokens; io::IO = stdout)
     kids = String[]
     seen = Set{String}()
     for raw in tokens
-        name = kit_ssh_name(String(raw))
-        is_parent_host_name(name) && continue
+        name = registry_host_key(String(raw))
         name in seen && continue
         push!(seen, name)
-        push!(kids, "child:$(name)")
+        push!(kids, name)
     end
     isempty(kids) && return nothing
     listed = join(kids, ", ")
@@ -187,10 +185,10 @@ function add_host_cli(args::Vector{String})::Cint
         startswith(a, "-") && throw(ArgumentError("unknown add-host option: $(a)"))
         push!(names, a)
     end
-    add_host_names!(config_path(), names)
+    isempty(names) || add_host_names!(config_path(), names)
     print_list_host(config_host_names(load_config()))
-    warn_child_submit_reach(names)
-    warn_worker_julia(names)
+    isempty(names) || warn_child_submit_reach(names)
+    isempty(names) || warn_worker_julia(names)
     return 0
 end
 
@@ -204,7 +202,7 @@ function remove_host_cli(args::Vector{String})::Cint
         startswith(a, "-") && throw(ArgumentError("unknown remove-host option: $(a)"))
         push!(names, a)
     end
-    remove_host_names!(config_path(), names)
+    isempty(names) || remove_host_names!(config_path(), names)
     print_list_host(config_host_names(load_config()))
     return 0
 end

@@ -84,9 +84,20 @@ function kit_worker_root(project::AbstractString, kw::AbstractDict)::String
     layout = if raw !== nothing
         raw
     else
-        resolve_remote_project_root(canonical_local_path(project))
+        _resolve_remote_project_root(canonical_local_path(project))
     end
     return remote_env_project_root(layout)
+end
+
+"""Like Run's resolver, but tests use env value `1` as unset (same as `DISTSSHQUEUE_*`)."""
+function _resolve_remote_project_root(project::AbstractString)::String
+    v = strip(get(ENV, "DISTRIBUTED_REMOTE_PROJECT_ROOT", ""))
+    if isempty(v) || v == "1"
+        return withenv("DISTRIBUTED_REMOTE_PROJECT_ROOT" => "") do
+            resolve_remote_project_root(project)
+        end
+    end
+    return resolve_remote_project_root(project)
 end
 
 """True when `project` is a qhost stage dir (`…/.distsshqueue/stage/<uuid>`)."""
@@ -132,17 +143,12 @@ function as_host_allow(allowed)::Union{Nothing, HostAllow}
         out = HostAllow()
         for (k, v) in allowed
             n = String(k)
-            if n == "parent" || startswith(n, "parent:") || startswith(n, "child:")
-                n = kit_ssh_name(n)
-            elseif isempty(n)
-                continue
-            end
-            cap = if v === nothing
-                nothing
+            isempty(n) && continue
+            if v === nothing
+                out[n] = 1
             else
-                _positive_n(Int(v), string(n, ":", v))
+                out[n] = _positive_workers(Int(v), string(n))
             end
-            out[n] = cap
         end
         return out
     end
@@ -150,33 +156,26 @@ function as_host_allow(allowed)::Union{Nothing, HostAllow}
 end
 
 function reject_host_token!(allow::Union{Nothing, HostAllow}, t::AbstractString)
-    parsed = parse_placement_token(t)
-    allow === nothing && return parsed
-    if !haskey(allow, parsed.name)
+    throw_legacy_machine_token(String(strip(t)))
+    placement = parse_machine_token(t)
+    key = String(placement.dest)
+    allow === nothing && return placement
+    if !haskey(allow, key)
         throw(
             ArgumentError(
-                "Kit name $(repr(parsed.name)) is not allowed (token $(repr(t)))",
-            )
+                "host $(repr(key)) is not on hosts (token $(repr(t)))",
+            ),
         )
     end
-    cap = allow[parsed.name]
-    cap === nothing && return parsed
-    jobn = parsed.n
-    if jobn === nothing
+    cap = allow[key]
+    if placement.workers > cap
         throw(
             ArgumentError(
-                "Kit name $(repr(parsed.name)) needs :N (max $(cap); token $(repr(t)))",
-            )
+                "$(placement.workers) workers exceeds registry max $(cap) for $(repr(key)) (token $(repr(t)))",
+            ),
         )
     end
-    if jobn > cap
-        throw(
-            ArgumentError(
-                "Kit :N $(jobn) exceeds max $(cap) for $(repr(parsed.name)) (token $(repr(t)))",
-            )
-        )
-    end
-    return parsed
+    return placement
 end
 
 
@@ -682,14 +681,9 @@ function _kit_setup_session(j::Job, proj::AbstractString; workers = j.hosts)
     )
 end
 
-"""`child:NAME[:N]` tokens only. Kit `setup!` refuses `parent` except `up`."""
+"""SSH host names for `setup!` (strip `N*host` tokens; head uses kwargs)."""
 function _kit_setup_child_tokens(hosts::AbstractVector{<:AbstractString})::Vector{String}
-    out = String[]
-    for raw in hosts
-        is_parent_host_name(kit_ssh_name(raw)) && continue
-        push!(out, String(raw))
-    end
-    return out
+    return String[registry_host_key(String(raw)) for raw in hosts]
 end
 
 """`Pkg.instantiate` the job tree on this host (Kit parent / queue host).
@@ -915,9 +909,6 @@ function _host_result_name(h)::Union{Nothing, String}
     text = strip(String(raw))
     isempty(text) && return nothing
     # Ship `HostResult.host` is an SSH alias. A placement token is normalized.
-    if startswith(text, "parent") || startswith(text, "child:")
-        return kit_ssh_name(text)
-    end
     return text
 end
 
@@ -956,7 +947,7 @@ end
 function _child_ssh_names(hosts::AbstractVector{<:AbstractString})::Vector{String}
     out = String[]
     for raw in _kit_setup_child_tokens(hosts)
-        push!(out, kit_ssh_name(raw))
+        push!(out, registry_host_key(raw))
     end
     return out
 end
@@ -1371,7 +1362,7 @@ end
 
 """Enqueue. `kind` is a DistSSHRun `execute!` kind in `KIT_EXECUTE_KINDS` (`:go`, `:ride`, `:drive`).
 
-`hosts` must be DistSSHKit 0.4 placement tokens (`parent[:N]` / `child:NAME[:N]`).
+`hosts` are remote machine tokens (`N*host` or bare host). Head uses kwargs `head_workers` / `head_slots`.
 Missing `project` uses `job_project()` (cwd / `DISTRIBUTED_PROJECT_ROOT`), not the
 serve env (`enable --queue-env` / Julia `--project=` that loaded Queue). Same verb as CLI `submit`.
 

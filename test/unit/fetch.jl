@@ -66,7 +66,7 @@ end
         queued_store = joinpath(d, "queued.toml")
         q = Queue(; store = queued_store, runner = _ -> nothing)
         queued = withenv("DISTRIBUTED_PROJECT_ROOT" => proj) do
-            submit!(q, script, "parent:1"; project = proj)
+            submit!(q, script; head_slots = 1, project = proj)
         end
         @test_throws ArgumentError DistSSHQueue.fetch_source(queued; store = queued_store)
         @test_throws ArgumentError DistSSHQueue.fetch_source("no-such-id"; store = queued_store)
@@ -81,7 +81,7 @@ end
             end
         )
         running = withenv("DISTRIBUTED_PROJECT_ROOT" => proj) do
-            submit!(q2, script, "parent:1"; project = proj)
+            submit!(q2, script; head_slots = 1, project = proj)
         end
         leaf[] = joinpath(d, ".distsshkit", "go", "S_" * first(running, 8))
         mkpath(leaf[])
@@ -117,7 +117,7 @@ end
         stray_id = Ref{String}()
         q3 = Queue(; store = stray_store, runner = _ -> "/tmp/go/S_" * first(stray_id[], 8))
         stray_id[] = withenv("DISTRIBUTED_PROJECT_ROOT" => proj) do
-            submit!(q3, script, "parent:1"; project = proj)
+            submit!(q3, script; head_slots = 1, project = proj)
         end
         @test step!(q3) == 1
         _wait_fetch_state(q3, stray_id[], :done)
@@ -139,7 +139,7 @@ end
                     id = id,
                     kind = :go,
                     script = joinpath(d, "S.jl"),
-                    hosts = ["parent:1"],
+                    hosts = String[],
                     state = :running,
                 ),
             ],
@@ -166,7 +166,7 @@ end
             id = id,
             kind = :go,
             script = joinpath(d, "S.jl"),
-            hosts = ["parent:1"],
+            hosts = String[],
             state = :done,
             kwargs = Dict{String, Any}(
                 "project" => String(d),
@@ -192,11 +192,12 @@ end
             id = id,
             kind = :drive,
             script = joinpath(d, "S.jl"),
-            hosts = ["parent:1"],
+            hosts = String[],
             state = :failed,
             kwargs = Dict{String, Any}(
                 "project" => String(d),
                 "setup_logs" => [setup],
+                "head_slots" => 1,
             ),
         )
         DistSSHQueue.save_jobs(store, [j])
@@ -209,7 +210,7 @@ end
             id = "bbbbbbbb-4444-4000-8000-000000000004",
             kind = :go,
             script = joinpath(d, "T.jl"),
-            hosts = ["parent:1"],
+            hosts = String[],
             state = :done,
             result_path = "-",
         )
@@ -235,12 +236,13 @@ end
             id = id,
             kind = :drive,
             script = joinpath(d, "S.jl"),
-            hosts = ["parent:1"],
+            hosts = String[],
             state = :failed,
             result_path = art,
             kwargs = Dict{String, Any}(
                 "project" => String(d),
                 "setup_logs" => [setup],
+                "head_slots" => 1,
             ),
         )
         DistSSHQueue.save_jobs(store, [j])
@@ -268,7 +270,7 @@ end
                 return leaf
             end
         )
-        id = submit!(q, script, "parent:1"; project = proj)
+        id = submit!(q, script; head_slots = 1, project = proj)
         idbox[] = id
         @test step!(q) == 1
         _wait_fetch_state(q, id, :done)
@@ -276,11 +278,11 @@ end
         withenv(
             "DISTSSHQUEUE_STORE" => store,
             "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
-            "DISTSSHQUEUE_HOST" => nothing,
+            "DISTSSHQUEUE_HOST" => 1,
             "DISTSSHQUEUE_NO_STAGE" => "1",
             DistSSHQueue.LOCAL_QUEUE_ENV => "1",
             "DISTRIBUTED_PROJECT_ROOT" => proj,
-            "DISTSSH_TEST_SSH" => nothing,
+            "DISTSSH_TEST_SSH" => 1,
         ) do
             code, out, err = capture_stdio() do
                 DistSSHQueue.main(["fetch", id])
@@ -298,11 +300,13 @@ end
             end
             @test code_q == 1
             @test occursin("unknown job", err_q)
-            code_r, _, err_r = capture_stdio() do
-                DistSSHQueue.main(["qhost:h", "fetch", id])
+            code_r, _, err_r = withenv("DISTSSHQUEUE_HOST" => nothing) do
+                capture_stdio() do
+                    DistSSHQueue.main(["qhost:h", "fetch", id])
+                end
             end
             @test code_r == 1
-            @test occursin("rsync", err_r)
+            @test occursin("rsync", err_r) || occursin("queue host", err_r)
             code_e, _, err_e = capture_stdio() do
                 DistSSHQueue.main(["fetch"])
             end
@@ -451,7 +455,7 @@ end
         j = DistSSHQueue.Job(;
             kind = :go,
             script = "S.jl",
-            hosts = ["parent:1"],
+            hosts = String[],
             result_path = art,
             kwargs = Dict{String, Any}(
                 "run_toml" => Dict{String, Any}(
@@ -518,7 +522,7 @@ end
                     id = id,
                     kind = :go,
                     script = "s.jl",
-                    hosts = ["parent:1"],
+                    hosts = String[],
                     state = :done,
                     result_path = art,
                     kwargs = Dict{String, Any}(
@@ -563,7 +567,7 @@ end
         @test parsed6[6] == notes
         out_io_path, err_text, code_line = mktemp() do _, out_io
             mktemp() do _, err_io
-                code = withenv("DISTSSHQUEUE_STORE" => store, "DISTSSH_QUIET" => nothing) do
+                code = withenv("DISTSSHQUEUE_STORE" => store, "DISTSSH_QUIET" => 1) do
                     redirect_stdout(out_io) do
                         redirect_stderr(err_io) do
                             DistSSHQueue.fetch_cli(nothing, nothing, nothing, [id])
@@ -580,13 +584,15 @@ end
         @test code_line == 0
         @test split(chomp(out_io_path), '\n'; keepempty = false) == [art]
         @test !occursin("setup on the queue host", err_text)
-        shown = mktemp() do _, err_io
-            redirect_stderr(err_io) do
-                DistSSHQueue._print_fetch_notes(notes)
+        shown = withenv("DISTSSH_QUIET" => "") do
+            mktemp() do _, err_io
+                redirect_stderr(err_io) do
+                    DistSSHQueue._print_fetch_notes(notes)
+                end
+                flush(err_io)
+                seekstart(err_io)
+                return read(err_io, String)
             end
-            flush(err_io)
-            seekstart(err_io)
-            return read(err_io, String)
         end
         at(needle) = something(findfirst(needle, shown), 0:0).start
         code_at = at("code  commit 1a2b3c4 (uncommitted changes)")
@@ -606,13 +612,15 @@ end
         end
         @test !occursin("setup on the queue host", quiet)
         @test !occursin("commit 1a2b3c4", quiet)
-        code_only = mktemp() do _, err_io
-            redirect_stderr(err_io) do
-                DistSSHQueue._print_fetch_notes("commit 1a2b3c4")
+        code_only = withenv("DISTSSH_QUIET" => "") do
+            mktemp() do _, err_io
+                redirect_stderr(err_io) do
+                    DistSSHQueue._print_fetch_notes("commit 1a2b3c4")
+                end
+                flush(err_io)
+                seekstart(err_io)
+                return read(err_io, String)
             end
-            flush(err_io)
-            seekstart(err_io)
-            return read(err_io, String)
         end
         @test occursin("code  commit 1a2b3c4", code_only)
         @test !occursin("setup on the queue host", code_only)

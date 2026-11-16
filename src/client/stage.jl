@@ -46,7 +46,7 @@ function drop_unwritten_stage!(id::AbstractString, store::AbstractString; home::
     written = try
         any(j -> j.id == sid, read_jobs(store))
     catch
-        return nothing
+        false
     end
     written && return nothing
     path = orphan_stage_path(sid; home = home)

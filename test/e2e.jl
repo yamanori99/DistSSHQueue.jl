@@ -12,7 +12,7 @@
 # tree is the git send list (`setup --rsync`), with `.distsshqueue/` left
 # out and `.distsshqueue-backup` kept. Inspect verbs
 # (`pool`) is Queue chrome only (header + inventory notes).
-# Kit slots on docker-ssh (`child:child-1:1`).
+# Kit slots on docker-ssh (`1*child-1`).
 # Three roles, one suite: client = loopback, qhost = this host, child = containers.
 # Do not treat a container as qhost. `parent:1` only occupies FIFO here.
 # Not a client-as-`parent:N` topology. `enable` / `disable` / `teardown` use
@@ -20,7 +20,7 @@
 #
 # Table jobs are the four *file*/*echo* demos plus `ride/map_echo.jl`.
 # `pipeline_pi.jl` / `pipeline_square.jl` call `go!` / `pipeline!` themselves —
-# not Queue rows. One `go` uses `child:HOST:2` (`go_manifest.txt` `slots=2`).
+# not Queue rows. One `go` uses `2*HOST` (`go_manifest.txt` `slots=2`).
 # `pool` lists every worker in the hosts file.
 #
 # Also: FIFO one-at-a-time, cancel queued (skip that row), cancel running
@@ -637,7 +637,7 @@ end
             @test manifest_check_ignore_status(JOB_PROJECT) == 1
             session = DistSSHSession(
                 project = JOB_PROJECT,
-                workers = ["child:$(h)" for h in HOSTS],
+                workers = ["$(h)" for h in HOSTS],
                 remote = REMOTE_ROOT,
                 yes = true,
                 quiet = true,
@@ -661,7 +661,7 @@ end
 
         mktempdir() do d
             host = HOSTS[1]
-            token = "child:$(host):1"
+            token = "1*$(host)"
 
             @testset "Kit go/drive/ride demos through serve" begin
                 cases = (
@@ -745,11 +745,11 @@ end
                 end
             end
 
-            @testset "go on child:HOST:2" begin
-                @e2e_announce "go on child:HOST:2"
+            @testset "go on 2*HOST" begin
+                @e2e_announce "go on 2*HOST"
                 # One job, two Kit slots on the same worker. `step!` still runs
                 # a single row; this checks the `:2` token is accepted and finishes.
-                wide = "child:$(host):2"
+                wide = "2*$(host)"
                 store_w = joinpath(d, "wide.toml")
                 echo = joinpath(JOB_PROJECT, "demos", "without_kit", "pi_echo.jl")
                 out_w = joinpath(JOB_PROJECT, "e2e_kit_out", "wide")
@@ -832,9 +832,9 @@ end
                 end
                 a = submit!(
                     h,
-                    hold,
-                    String["parent:1"];
+                    hold;
                     kind = :go,
+                    head_slots = 1,
                     project = JOB_PROJECT,
                     output_dir = out_a,
                     julia = "auto",
@@ -931,11 +931,15 @@ end
                     ztext = isfile(zout) ? read(zout, String) : ""
                     @test count("will require --interval > 0", ztext) == 1
 
-                    @test capture_cli(addenv(qcmd(["add-host", "parent"]), env...))[1] == 0
+                    @test capture_cli(addenv(qcmd(["add-host"]), env...))[1] == 0
+                    @test capture_cli(addenv(qcmd(["add-host", "1*e2e-local"]), env...))[1] == 0
                     decline = joinpath(d, "decline.txt")
                     write(decline, "no\n")
                     code, out, _ = capture_cli(
-                        addenv(qcmd(["up", "default", "1.13"]), env...);
+                        addenv(
+                            qcmd(["up", "default", "1.13"]),
+                            merge(env, Dict("DISTSSH_QUIET" => ""))...,
+                        );
                         stdin = decline,
                     )
                     @test code == 0
@@ -965,7 +969,7 @@ end
                             DistSSHQueue.Job(;
                                 kind = :go,
                                 script = script,
-                                hosts = ["parent"],
+                                hosts = String[],
                                 state = :running,
                                 kwargs = Dict{String, Any}("run_dir" => rundir),
                             ),
@@ -1047,7 +1051,7 @@ end
                     enabled = false
                     try
                         @test capture_cli(addenv(qcmd(["setup"]), env...))[1] == 0
-                        @test capture_cli(addenv(qcmd(["add-host", "parent"]), env...))[1] == 0
+                        @test capture_cli(addenv(qcmd(["add-host"]), env...))[1] == 0
                         @test capture_cli(
                             addenv(
                                 qcmd(["enable", "--write-only", "--queue-env", qenv, "--julia", E2E_JULIA]),
@@ -1064,7 +1068,7 @@ end
                         @test !isempty(tag)
                         code, _, err = capture_cli(
                             addenv(
-                                qcmd(["submit", "go", "parent:1", "--output-dir", outdir, script]),
+                                qcmd(["submit", "go", "--head-slots", "1", "--output-dir", outdir, script]),
                                 env...,
                             ),
                         )
@@ -1106,7 +1110,7 @@ end
                 mkpath(e2e_home)
                 cfg = joinpath(e2e_home, ".distsshqueue", "config.toml")
                 store = joinpath(e2e_home, ".distsshqueue", "jobs.toml")
-                token = "child:$(HOSTS[1]):1"
+                token = "1*$(HOSTS[1])"
                 script = joinpath(JOB_PROJECT, "demos", "without_kit", "pi_echo.jl")
                 @test isfile(script)
 
@@ -1132,7 +1136,7 @@ end
                     env = merge(host_env, Dict("DISTSSHQUEUE_NO_AUTOSERVE" => "1"))
                     @test run_cli(addenv(qcmd(["setup"]), env...)).exitcode == 0
                     @test isfile(cfg)
-                    @test run_cli(addenv(qcmd(["add-host", "parent", "child:$(HOSTS[1])"]), env...)).exitcode == 0
+                    @test run_cli(addenv(qcmd(["add-host", "$(HOSTS[1])"]), env...)).exitcode == 0
                     @test run_cli(addenv(qcmd(["enable", "--write-only", "--queue-env", test_project, "--julia", E2E_JULIA]), env...)).exitcode == 0
                     rel = if Sys.isapple()
                         joinpath("Library", "LaunchAgents", "org.distsshqueue.serve.plist")
@@ -1162,7 +1166,7 @@ end
 
                     # Glue only: Queue header + inventory notes. Table layout is Kit E2E.
                     size_env = merge(env, Dict("DISTSSH_QUIET" => "0"))
-                    inspect_hosts = ["parent"; ["child:$(h)" for h in HOSTS]]
+                    inspect_hosts = String["$(h)" for h in HOSTS]
                     code_sz, _, size_err = capture_cli(
                         addenv(qcmd(["size", "--gb-per-worker", "1.5", inspect_hosts...]), size_env...),
                     )
@@ -1179,7 +1183,7 @@ end
                     @test occursin("Pool:", pool_out)
                     @test !occursin("Suggested submit (template):", pool_out)
                     @test !occursin("GB/worker", pool_out)
-                    @test occursin("parent is this queue host", pool_out)
+                    @test occursin("head", pool_out)
                     for h in HOSTS
                         @test occursin(h, pool_out)
                     end
@@ -1341,7 +1345,7 @@ end
                         write(hold, "while true; sleep(1); end\n")
                         cancel_out = joinpath(JOB_PROJECT, "e2e_kit_out", "qhost_cancel")
                         isdir(cancel_out) && rm(cancel_out; recursive = true)
-                        id2 = read_cli(addenv(qh(["submit", "go", "parent:1", "--output-dir", cancel_out, hold]), client_env...))
+                        id2 = read_cli(addenv(qh(["submit", "go", "--head-slots", "1", "--output-dir", cancel_out, hold]), client_env...))
                         wait_store_job(qh_store, id2, (:running,); tries = GO_WAIT_TRIES)
                         wait_store_kit_pid(qh_store, id2)
                         id3 = read_cli(addenv(qh(["submit", "go", token, script, GO_N...]), client_env...))

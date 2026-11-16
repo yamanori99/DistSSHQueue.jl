@@ -24,7 +24,11 @@ using DistSSHQueue
             @test code_h == 1
             @test occursin("qhost:HOST", err_h)
             @test occursin("setup", err_h)
-            withenv(DistSSHQueue.LOCAL_QUEUE_ENV => "1", DistSSHQueue.QHOST_DEFAULT_ENV => nothing) do
+            withenv(
+                DistSSHQueue.LOCAL_QUEUE_ENV => "1",
+                DistSSHQueue.QHOST_DEFAULT_ENV => nothing,
+                "DISTSSH_QUIET" => "",
+            ) do
                 code_ok, out, _ = capture_stdio() do
                     DistSSHQueue.main(["status"])
                 end
@@ -45,12 +49,14 @@ using DistSSHQueue
             end
             @test code_setup == 0
             @test isfile(cfg2)
-            code_host, out_s, err_s = capture_stdio() do
-                DistSSHQueue.main(["status"])
+            withenv("DISTSSH_QUIET" => "") do
+                code_host, out_s, err_s = capture_stdio() do
+                    DistSSHQueue.main(["status"])
+                end
+                @test code_host == 0
+                @test !occursin("qhost:HOST", err_s)
+                @test occursin("Store", out_s)
             end
-            @test code_host == 0
-            @test !occursin("qhost:HOST", err_s)
-            @test occursin("Store", out_s)
         end
     end
 end

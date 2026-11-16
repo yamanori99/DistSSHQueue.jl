@@ -4,35 +4,31 @@
 # No tokens: pool every name on config `hosts`. From a client: `qhost:HOST pool …`.
 function clamp_pool_slots(slots::Int, allow::Union{Nothing, HostAllow}, host::AbstractString)::Int
     allow === nothing && return slots
-    name = is_parent_host_name(host) ? PARENT_HOST_NAME : String(host)
-    cap = get(allow, name, nothing)
-    cap === nothing && return slots
+    name = String(host)
+    cap = get(allow, name, slots)
     return min(slots, cap)
 end
 
 function pool_hosts_from_allow(
-        include_parent::Bool,
+        include_head::Bool,
         hosts::Vector{String},
         allow::Union{Nothing, HostAllow},
     )::Tuple{Bool, Vector{String}}
-    isempty(hosts) || return include_parent, String[String(h) for h in hosts]
-    include_parent && return include_parent, String[String(h) for h in hosts]
-    allow === nothing && throw(
-        ArgumentError(
-            "pool: pass `parent` / `child:NAME`, or add-host first",
+    isempty(hosts) || return include_head, String[String(h) for h in hosts]
+    include_head && return include_head, String[String(h) for h in hosts]
+    if allow === nothing || isempty(allow)
+        include_head || throw(
+            ArgumentError(
+                "pool: pass SSH host names, or add-host first",
+            )
         )
-    )
-    isempty(allow) && throw(ArgumentError("pool: hosts = []; add-host first"))
-    out = String[]
-    parent = false
-    for n in sorted_kit_ssh_names(allow)
-        if is_parent_host_name(n)
-            parent = true
-        else
-            push!(out, n)
-        end
+        return true, String[]
     end
-    return parent, out
+    out = String[]
+    for n in sorted_registry_hosts(allow)
+        push!(out, n)
+    end
+    return true, out
 end
 
 function pool_cli(args::Vector{String})::Cint
@@ -44,29 +40,24 @@ function pool_cli(args::Vector{String})::Cint
         print_help_lines(
             stdout,
             "  Same flags as DistSSHKit pool. Runs on the queue host (cwd / project).",
-            "  $(cli_m()) [qhost:HOST] pool [parent] [child:NAME...]",
-            "  Omit tokens to pool config hosts. Does not enqueue.",
-            "  Does not recommend a worker count. Submit with parent:N / child:NAME:N or pool:N.",
+            "  $(cli_m()) [qhost:HOST] pool [HOST...]",
+            "  Omit hosts to pool config registry. Head is always listed first.",
+            "  Does not enqueue or recommend a worker count (parent:N sizing was removed).",
+            "  Submit with --head-workers and machine tokens (or pool:N).",
         )
         return 0
     end
     opts.show_version && (DistSSHRun.println_kit_version(); return 0)
     allow = config_host_names(load_config())
-    include_parent, hosts = pool_hosts_from_allow(
+    include_head, hosts = pool_hosts_from_allow(
         opts.include_parent,
         opts.hosts,
         allow,
     )
-    tokens = String[]
-    include_parent && push!(tokens, format_placement_token(:parent, PARENT_HOST_NAME))
-    for h in hosts
-        if startswith(h, "child:") || is_parent_host_name(h)
-            push!(tokens, h)
-        else
-            push!(tokens, format_placement_token(:child, h))
-        end
-    end
-    if isempty(tokens)
+    tokens = String[
+        format_machine_token(allow === nothing ? 1 : get(allow, h, 1), h) for h in hosts
+    ]
+    if isempty(tokens) && !include_head
         DistSSHRun.show_pool_usage()
         return 0
     end
@@ -80,6 +71,7 @@ function pool_cli(args::Vector{String})::Cint
         quiet = opts.cli_session.quiet,
         verbosity = opts.cli_session.verbosity,
         yes = opts.cli_session.yes,
+        include_head_for_size = include_head,
     )
     result = DistSSHRun.pool!(session)
     DistSSHRun.print_pool(result)

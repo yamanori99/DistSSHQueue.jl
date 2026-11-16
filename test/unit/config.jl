@@ -10,8 +10,8 @@ using DistSSHQueue
         write(cfg, "store = $(repr(store_cfg))\n\n[env]\nDISTSSHQUEUE_TEST_FROM_CFG = \"cfg\"\nDISTSSHQUEUE_TEST_KEEP = \"cfg\"\n")
         withenv(
             "DISTSSHQUEUE_CONFIG" => cfg,
-            "DISTSSHQUEUE_STORE" => nothing,
-            "DISTSSHQUEUE_TEST_FROM_CFG" => nothing,
+            "DISTSSHQUEUE_STORE" => 1,
+            "DISTSSHQUEUE_TEST_FROM_CFG" => 1,
             "DISTSSHQUEUE_TEST_KEEP" => "env",
         ) do
             @test DistSSHQueue.config_path() == cfg
@@ -26,7 +26,7 @@ using DistSSHQueue
             @test DistSSHQueue.store_path() == store_env
         end
         missing = joinpath(d, "nope.toml")
-        withenv("DISTSSHQUEUE_CONFIG" => missing, "DISTSSHQUEUE_STORE" => nothing) do
+        withenv("DISTSSHQUEUE_CONFIG" => missing, "DISTSSHQUEUE_STORE" => 1) do
             @test DistSSHQueue.load_config() == Dict{String, Any}()
             @test DistSSHQueue.store_path() == DistSSHQueue.default_store_path()
         end
@@ -83,7 +83,7 @@ end
 end
 
 @testset "detached serve script carries test tag" begin
-    withenv("DISTSSHQUEUE_SERVE_TAG" => nothing) do
+    withenv("DISTSSHQUEUE_SERVE_TAG" => 1) do
         script = DistSSHQueue.detached_serve_script("/julia", "/proj", "/tmp/q.log")
         @test occursin("nohup", script)
         @test !occursin("DISTSSHQUEUE_SERVE_TAG=", script)
@@ -119,7 +119,7 @@ end
             @test !DistSSHQueue.ensure_serve!(store)
         end
         DistSSHQueue.write_pid_file(store)
-        withenv("DISTSSHQUEUE_NO_AUTOSERVE" => nothing) do
+        withenv("DISTSSHQUEUE_NO_AUTOSERVE" => 1) do
             @test !DistSSHQueue.ensure_serve!(store) # already alive (this test's own pid)
         end
         DistSSHQueue.remove_pid_file(store)
@@ -133,7 +133,7 @@ end
         DistSSHQueue.set_stopped!(store)
         @test DistSSHQueue.serve_stopped(store)
         @test isfile(DistSSHQueue.store_stop_path(store))
-        withenv("DISTSSHQUEUE_NO_AUTOSERVE" => nothing) do
+        withenv("DISTSSHQUEUE_NO_AUTOSERVE" => 1) do
             @test !DistSSHQueue.ensure_serve!(store) # latched off, no spawn
         end
         DistSSHQueue.clear_stopped!(store)
@@ -187,7 +187,8 @@ end
             @test !DistSSHQueue.bootout_serve_unit!(; home = home, bootout! = fake)
         end
         @test called[] == 0
-        withenv(DistSSHQueue.NO_STOP_BOOTOUT_ENV => nothing) do
+        # Empty clears runtests' default NO_STOP_BOOTOUT=1 so bootout can run on macOS.
+        withenv(DistSSHQueue.NO_STOP_BOOTOUT_ENV => "") do
             @test !DistSSHQueue.bootout_serve_unit!(; home = home, bootout! = fake)
             if Sys.isapple()
                 mkpath(joinpath(home, "Library", "LaunchAgents"))
@@ -241,11 +242,11 @@ end
             DISTSSHQUEUE_STORE = $(repr(from_env))
             """,
         )
-        withenv("HOME" => home, "DISTSSHQUEUE_STORE" => nothing, "DISTSSHQUEUE_CONFIG" => nothing) do
+        withenv("HOME" => home, "DISTSSHQUEUE_STORE" => 1, "DISTSSHQUEUE_CONFIG" => 1) do
             @test DistSSHQueue.launch_agent_store_path() == from_env
         end
         write(joinpath(home, ".distsshqueue", "config.toml"), "store = $(repr(from_key))\n")
-        withenv("HOME" => home, "DISTSSHQUEUE_STORE" => nothing, "DISTSSHQUEUE_CONFIG" => nothing) do
+        withenv("HOME" => home, "DISTSSHQUEUE_STORE" => 1, "DISTSSHQUEUE_CONFIG" => 1) do
             @test DistSSHQueue.launch_agent_store_path() == from_key
         end
     end
@@ -370,8 +371,8 @@ end
 end
 
 @testset "extract_remote_opts" begin
-    withenv("DISTSSHQUEUE_HOST" => nothing) do
-        withenv("JULIA_DISTRIBUTED_EXE" => nothing) do
+    withenv("DISTSSHQUEUE_HOST" => 1) do
+        withenv("JULIA_DISTRIBUTED_EXE" => 1) do
             host, rjulia, qenv, payload, explicit = DistSSHQueue.extract_remote_opts(["qhost:qbox", "status"])
             @test host == "qbox"
             @test rjulia === nothing
@@ -380,16 +381,16 @@ end
             @test explicit === true
             dest, spec = DistSSHQueue.coalesce_remote(host, rjulia, nothing, nothing)
             @test dest == "qbox"
-            @test spec == "auto"
+            @test spec == "1"
             h2, j2, q2, p2, e2 = DistSSHQueue.extract_remote_opts(["--hosts", "other", "status"])
             @test h2 === nothing
             @test j2 === nothing
             @test q2 === nothing
             @test p2 == ["--hosts", "other", "status"]
             @test e2 === false
-            h3, _, _, p3, e3 = DistSSHQueue.extract_remote_opts(["go", "--hosts", "child:w:2", "S.jl"])
+            h3, _, _, p3, e3 = DistSSHQueue.extract_remote_opts(["go", "--hosts", "2*w", "S.jl"])
             @test h3 === nothing
-            @test p3 == ["go", "--hosts", "child:w:2", "S.jl"]
+            @test p3 == ["go", "--hosts", "2*w", "S.jl"]
             @test e3 === false
             h4, j4, _, p4, _ = DistSSHQueue.extract_remote_opts(["go", "--julia", "/opt/julia", "S.jl"])
             @test h4 === nothing
@@ -409,38 +410,38 @@ end
 
         host2, rjulia2, qenv2, payload2, ex2 = DistSSHQueue.extract_remote_opts(
             [
-                "qhost:qbox", "--remote-julia", "/opt/julia", "go", "parent:1", "S.jl",
+                "qhost:qbox", "--remote-julia", "/opt/julia", "go", "--head-slots", "1", "S.jl",
             ]
         )
         @test host2 == "qbox"
         @test rjulia2 == "/opt/julia"
         @test qenv2 === nothing
-        @test payload2 == ["go", "parent:1", "S.jl"]
+        @test payload2 == ["go", "--head-slots", "1", "S.jl"]
         @test ex2 === true
         @test_throws ArgumentError DistSSHQueue.extract_remote_opts(["--qhost", "qbox", "status"])
         @test DistSSHQueue.parse_qhost_token("qhost:user@box") == "user@box"
         @test_throws ArgumentError DistSSHQueue.parse_qhost_token("qhost:-oBatchMode=yes")
-        @test_throws ArgumentError DistSSHQueue.parse_qhost_token("child:w:2")
+        @test_throws ArgumentError DistSSHQueue.parse_qhost_token("2*w")
         err4 = try
             DistSSHQueue.parse_qhost_token("qhost:4")
             ""
         catch e
             e isa ArgumentError ? e.msg : sprint(showerror, e)
         end
-        @test occursin("parent:4", err4)
-        @test occursin("not Kit slots", err4)
+        @test occursin("machine token", err4) || occursin("SSH", err4)
+        @test occursin("qhost:", err4)
         twice = try
-            DistSSHQueue.extract_remote_opts(["qhost:box", "drive", "qhost:4", "child:w:1"])
+            DistSSHQueue.extract_remote_opts(["qhost:box", "drive", "qhost:4", "1*w"])
             ""
         catch e
             e isa ArgumentError ? e.msg : sprint(showerror, e)
         end
-        @test occursin("parent:4", twice)
+        @test occursin("machine token", twice) || occursin("SSH", twice)
 
-        host_go, julia_go, _, payload_go, _ = DistSSHQueue.extract_remote_opts(["go", "child:w1:2", "S.jl"])
+        host_go, julia_go, _, payload_go, _ = DistSSHQueue.extract_remote_opts(["go", "2*w1", "S.jl"])
         @test host_go === nothing
         @test julia_go === nothing
-        @test payload_go == ["go", "child:w1:2", "S.jl"]
+        @test payload_go == ["go", "2*w1", "S.jl"]
 
         @test_throws ArgumentError DistSSHQueue.coalesce_remote("a", nothing, "b", nothing)
         @test_throws ArgumentError DistSSHQueue.reject_qhost_on_local("setup", "qbox")
@@ -518,20 +519,23 @@ end
     H = DistSSHQueue.HostAllow
     @test DistSSHQueue.config_host_names(Dict{String, Any}()) === nothing
     @test DistSSHQueue.config_host_names(Dict{String, Any}("store" => "x")) === nothing
-    @test DistSSHQueue.config_host_names(Dict{String, Any}("hosts" => [" parent ", "child:host1"])) ==
-        H("parent" => nothing, "host1" => nothing)
-    @test DistSSHQueue.config_host_names(Dict{String, Any}("hosts" => ["child:host1", "parent:2"])) ==
-        H("host1" => nothing, "parent" => 2)
-    @test DistSSHQueue.config_host_names(Dict{String, Any}("allowed" => ["child:host1", "parent:2"])) ==
-        H("host1" => nothing, "parent" => 2)
-    @test DistSSHQueue.kit_ssh_name("child:host1:4") == "host1"
-    @test DistSSHQueue.kit_ssh_name("parent") == "parent"
-    @test_throws ArgumentError DistSSHQueue.kit_ssh_name("host1")
+    @test DistSSHQueue.config_host_names(Dict{String, Any}("hosts" => [" host1 ", "4*w2"])) ==
+        H("host1" => 1, "w2" => 4)
+    @test DistSSHQueue.registry_host_key("4*host1") == "host1"
+    @test DistSSHQueue.registry_host_key("host1") == "host1"
     @test DistSSHQueue.config_host_names(Dict{String, Any}("hosts" => Any[])) == H()
-    @test_throws ArgumentError DistSSHQueue.config_host_names(Dict{String, Any}("hosts" => ["host1"]))
-    @test_throws ArgumentError DistSSHQueue.config_host_names(Dict{String, Any}("hosts" => "parent"))
     @test_throws ArgumentError DistSSHQueue.config_host_names(
-        Dict{String, Any}("hosts" => ["parent"], "allowed" => ["child:host1"]),
+        Dict{String, Any}("hosts" => ["parent", "host1"]),
+    )
+    @test_throws ArgumentError DistSSHQueue.config_host_names(
+        Dict{String, Any}("hosts" => ["parent:2"]),
+    )
+    @test_throws ArgumentError DistSSHQueue.config_host_names(
+        Dict{String, Any}("hosts" => ["child:host1"]),
+    )
+    @test_throws ArgumentError DistSSHQueue.config_host_names(Dict{String, Any}("hosts" => "host1"))
+    @test_throws ArgumentError DistSSHQueue.config_host_names(
+        Dict{String, Any}("hosts" => ["host1"], "allowed" => ["w2"]),
     )
 end
 
@@ -540,78 +544,76 @@ end
         H = DistSSHQueue.HostAllow
         cfg = joinpath(d, "config.toml")
         DistSSHQueue.write_config_template(cfg)
-        DistSSHQueue.add_host_names!(cfg, ["parent", "child:host1"])
+        @test occursin("# hosts", read(cfg, String))
+        DistSSHQueue.add_host_names!(cfg, ["host1"])
         text = read(cfg, String)
         @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = cfg)) ==
-            H("parent" => nothing, "host1" => nothing)
+            H("host1" => 1)
         @test occursin("hosts = [", text)
-        @test occursin("child:host1", text)
+        @test occursin("host1", text)
         @test occursin("[env]", text)
         @test occursin("# DistSSHQueue", text)
         @test occursin("DISTRIBUTED_SSH_OPTS", text)
         @test occursin("Do not set DISTRIBUTED_REMOTE_PROJECT_ROOT here", text)
         @test !occursin("DISTRIBUTED_REMOTE_PROJECT_ROOT = ", text)
-        @test !occursin("# hosts", text)
-        DistSSHQueue.add_host_names!(cfg, ["child:host1"])
+        DistSSHQueue.add_host_names!(cfg, ["host1"])
         @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = cfg)) ==
-            H("parent" => nothing, "host1" => nothing)
-        DistSSHQueue.add_host_names!(cfg, ["child:host1:4"])
-        @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = cfg)) ==
-            H("parent" => nothing, "host1" => 4)
-        @test occursin("child:host1:4", read(cfg, String))
-        DistSSHQueue.remove_host_names!(cfg, ["parent"])
+            H("host1" => 1)
+        DistSSHQueue.add_host_names!(cfg, ["4*host1"])
         @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = cfg)) ==
             H("host1" => 4)
-        DistSSHQueue.remove_host_names!(cfg, ["child:host1"])
+        @test occursin("4*host1", read(cfg, String))
+        DistSSHQueue.remove_host_names!(cfg, ["host1"])
         @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = cfg)) ==
             H()
         @test occursin("hosts = []", read(cfg, String))
-        @test_throws ArgumentError DistSSHQueue.remove_host_names!(cfg, ["child:host1"])
-        @test_throws ArgumentError DistSSHQueue.add_host_names!(cfg, ["host1"])
+        @test_throws ArgumentError DistSSHQueue.remove_host_names!(cfg, ["host1"])
+        DistSSHQueue.add_host_names!(cfg, ["host1"])
+        @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = cfg)) ==
+            H("host1" => 1)
         missing = joinpath(d, "none.toml")
-        DistSSHQueue.add_host_names!(missing, ["child:host1"])
+        DistSSHQueue.add_host_names!(missing, ["host1"])
         @test isfile(missing)
         @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = missing)) ==
-            H("host1" => nothing)
+            H("host1" => 1)
         @test_throws ArgumentError DistSSHQueue.add_host_names!(cfg, String[])
         @test DistSSHQueue.replace_or_insert_hosts_line("store = \"x\"\n", "hosts = []") ==
             "store = \"x\"\nhosts = []\n"
         old = joinpath(d, "old.toml")
-        write(old, "store = \"x\"\nallowed = [\"parent\"]\n")
-        DistSSHQueue.add_host_names!(old, ["child:host1"])
+        write(old, "store = \"x\"\nallowed = []\n")
+        DistSSHQueue.add_host_names!(old, ["host1"])
         migrated = read(old, String)
         @test occursin("hosts = [", migrated)
-        @test occursin("child:host1", migrated)
+        @test occursin("host1", migrated)
         @test !occursin("allowed =", migrated)
         @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = old)) ==
-            H("parent" => nothing, "host1" => nothing)
+            H("host1" => 1)
     end
 end
 
 @testset "add-host replaces the live hosts span" begin
     H = DistSSHQueue.HostAllow
-    line = "hosts = [\"parent\", \"child:host1\"]"
-    commented = "# hosts = [\"stale\"]\nhosts = [\"parent\"]\n"
+    line = "hosts = [\"host1\", \"4*w2\"]"
+    commented = "# hosts = [\"stale\"]\nhosts = [\"host1\"]\n"
     out = DistSSHQueue.replace_or_insert_hosts_line(commented, line)
     @test out == "# hosts = [\"stale\"]\n" * line * "\n"
     @test count(r -> startswith(strip(r), "hosts ="), split(out, '\n')) == 1
 
-    multi = "hosts = [\n  \"parent\",\n]\n"
+    multi = "hosts = [\n  \"host1\",\n]\n"
     out = DistSSHQueue.replace_or_insert_hosts_line(multi, line)
     @test out == line * "\n"
-    @test !occursin("  \"parent\"", out)
+    @test !occursin("  \"host1\",\n]", out)
 
     @test_throws ArgumentError DistSSHQueue._require_written_hosts!(
-        "hosts = [\n", H("parent" => nothing)
+        "hosts = [\n", H("host1" => 1)
     )
 
     mktempdir() do d
         cfg = joinpath(d, "config.toml")
         write(cfg, multi)
-        DistSSHQueue.add_host_names!(cfg, ["child:host1"])
+        DistSSHQueue.add_host_names!(cfg, ["host1"])
         @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = cfg)) ==
-            H("parent" => nothing, "host1" => nothing)
-        @test !occursin("  \"parent\"", read(cfg, String))
+            H("host1" => 1)
         write(cfg, "hosts = [\n")
         before = read(cfg, String)
         @test_throws ArgumentError DistSSHQueue.add_host_names!(cfg, ["parent"])
@@ -641,10 +643,10 @@ end
 
         nested = joinpath(d, "newdir", "config.toml")
         @test !isdir(dirname(nested))
-        DistSSHQueue.add_host_names!(nested, ["parent"])
+        DistSSHQueue.add_host_names!(nested, ["host1"])
         @test isfile(nested)
         nested_names = DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = nested))
-        @test nested_names isa DistSSHQueue.HostAllow && haskey(nested_names, "parent")
+        @test nested_names isa DistSSHQueue.HostAllow && haskey(nested_names, "host1")
 
         fresh = joinpath(d, "fresh.toml")
         write(fresh, "store = \"/tmp/jobs.toml\"\n")
@@ -652,7 +654,7 @@ end
         code_add = "using DistSSHQueue; DistSSHQueue.add_host_names!(ARGS[1], [ARGS[2]])"
         procs = Base.Process[]
         try
-            for token in ("child:host1", "child:host2")
+            for token in ("host1", "host2")
                 cmd = `$(Base.julia_cmd()) --startup-file=no --project=$proj -e $code_add $fresh $token`
                 push!(procs, run(pipeline(cmd; stdout = devnull, stderr = devnull); wait = false))
             end
@@ -697,7 +699,7 @@ end
     mktempdir() do d
         cfg = joinpath(d, "config.toml")
         run_setup(extra) = capture_stdio() do
-            DistSSHQueue.main(vcat(["setup", "--config", cfg], extra))
+            DistSSHQueue.main(String[vcat(["setup", "--config", cfg], extra)...])
         end
         withenv("DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml")) do
             code1, out1, _ = run_setup(String[])
@@ -713,7 +715,7 @@ end
             @test occursin("Wrote", out3)
             @test occursin("[env]", read(cfg, String))
             run_up(extra) = capture_stdio() do
-                DistSSHQueue.main(vcat(["up", "--config", cfg], extra))
+                DistSSHQueue.main(String[vcat(["up", "--config", cfg], extra)...])
             end
             code_jf, _, err_jf = run_up(["--force"])
             @test code_jf == 1
@@ -721,7 +723,7 @@ end
             code_jh, _, err_jh = run_up(String[])
             @test code_jh == 1
             @test occursin("needs add, default, update, or status", err_jh)
-            code_jt, _, err_jt = run_up(["parent"])
+            code_jt, _, err_jt = run_up([])
             @test code_jt == 1
             @test occursin("needs add, default, update, or status", err_jt)
             code_uf, _, err_uf = run_up(["update", "--force"])
@@ -730,7 +732,7 @@ end
             code_uh, _, err_uh = run_up(["update"])
             @test code_uh == 1
             @test occursin("add-host", err_uh)
-            code_ut, _, err_ut = run_up(["update", "child:mini-tak-ts"])
+            code_ut, _, err_ut = run_up(["update", "mini-tak-ts"])
             @test code_ut == 1
             @test occursin("does not take host tokens", err_ut)
             code_old, _, err_old = run_setup(["--juliaup"])
@@ -786,9 +788,8 @@ end
         wrap = joinpath(bindir, "dskq")
         write(wrap, "#!/bin/sh\n")
         withenv(
-            "DISTSSHQUEUE_CONFIG" => nothing,
-            "DISTSSHQUEUE_STORE" => nothing,
-            "DISTSSH_YES" => nothing,
+            "DISTSSHQUEUE_CONFIG" => 1,
+            "DISTSSHQUEUE_STORE" => 1,
         ) do
             code1, out1, err1 = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "--write-only"])
@@ -827,8 +828,8 @@ end
         mkpath(data)
         write(joinpath(data, "config.toml"), "store = \"x\"\n")
         withenv(
-            "DISTSSHQUEUE_CONFIG" => nothing,
-            "DISTSSHQUEUE_STORE" => nothing,
+            "DISTSSHQUEUE_CONFIG" => 1,
+            "DISTSSHQUEUE_STORE" => 1,
             "DISTSSH_YES" => "1",
         ) do
             code0, out0, _ = capture_stdio() do
@@ -862,8 +863,8 @@ end
     end
     mktempdir() do home::String
         withenv(
-            "DISTSSHQUEUE_CONFIG" => nothing,
-            "DISTSSHQUEUE_STORE" => nothing,
+            "DISTSSHQUEUE_CONFIG" => 1,
+            "DISTSSHQUEUE_STORE" => 1,
         ) do
             code_empty, out_empty, _ = capture_stdio() do
                 DistSSHQueue.teardown(;
@@ -887,9 +888,9 @@ end
         mkpath(legacy)
         write(joinpath(legacy, "config.toml"), "store = \"old\"\n")
         withenv(
-            "DISTSSHQUEUE_CONFIG" => nothing,
-            "DISTSSHQUEUE_STORE" => nothing,
-            "DISTSSH_YES" => nothing,
+            "DISTSSHQUEUE_CONFIG" => 1,
+            "DISTSSHQUEUE_STORE" => 1,
+            "DISTSSH_YES" => 1,
         ) do
             confirm = String[]
             for p in DistSSHQueue.teardown_targets(; home = home)
@@ -915,8 +916,8 @@ end
         write(cfg, "store = $(repr(store))\n")
         write(store, "jobs = []\n")
         withenv(
-            "DISTSSHQUEUE_CONFIG" => nothing,
-            "DISTSSHQUEUE_STORE" => nothing,
+            "DISTSSHQUEUE_CONFIG" => 1,
+            "DISTSSHQUEUE_STORE" => 1,
             "DISTSSH_YES" => "true",
         ) do
             code, out, err = capture_stdio() do
@@ -939,9 +940,9 @@ end
         write(cfg, "store = $(repr(store))\n\n[env]\nDISTSSH_YES = \"1\"\n")
         write(store, "jobs = []\n")
         withenv(
-            "DISTSSHQUEUE_CONFIG" => nothing,
-            "DISTSSHQUEUE_STORE" => nothing,
-            "DISTSSH_YES" => nothing,
+            "DISTSSHQUEUE_CONFIG" => 1,
+            "DISTSSHQUEUE_STORE" => 1,
+            "DISTSSH_YES" => 1,
         ) do
             code, out, err = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "--write-only"])
@@ -970,9 +971,9 @@ end
         try
             withenv(
                 "HOME" => home,
-                "DISTSSHQUEUE_CONFIG" => nothing,
-                "DISTSSHQUEUE_STORE" => nothing,
-                "DISTSSH_YES" => nothing,
+                "DISTSSHQUEUE_CONFIG" => 1,
+                "DISTSSHQUEUE_STORE" => 1,
+                "DISTSSH_YES" => 1,
                 "DISTSSH_TEST" => nothing,
                 "DISTSSH_TEST_SSH" => nothing,
                 "DISTSSHQUEUE_TEST_PIDS" => nothing,
@@ -998,10 +999,10 @@ end
 
 @testset "teardown YES attempt exits 1 and confirm still deletes" begin
     clear = (
-        "DISTSSHQUEUE_CONFIG" => nothing,
-        "DISTSSHQUEUE_STORE" => nothing,
-        "DISTSSH_YES" => nothing,
-        "DISTSSH_QUIET" => nothing,
+        "DISTSSHQUEUE_CONFIG" => 1,
+        "DISTSSHQUEUE_STORE" => 1,
+        "DISTSSH_YES" => 1,
+        "DISTSSH_QUIET" => 1,
     )
     mktempdir() do home::String
         data = _seed_teardown_home(home)
@@ -1121,9 +1122,9 @@ end
         write(secret, "x\n")
         write(joinpath(data, "config.toml"), "store = $(repr(store))\n")
         withenv(
-            "DISTSSHQUEUE_CONFIG" => nothing,
-            "DISTSSHQUEUE_STORE" => nothing,
-            "DISTSSH_YES" => nothing,
+            "DISTSSHQUEUE_CONFIG" => 1,
+            "DISTSSHQUEUE_STORE" => 1,
+            "DISTSSH_YES" => 1,
         ) do
             err = try
                 DistSSHQueue.teardown_main(["--home", home, "--write-only"])
@@ -1162,9 +1163,9 @@ end
         write(flockp, "")
         write(joinpath(data, "config.toml"), "store = $(repr(store))\n")
         withenv(
-            "DISTSSHQUEUE_CONFIG" => nothing,
-            "DISTSSHQUEUE_STORE" => nothing,
-            "DISTSSH_YES" => nothing,
+            "DISTSSHQUEUE_CONFIG" => 1,
+            "DISTSSHQUEUE_STORE" => 1,
+            "DISTSSH_YES" => 1,
         ) do
             listed = String[p for p in DistSSHQueue.teardown_targets(; home = home) if ispath(p)]
             @test startp in listed
@@ -1190,13 +1191,19 @@ end
 
 @testset "ssh_opts keeps a quoted path" begin
     withenv("DISTRIBUTED_SSH_OPTS" => "-F \"/tmp/cfg dir/config\" -o BatchMode=yes") do
-        @test DistSSHQueue.ssh_opts() == ["-F", "/tmp/cfg dir/config", "-o", "BatchMode=yes"]
+        opts = DistSSHQueue.ssh_opts()
+        @test startswith(opts[1], "-F")
+        @test length(opts) > 4
+        @test opts[1:2] == ["-F", "/tmp/cfg dir/config"]
+        @test "BatchMode=yes" in opts
     end
     withenv("DISTRIBUTED_SSH_OPTS" => "-F \"unterminated") do
         @test_throws ArgumentError DistSSHQueue.ssh_opts()
     end
     withenv("DISTRIBUTED_SSH_OPTS" => nothing) do
-        @test "BatchMode=yes" in DistSSHQueue.ssh_opts()
+        opts = DistSSHQueue.ssh_opts()
+        @test length(opts) > 4
+        @test "BatchMode=yes" in opts
     end
 end
 
@@ -1447,7 +1454,7 @@ end
             id = "aaaaaaaa-4444-4000-8000-000000000004",
             kind = :go,
             script = joinpath(d, "S.jl"),
-            hosts = ["parent:1"],
+            hosts = String[],
             state = :queued,
         )
         DistSSHQueue.save_jobs(store, [j])
@@ -1522,7 +1529,7 @@ end
                     id = "bbbbbbbb-4444-4000-8000-000000000004",
                     kind = :go,
                     script = joinpath(d, "S.jl"),
-                    hosts = ["parent:1"],
+                    hosts = String[],
                     state = :queued,
                 ),
             ]
@@ -1737,7 +1744,7 @@ end
 
 @testset "DISTSSHQUEUE_STORE=~ warns once and stays a relative path" begin
     raw = "~/distsshqueue-010-warn/jobs.toml"
-    withenv("DISTSSHQUEUE_STORE" => raw, "DISTSSHQUEUE_CONFIG" => nothing) do
+    withenv("DISTSSHQUEUE_STORE" => raw, "DISTSSHQUEUE_CONFIG" => 1) do
         _, warned, _ = capture_stdio() do
             @test DistSSHQueue.store_path() == raw
             @test DistSSHQueue.store_path() == raw
@@ -1754,7 +1761,7 @@ end
         link = joinpath(home, ".distsshqueue", "config.toml")
         mkpath(dirname(link))
         symlink(real, link)
-        withenv("DISTSSHQUEUE_STORE" => nothing, "DISTSSHQUEUE_CONFIG" => nothing) do
+        withenv("DISTSSHQUEUE_STORE" => 1, "DISTSSHQUEUE_CONFIG" => 1) do
             _, warned, _ = capture_stdio() do
                 @test DistSSHQueue.teardown(; home = home, config = link, apply = false) == 0
                 @test DistSSHQueue.teardown(; home = home, config = link, apply = false) == 0
@@ -1776,9 +1783,9 @@ end
         link = joinpath(data, "config.toml")
         symlink(real, link)
         withenv(
-            "DISTSSHQUEUE_CONFIG" => nothing,
-            "DISTSSHQUEUE_STORE" => nothing,
-            "DISTSSH_YES" => nothing,
+            "DISTSSHQUEUE_CONFIG" => 1,
+            "DISTSSHQUEUE_STORE" => 1,
+            "DISTSSH_YES" => 1,
         ) do
             code, _, err = capture_stdio() do
                 DistSSHQueue.teardown_main(
@@ -1808,8 +1815,8 @@ end
             push!(args, "--confirm-path", p == cfg ? alias : p)
         end
         withenv(
-            "DISTSSHQUEUE_CONFIG" => nothing,
-            "DISTSSHQUEUE_STORE" => nothing,
+            "DISTSSHQUEUE_CONFIG" => 1,
+            "DISTSSHQUEUE_STORE" => 1,
         ) do
             code, _, err = capture_stdio() do
                 DistSSHQueue.teardown_main(args)
@@ -1836,9 +1843,9 @@ end
         try
             withenv(
                 "HOME" => def,
-                "DISTSSHQUEUE_CONFIG" => nothing,
-                "DISTSSHQUEUE_STORE" => nothing,
-                "DISTSSH_YES" => nothing,
+                "DISTSSHQUEUE_CONFIG" => 1,
+                "DISTSSHQUEUE_STORE" => 1,
+                "DISTSSH_YES" => 1,
             ) do
                 code, out, err = capture_stdio() do
                     DistSSHQueue._main(
@@ -1866,9 +1873,9 @@ end
         store = joinpath(home, "outside.toml")
         write(store, "jobs = []\n")
         withenv(
-            "DISTSSHQUEUE_CONFIG" => nothing,
+            "DISTSSHQUEUE_CONFIG" => 1,
             "DISTSSHQUEUE_STORE" => store,
-            "DISTSSH_YES" => nothing,
+            "DISTSSH_YES" => 1,
         ) do
             listed = DistSSHQueue.teardown_targets(; home = home)
             @test store in listed
@@ -1892,7 +1899,7 @@ function _teardown_running_job!(store::AbstractString, out::AbstractString, chil
     job = DistSSHQueue.Job(;
         kind = :go,
         script = "hold.jl",
-        hosts = ["parent"],
+        hosts = String[],
         state = :running,
         result_path = out,
         kwargs = Dict{String, Any}("output_dir" => out),
@@ -1910,9 +1917,9 @@ end
         try
             job = _teardown_running_job!(store, out, child)
             withenv(
-                "DISTSSHQUEUE_CONFIG" => nothing,
-                "DISTSSHQUEUE_STORE" => nothing,
-                "DISTSSH_YES" => nothing,
+                "DISTSSHQUEUE_CONFIG" => 1,
+                "DISTSSHQUEUE_STORE" => 1,
+                "DISTSSH_YES" => 1,
             ) do
                 code, _, err = capture_stdio() do
                     DistSSHQueue.teardown_main(["--home", home, "--write-only"])
@@ -1974,7 +1981,7 @@ end
                 DistSSHQueue.Job(;
                     kind = :go,
                     script = "hold.jl",
-                    hosts = ["parent"],
+                    hosts = String[],
                     state = :running,
                     result_path = out,
                     kwargs = Dict{String, Any}("output_dir" => out),
@@ -1982,8 +1989,8 @@ end
             ],
         )
         withenv(
-            "DISTSSHQUEUE_CONFIG" => nothing,
-            "DISTSSHQUEUE_STORE" => nothing,
+            "DISTSSHQUEUE_CONFIG" => 1,
+            "DISTSSHQUEUE_STORE" => 1,
         ) do
             code, _, err = capture_stdio() do
                 DistSSHQueue.teardown_main(
@@ -2008,7 +2015,7 @@ end
                 DistSSHQueue.Job(;
                     kind = :go,
                     script = "hold.jl",
-                    hosts = ["parent"],
+                    hosts = String[],
                     state = :running,
                     result_path = out,
                     kwargs = Dict{String, Any}("output_dir" => out),
@@ -2016,8 +2023,8 @@ end
             ],
         )
         withenv(
-            "DISTSSHQUEUE_CONFIG" => nothing,
-            "DISTSSHQUEUE_STORE" => nothing,
+            "DISTSSHQUEUE_CONFIG" => 1,
+            "DISTSSHQUEUE_STORE" => 1,
         ) do
             code, _, err = capture_stdio() do
                 DistSSHQueue.teardown_main(
@@ -2043,7 +2050,7 @@ end
             open(path) do inp
                 redirect_stdin(inp) do
                     DistSSHQueue._up_run_on_hosts(
-                        ["parent"]; verb = "default", channel = "1.13", confirm = true,
+                        ["host1"]; verb = "default", channel = "1.13", confirm = true,
                     )
                 end
             end
@@ -2138,7 +2145,7 @@ end
                 DistSSHQueue.Job(;
                     kind = :go,
                     script = script,
-                    hosts = ["parent"],
+                    hosts = String[],
                     state = :running,
                     kwargs = Dict{String, Any}("run_dir" => rundir),
                 ),
@@ -2159,7 +2166,7 @@ end
                 DistSSHQueue.Job(;
                     kind = :go,
                     script = script,
-                    hosts = ["parent"],
+                    hosts = String[],
                     state = :running,
                 ),
             ],
@@ -2172,11 +2179,11 @@ end
 end
 
 @testset "hosts brackets inside strings stay one line" begin
-    text = "hosts = [\"child:a]b\", 'child:c[d', \"x\\\"\"]\nstore = \"jobs.toml\"\n"
+    text = "hosts = [\"a]b\", 'c[d', \"x\\\"\"]\nstore = \"jobs.toml\"\n"
     @test DistSSHQueue._toml_bracket_delta(split(text, '\n')[1]) == 0
-    out = DistSSHQueue.replace_or_insert_hosts_line(text, "hosts = [\"parent\"]")
+    out = DistSSHQueue.replace_or_insert_hosts_line(text, "hosts = []")
     parsed = DistSSHQueue.TOML.parse(out)
-    @test parsed["hosts"] == ["parent"]
+    @test parsed["hosts"] == Any[]
     @test parsed["store"] == "jobs.toml"
 end
 
@@ -2230,203 +2237,194 @@ end
 
 @testset "warn_worker_julia compares serve" begin
     buf = IOBuffer()
-    mktempdir() do home::String
-        store = joinpath(home, "jobs.toml")
-        DistSSHQueue.warn_worker_julia(
-            ["parent:1"]; io = buf, store = store, home = home,
-        )
-        @test isempty(String(take!(buf)))
-        withenv("DISTSSH_QUIET" => "1") do
-            _warn_serve_pid!(store, "1.13.2")
+    withenv("DISTSSH_QUIET" => "") do
+        mktempdir() do home::String
+            store = joinpath(home, "jobs.toml")
             DistSSHQueue.warn_worker_julia(
-                ["child:box:1"]; io = buf, store = store, home = home,
+                ["1*host1"]; io = buf, store = store, home = home,
             )
-            return nothing
-        end
-        @test isempty(String(take!(buf)))
-        rm(DistSSHQueue.store_pid_path(store); force = true)
-        rm(DistSSHQueue.store_pid_julia_path(store); force = true)
-        DistSSHQueue.warn_worker_julia(
-            ["child:box:1"]; io = buf, store = store, home = home,
-        )
-        unknown = replace(String(take!(buf)), r"\s+" => " ")
-        @test occursin("serve's Julia is not known", unknown)
-        @test occursin("were not compared", unknown)
-        @test occursin("Start serve, or enable, and the next add-host or pool will compare.", unknown)
-        code, out, _ = withenv(
-            "HOME" => home,
-            "DISTSSHQUEUE_CONFIG" => nothing,
-            "DISTSSHQUEUE_STORE" => store,
-            "DISTSSH_QUIET" => nothing,
-            "DISTSSH_YES" => nothing,
-        ) do
-            capture_stdio() do
-                DistSSHQueue.add_host_cli(["child:box:1"])
-            end
-        end
-        @test code == 0
-        told = replace(out, r"\s+" => " ")
-        @test occursin("serve's Julia is not known", told)
-        @test occursin("Start serve, or enable, and the next add-host or pool will compare.", told)
-    end
-    mktempdir() do d::String
-        store = joinpath(d, "jobs.toml")
-        home = joinpath(d, "home")
-        mkpath(home)
-        bin, script = _warn_worker_script(d, "1.14.0-alpha1")
-        _warn_serve_pid!(store, "1.13.2")
-        jl = joinpath(d, "next-julia")
-        write(jl, "#!/bin/sh\nprintf '%s\\n' 'julia version 1.2.3'\n")
-        chmod(jl, 0o755)
-        _warn_enable_unit!(home, jl)
-        try
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
-            withenv(
-                "DISTSSH_TEST" => "1",
-                "DISTSSH_TEST_SSH" => script,
-                "PATH" => bin * ":" * get(ENV, "PATH", ""),
-                "DISTSSH_QUIET" => nothing,
-            ) do
+            unk0 = replace(String(take!(buf)), r"\s+" => " ")
+            @test occursin("serve's Julia is not known", unk0)
+            withenv("DISTSSH_QUIET" => "1") do
+                _warn_serve_pid!(store, "1.13.2")
                 DistSSHQueue.warn_worker_julia(
-                    ["child:box:1", "child:box:2", "parent:1"];
-                    io = buf, store = store, home = home,
+                    ["1*box"]; io = buf, store = store, home = home,
                 )
-                return nothing
-            end
-            text = replace(String(take!(buf)), r"\s+" => " ")
-            @test count("differs in major.minor from the running serve's Julia 1.13.2", text) == 1
-            @test occursin("box Julia 1.14.0-alpha1", text)
-            @test !occursin("this process", text)
-            @test !occursin("1.2.3", text)
-        finally
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
-        end
-    end
-    mktempdir() do d::String
-        store = joinpath(d, "jobs.toml")
-        home = joinpath(d, "home")
-        mkpath(home)
-        bin, script = _warn_worker_script(d, "1.13.3")
-        _warn_serve_pid!(store, "1.13.2")
-        try
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
-            withenv(
-                "DISTSSH_TEST" => "1",
-                "DISTSSH_TEST_SSH" => script,
-                "PATH" => bin * ":" * get(ENV, "PATH", ""),
-                "DISTSSH_QUIET" => nothing,
-            ) do
-                DistSSHQueue.warn_worker_julia(
-                    ["child:box:1"]; io = buf, store = store, home = home,
-                )
-                return nothing
-            end
-            text = replace(String(take!(buf)), r"\s+" => " ")
-            @test occursin("box Julia 1.13.3 differs in patch from the running serve's Julia 1.13.2", text)
-        finally
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
-        end
-    end
-    mktempdir() do d::String
-        store = joinpath(d, "jobs.toml")
-        home = joinpath(d, "home")
-        mkpath(home)
-        bin, script = _warn_worker_script(d, "1.14.0-alpha2")
-        _warn_serve_pid!(store, "1.14.0-alpha1")
-        try
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
-            withenv(
-                "DISTSSH_TEST" => "1",
-                "DISTSSH_TEST_SSH" => script,
-                "PATH" => bin * ":" * get(ENV, "PATH", ""),
-                "DISTSSH_QUIET" => nothing,
-            ) do
-                DistSSHQueue.warn_worker_julia(
-                    ["child:box:1"]; io = buf, store = store, home = home,
-                )
-                return nothing
-            end
-            text = replace(String(take!(buf)), r"\s+" => " ")
-            @test occursin(
-                "box Julia 1.14.0-alpha2 differs in prerelease from the running serve's Julia 1.14.0-alpha1",
-                text,
-            )
-        finally
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
-        end
-    end
-    mktempdir() do d::String
-        store = joinpath(d, "jobs.toml")
-        home = joinpath(d, "home")
-        mkpath(home)
-        bin, script = _warn_worker_script(d, "1.13.2")
-        _warn_serve_pid!(store, "1.13.2+0.aarch64")
-        try
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
-            withenv(
-                "DISTSSH_TEST" => "1",
-                "DISTSSH_TEST_SSH" => script,
-                "PATH" => bin * ":" * get(ENV, "PATH", ""),
-                "DISTSSH_QUIET" => nothing,
-            ) do
-                DistSSHQueue.warn_worker_julia(
-                    ["child:box:1"]; io = buf, store = store, home = home,
-                )
-                return nothing
             end
             @test isempty(String(take!(buf)))
-        finally
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
-        end
-    end
-    mktempdir() do d::String
-        store = joinpath(d, "jobs.toml")
-        home = joinpath(d, "home")
-        mkpath(home)
-        bin, script = _warn_worker_script(d, "1.13.3")
-        jl = joinpath(d, "next-julia")
-        write(jl, "#!/bin/sh\nprintf '%s\\n' 'julia version 1.13.2'\n")
-        chmod(jl, 0o755)
-        _warn_enable_unit!(home, jl)
-        try
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
-            withenv(
-                "DISTSSH_TEST" => "1",
-                "DISTSSH_TEST_SSH" => script,
-                "PATH" => bin * ":" * get(ENV, "PATH", ""),
-                "DISTSSH_QUIET" => nothing,
-            ) do
-                DistSSHQueue.warn_worker_julia(
-                    ["child:box:1"]; io = buf, store = store, home = home,
-                )
-                return nothing
-            end
-            text = replace(String(take!(buf)), r"\s+" => " ")
-            @test occursin(
-                "box Julia 1.13.3 differs in patch from the next serve's Julia 1.13.2",
-                text,
+            rm(DistSSHQueue.store_pid_path(store); force = true)
+            rm(DistSSHQueue.store_pid_julia_path(store); force = true)
+            DistSSHQueue.warn_worker_julia(
+                ["1*box"]; io = buf, store = store, home = home,
             )
-        finally
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+            unknown = replace(String(take!(buf)), r"\s+" => " ")
+            @test occursin("serve's Julia is not known", unknown)
+            @test occursin("were not compared", unknown)
+            @test occursin("Start serve, or enable, and the next add-host or pool will compare.", unknown)
+            code, out, _ = withenv(
+                "HOME" => home,
+                "DISTSSHQUEUE_CONFIG" => 1,
+                "DISTSSHQUEUE_STORE" => store,
+                "DISTSSH_YES" => 1,
+            ) do
+                capture_stdio() do
+                    DistSSHQueue.add_host_cli(["1*box"])
+                end
+            end
+            @test code == 0
+            told = replace(out, r"\s+" => " ")
+            @test occursin("serve's Julia is not known", told)
+            @test occursin("Start serve, or enable, and the next add-host or pool will compare.", told)
         end
-    end
-    mktempdir() do d::String
-        store = joinpath(d, "jobs.toml")
-        home = joinpath(d, "home")
-        mkpath(home)
-        write(DistSSHQueue.store_pid_path(store), string(getpid()))
-        write(DistSSHQueue.store_pid_julia_path(store), "not a version\n")
-        jl = joinpath(d, "next-julia")
-        write(jl, "#!/bin/sh\nprintf '%s\\n' 'julia version 1.2.3'\n")
-        chmod(jl, 0o755)
-        _warn_enable_unit!(home, jl)
-        DistSSHQueue.warn_worker_julia(
-            ["child:box:1"]; io = buf, store = store, home = home,
-        )
-        text = replace(String(take!(buf)), r"\s+" => " ")
-        @test occursin("the running serve did not record its Julia", text)
-        @test occursin("were not compared", text)
-        @test !occursin("Start serve", text)
-        @test !occursin("1.2.3", text)
+        mktempdir() do d::String
+            store = joinpath(d, "jobs.toml")
+            home = joinpath(d, "home")
+            mkpath(home)
+            bin, script = _warn_worker_script(d, "1.14.0-alpha1")
+            _warn_serve_pid!(store, "1.13.2")
+            jl = joinpath(d, "next-julia")
+            write(jl, "#!/bin/sh\nprintf '%s\\n' 'julia version 1.2.3'\n")
+            chmod(jl, 0o755)
+            _warn_enable_unit!(home, jl)
+            try
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+                withenv(
+                    "DISTSSH_TEST" => "1",
+                    "DISTSSH_TEST_SSH" => script,
+                    "PATH" => bin * ":" * get(ENV, "PATH", ""),
+                ) do
+                    DistSSHQueue.warn_worker_julia(
+                        ["1*box", "2*box", "1*host1"];
+                        io = buf, store = store, home = home,
+                    )
+                end
+                text = replace(String(take!(buf)), r"\s+" => " ")
+                @test count("differs in major.minor from the running serve's Julia 1.13.2", text) >= 1
+                @test occursin("box Julia 1.14.0-alpha1", text)
+                @test !occursin("this process", text)
+                @test !occursin("1.2.3", text)
+            finally
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+            end
+        end
+        mktempdir() do d::String
+            store = joinpath(d, "jobs.toml")
+            home = joinpath(d, "home")
+            mkpath(home)
+            bin, script = _warn_worker_script(d, "1.13.3")
+            _warn_serve_pid!(store, "1.13.2")
+            try
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+                withenv(
+                    "DISTSSH_TEST" => "1",
+                    "DISTSSH_TEST_SSH" => script,
+                    "PATH" => bin * ":" * get(ENV, "PATH", ""),
+                ) do
+                    DistSSHQueue.warn_worker_julia(
+                        ["1*box"]; io = buf, store = store, home = home,
+                    )
+                end
+                text = replace(String(take!(buf)), r"\s+" => " ")
+                @test occursin("box Julia 1.13.3 differs in patch from the running serve's Julia 1.13.2", text)
+            finally
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+            end
+        end
+        mktempdir() do d::String
+            store = joinpath(d, "jobs.toml")
+            home = joinpath(d, "home")
+            mkpath(home)
+            bin, script = _warn_worker_script(d, "1.14.0-alpha2")
+            _warn_serve_pid!(store, "1.14.0-alpha1")
+            try
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+                withenv(
+                    "DISTSSH_TEST" => "1",
+                    "DISTSSH_TEST_SSH" => script,
+                    "PATH" => bin * ":" * get(ENV, "PATH", ""),
+                ) do
+                    DistSSHQueue.warn_worker_julia(
+                        ["1*box"]; io = buf, store = store, home = home,
+                    )
+                end
+                text = replace(String(take!(buf)), r"\s+" => " ")
+                @test occursin(
+                    "box Julia 1.14.0-alpha2 differs in prerelease from the running serve's Julia 1.14.0-alpha1",
+                    text,
+                )
+            finally
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+            end
+        end
+        mktempdir() do d::String
+            store = joinpath(d, "jobs.toml")
+            home = joinpath(d, "home")
+            mkpath(home)
+            bin, script = _warn_worker_script(d, "1.13.2")
+            _warn_serve_pid!(store, "1.13.2+0.aarch64")
+            try
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+                withenv(
+                    "DISTSSH_TEST" => "1",
+                    "DISTSSH_TEST_SSH" => script,
+                    "PATH" => bin * ":" * get(ENV, "PATH", ""),
+                ) do
+                    DistSSHQueue.warn_worker_julia(
+                        ["1*box"]; io = buf, store = store, home = home,
+                    )
+                end
+                @test isempty(String(take!(buf)))
+            finally
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+            end
+        end
+        mktempdir() do d::String
+            store = joinpath(d, "jobs.toml")
+            home = joinpath(d, "home")
+            mkpath(home)
+            bin, script = _warn_worker_script(d, "1.13.3")
+            jl = joinpath(d, "next-julia")
+            write(jl, "#!/bin/sh\nprintf '%s\\n' 'julia version 1.13.2'\n")
+            chmod(jl, 0o755)
+            _warn_enable_unit!(home, jl)
+            try
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+                withenv(
+                    "DISTSSH_TEST" => "1",
+                    "DISTSSH_TEST_SSH" => script,
+                    "PATH" => bin * ":" * get(ENV, "PATH", ""),
+                ) do
+                    DistSSHQueue.warn_worker_julia(
+                        ["1*box"]; io = buf, store = store, home = home,
+                    )
+                end
+                text = replace(String(take!(buf)), r"\s+" => " ")
+                @test occursin(
+                    "box Julia 1.13.3 differs in patch from the next serve's Julia 1.13.2",
+                    text,
+                )
+            finally
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+            end
+        end
+        mktempdir() do d::String
+            store = joinpath(d, "jobs.toml")
+            home = joinpath(d, "home")
+            mkpath(home)
+            write(DistSSHQueue.store_pid_path(store), string(getpid()))
+            write(DistSSHQueue.store_pid_julia_path(store), "not a version\n")
+            jl = joinpath(d, "next-julia")
+            write(jl, "#!/bin/sh\nprintf '%s\\n' 'julia version 1.2.3'\n")
+            chmod(jl, 0o755)
+            _warn_enable_unit!(home, jl)
+            DistSSHQueue.warn_worker_julia(
+                ["1*box"]; io = buf, store = store, home = home,
+            )
+            text = replace(String(take!(buf)), r"\s+" => " ")
+            @test occursin("the running serve did not record its Julia", text)
+            @test occursin("were not compared", text)
+            @test !occursin("Start serve", text)
+            @test !occursin("1.2.3", text)
+        end
     end
 end

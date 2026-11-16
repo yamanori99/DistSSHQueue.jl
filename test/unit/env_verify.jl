@@ -9,7 +9,7 @@ using TOML
             store,
             """
             jobs = [
-              { id = "x", job_format_version = 1, kind = "go", script = "s.jl", hosts = ["parent:1"], state = "queued", queued_at = "2020-01-01T00:00:00", started_at = "", finished_at = "", error = "", result_path = "", kwargs = {} },
+              { id = "x", job_format_version = 1, kind = "go", script = "s.jl", hosts = [], state = "queued", queued_at = "2020-01-01T00:00:00", started_at = "", finished_at = "", error = "", result_path = "", kwargs = {} },
             ]
             """,
         )
@@ -18,7 +18,7 @@ using TOML
         store2 = joinpath(d, "jobs2.toml")
         q = Queue(; store = store2, runner = _ -> nothing)
         with_submit_project() do _, script
-            id = submit!(q, script, "parent:1")
+            id = submit!(q, script; head_slots = 1)
             @test !isempty(id)
         end
         raw = TOML.parsefile(store2)
@@ -38,8 +38,8 @@ end
         j = Job(;
             kind = :go,
             script = script,
-            hosts = ["parent:1"],
-            kwargs = Dict{String, Any}("project" => d),
+            hosts = String[],
+            kwargs = Dict{String, Any}("project" => d, "head_slots" => 1),
         )
         stamp_enqueue_verify!(j)
         open(joinpath(d, "Project.toml"), "a") do io

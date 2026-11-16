@@ -28,7 +28,8 @@ lets serve outlive `submit` without that handle. Windows has no serve
 unit; keep the Julia spawn there.
 """
 function serve_tag()::String
-    return String(get(ENV, "DISTSSHQUEUE_SERVE_TAG", ""))
+    v = strip(get(ENV, "DISTSSHQUEUE_SERVE_TAG", ""))
+    return (isempty(v) || v == "1") ? "" : String(v)
 end
 
 function with_serve_tag(cmd::Cmd)::Cmd

@@ -39,7 +39,7 @@ end
         mkpath(stage)
         write(joinpath(stage, "keep.txt"), "x\n")
         j = DistSSHQueue.Job(;
-            id = id, kind = :go, script = "a.jl", hosts = ["parent:1"],
+            id = id, kind = :go, script = "a.jl", hosts = ["1*local"],
         )
         DistSSHQueue.save_jobs(store, [j])
         withenv("HOME" => home) do
@@ -59,21 +59,29 @@ end
         write(script, "1\n")
         mkpath(stage)
         write(joinpath(stage, "keep.txt"), "x\n")
+        rm(store; force = true)
         withenv("HOME" => home, DistSSHQueue.JOB_ID_ENV => id) do
-            @test_throws ArgumentError DistSSHQueue.submit_cli(
-                store, :go, script, ["parent:1"], Dict{String, Any}(),
-            )
+            code_st, = capture_stdio() do
+                DistSSHQueue.submit_cli(
+                    store, :go, script, String[], Dict{String, Any}("head_slots" => 1),
+                )
+            end
+            @test code_st == 0
         end
         @test isfile(joinpath(stage, "keep.txt"))
         rm(store; force = true)
         withenv("HOME" => home, DistSSHQueue.JOB_ID_ENV => id) do
-            @test_throws ArgumentError DistSSHQueue.submit_cli(
-                store, :go, script, ["parent:1"], Dict{String, Any}(),
-            )
+            code_rm, = capture_stdio() do
+                DistSSHQueue.submit_cli(
+                    store, :go, script, String[], Dict{String, Any}("head_slots" => 1),
+                )
+            end
+            @test code_rm == 0
         end
-        @test !ispath(stage)
+        @test ispath(stage)
         mkpath(stage)
         write(joinpath(stage, "keep.txt"), "x\n")
+        rm(store; force = true)
         withenv("HOME" => home, DistSSHQueue.JOB_ID_ENV => id) do
             @test_throws ArgumentError DistSSHQueue.submit_main(["pool:1", "go", script])
         end
@@ -81,7 +89,7 @@ end
         mkpath(stage)
         write(joinpath(stage, "keep.txt"), "x\n")
         j = DistSSHQueue.Job(;
-            id = id, kind = :go, script = "a.jl", hosts = ["parent:1"],
+            id = id, kind = :go, script = "a.jl", hosts = ["1*local"],
         )
         DistSSHQueue.save_jobs(store, [j])
         withenv("HOME" => home, DistSSHQueue.JOB_ID_ENV => id) do
@@ -107,18 +115,18 @@ end
         remote = "~/.distsshqueue/stage/abc"
         payload = [
             "go",
-            "child:w:1",
+            "1*w",
             "--output-dir",
             outdir,
             "S.jl",
         ]
         got = DistSSHQueue.rewrite_payload_paths(payload, proj, remote)
         @test got[1] == "go"
-        @test got[2] == "child:w:1"
+        @test got[2] == "1*w"
         @test got[3] == "--output-dir"
         @test got[4] == remote * "/out/x"
         @test got[5] == remote * "/S.jl"
-        @test DistSSHQueue.rewrite_one_path("parent:1", proj, remote) == "parent:1"
+        @test DistSSHQueue.rewrite_one_path("1*w", proj, remote) == "1*w"
         @test DistSSHQueue.remote_stage_root("abc") == remote
         k = DistSSHQueue.new_job_id()
         @test DistSSHQueue.new_job_id() != k
@@ -148,12 +156,15 @@ end
     @test ".distsshkit/" in opts
     @test ".git/" in opts
     @test "--info=progress2" in DistSSHQueue.stage_rsync_push_opts("ssh"; progress = true)
-    buf = IOBuffer()
-    DistSSHQueue.print_rsync_start("qh", "/Users/me/.distsshqueue/stage/abc"; io = buf)
-    @test occursin("rsync → qh:", String(take!(buf)))
-    buf2 = IOBuffer()
-    DistSSHQueue.print_rsync_start("qh", "/tmp/leaf"; pulling = true, io = buf2)
-    @test occursin("rsync ← qh:", String(take!(buf2)))
+    withenv("DISTSSH_QUIET" => "") do
+        buf = IOBuffer()
+        DistSSHQueue.print_rsync_start("qh", "/Users/me/.distsshqueue/stage/abc"; io = buf)
+        @test occursin("rsync → qh:", String(take!(buf)))
+        buf2 = IOBuffer()
+        DistSSHQueue.print_rsync_start("qh", "/tmp/leaf"; pulling = true, io = buf2)
+        @test occursin("rsync ← qh:", String(take!(buf2)))
+        @test DistSSHQueue.rsync_progress_on(["go", "--progress", "S.jl"])
+    end
     withenv("DISTSSH_QUIET" => "1") do
         bufq = IOBuffer()
         DistSSHQueue.print_rsync_start("qh", "/x"; io = bufq)
@@ -163,9 +174,8 @@ end
     withenv("DISTSSH_QUIET" => nothing, "DISTSSH_PROGRESS" => "1") do
         @test DistSSHQueue.rsync_progress_on()
     end
-    withenv("DISTSSH_QUIET" => nothing, "DISTSSH_PROGRESS" => nothing) do
+    withenv("DISTSSH_QUIET" => "1", "DISTSSH_PROGRESS" => "1") do
         @test !DistSSHQueue.rsync_progress_on()
-        @test DistSSHQueue.rsync_progress_on(["go", "--progress", "S.jl"])
     end
 
     @testset "stage follows the manifest directory" begin
@@ -448,9 +458,9 @@ end
 end
 
 @testset "kit_verb_and_args splits submit" begin
-    kit, args = DistSSHQueue.kit_verb_and_args("submit", ["go", "a.jl", "parent:1"])
+    kit, args = DistSSHQueue.kit_verb_and_args("submit", ["go", "--head-slots", "1", "a.jl"])
     @test kit == "go"
-    @test args == ["a.jl", "parent:1"]
+    @test args == ["--head-slots", "1", "a.jl"]
     kit2, args2 = DistSSHQueue.kit_verb_and_args("drive", ["job.jl"])
     @test kit2 == "drive"
     @test args2 == ["job.jl"]
