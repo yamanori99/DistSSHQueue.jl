@@ -584,13 +584,15 @@ end
         @test code_line == 0
         @test split(chomp(out_io_path), '\n'; keepempty = false) == [art]
         @test !occursin("setup on the queue host", err_text)
-        shown = mktemp() do _, err_io
-            redirect_stderr(err_io) do
-                DistSSHQueue._print_fetch_notes(notes)
+        shown = withenv("DISTSSH_QUIET" => "") do
+            mktemp() do _, err_io
+                redirect_stderr(err_io) do
+                    DistSSHQueue._print_fetch_notes(notes)
+                end
+                flush(err_io)
+                seekstart(err_io)
+                return read(err_io, String)
             end
-            flush(err_io)
-            seekstart(err_io)
-            return read(err_io, String)
         end
         at(needle) = something(findfirst(needle, shown), 0:0).start
         code_at = at("code  commit 1a2b3c4 (uncommitted changes)")
@@ -610,13 +612,15 @@ end
         end
         @test !occursin("setup on the queue host", quiet)
         @test !occursin("commit 1a2b3c4", quiet)
-        code_only = mktemp() do _, err_io
-            redirect_stderr(err_io) do
-                DistSSHQueue._print_fetch_notes("commit 1a2b3c4")
+        code_only = withenv("DISTSSH_QUIET" => "") do
+            mktemp() do _, err_io
+                redirect_stderr(err_io) do
+                    DistSSHQueue._print_fetch_notes("commit 1a2b3c4")
+                end
+                flush(err_io)
+                seekstart(err_io)
+                return read(err_io, String)
             end
-            flush(err_io)
-            seekstart(err_io)
-            return read(err_io, String)
         end
         @test occursin("code  commit 1a2b3c4", code_only)
         @test !occursin("setup on the queue host", code_only)
