@@ -976,8 +976,7 @@ end
         )
         s = DistSSHQueue._kit_setup_session(j, String(d))
         @test s.remote == "/custom/root"
-        @test DistSSHQueue._kit_setup_child_tokens(["2*w1"]) ==
-            ["2*w1"]
+        @test DistSSHQueue._kit_setup_child_tokens(["2*w1"]) == ["w1"]
         @test isempty(DistSSHQueue._kit_setup_child_tokens(String[]))
         j2 = DistSSHQueue.Job(;
             kind = :go,

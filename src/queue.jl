@@ -681,9 +681,9 @@ function _kit_setup_session(j::Job, proj::AbstractString; workers = j.hosts)
     )
 end
 
-"""Remote machine tokens only (head uses `head_workers` / `head_slots` in kwargs)."""
+"""SSH host names for `setup!` (strip `N*host` tokens; head uses kwargs)."""
 function _kit_setup_child_tokens(hosts::AbstractVector{<:AbstractString})::Vector{String}
-    return String[String(raw) for raw in hosts]
+    return String[registry_host_key(String(raw)) for raw in hosts]
 end
 
 """`Pkg.instantiate` the job tree on this host (Kit parent / queue host).

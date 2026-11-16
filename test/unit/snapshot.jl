@@ -83,7 +83,7 @@ end
         end
         @test j.kwargs["run_id"] == _SNAP_A
         @test j.kwargs["run_id"] != j.id
-        @test j.kwargs["ship_hosts"] == ["1*w1"]
+        @test j.kwargs["ship_hosts"] == ["w1"]
         @test j.kwargs["ship_project"] == DistSSHQueue.canonical_local_path(d)
         @test j.kwargs["ship_deploy_root"] == "/deploy/a"
         @test probe.modes == [:remote_root, :ship_tree, :instantiate, :check]
@@ -373,9 +373,17 @@ end
         kp = launched::DistSSHRun.DetachedProcess
         cmd = _proc_cmdline(kp.process)
         try
-            @test occursin("--run-id", cmd)
-            @test occursin(_SNAP_A, cmd)
-            @test !occursin("--run-id $(loaded.id)", cmd)
+            blob_m = match(r"--job-blob\s+(\S+)", cmd)
+            blob_path = blob_m === nothing ? nothing : only(blob_m.captures)::Union{Nothing, SubString{String}}
+            if blob_path isa AbstractString
+                blob_text = read(String(blob_path), String)
+                @test occursin(_SNAP_A, blob_text)
+                @test !occursin("run_id = \"$(loaded.id)\"", blob_text)
+            else
+                @test occursin("--run-id", cmd)
+                @test occursin(_SNAP_A, cmd)
+                @test !occursin("--run-id $(loaded.id)", cmd)
+            end
             r = wait(kp)
             @test r.ok
             @test isfile(mark)
