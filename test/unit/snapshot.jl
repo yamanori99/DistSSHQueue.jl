@@ -19,7 +19,7 @@ function _ok_ship(
     )
 end
 
-function _snap_job(proj::AbstractString; hosts = ["child:w1:1"], remote = "/deploy/a", id = nothing)
+function _snap_job(proj::AbstractString; hosts = ["1*w1"], remote = "/deploy/a", id = nothing)
     write_shippable_project!(proj)
     script = joinpath(proj, "s.jl")
     write(script, "1\n")
@@ -83,7 +83,7 @@ end
         end
         @test j.kwargs["run_id"] == _SNAP_A
         @test j.kwargs["run_id"] != j.id
-        @test j.kwargs["ship_hosts"] == ["child:w1:1"]
+        @test j.kwargs["ship_hosts"] == ["1*w1"]
         @test j.kwargs["ship_project"] == DistSSHQueue.canonical_local_path(d)
         @test j.kwargs["ship_deploy_root"] == "/deploy/a"
         @test probe.modes == [:remote_root, :ship_tree, :instantiate, :check]
@@ -107,8 +107,8 @@ end
         j = DistSSHQueue.Job(;
             kind = :go,
             script = joinpath(d, "s.jl"),
-            hosts = ["parent:1"],
-            kwargs = Dict{String, Any}("project" => String(d)),
+            hosts = String[],
+            kwargs = Dict{String, Any}("project" => String(d), "head_slots" => 1),
         )
         write(j.script, "1\n")
         stamp_enqueue_verify!(j)
@@ -123,7 +123,7 @@ end
 @testset "old jobs without run_id stay unpinned" begin
     with_submit_project() do _, script
         q = Queue(; runner = _ -> nothing)
-        id = submit!(q, script, "parent:1")
+        id = submit!(q, script; head_slots = 1)
         loaded = job(q, id)
         @test !haskey(loaded.kwargs, "run_id")
         @test !haskey(DistSSHQueue.execute_kwargs(loaded), :run_id)
@@ -133,8 +133,8 @@ end
 @testset "jobs do not share run_id kwargs" begin
     with_submit_project() do _, script
         q = Queue(; runner = _ -> nothing)
-        a = submit!(q, script, "parent:1")
-        b = submit!(q, script, "parent:1")
+        a = submit!(q, script; head_slots = 1)
+        b = submit!(q, script; head_slots = 1)
         ja = job(q, a)
         jb = job(q, b)
         @test ja.kwargs !== jb.kwargs
@@ -148,7 +148,7 @@ end
 @testset "explicit run_id without context still reaches execute_kwargs" begin
     with_submit_project() do _, script
         q = Queue(; runner = _ -> nothing)
-        id = submit!(q, script, "parent:1"; run_id = _SNAP_A)
+        id = submit!(q, script; head_slots = 1, run_id = _SNAP_A)
         kw = DistSSHQueue.execute_kwargs(job(q, id))
         @test kw.run_id == _SNAP_A
         @test !haskey(kw, :ship_hosts)
@@ -187,9 +187,9 @@ end
         write(script, "1\n")
         store = joinpath(d, "jobs.toml")
         q = Queue(; store, runner = _ -> nothing)
-        id = submit!(q, script, "child:w1:1"; project = String(d), remote = "/deploy/a")
+        id = submit!(q, script, "1*w1"; project = String(d), remote = "/deploy/a")
         j = job(q, id)
-        DistSSHQueue._record_job_run_id!(j, _SNAP_A, ["child:w1:1"], d, "/deploy/a")
+        DistSSHQueue._record_job_run_id!(j, _SNAP_A, ["1*w1"], d, "/deploy/a")
         DistSSHQueue.save_jobs(store, [j])
         loaded = only(DistSSHQueue.load_jobs(store))
         @test loaded.kwargs["run_id"] == _SNAP_A
@@ -237,7 +237,7 @@ end
 @testset "mixed and missing ship hosts are refused" begin
     mktempdir() do d
         write(joinpath(d, "Project.toml"), "[deps]\n")
-        j = _snap_job(d; hosts = ["child:w1:1", "child:w2:1"])
+        j = _snap_job(d; hosts = ["1*w1", "1*w2"])
         mixed = _ok_ship(
             _SNAP_A;
             hosts = [
@@ -266,7 +266,7 @@ end
             _SNAP_A;
             hosts = [DistSSHRun.HostResult("w1", true, "ok")],
         )
-        j2 = _snap_job(d; hosts = ["child:w1:1", "child:w2:1"])
+        j2 = _snap_job(d; hosts = ["1*w1", "1*w2"])
         err_missing = try
             withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
                 DistSSHQueue._queue_kit_setup!(
@@ -289,17 +289,17 @@ end
 @testset "run_id context does not move to another host or root" begin
     mktempdir() do d
         write(joinpath(d, "Project.toml"), "[deps]\n")
-        j = _snap_job(d; hosts = ["child:w1:1"], remote = "/deploy/a")
-        DistSSHQueue._record_job_run_id!(j, _SNAP_A, ["child:w1:1"], d, "/deploy/a")
-        other = _snap_job(d; hosts = ["child:w2:1"], remote = "/deploy/a")
+        j = _snap_job(d; hosts = ["1*w1"], remote = "/deploy/a")
+        DistSSHQueue._record_job_run_id!(j, _SNAP_A, ["1*w1"], d, "/deploy/a")
+        other = _snap_job(d; hosts = ["1*w2"], remote = "/deploy/a")
         other.kwargs["run_id"] = _SNAP_A
-        other.kwargs["ship_hosts"] = ["child:w1:1"]
+        other.kwargs["ship_hosts"] = ["1*w1"]
         other.kwargs["ship_project"] = DistSSHQueue.canonical_local_path(d)
         other.kwargs["ship_deploy_root"] = "/deploy/a"
-        session = DistSSHQueue._kit_setup_session(other, d; workers = ["child:w2:1"])
+        session = DistSSHQueue._kit_setup_session(other, d; workers = ["1*w2"])
         err = try
             DistSSHQueue._assert_run_id_context!(
-                other, d, session, ["child:w2:1"],
+                other, d, session, ["1*w2"],
             )
             nothing
         catch e
@@ -307,15 +307,15 @@ end
         end
         @test err isa ErrorException
         @test occursin("recorded for hosts", err.msg)
-        root = _snap_job(d; hosts = ["child:w1:1"], remote = "/deploy/b")
+        root = _snap_job(d; hosts = ["1*w1"], remote = "/deploy/b")
         root.kwargs["run_id"] = _SNAP_A
-        root.kwargs["ship_hosts"] = ["child:w1:1"]
+        root.kwargs["ship_hosts"] = ["1*w1"]
         root.kwargs["ship_project"] = DistSSHQueue.canonical_local_path(d)
         root.kwargs["ship_deploy_root"] = "/deploy/a"
-        session_b = DistSSHQueue._kit_setup_session(root, d; workers = ["child:w1:1"])
+        session_b = DistSSHQueue._kit_setup_session(root, d; workers = ["1*w1"])
         err_root = try
             DistSSHQueue._assert_run_id_context!(
-                root, d, session_b, ["child:w1:1"],
+                root, d, session_b, ["1*w1"],
             )
             nothing
         catch e
@@ -324,7 +324,7 @@ end
         @test err_root isa ErrorException
         @test occursin("recorded for remote", err_root.msg)
         err_swap = try
-            DistSSHQueue._record_job_run_id!(j, _SNAP_B, ["child:w1:1"], d, "/deploy/a")
+            DistSSHQueue._record_job_run_id!(j, _SNAP_B, ["1*w1"], d, "/deploy/a")
             nothing
         catch e
             e
@@ -350,7 +350,7 @@ end
         j = DistSSHQueue.Job(;
             kind = :go,
             script = joinpath(d, "mark.jl"),
-            hosts = ["parent:1"],
+            hosts = String[],
             kwargs = Dict{String, Any}(
                 "project" => d,
                 "run_id" => _SNAP_A,

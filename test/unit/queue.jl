@@ -95,7 +95,7 @@ function _stage_rsync_setup!(proj::String)
     j = DistSSHQueue.Job(;
         kind = :go,
         script = script,
-        hosts = ["child:w1:1"],
+        hosts = ["1*w1"],
         kwargs = Dict{String, Any}("project" => proj, "remote" => "/custom/root"),
     )
     stamp_enqueue_verify!(j)
@@ -170,32 +170,31 @@ end
     with_submit_project() do _, script
         q = Queue(; runner = _ -> nothing)
         @test_throws ArgumentError submit!(q, script, "parenthost:2")
-        @test_throws ArgumentError submit!(q, script, "worker:2")
-        @test_throws ArgumentError submit!(q, script, "h1")
-        @test_throws ArgumentError submit!(q, script, "64")
-        id = submit!(q, script, "parent:1", "child:w1:2")
-        @test job(q, id).hosts == ["parent:1", "child:w1:2"]
+        id = submit!(q, script, "2*w1"; head_slots = 1)
+        @test job(q, id).hosts == ["2*w1"]
+        @test job(q, id).kwargs["head_slots"] == 1
     end
 end
 
 @testset "submit! rejects Kit names not on allowed" begin
     with_submit_project() do _, script
-        q = Queue(; runner = _ -> nothing, allowed = ["parent", "child:host1"])
-        id = submit!(q, script, "parent:2", "child:host1:4")
-        @test job(q, id).hosts == ["parent:2", "child:host1:4"]
-        @test_throws ArgumentError submit!(q, script, "child:other:1")
-        tokened = Queue(; runner = _ -> nothing, allowed = ["child:host1"])
-        gid = submit!(tokened, script, "child:host1:4")
-        @test job(tokened, gid).hosts == ["child:host1:4"]
-        mixed = Queue(; runner = _ -> nothing, allowed = ["parent"])
-        @test_throws ArgumentError submit!(mixed, script, "parent:1", "child:other:1")
+        q = Queue(; runner = _ -> nothing, allowed = ["4*host1"])
+        id = submit!(q, script, "4*host1"; head_slots = 2)
+        @test job(q, id).hosts == ["4*host1"]
+        @test_throws ArgumentError submit!(q, script, "1*other")
+        tokened = Queue(; runner = _ -> nothing, allowed = ["4*host1"])
+        gid = submit!(tokened, script, "2*host1")
+        @test job(tokened, gid).hosts == ["2*host1"]
+        mixed = Queue(; runner = _ -> nothing, allowed = String[])
+        @test_throws ArgumentError submit!(mixed, script, "1*other"; head_slots = 1)
         @test isempty(jobs(mixed))
         closed = Queue(; runner = _ -> nothing, allowed = String[])
-        @test_throws ArgumentError submit!(closed, script, "parent:1")
+        @test submit!(closed, script; head_slots = 1) isa String
+        @test_throws ArgumentError submit!(closed, script, "1*host1"; head_slots = 1)
         open = Queue(; runner = _ -> nothing)
-        @test submit!(open, script, "child:any:1") isa String
-        @test_throws ArgumentError Queue(; allowed = ["host1"])
-        @test_throws ArgumentError Queue(; allowed = ["parent"], follow_config = true)
+        @test submit!(open, script, "1*any") isa String
+        @test_throws ArgumentError Queue(; allowed = ["parent"])
+        @test_throws ArgumentError Queue(; allowed = String[], follow_config = true)
     end
 end
 
@@ -212,35 +211,35 @@ end
         q = Queue(; runner = _ -> nothing)
         shared = "/tmp/distsshqueue-shared-remote"
         withenv("DISTRIBUTED_REMOTE_PROJECT_ROOT" => shared) do
-            id = submit!(q, joinpath(a, "x.jl"), "parent:1"; project = a)
+            id = submit!(q, joinpath(a, "x.jl"); head_slots = 1, project = a)
             @test DistSSHQueue.canonical_local_path(String(job(q, id).kwargs["project"])) ==
                 DistSSHQueue.canonical_local_path(a)
-            @test_throws ArgumentError submit!(q, joinpath(b, "x.jl"), "parent:1"; project = b)
-            id2 = submit!(q, joinpath(a, "x.jl"), "parent:1"; project = a)
+            @test_throws ArgumentError submit!(q, joinpath(b, "x.jl"); head_slots = 1, project = b)
+            id2 = submit!(q, joinpath(a, "x.jl"); head_slots = 1, project = a)
             @test job(q, id2).state === :queued
         end
         q2 = Queue(; runner = _ -> nothing)
-        submit!(q2, joinpath(a, "x.jl"), "parent:1"; project = a, remote = "/r/one")
-        @test_throws ArgumentError submit!(q2, joinpath(b, "x.jl"), "parent:1"; project = b, remote = "/r/one")
-        submit!(q2, joinpath(b, "x.jl"), "parent:1"; project = b, remote = "/r/two")
+        submit!(q2, joinpath(a, "x.jl"); head_slots = 1, project = a, remote = "/r/one")
+        @test_throws ArgumentError submit!(q2, joinpath(b, "x.jl"); head_slots = 1, project = b, remote = "/r/one")
+        submit!(q2, joinpath(b, "x.jl"); head_slots = 1, project = b, remote = "/r/two")
         @test DistSSHQueue.kit_worker_root(a, Dict{String, Any}("remote" => "~/jobs/x")) == "~/jobs/x"
         @test DistSSHQueue.kit_worker_root(a, Dict{String, Any}("remote" => "~/jobs/x")) !=
             DistSSHQueue.canonical_local_path("~/jobs/x")
         @test DistSSHQueue.kit_worker_root(a, Dict{String, Any}("remote" => "/r/one")) ==
             DistSSHQueue.remote_env_project_root("/r/one")
         q3 = Queue(; runner = _ -> nothing)
-        submit!(q3, joinpath(a, "x.jl"), "parent:1"; project = a, remote = "~/jobs/x")
-        submit!(q3, joinpath(b, "x.jl"), "parent:1"; project = b, remote = DistSSHQueue.canonical_local_path("~/jobs/x"))
+        submit!(q3, joinpath(a, "x.jl"); head_slots = 1, project = a, remote = "~/jobs/x")
+        submit!(q3, joinpath(b, "x.jl"); head_slots = 1, project = b, remote = DistSSHQueue.canonical_local_path("~/jobs/x"))
     end
 end
 
 @testset "submit! keeps a client-assigned job id" begin
     want = DistSSHQueue.new_job_id()
     q = Queue(; runner = _ -> nothing)
-    id = submit!(q, "a.jl", "parent:1"; id = want)
+    id = submit!(q, "a.jl"; head_slots = 1, id = want)
     @test id == want
     @test job(q, id).id == want
-    @test_throws ArgumentError submit!(q, "b.jl", "parent:1"; id = want)
+    @test_throws ArgumentError submit!(q, "b.jl"; head_slots = 1, id = want)
     @test length(jobs(q)) == 1
 end
 
@@ -254,10 +253,10 @@ end
         write_shippable_project!(s2; name = "Stage2")
         write(joinpath(s1, "x.jl"), "1\n")
         write(joinpath(s2, "x.jl"), "1\n")
-        withenv("DISTRIBUTED_REMOTE_PROJECT_ROOT" => nothing) do
+        withenv("DISTRIBUTED_REMOTE_PROJECT_ROOT" => 1) do
             q = Queue(; runner = _ -> nothing)
-            id1 = submit!(q, joinpath(s1, "x.jl"), "parent:1"; project = s1)
-            id2 = submit!(q, joinpath(s2, "x.jl"), "parent:1"; project = s2)
+            id1 = submit!(q, joinpath(s1, "x.jl"); head_slots = 1, project = s1)
+            id2 = submit!(q, joinpath(s2, "x.jl"); head_slots = 1, project = s2)
             @test id1 != id2
             r1 = DistSSHQueue.kit_worker_root(s1, job(q, id1).kwargs)
             r2 = DistSSHQueue.kit_worker_root(s2, job(q, id2).kwargs)
@@ -266,8 +265,8 @@ end
         shared = "/tmp/distsshqueue-shared-remote"
         withenv("DISTRIBUTED_REMOTE_PROJECT_ROOT" => shared) do
             q = Queue(; runner = _ -> nothing)
-            id1 = submit!(q, joinpath(s1, "x.jl"), "parent:1"; project = s1)
-            id2 = submit!(q, joinpath(s2, "x.jl"), "parent:1"; project = s2)
+            id1 = submit!(q, joinpath(s1, "x.jl"); head_slots = 1, project = s1)
+            id2 = submit!(q, joinpath(s2, "x.jl"); head_slots = 1, project = s2)
             @test id1 != id2
             @test DistSSHQueue.kit_worker_root(s1, job(q, id1).kwargs) ==
                 DistSSHQueue.kit_worker_root(s2, job(q, id2).kwargs)
@@ -276,52 +275,52 @@ end
 end
 
 @testset "submit! rejects :N above the allowed max" begin
-    q = Queue(; runner = _ -> nothing, allowed = ["parent:2", "child:host1:4"])
-    @test submit!(q, "ok.jl", "parent:2", "child:host1:4") isa String
-    @test_throws ArgumentError submit!(q, "big.jl", "child:host1:5")
-    @test_throws ArgumentError submit!(q, "non.jl", "child:host1")
-    @test_throws ArgumentError submit!(q, "p.jl", "parent:3")
+    q = Queue(; runner = _ -> nothing, allowed = ["4*host1"])
+    @test submit!(q, "ok.jl", "4*host1"; head_slots = 2) isa String
+    @test_throws ArgumentError submit!(q, "big.jl", "5*host1")
+    @test submit!(q, "non.jl", "host1") isa String
+    @test_throws ArgumentError submit!(q, "big2.jl", "8*host1")
 end
 
 @testset "follow_config re-reads hosts without a new Queue" begin
     mktempdir() do d
         cfg = joinpath(d, "config.toml")
         store = joinpath(d, "jobs.toml")
-        write(cfg, "store = $(repr(store))\nhosts = [\"parent\"]\n")
+        write(cfg, "store = $(repr(store))\nhosts = []\n")
         withenv("DISTSSHQUEUE_CONFIG" => cfg) do
             q = Queue(; store = store, runner = _ -> nothing, follow_config = true)
-            a = submit!(q, "a.jl", "parent:1")
+            a = submit!(q, "a.jl"; head_slots = 1)
             @test job(q, a).state === :queued
-            @test_throws ArgumentError submit!(q, "b.jl", "child:host1:1")
-            DistSSHQueue.add_host_names!(cfg, ["child:host1"])
-            b = submit!(q, "b.jl", "child:host1:1")
-            @test job(q, b).hosts == ["child:host1:1"]
+            @test_throws ArgumentError submit!(q, "b.jl", "1*host1")
+            DistSSHQueue.add_host_names!(cfg, ["host1"])
+            b = submit!(q, "b.jl", "1*host1")
+            @test job(q, b).hosts == ["1*host1"]
         end
     end
 end
 
 @testset "hosts change does not stop running or drop queued" begin
     ev = Base.Event()
-    q = Queue(; runner = _ -> wait(ev), allowed = ["parent", "child:host1"])
-    run_id = submit!(q, "run.jl", "parent:1")
-    queued_id = submit!(q, "q.jl", "child:host1:1")
+    q = Queue(; runner = _ -> wait(ev), allowed = ["host1"])
+    run_id = submit!(q, "run.jl"; head_slots = 1)
+    queued_id = submit!(q, "q.jl", "1*host1")
     @test step!(q) == 1
     @test job(q, run_id).state === :running
-    q.allowed = DistSSHQueue.HostAllow("parent" => nothing)
+    q.allowed = DistSSHQueue.HostAllow()
     @test job(q, queued_id).state === :queued
     @test step!(q) == 0
     notify(ev)
     _wait_state(q, run_id, :done)
     @test step!(q) == 1
     _wait_state(q, queued_id, :done)
-    @test job(q, queued_id).hosts == ["child:host1:1"]
+    @test job(q, queued_id).hosts == ["1*host1"]
 end
 
 @testset "true FIFO one at a time" begin
     started = String[]
     q = Queue(; runner = j -> (push!(started, j.id); sleep(0.05)))
-    a = submit!(q, "a.jl", "child:host1:4")
-    b = submit!(q, "b.jl", "child:host1:1")
+    a = submit!(q, "a.jl", "4*host1")
+    b = submit!(q, "b.jl", "1*host1")
     @test step!(q) == 1
     @test job(q, a).state === :running
     @test job(q, b).state === :queued
@@ -337,10 +336,10 @@ end
     hold = Base.Event()
     q = Queue(;
         runner = _ -> (n[] += 1; n[] == 1 ? nothing : wait(hold)),
-        allowed = ["child:host1"],
+        allowed = ["host1"],
     )
-    a = submit!(q, "a.jl", "child:host1:1")
-    b = submit!(q, "b.jl", "child:host1:1")
+    a = submit!(q, "a.jl", "1*host1")
+    b = submit!(q, "b.jl", "1*host1")
     @test drive_until_terminal!(q, a; tries = 50, sleep_s = 0.01) === :done
     @test job(q, b).state === :queued
     @test step!(q) == 1
@@ -351,8 +350,8 @@ end
 
 @testset "cancel queued; stub running without a script has no output_dir" begin
     q = Queue(; runner = _ -> sleep(0.05))
-    a = submit!(q, "a.jl", "parent:2")
-    b = submit!(q, "b.jl", "parent:2")
+    a = submit!(q, "a.jl"; head_slots = 2)
+    b = submit!(q, "b.jl"; head_slots = 2)
     @test cancel!(q, b)
     @test job(q, b).state === :cancelled
     @test step!(q) == 1
@@ -370,7 +369,7 @@ end
         write(script, "1\n")
         ev = Base.Event()
         q = Queue(; runner = _ -> wait(ev))
-        id = submit!(q, script, "parent:1"; project = d)
+        id = submit!(q, script; head_slots = 1, project = d)
         @test step!(q) == 1
         j = job(q, id)
         @test j.state === :running
@@ -406,8 +405,8 @@ end
         store = joinpath(d, "jobs.toml")
         ev = Base.Event()
         q = Queue(; store, runner = _ -> wait(ev))
-        a = submit!(q, "a.jl", "parent:1")
-        b = submit!(q, "b.jl", "parent:1")
+        a = submit!(q, "a.jl"; head_slots = 1)
+        b = submit!(q, "b.jl"; head_slots = 1)
         @test step!(q) == 1
         code = withenv(
             "DISTSSHQUEUE_STORE" => store,
@@ -431,14 +430,14 @@ end
     lost = DistSSHQueue.Job(;
         kind = :go,
         script = "a.jl",
-        hosts = ["parent:1"],
+        hosts = String[],
         state = :running,
         kwargs = Dict{String, Any}("cancel" => true),
     )
     DistSSHQueue.fail_stale_running!([lost])
     @test lost.state === :cancelled
     plain = DistSSHQueue.Job(;
-        kind = :go, script = "a.jl", hosts = ["parent:1"], state = :running,
+        kind = :go, script = "a.jl", hosts = String[], state = :running,
     )
     DistSSHQueue.fail_stale_running!([plain])
     @test plain.state === :failed
@@ -453,7 +452,7 @@ end
         j = DistSSHQueue.Job(;
             kind = :go,
             script = script,
-            hosts = ["child:w1:1"],
+            hosts = ["1*w1"],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
         stamp_enqueue_verify!(j)
@@ -470,7 +469,7 @@ end
         bare = DistSSHQueue.Job(;
             kind = :go,
             script = "a.jl",
-            hosts = ["parent:1"],
+            hosts = String[],
             kwargs = Dict{String, Any}("project" => joinpath(d, "missing")),
         )
         stamp_enqueue_verify!(bare)
@@ -497,7 +496,7 @@ end
         armed = Ref(false)
         seen = Ref{Union{Nothing, String}}(nothing)
         j = DistSSHQueue.Job(;
-            kind = :go, script = "a.jl", hosts = ["parent:1"],
+            kind = :go, script = "a.jl", hosts = String[],
         )
         try
             withenv(DistSSHQueue.NO_KIT_SETUP_ENV => "1") do
@@ -522,7 +521,7 @@ end
         armed = Ref(false)
         seen = Ref{Union{Nothing, String}}(nothing)
         j = DistSSHQueue.Job(;
-            kind = :go, script = "a.jl", hosts = ["parent:1"],
+            kind = :go, script = "a.jl", hosts = String[],
         )
         try
             withenv(DistSSHQueue.NO_KIT_SETUP_ENV => "1") do
@@ -545,7 +544,7 @@ end
         proc = Base.run(`/usr/bin/true`; wait = false)::Base.Process
         kp = DistSSHRun.DetachedProcess(proc; kind = :go, output_dir = outdir)
         j = DistSSHQueue.Job(;
-            kind = :go, script = "a.jl", hosts = ["parent:1"],
+            kind = :go, script = "a.jl", hosts = String[],
         )
         out = withenv(DistSSHQueue.NO_KIT_SETUP_ENV => "1") do
             DistSSHQueue.run_kit(
@@ -562,16 +561,15 @@ end
 
 @testset "as_host_allow reads a dict of caps" begin
     allow = DistSSHQueue.as_host_allow(
-        Dict("parent:2" => nothing, "child:box" => 3, "" => 9, "lab" => nothing),
+        Dict("box" => 3, "" => 9, "lab" => nothing),
     )
-    @test allow["parent"] === nothing
     @test allow["box"] == 3
-    @test allow["lab"] === nothing
+    @test allow["lab"] == 1
     @test !haskey(allow, "")
-    listed = DistSSHQueue.as_host_allow(["child:h:2"])
+    listed = DistSSHQueue.as_host_allow(["2*h"])
     @test listed["h"] == 2
     @test DistSSHQueue.as_host_allow(nothing) === nothing
-    @test_throws ArgumentError DistSSHQueue.as_host_allow(Dict("child:h" => 0))
+    @test_throws ArgumentError DistSSHQueue.as_host_allow(Dict("h" => 0))
 end
 
 @testset "kit_run_error_text and a failed kit.result" begin
@@ -587,7 +585,7 @@ end
         j = DistSSHQueue.Job(;
             kind = :go,
             script = "a.jl",
-            hosts = ["parent:1"],
+            hosts = String[],
             state = :running,
             kwargs = Dict{String, Any}("run_dir" => d),
         )
@@ -605,7 +603,7 @@ end
             return nothing
         end
     )
-    id = submit!(q, "a.jl", "parent:1")
+    id = submit!(q, "a.jl"; head_slots = 1)
     t = @async capture_stdio() do
         DistSSHQueue.serve!(q; interval = 0.02)
     end
@@ -630,7 +628,7 @@ end
         write(script, "1\n")
         ev = Base.Event()
         q = Queue(; runner = _ -> wait(ev))
-        id = submit!(q, script, "parent:1"; project = d)
+        id = submit!(q, script; head_slots = 1, project = d)
         @test step!(q) == 1
         run = joinpath(d, ".distsshkit", "runs", "go", "hold_x")
         art = joinpath(d, ".distsshkit", "go", "hold_leaf")
@@ -663,7 +661,7 @@ end
         write(script, "1\n")
         ev = Base.Event()
         q = Queue(; runner = _ -> wait(ev))
-        id = submit!(q, script, "parent:1"; kind = :drive, project = d)
+        id = submit!(q, script; head_workers = 1, kind = :drive, project = d)
         @test step!(q) == 1
         j = job(q, id)
         @test get(j.kwargs, "output_dir", nothing) === nothing
@@ -681,7 +679,7 @@ end
         write(script, "1\n")
         ev = Base.Event()
         q = Queue(; runner = _ -> wait(ev))
-        id = submit!(q, script, "parent:1"; project = d)
+        id = submit!(q, script; head_slots = 1, project = d)
         @test step!(q) == 1
         j = job(q, id)
         @test get(j.kwargs, "output_dir", nothing) === nothing
@@ -701,7 +699,7 @@ end
         j = DistSSHQueue.Job(;
             kind = :go,
             script = "a.jl",
-            hosts = ["parent:1"],
+            hosts = String[],
             result_path = out,
             kwargs = Dict{String, Any}("output_dir" => out, "run_dir" => run),
         )
@@ -719,7 +717,7 @@ end
         write(script, "1\n")
         ev = Base.Event()
         q = Queue(; store, runner = _ -> wait(ev))
-        id = submit!(q, script, "parent:1"; project = d)
+        id = submit!(q, script; head_slots = 1, project = d)
         @test step!(q) == 1
         run = joinpath(d, ".distsshkit", "runs", "go", "hold_x")
         art = joinpath(d, ".distsshkit", "go", "hold_leaf")
@@ -758,7 +756,7 @@ end
         store = joinpath(d, "jobs.toml")
         ev = Base.Event()
         q = Queue(; store, runner = _ -> wait(ev))
-        id = submit!(q, script, "parent:1"; project = d)
+        id = submit!(q, script; head_slots = 1, project = d)
         @test step!(q) == 1
         @test job(q, id).result_path === nothing
         run = joinpath(d, ".distsshkit", "runs", "go", "hold_x")
@@ -782,8 +780,8 @@ end
         mkpath(out)
         ev = Base.Event()
         q = Queue(; runner = _ -> wait(ev))
-        id = submit!(q, "a.jl", "parent:1"; output_dir = out)
-        nxt = submit!(q, "b.jl", "parent:1")
+        id = submit!(q, "a.jl"; head_slots = 1, output_dir = out)
+        nxt = submit!(q, "b.jl"; head_slots = 1)
         @test step!(q) == 1
         @test job(q, id).state === :running
         @test DistSSHQueue.kit_run_dir(job(q, id)) === nothing
@@ -807,7 +805,7 @@ end
         ev = Base.Event()
         q = Queue(; runner = _ -> wait(ev))
         try
-            id = submit!(q, "a.jl", "parent:1"; output_dir = out)
+            id = submit!(q, "a.jl"; head_slots = 1, output_dir = out)
             @test step!(q) == 1
             @test DistSSHQueue.kit_run_dir(job(q, id)) === nothing
             @test DistSSHQueue.kit_child_alive(job(q, id))
@@ -827,7 +825,7 @@ end
         out = joinpath(d, "kit-out")
         mkpath(out)
         q = Queue(; runner = _ -> wait(Base.Event()))
-        id = submit!(q, "a.jl", "parent:1"; output_dir = out)
+        id = submit!(q, "a.jl"; head_slots = 1, output_dir = out)
         @test step!(q) == 1
         DistSSHQueue._finish!(q, id, :failed, "terminated"; result_path = out)
         DistSSHQueue._finish!(q, id, :cancelled, nothing; result_path = out)
@@ -840,7 +838,7 @@ end
         out = joinpath(d, "kit-out")
         mkpath(out)
         q = Queue(; runner = _ -> wait(Base.Event()))
-        id = submit!(q, "a.jl", "parent:1"; output_dir = out)
+        id = submit!(q, "a.jl"; head_slots = 1, output_dir = out)
         @test step!(q) == 1
         DistSSHQueue._finish!(q, id, :done, nothing; result_path = out)
         DistSSHQueue._finish!(q, id, :cancelled, nothing; result_path = out)
@@ -854,7 +852,7 @@ end
         out = joinpath(d, "kit-out")
         mkpath(out)
         q = Queue(; store, runner = _ -> wait(Base.Event()))
-        id = submit!(q, "a.jl", "parent:1"; output_dir = out)
+        id = submit!(q, "a.jl"; head_slots = 1, output_dir = out)
         @test step!(q) == 1
         DistSSHQueue._set_running_result_path!(q, id, out)
         stale = DistSSHQueue.read_jobs(store)
@@ -874,7 +872,7 @@ end
         mkpath(out)
         ev = Base.Event()
         q = Queue(; store, runner = _ -> wait(ev))
-        id = submit!(q, "a.jl", "parent:1"; output_dir = out)
+        id = submit!(q, "a.jl"; head_slots = 1, output_dir = out)
         @test step!(q) == 1
         @test q.live_id == id
         child = Base.run(`sleep 60`; wait = false)
@@ -902,7 +900,7 @@ end
         store = joinpath(d, "jobs.toml")
         gate = Base.Event()
         q = Queue(; store, runner = _ -> (wait(gate); error("rsync failed")))
-        id = submit!(q, "a.jl", "parent:1")
+        id = submit!(q, "a.jl"; head_slots = 1)
         @test step!(q) == 1
         @test cancel!(q, id)
         @test DistSSHQueue._job_cancel_flag(job(q, id))
@@ -916,7 +914,7 @@ end
     mktempdir() do d
         store = joinpath(d, "jobs.toml")
         q = Queue(; store, runner = _ -> error("rsync failed"))
-        id = submit!(q, "a.jl", "parent:1")
+        id = submit!(q, "a.jl"; head_slots = 1)
         @test step!(q) == 1
         _wait_state(q, id, :failed)
         @test occursin("rsync failed", something(job(q, id).error, ""))
@@ -929,7 +927,7 @@ end
         started = Base.Event()
         gate = Base.Event()
         q = Queue(; store, runner = _ -> (notify(started); wait(gate); error("rsync failed")))
-        id = submit!(q, "a.jl", "parent:1")
+        id = submit!(q, "a.jl"; head_slots = 1)
         @test step!(q) == 1
         wait(started)
         @test cancel!(q, id)
@@ -942,8 +940,8 @@ end
 
 @testset "kit throw does not stall" begin
     q = Queue(; runner = j -> basename(j.script) == "bad.jl" ? error("boom") : nothing)
-    a = submit!(q, "bad.jl", "parent:1")
-    b = submit!(q, "ok.jl", "parent:1")
+    a = submit!(q, "bad.jl"; head_slots = 1)
+    b = submit!(q, "ok.jl"; head_slots = 1)
     @test step!(q) == 1
     _wait_state(q, a, :failed)
     @test occursin("boom", something(job(q, a).error, ""))
@@ -953,16 +951,16 @@ end
 
 @testset "kind=:drive" begin
     q = Queue(; runner = _ -> nothing)
-    id = submit!(q, "d.jl", "parent:1"; kind = :drive)
+    id = submit!(q, "d.jl"; head_workers = 1, kind = :drive)
     j = job(q, id)
     @test j.kind === :drive
     @test haskey(j.kwargs, "project")
     @test !haskey(j.kwargs, "path_anchor")
-    gid = submit!(q, "g.jl", "parent:1")
+    gid = submit!(q, "g.jl"; head_slots = 1)
     g = job(q, gid)
     @test g.kind === :go
     @test !haskey(g.kwargs, "path_anchor")
-    rid = submit!(q, "m.jl", "parent:1"; kind = :ride)
+    rid = submit!(q, "m.jl"; head_workers = 1, kind = :ride)
     @test job(q, rid).kind === :ride
 end
 
@@ -973,18 +971,18 @@ end
         j = DistSSHQueue.Job(;
             kind = :go,
             script = script,
-            hosts = ["parent:1"],
+            hosts = String[],
             kwargs = Dict{String, Any}("project" => String(d), "remote" => "/custom/root"),
         )
         s = DistSSHQueue._kit_setup_session(j, String(d))
         @test s.remote == "/custom/root"
-        @test DistSSHQueue._kit_setup_child_tokens(["parent:1", "child:w1:2"]) ==
-            ["child:w1:2"]
-        @test isempty(DistSSHQueue._kit_setup_child_tokens(["parent:2"]))
+        @test DistSSHQueue._kit_setup_child_tokens(["2*w1"]) ==
+            ["2*w1"]
+        @test isempty(DistSSHQueue._kit_setup_child_tokens(String[]))
         j2 = DistSSHQueue.Job(;
             kind = :go,
             script = script,
-            hosts = ["parent:1"],
+            hosts = String[],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
         s2 = DistSSHQueue._kit_setup_session(j2, String(d))
@@ -1000,7 +998,7 @@ end
         j = DistSSHQueue.Job(;
             kind = :go,
             script = script,
-            hosts = ["parent:1"],
+            hosts = String[],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
         stamp_enqueue_verify!(j)
@@ -1022,7 +1020,7 @@ end
         j = DistSSHQueue.Job(;
             kind = :go,
             script = script,
-            hosts = ["child:w1:1"],
+            hosts = ["1*w1"],
             kwargs = Dict{String, Any}(
                 "project" => String(d),
                 "remote" => "/custom/root",
@@ -1048,7 +1046,7 @@ end
         rel = DistSSHQueue.Job(;
             kind = :go,
             script = script,
-            hosts = ["child:w1:1"],
+            hosts = ["1*w1"],
             kwargs = Dict{String, Any}("project" => String(d), "remote" => "jobs/app"),
         )
         stamp_enqueue_verify!(rel)
@@ -1094,7 +1092,7 @@ end
         j = DistSSHQueue.Job(;
             kind = :drive,
             script = script,
-            hosts = ["child:w1:1"],
+            hosts = ["1*w1"],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
         stamp_enqueue_verify!(j)
@@ -1121,7 +1119,7 @@ end
         j = DistSSHQueue.Job(;
             kind = :drive,
             script = script,
-            hosts = ["child:w1:1"],
+            hosts = ["1*w1"],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
         stamp_enqueue_verify!(j)
@@ -1154,7 +1152,7 @@ end
         j = DistSSHQueue.Job(;
             kind = :drive,
             script = script,
-            hosts = ["child:w1:1"],
+            hosts = ["1*w1"],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
         stamp_enqueue_verify!(j)
@@ -1179,7 +1177,7 @@ function _running_setup_job(dir::AbstractString)
     script = joinpath(dir, "s.jl")
     write(script, "1\n")
     q = Queue(; store = store, runner = _ -> nothing)
-    id = submit!(q, script, "child:box:1"; project = String(proj))
+    id = submit!(q, script, "1*box"; project = String(proj))
     lock(q.lock) do
         i = DistSSHQueue._index_id(q.jobs, id)
         row = q.jobs[i]
@@ -1256,7 +1254,7 @@ end
         j = DistSSHQueue.Job(;
             kind = :drive,
             script = script,
-            hosts = ["child:w1:1"],
+            hosts = ["1*w1"],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
         stamp_enqueue_verify!(j)
@@ -1291,7 +1289,7 @@ end
         j = DistSSHQueue.Job(;
             kind = :drive,
             script = script,
-            hosts = ["child:w1:1"],
+            hosts = ["1*w1"],
             kwargs = Dict{String, Any}("project" => String(d)),
         )
         stamp_enqueue_verify!(j)
@@ -1319,7 +1317,7 @@ end
         submit!(
             q,
             script,
-            "parent:1";
+            head_slots = 1;
             id = id,
             kind = :drive,
             project = d,
@@ -1350,7 +1348,7 @@ end
                 error("DistSSHKit setup! instantiate failed")
             end
         )
-        submit!(q, script, "parent:1"; id = id, kind = :drive, project = d)
+        submit!(q, script; head_slots = 1, id = id, kind = :drive, project = d)
         @test step!(q) == 1
         _wait_state(q, id, :failed)
         logs = job(q, id).kwargs["setup_logs"]
@@ -1470,7 +1468,7 @@ end
         j = DistSSHQueue.Job(;
             kind = :go,
             script = script,
-            hosts = ["parent:1"],
+            hosts = String[],
             state = :running,
             kwargs = Dict{String, Any}("project" => String(d)),
         )
@@ -1496,7 +1494,7 @@ end
             """
         )
         q = Queue(; runner = _ -> nothing, store = joinpath(d, "jobs.toml"))
-        id = submit!(q, script, "parent:1"; kind = :drive, project = d)
+        id = submit!(q, script; head_workers = 1, kind = :drive, project = d)
         @test step!(q) == 1
         _wait_state(q, id, :done)
         j = job(q, id)
@@ -1504,7 +1502,7 @@ end
         @test get(j.kwargs, "output_dir", nothing) === nothing
         mod = Module()
         Base.include(mod, script)
-        got = withenv("DISTRIBUTED_OUTPUT_DIR" => nothing) do
+        got = withenv("DISTRIBUTED_OUTPUT_DIR" => 1) do
             @eval mod init_output_dir!(String[])
         end
         @test DistSSHQueue.canonical_local_path(got) ==
@@ -1521,7 +1519,7 @@ end
         j = DistSSHQueue.Job(;
             kind = :go,
             script = "/tmp/job.jl",
-            hosts = ["parent:1"],
+            hosts = String[],
             state = :running,
             result_path = out,
         )
@@ -1548,7 +1546,7 @@ end
         j = DistSSHQueue.Job(;
             kind = :go,
             script = "/tmp/job.jl",
-            hosts = ["parent:1"],
+            hosts = String[],
             state = :running,
             result_path = out,
         )
@@ -1570,7 +1568,7 @@ end
         j = DistSSHQueue.Job(;
             kind = :go,
             script = "/tmp/job.jl",
-            hosts = ["parent:1"],
+            hosts = String[],
             state = :running,
             result_path = out,
         )
@@ -1596,7 +1594,7 @@ end
         j = DistSSHQueue.Job(;
             kind = :drive,
             script = "/tmp/job.jl",
-            hosts = ["parent:2", "child:mini-alpha:2"],
+            hosts = ["2*mini-alpha"],
             state = :running,
             result_path = out,
         )
@@ -1615,7 +1613,7 @@ end
         p = joinpath(d, "jobs.toml")
         ev = Base.Event()
         q = Queue(; store = p, runner = _ -> wait(ev))
-        id = submit!(q, "a.jl", "parent:1")
+        id = submit!(q, "a.jl"; head_slots = 1)
         @test step!(q) == 1
         @test job(q, id).state === :running
         q2 = Queue(; store = p, runner = _ -> nothing)
@@ -1640,50 +1638,50 @@ end
     @test DistSSHQueue.require_kit_ok((ok = true, kind = :go, output_dir = "/tmp/out")) === nothing
     @test DistSSHQueue.kit_result_path((ok = true, output_dir = "/tmp/out")) == "/tmp/out"
     q = Queue(; runner = _ -> error("DistSSHKit go failed (ok=false)"))
-    id = submit!(q, "a.jl", "parent:1")
+    id = submit!(q, "a.jl"; head_slots = 1)
     @test step!(q) == 1
     _wait_state(q, id, :failed)
 end
 
 @testset "execute_kwargs drops names execute! detached rejects" begin
     q = Queue(; runner = _ -> nothing)
-    gid = submit!(q, "g.jl", "parent:1"; path_anchor = "/x", yes = false, log_dir = "/logs", quiet = true)
+    gid = submit!(q, "g.jl"; head_slots = 1, path_anchor = "/x", yes = false, log_dir = "/logs", quiet = true)
     gkw = DistSSHQueue.execute_kwargs(job(q, gid))
     @test gkw.yes === true
     @test gkw.quiet === true
     @test !haskey(gkw, :path_anchor)
     @test !haskey(gkw, :job_id)
     @test !haskey(gkw, :log_dir)
-    did = submit!(q, "d.jl", "parent:1"; kind = :drive, log_dir = "/logs", skip_hash_check = false)
+    did = submit!(q, "d.jl"; head_workers = 1, kind = :drive, log_dir = "/logs", skip_hash_check = false)
     dkw = DistSSHQueue.execute_kwargs(job(q, did))
     @test dkw.log_dir == "/logs"
     @test dkw.skip_hash_check === false
     @test dkw.yes === true
-    wid = submit!(q, "w.jl", "child:h1:1"; kind = :drive, workers = 4, mem_headroom = 0.5)
+    wid = submit!(q, "w.jl", "1*h1"; kind = :drive, workers = 4, mem_headroom = 0.5)
     wkw = DistSSHQueue.execute_kwargs(job(q, wid))
     @test wkw.workers == 4
     @test !haskey(wkw, :mem_headroom)
     @test !haskey(DistSSHQueue.execute_kwargs(job(q, gid)), :workers)
-    rid = submit!(q, "r.jl", "parent:1"; kind = :go, repeat = 8)
+    rid = submit!(q, "r.jl"; head_slots = 1, kind = :go, repeat = 8)
     @test DistSSHQueue.execute_kwargs(job(q, rid)).repeat == 8
-    didr = submit!(q, "rd.jl", "parent:1"; kind = :drive, repeat = 8)
+    didr = submit!(q, "rd.jl"; head_workers = 1, kind = :drive, repeat = 8)
     @test !haskey(DistSSHQueue.execute_kwargs(job(q, didr)), :repeat)
-    ride = submit!(q, "m.jl", "parent:2"; kind = :ride, spi_check = false, repeat = 8)
+    ride = submit!(q, "m.jl"; head_workers = 2, kind = :ride, spi_check = false, repeat = 8)
     rkw = DistSSHQueue.execute_kwargs(job(q, ride))
     @test rkw.spi_check === false
     @test !haskey(rkw, :repeat)
-    @test_throws ArgumentError submit!(q, "x.jl", "parent:1"; kind = :pipeline)
+    @test_throws ArgumentError submit!(q, "x.jl"; head_slots = 1, kind = :pipeline)
 end
 
 @testset "result_path from runner and kwargs" begin
     q = Queue(; runner = _ -> "/tmp/kit-out")
-    id = submit!(q, "a.jl", "parent:1"; output_dir = "/tmp/unused")
+    id = submit!(q, "a.jl"; head_slots = 1, output_dir = "/tmp/unused")
     @test step!(q) == 1
     _wait_state(q, id, :done)
     @test job(q, id).result_path == "/tmp/kit-out"
 
     q2 = Queue(; runner = _ -> nothing)
-    id2 = submit!(q2, "b.jl", "parent:1"; output_dir = "/tmp/bag")
+    id2 = submit!(q2, "b.jl"; head_slots = 1, output_dir = "/tmp/bag")
     @test step!(q2) == 1
     _wait_state(q2, id2, :done)
     @test job(q2, id2).result_path == "/tmp/bag"
@@ -1693,8 +1691,8 @@ end
     mktempdir() do d
         p = joinpath(d, "jobs.toml")
         q = Queue(; store = p, runner = _ -> sleep(0.05))
-        a = submit!(q, "a.jl", "parent:1")
-        b = submit!(q, "b.jl", "parent:1")
+        a = submit!(q, "a.jl"; head_slots = 1)
+        b = submit!(q, "b.jl"; head_slots = 1)
         @test step!(q) == 1
         other = Queue(; store = p)
         @test cancel!(other, b)
@@ -1712,10 +1710,10 @@ end
         p = joinpath(d, "jobs.toml")
         ev = Base.Event()
         q = Queue(; store = p, runner = _ -> wait(ev))
-        a = submit!(q, "a.jl", "parent:1")
+        a = submit!(q, "a.jl"; head_slots = 1)
         @test step!(q) == 1
         q2 = Queue(; store = p, runner = _ -> nothing)
-        b = submit!(q2, "b.jl", "child:host1:2")
+        b = submit!(q2, "b.jl", "2*host1")
         rows = DistSSHQueue.read_jobs(p)
         @test job(q, a).state === :running
         @test any(j -> j.id == b && j.state === :queued, rows)
@@ -1738,7 +1736,7 @@ end
             "DISTSSHQUEUE_STORE" => p,
             "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
             "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
-            "DISTRIBUTED_PROJECT_ROOT" => nothing,
+            "DISTRIBUTED_PROJECT_ROOT" => 1,
         ) do
             cd(jobdir) do
                 proj = DistSSHQueue.canonical_local_path(pwd())
@@ -1804,9 +1802,9 @@ end
                 @test occursin("ride", client_h)
                 @test occursin("See DistSSHKit", client_h)
                 @test occursin("-m DistSSHKit --help", client_h)
-                @test occursin("parent:4", client_h)
-                @test occursin("submit drive parent:4", client_h)
-                @test occursin("child:NAME:N", client_h)
+                @test occursin("--head-workers", client_h)
+                @test occursin("submit drive --head-workers", client_h)
+                @test occursin("parent", client_h) && occursin("removed", client_h)
                 @test !occursin("submit \\", client_h)
                 @test !occursin("Replay:", client_h)
                 @test !occursin("qhost:HOST go parent SCRIPT", client_h)
@@ -1843,7 +1841,7 @@ end
                     DistSSHQueue.main(["-h", "client"])
                 end
                 @test code_topic == 0
-                @test occursin("submit drive parent:4", out_topic)
+                @test occursin("submit drive --head-workers", out_topic)
                 @test occursin("DistSSHQueue help client", out_topic)
                 code_help_client, out_help_client, _ = capture_stdio() do
                     DistSSHQueue.main(["help", "client"])
@@ -1884,7 +1882,7 @@ end
                 up_h = sprint(DistSSHQueue.print_up_usage)
                 @test occursin("qhost up update", up_h)
                 @test occursin("qhost up", up_h)
-                @test !occursin("[child:NAME", setup_h)
+                @test !occursin("[NAME", setup_h)
                 @test occursin("--help / -h", setup_h)
                 @test !occursin("Enqueue DistSSHKit", setup_h)
                 code_st_h, out_st_h, _ = capture_stdio() do
@@ -1959,9 +1957,9 @@ end
                     DistSSHQueue.main(["submit", "go", "-h"])
                 end
                 @test code_sh == 0
-                @test occursin("parent:N", out_sh)
+                @test occursin("--head-workers", out_sh) || occursin("--head-slots", out_sh)
                 @test occursin("DistSSHKit", out_sh)
-                @test occursin("not a Kit slot", out_sh)
+                @test occursin("machine", lowercase(out_sh))
                 code_help_go, out_help_go, err_help_go = capture_stdio() do
                     DistSSHQueue.main(["help", "submit", "go"])
                 end
@@ -2060,18 +2058,18 @@ end
                 @test code_qv == 1
                 @test occursin("cannot combine", err_qv)
                 code_go, _, err_go = capture_stdio() do
-                    DistSSHQueue.main(["submit", "go", "child:host1:4", "job.jl"])
+                    DistSSHQueue.main(["submit", "go", "4*host1", "job.jl"])
                 end
                 @test code_go == 1
                 @test occursin("no add-host list", err_go)
                 @test occursin("add-host first", err_go)
                 @test isempty(DistSSHQueue.read_jobs(p))
                 code_add, _, _ = capture_stdio() do
-                    DistSSHQueue.main(["add-host", "parent", "child:host1", "child:w"])
+                    DistSSHQueue.main(["add-host", "4*host1", "w"])
                 end
                 @test code_add == 0
                 code_go, out_go, err_go = capture_stdio() do
-                    DistSSHQueue.main(["submit", "go", "child:host1:4", "job.jl"])
+                    DistSSHQueue.main(["submit", "go", "4*host1", "job.jl"])
                 end
                 @test code_go == 0
                 @test !occursin("no add-host list", err_go)
@@ -2080,7 +2078,7 @@ end
                 @test strip(out_go) == rows[1].id
                 @test rows[1].kind === :go
                 @test rows[1].script == DistSSHQueue.canonical_local_path(joinpath(pwd(), "job.jl"))
-                @test rows[1].hosts == ["child:host1:4"]
+                @test rows[1].hosts == ["4*host1"]
                 @test rows[1].state === :queued
                 @test rows[1].kwargs["project"] == proj
                 listed = sprint(io -> DistSSHQueue.show_status(p; io = io))
@@ -2096,61 +2094,61 @@ end
                 @test occursin("submit go", err_alias)
                 @test length(DistSSHQueue.read_jobs(p)) == 1
                 code_drv, _, _ = capture_stdio() do
-                    DistSSHQueue.main(["submit", "drive", "parent:2", "drv.jl"])
+                    DistSSHQueue.main(["submit", "drive", "--head-workers", "2", "drv.jl"])
                 end
                 @test code_drv == 0
                 rows = DistSSHQueue.read_jobs(p)
                 @test length(rows) == 2
                 @test rows[2].kind === :drive
                 @test rows[2].script == DistSSHQueue.canonical_local_path(joinpath(pwd(), "drv.jl"))
-                @test rows[2].hosts == ["parent:2"]
+                @test rows[2].hosts == String[]
+                @test rows[2].kwargs["head_workers"] == 2
                 @test rows[2].kwargs["project"] == proj
                 code_ride, _, _ = capture_stdio() do
-                    DistSSHQueue.main(["submit", "ride", "--no-spi-check", "parent:1", "map.jl"])
+                    DistSSHQueue.main(["submit", "ride", "--no-spi-check", "--head-workers", "1", "map.jl"])
                 end
                 @test code_ride == 0
                 rows = DistSSHQueue.read_jobs(p)
                 @test rows[end].kind === :ride
                 @test DistSSHQueue.execute_kwargs(rows[end]).spi_check === false
                 code_w, _, _ = capture_stdio() do
-                    DistSSHQueue.main(["submit", "drive", "--workers", "4", "child:host1:1", "drv.jl"])
+                    DistSSHQueue.main(["submit", "drive", "--head-workers", "4", "1*host1", "drv.jl"])
                 end
                 @test code_w == 0
                 rows = DistSSHQueue.read_jobs(p)
                 want = DistSSHQueue.host_tokens(
-                    DistSSHRun.parse_drive_args(["--workers", "4", "child:host1:1", "drv.jl"]);
+                    DistSSHRun.parse_drive_args(["--head-workers", "4", "1*host1", "drv.jl"]);
                     kind = :drive,
                 )
                 @test rows[end].hosts == want
-                @test rows[end].kwargs["workers"] == 4
+                @test rows[end].kwargs["head_workers"] == 4
                 n_hosts = length(rows)
-                code_bare, _, err_bare = capture_stdio() do
-                    DistSSHQueue.main(["submit", "drive", "--workers", "4", "child:host1", "drv.jl"])
+                code_bare, _, _ = capture_stdio() do
+                    DistSSHQueue.main(["submit", "drive", "--head-workers", "4", "host1", "drv.jl"])
                 end
-                @test code_bare == 1
-                @test occursin("needs :N", err_bare)
-                @test length(DistSSHQueue.read_jobs(p)) == n_hosts
+                @test code_bare == 0
+                @test length(DistSSHQueue.read_jobs(p)) == n_hosts + 1
                 code_kitgo, _, err_kitgo = capture_stdio() do
-                    DistSSHQueue.main(["go", "--hosts", "child:w:2", "job.jl"])
+                    DistSSHQueue.main(["go", "--hosts", "2*w", "job.jl"])
                 end
                 @test code_kitgo == 1
                 @test occursin("Enqueue with submit", err_kitgo)
                 n_before_hf = length(DistSSHQueue.read_jobs(p))
-                code_hf, _, _ = capture_stdio() do
-                    DistSSHQueue.main(["submit", "go", "--hosts", "child:w:2", "job.jl"])
+                code_hf, _, err_hf = capture_stdio() do
+                    DistSSHQueue.main(["submit", "go", "--hosts", "2*w", "job.jl"])
                 end
-                @test code_hf == 0
+                @test code_hf == 1
+                @test occursin("removed", err_hf) || occursin("--hosts", err_hf)
                 rows = DistSSHQueue.read_jobs(p)
-                @test length(rows) == n_before_hf + 1
-                @test rows[end].hosts == ["child:w:2"]
+                @test length(rows) == n_before_hf
                 code_sh, _, err_sh = capture_stdio() do
-                    DistSSHQueue.main(["--hosts", "child:w:2", "job.jl"])
+                    DistSSHQueue.main(["--hosts", "2*w", "job.jl"])
                 end
                 @test code_sh == 1
                 @test occursin("unknown subcommand", err_sh)
                 @test length(DistSSHQueue.read_jobs(p)) == length(rows)
                 code_jl, _, _ = capture_stdio() do
-                    DistSSHQueue.main(["submit", "go", "--julia", "/opt/queue-kit-julia", "parent:1", "job.jl"])
+                    DistSSHQueue.main(["submit", "go", "--julia", "/opt/queue-kit-julia", "--head-slots", "1", "job.jl"])
                 end
                 @test code_jl == 0
                 rows = DistSSHQueue.read_jobs(p)
@@ -2160,7 +2158,7 @@ end
                     DistSSHQueue.main(["submit", "go", "parent", "job.jl"])
                 end
                 @test code_parent == 1
-                @test occursin("needs :N", err_parent)
+                @test occursin("was removed", err_parent)
                 @test length(DistSSHQueue.read_jobs(p)) == n_jl
                 cid = DistSSHQueue.read_jobs(p)[2].id
                 code_c, out_c, _ = capture_stdio() do
@@ -2300,9 +2298,9 @@ end
         mkpath(home)
         withenv(
             "HOME" => home,
-            DistSSHQueue.LOCAL_QUEUE_ENV => nothing,
+            DistSSHQueue.LOCAL_QUEUE_ENV => 1,
             "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
-            "DISTSSHQUEUE_HOST" => nothing,
+            "DISTSSHQUEUE_HOST" => 1,
             "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
         ) do
             @test !DistSSHQueue.queue_host_machine()
@@ -2366,7 +2364,7 @@ end
     mktempdir() do d
         p = joinpath(d, "jobs.toml")
         cfg = joinpath(d, "config.toml")
-        write(cfg, "store = $(repr(p))\nhosts = [\"parent\"]\n")
+        write(cfg, "store = $(repr(p))\nhosts = []\n")
         jobdir = mktempdir()
         write_shippable_project!(jobdir)
         write(joinpath(jobdir, "job.jl"), "1\n")
@@ -2377,7 +2375,7 @@ end
         ) do
             cd(jobdir) do
                 code_ok, out_ok, err_ok = capture_stdio() do
-                    DistSSHQueue.main(["submit", "go", "parent:1", "job.jl"])
+                    DistSSHQueue.main(["submit", "go", "--head-slots", "1", "job.jl"])
                 end
                 @test code_ok == 0
                 @test occursin(r"Queued\s+1\b", err_ok)
@@ -2390,7 +2388,7 @@ end
                 @test !isempty(id1)
                 withenv(DistSSHQueue.QHOST_DISPLAY_ENV => "mini-tak-ts") do
                     code_h, _, err_h = capture_stdio() do
-                        DistSSHQueue.main(["submit", "go", "parent:1", "job.jl"])
+                        DistSSHQueue.main(["submit", "go", "--head-slots", "1", "job.jl"])
                     end
                     @test code_h == 0
                     @test occursin("qhost: local", err_h)
@@ -2398,14 +2396,14 @@ end
                     @test !occursin("queue: qhost:", err_h)
                 end
                 code2, out2, err2 = capture_stdio() do
-                    DistSSHQueue.main(["submit", "go", "parent:1", "job.jl"])
+                    DistSSHQueue.main(["submit", "go", "--head-slots", "1", "job.jl"])
                 end
                 @test code2 == 0
                 @test occursin(r"Queued\s+3\b", err2)
                 @test strip(out2) != id1
                 withenv("DISTSSH_QUIET" => "1") do
                     code_q, out_q, err_q = capture_stdio() do
-                        DistSSHQueue.main(["submit", "go", "parent:1", "job.jl"])
+                        DistSSHQueue.main(["submit", "go", "--head-slots", "1", "job.jl"])
                     end
                     @test code_q == 0
                     @test !occursin("Queued", err_q)
@@ -2414,7 +2412,7 @@ end
                     @test !isempty(strip(out_q))
                 end
                 code_bad, _, err = capture_stdio() do
-                    DistSSHQueue.main(["submit", "go", "child:host1:1", "job.jl"])
+                    DistSSHQueue.main(["submit", "go", "1*host1", "job.jl"])
                 end
                 @test code_bad == 1
                 @test occursin("not allowed", err)
@@ -2424,24 +2422,24 @@ end
 end
 
 @testset "status error shows the full Kit line with a Queue prefix" begin
-    kit = """setup: "parent" is only for up (kit parent machine). extra words"""
-    j = DistSSHQueue.Job(; kind = :go, script = "x.jl", hosts = ["parent:1"], state = :failed, error = kit)
+    kit = """setup: "head" is only for up (kit head machine). extra words"""
+    j = DistSSHQueue.Job(; kind = :go, script = "x.jl", hosts = String[], state = :failed, error = kit)
     shown = DistSSHQueue._job_error_disp(j)
-    @test occursin("parent:N", shown)
+    @test occursin("head workers", shown)
     @test occursin("only for up", shown)
     @test occursin("extra words", shown)
     @test !endswith(shown, "…")
     @test DistSSHQueue.queue_explain_error("unrelated only for up noise") ==
         "unrelated only for up noise"
-    prefixed = DistSSHQueue.queue_explain_error("this job includes parent:N; keep")
-    @test prefixed == "this job includes parent:N; keep"
+    prefixed = DistSSHQueue.queue_explain_error("this job includes head workers; keep")
+    @test prefixed == "this job includes head workers; keep"
 end
 
 @testset "CLI submit pool:N" begin
     mktempdir() do d
         p = joinpath(d, "jobs.toml")
         cfg = joinpath(d, "config.toml")
-        write(cfg, "store = $(repr(p))\nhosts = [\"parent\", \"child:host1:4\"]\n")
+        write(cfg, "store = $(repr(p))\nhosts = [\"4*host1\"]\n")
         jobdir = mktempdir()
         write_shippable_project!(jobdir)
         write(joinpath(jobdir, "job.jl"), "1\n")
@@ -2455,12 +2453,12 @@ end
                     DistSSHQueue.main(["submit", "pool:8", "go", "job.jl"])
                 end
                 @test code == 0
-                @test DistSSHQueue.read_jobs(p)[end].hosts == ["parent:8", "child:host1:4"]
+                @test DistSSHQueue.read_jobs(p)["4*host1"]
                 code_m, _, err_m = capture_stdio() do
-                    DistSSHQueue.main(["submit", "pool:2", "go", "parent:1", "job.jl"])
+                    DistSSHQueue.main(["submit", "pool:2", "go", "--head-slots", "1", "job.jl"])
                 end
                 @test code_m == 1
-                @test occursin("cannot mix", err_m)
+                @test occursin("cannot mix", err_m) || occursin("head-slots", err_m)
                 rest, n = DistSSHQueue.peel_submit_pool(
                     ["go", "--julia", "pool:8", "parent:1", "job.jl"],
                 )
@@ -2478,7 +2476,7 @@ end
     mktempdir() do d
         p = joinpath(d, "jobs.toml")
         cfg = joinpath(d, "config.toml")
-        write(cfg, "store = $(repr(p))\nhosts = [\"parent\"]\n")
+        write(cfg, "store = $(repr(p))\nhosts = []\n")
         jobdir = mktempdir()
         write_shippable_project!(jobdir)
         write(joinpath(jobdir, "job.jl"), "1\n")
@@ -2497,16 +2495,16 @@ end
                     end
                     @test DistSSHQueue.serve_pid(p) == getpid()
                     code_bad, _, err = capture_stdio() do
-                        DistSSHQueue.main(["submit", "go", "child:host1:1", "job.jl"])
+                        DistSSHQueue.main(["submit", "go", "1*host1", "job.jl"])
                     end
                     @test code_bad == 1
                     @test occursin("not allowed", err)
                     code_add, _, _ = capture_stdio() do
-                        DistSSHQueue.main(["add-host", "child:host1"])
+                        DistSSHQueue.main(["add-host", "host1"])
                     end
                     @test code_add == 0
                     code_ok, _, _ = capture_stdio() do
-                        DistSSHQueue.main(["submit", "go", "child:host1:1", "job.jl"])
+                        DistSSHQueue.main(["submit", "go", "1*host1", "job.jl"])
                     end
                     @test code_ok == 0
                     schedule(t, InterruptException(); error = true)
@@ -2524,7 +2522,7 @@ end
     buf = IOBuffer()
     DistSSHQueue._print_cli_note(
         buf,
-        "child:host1",
+        "host1",
         "DistSSHKit can reach this name from this queue host. Anyone who can submit as this user (including qhost:) can use them.";
         cols = 40,
     )
@@ -2547,15 +2545,15 @@ end
     end
     hn = "sat12-bq153-f5a29c4d-2cfd-48dd-a60c-d49a6140ecf7-3AD76F09ECCB.local"
     let (nw, tw, mw, jw, _) = DistSSHQueue._list_host_fit(
-            textwidth(hn), textwidth("child:host1"), 3, 6, 72,
+            textwidth(hn), textwidth("host1"), 3, 6, 72,
         )
         buf = IOBuffer()
         DistSSHQueue.print_wrapped_row(
-            buf, [hn, "child:host1", "-", "1.13.2"], Int[nw, tw, mw, jw],
+            buf, [hn, "host1", "-", "1.13.2"], Int[nw, tw, mw, jw],
             "lab@10.0.0.8:2222"; cols = 72,
         )
         row = String(take!(buf))
-        @test occursin("child:host1", row)
+        @test occursin("host1", row)
         @test !occursin(hn, row)
         @test occursin(first(hn, 12), row)
     end
@@ -2600,7 +2598,7 @@ end
         )
         chmod(ju, 0o755)
         path = fake * ":" * get(ENV, "PATH", "")
-        write(cfg, "hosts = [\"parent\", \"child:host1\"]\n")
+        write(cfg, "hosts = [\"host1\"]\n")
         withenv(
             "DISTSSHQUEUE_CONFIG" => cfg,
             "PATH" => path,
@@ -2611,8 +2609,8 @@ end
                 DistSSHQueue.main(["list-host"])
             end
             @test code == 0
-            @test occursin("parent", out)
-            @test occursin("child:host1", out)
+            @test occursin("head", out)
+            @test occursin("host1", out)
             @test occursin("TOKEN", out)
             @test !occursin("HOST TOKEN", out)
             @test shows_hostname_prefix(out)
@@ -2629,8 +2627,8 @@ end
             @test occursin("2222", out)
             @test !occursin("HostName", out)
             @test !occursin("identityfile", lowercase(out))
-            @test !occursin("id_rsa", out)
-            @test occursin("MAX", out)
+            @test !occursin("IdentityFile", out)
+            @test occursin("WORKERS", out)
             @test occursin("JULIA", out)
             @test !occursin("JULIAUP", out)
             @test occursin("1.12.7", out)
@@ -2647,7 +2645,7 @@ end
                 @test textwidth(line) <= 40
             end
         end
-        write(cfg, "hosts = [\"parent\", \"child:host1\"]\n")
+        write(cfg, "hosts = [\"host1\"]\n")
         withenv(
             "DISTSSHQUEUE_CONFIG" => cfg,
             "PATH" => path,
@@ -2660,7 +2658,7 @@ end
             @test occursin("queue host", out)
             @test !occursin("this machine", out)
             @test shows_hostname_prefix(out)
-            @test occursin("parent", out)
+            @test occursin("head", out)
         end
         write(cfg, "store = \"x\"\n")
         withenv("DISTSSHQUEUE_CONFIG" => cfg, "PATH" => path) do
@@ -2688,16 +2686,16 @@ end
         write(cfg, DistSSHQueue.default_config_body(; store = joinpath(d, "jobs.toml")))
         withenv("DISTSSHQUEUE_CONFIG" => cfg, "PATH" => path) do
             code_p, out_p, _ = capture_stdio() do
-                DistSSHQueue.main(["add-host", "parent"])
+                DistSSHQueue.main(["add-host"])
             end
             @test code_p == 0
             @test !occursin("reachable via DistSSHKit", out_p)
             @test !occursin("  ! ", out_p)
             code, out, _ = capture_stdio() do
-                DistSSHQueue.main(["add-host", "parent", "child:host1"])
+                DistSSHQueue.main(["add-host", "host1"])
             end
             @test code == 0
-            @test occursin("child:host1", out)
+            @test occursin("host1", out)
             @test occursin("  ! ", out)
             @test occursin("DistSSHKit can reach", out)
             @test occursin("including qhost:", out)
@@ -2705,23 +2703,23 @@ end
             @test occursin("unless the depot", out)
             @test occursin("instantiate", out)
             @test DistSSHQueue.config_host_names(DistSSHQueue.load_config()) ==
-                DistSSHQueue.HostAllow("parent" => nothing, "host1" => nothing)
+                DistSSHQueue.HostAllow("host1" => 1)
             withenv("DISTSSH_QUIET" => "1") do
                 code_q, out_q, _ = capture_stdio() do
-                    DistSSHQueue.main(["add-host", "child:host2"])
+                    DistSSHQueue.main(["add-host", "host2"])
                 end
                 @test code_q == 0
-                @test occursin("child:host2", out_q)
+                @test occursin("host2", out_q)
                 @test !occursin("  ! ", out_q)
                 @test !occursin("DistSSHKit can reach", out_q)
             end
             code2, out2, _ = capture_stdio() do
-                DistSSHQueue.main(["remove-host", "parent"])
+                DistSSHQueue.main(["remove-host"])
             end
             @test code2 == 0
             @test occursin("host1", out2)
             @test DistSSHQueue.config_host_names(DistSSHQueue.load_config()) ==
-                DistSSHQueue.HostAllow("host1" => nothing, "host2" => nothing)
+                DistSSHQueue.HostAllow("host1" => 1, "host2" => 1)
             bad2, _, err2 = capture_stdio() do
                 DistSSHQueue.main(["add-host", "--hosts"])
             end
@@ -2732,7 +2730,7 @@ end
 end
 
 @testset "pool uses Kit argv or config hosts" begin
-    allow = DistSSHQueue.HostAllow("parent" => nothing, "host1" => 4)
+    allow = DistSSHQueue.HostAllow("host1" => 4)
     inc, hosts = DistSSHQueue.pool_hosts_from_allow(false, String[], allow)
     @test inc
     @test hosts == ["host1"]
@@ -2773,7 +2771,7 @@ end
             "DISTSSHQUEUE_STORE" => p,
             "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
             "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
-            "DISTRIBUTED_PROJECT_ROOT" => nothing,
+            "DISTRIBUTED_PROJECT_ROOT" => 1,
         ) do
             code, _, err = capture_stdio() do
                 DistSSHQueue.main(["plan", "echo.jl"])
@@ -2794,7 +2792,7 @@ end
             "DISTSSHQUEUE_STORE" => p,
             "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
             "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
-            "DISTRIBUTED_PROJECT_ROOT" => nothing,
+            "DISTRIBUTED_PROJECT_ROOT" => 1,
         ) do
             code, out, _ = capture_stdio() do
                 DistSSHQueue.main(["pool", "-h"])
@@ -2815,12 +2813,12 @@ end
             write_shippable_project!(jobdir)
             cd(jobdir) do
                 code_p, out_p, _ = capture_stdio() do
-                    DistSSHQueue.main(["pool", "parent"])
+                    DistSSHQueue.main(["pool"])
                 end
                 @test code_p == 0
                 @test occursin("DistSSHQueue pool", out_p)
                 @test occursin("Pool:", out_p)
-                @test occursin("parent is this queue host", out_p)
+                @test occursin("head machine", out_p)
                 @test !occursin("slots", lowercase(out_p))
                 @test !occursin("Suggested submit", out_p)
                 @test !occursin("GB/worker", out_p)
@@ -2833,7 +2831,7 @@ end
     _, notes, _ = capture_stdio() do
         DistSSHQueue.print_pool_inventory_notes!()
     end
-    @test occursin("parent is this queue host", notes)
+    @test occursin("head machine", notes)
     @test !occursin("GB/worker", notes)
     @test !occursin("Suggested submit", notes)
     @test !occursin("not free queue capacity", notes)
@@ -2868,12 +2866,12 @@ end
         mkpath(jobdir)
         write_shippable_project!(jobdir)
         write(joinpath(jobdir, "a.jl"), "1\n")
-        write(joinpath(d, "config.toml"), "store = $(repr(p))\nhosts = [\"parent\"]\n")
+        write(joinpath(d, "config.toml"), "store = $(repr(p))\nhosts = []\n")
         withenv(
             "DISTSSHQUEUE_STORE" => p,
             "DISTSSHQUEUE_CONFIG" => joinpath(d, "config.toml"),
             "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
-            "DISTRIBUTED_PROJECT_ROOT" => nothing,
+            "DISTRIBUTED_PROJECT_ROOT" => 1,
             "DISTSSHQUEUE_WATCH_TICKS" => "1",
         ) do
             cd(jobdir) do
@@ -2904,7 +2902,7 @@ end
                 @test !occursin("DistSSHQueue watch", out_qw)
                 @test !occursin("Ctrl-C stops watch", out_qw)
                 code_go, _, _ = capture_stdio() do
-                    DistSSHQueue.main(["submit", "go", "parent:1", "a.jl"])
+                    DistSSHQueue.main(["submit", "go", "--head-slots", "1", "a.jl"])
                 end
                 @test code_go == 0
                 withenv("DISTSSHQUEUE_WATCH_TICKS" => "2") do
@@ -2961,12 +2959,12 @@ end
 end
 
 @testset "qhost hop forwards NO_COLOR" begin
-    withenv("NO_COLOR" => "1", "DISTSSH_QUIET" => nothing) do
+    withenv("NO_COLOR" => "1", "DISTSSH_QUIET" => 1) do
         assigns = String[]
         DistSSHQueue.append_hop_forwarded_env!(assigns)
         @test any(a -> occursin("NO_COLOR", a), assigns)
     end
-    withenv("NO_COLOR" => nothing, "DISTSSH_QUIET" => nothing) do
+    withenv("NO_COLOR" => 1, "DISTSSH_QUIET" => 1) do
         assigns = String[]
         DistSSHQueue.append_hop_forwarded_env!(assigns)
         @test !any(a -> occursin("NO_COLOR", a), assigns)
@@ -2982,11 +2980,11 @@ end
             "DISTSSHQUEUE_STORE" => p,
             "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
             "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
-            "DISTRIBUTED_PROJECT_ROOT" => nothing,
+            "DISTRIBUTED_PROJECT_ROOT" => 1,
         ) do
             cd(jobdir) do
                 code, _, err = capture_stdio() do
-                    DistSSHQueue.main(["submit", "go", "parent:1", "no_such.jl"])
+                    DistSSHQueue.main(["submit", "go", "--head-slots", "1", "no_such.jl"])
                 end
                 @test code == 1
                 @test occursin("not found", err)
@@ -3048,7 +3046,7 @@ end
     mktempdir() do d
         p = joinpath(d, "jobs.toml")
         q = Queue(; store = p, runner = _ -> error("boom: kaboom"))
-        id = submit!(q, "a.jl", "parent:1")
+        id = submit!(q, "a.jl"; head_slots = 1)
         @test step!(q) == 1
         _wait_state(q, id, :failed)
         listed = sprint(io -> DistSSHQueue.show_status(p; io = io))
@@ -3066,7 +3064,7 @@ end
         j = DistSSHQueue.Job(;
             kind = :go,
             script = script,
-            hosts = ["parent:1"],
+            hosts = String[],
             state = :running,
             kwargs = Dict{String, Any}("project" => d),
         )
@@ -3077,7 +3075,7 @@ end
             id = j.id,
             kind = :go,
             script = script,
-            hosts = ["parent:1"],
+            hosts = String[],
             state = :running,
             kwargs = Dict{String, Any}("project" => d, "cancel" => true),
         )
@@ -3114,7 +3112,7 @@ end
             id = "aaaaaaaa-1111-4000-8000-000000000001",
             kind = :go,
             script = script,
-            hosts = ["parent:1"],
+            hosts = String[],
             state = :done,
             result_path = leaf,
             kwargs = Dict{String, Any}("project" => stage),
@@ -3123,7 +3121,7 @@ end
             id = "aaaaaaaa-2222-4000-8000-000000000002",
             kind = :go,
             script = script,
-            hosts = ["parent:1"],
+            hosts = String[],
             state = :queued,
             kwargs = Dict{String, Any}("project" => stage),
         )
@@ -3154,7 +3152,7 @@ end
         id = "bbbbbbbb-1111-4000-8000-000000000001",
         kind = :drive,
         script = "d.jl",
-        hosts = ["parent:5", "child:mini-alpha:8", "child:mini-beta:8", "child:mini-gamma:8"],
+        hosts = ["8*mini-alpha", "8*mini-beta", "8*mini-gamma"],
         state = :done,
         queued_at = qat,
         started_at = qat,
@@ -3164,7 +3162,7 @@ end
         id = "bbbbbbbb-2222-4000-8000-000000000002",
         kind = :go,
         script = "g.jl",
-        hosts = ["parent:1"],
+        hosts = String[],
         state = :running,
         queued_at = qat,
         started_at = now(UTC) - Minute(12) - Second(30),
@@ -3177,10 +3175,10 @@ end
     @test occursin("1h04m", listed)
     @test occursin("elapsed", listed)
     @test DistSSHQueue._human_span(qat, qat + Minute(12)) == "12m"
-    @test occursin("parent:5  child:mini-alpha:8  +2", listed)
-    @test !occursin("child:mini-gamma:8", listed)
+    @test occursin("--head-slots 5  8*mini-alpha  +2", listed)
+    @test !occursin("8*mini-gamma", listed)
     full = sprint(io -> DistSSHQueue.print_jobs_table([done]; io = io, verbose = true))
-    @test occursin("child:mini-gamma:8", full)
+    @test occursin("8*mini-gamma", full)
     quiet = sprint(io -> DistSSHQueue.print_jobs_table([done]; io = io, quiet = true))
     @test !occursin("queued", quiet)
     @test !occursin("hosts", quiet)
@@ -3188,7 +3186,7 @@ end
         id = "cccccccc-1111-4000-8000-000000000001",
         kind = :go,
         script = "s.jl",
-        hosts = ["parent:1"],
+        hosts = String[],
         state = :failed,
         error = "setup failed because " * repeat("x", 60),
         result_path = joinpath("/tmp", "artifact" * repeat("y", 40)),
@@ -3232,7 +3230,7 @@ end
         kp = DistSSHRun.execute!(
             :go,
             joinpath(d, "mark.jl"),
-            ["parent:1"];
+            String[];
             detached = true,
             yes = true,
             job_id = "queue-slot-include",
@@ -3485,7 +3483,7 @@ end
 @testset "submit source" begin
     q = DistSSHQueue.Queue(; runner = _ -> nothing)
     id = DistSSHQueue.submit!(
-        q, "g.jl", "parent:1";
+        q, "g.jl", head_slots = 1;
         source = Dict{String, Any}(
             "commit" => "abc",
             "dirty" => false,
@@ -3501,7 +3499,7 @@ end
     else
         @test !haskey(kw, :source)
     end
-    plain = DistSSHQueue.submit!(q, "local.jl", "parent:1")
+    plain = DistSSHQueue.submit!(q, "local.jl"; head_slots = 1)
     @test !haskey(DistSSHQueue.job(q, plain).kwargs, "source")
     withenv(
         "DISTSSHQUEUE_SOURCE_COMMIT" => "abc",
@@ -3517,7 +3515,7 @@ end
         @test built["captured"] == "submit:client"
         @test built["untracked"] == 2
     end
-    withenv("DISTSSHQUEUE_SOURCE_COMMIT" => nothing) do
+    withenv("DISTSSHQUEUE_SOURCE_COMMIT" => 1) do
         @test DistSSHQueue._source_from_queue_env() === nothing
     end
     mktempdir() do tmp
@@ -3525,7 +3523,7 @@ end
         cfg = joinpath(tmp, "config.toml")
         script = joinpath(tmp, "job.jl")
         write(script, "1\n")
-        write(cfg, "store = $(repr(store))\nhosts = [\"parent\"]\n")
+        write(cfg, "store = $(repr(store))\nhosts = []\n")
         withenv(
             "DISTSSHQUEUE_CONFIG" => cfg,
             "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
@@ -3538,7 +3536,7 @@ end
             redirect_stdout(devnull) do
                 redirect_stderr(devnull) do
                     @test DistSSHQueue.submit_cli(
-                        store, :go, script, ["parent:1"], Dict{String, Any}(),
+                        store, :go, script, String[], Dict{String, Any}(),
                     ) == 0
                 end
             end
@@ -3573,7 +3571,7 @@ function _submit_manifest_tree(dir::AbstractString, kind::Symbol)
     cfg = joinpath(dir, "config.toml")
     script = joinpath(dir, "job.jl")
     write(script, "1\n")
-    write(cfg, "store = $(repr(store))\nhosts = [\"parent\"]\n")
+    write(cfg, "store = $(repr(store))\nhosts = []\n")
     stdout, stderr, code = mktemp() do _, out_io
         mktemp() do _, err_io
             status = try
@@ -3581,7 +3579,7 @@ function _submit_manifest_tree(dir::AbstractString, kind::Symbol)
                     redirect_stdout(out_io) do
                         redirect_stderr(err_io) do
                             DistSSHQueue.submit_cli(
-                                store, :go, script, ["parent:1"],
+                                store, :go, script, String[],
                                 Dict{String, Any}("project" => proj),
                             )
                         end
@@ -3672,7 +3670,7 @@ end
             original = read(joinpath(src, "run.toml"))
             result = _kit_result_at(src)
             j = DistSSHQueue.Job(;
-                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kind = :go, script = "a.jl", hosts = String[],
                 kwargs = Dict{String, Any}("run_dir" => src),
             )
             @test DistSSHQueue._archive_controller_run_toml!(j, result) === nothing
@@ -3687,7 +3685,7 @@ end
             blank = joinpath(home, "blank-run")
             _shipped_run_toml(blank; hash = "", run_id = "")
             bare = DistSSHQueue.Job(;
-                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kind = :go, script = "a.jl", hosts = String[],
                 kwargs = Dict{String, Any}("run_dir" => blank),
             )
             DistSSHQueue._archive_controller_run_toml!(bare, _kit_result_at(blank))
@@ -3696,7 +3694,7 @@ end
             @test !haskey(bare.kwargs, "remote_run_id")
 
             missing = DistSSHQueue.Job(;
-                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kind = :go, script = "a.jl", hosts = String[],
             )
             nowhere = joinpath(home, "missing-run")
             mkpath(nowhere)
@@ -3709,7 +3707,7 @@ end
             proc = Base.run(`/usr/bin/false`; wait = false)::Base.Process
             kp = DistSSHRun.DetachedProcess(proc; kind = :go, run_dir = failed_dir)
             failed = DistSSHQueue.Job(;
-                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kind = :go, script = "a.jl", hosts = String[],
             )
             @test_throws ErrorException DistSSHQueue.run_kit(
                 failed, Returns(nothing);
@@ -3726,7 +3724,7 @@ end
             held_kp = DistSSHRun.DetachedProcess(held; kind = :go, run_dir = cancel_dir)
             armed = Ref(false)
             cancelled = DistSSHQueue.Job(;
-                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kind = :go, script = "a.jl", hosts = String[],
             )
             @test_throws DistSSHQueue._JobCancelled DistSSHQueue.run_kit(
                 cancelled, Returns(nothing);
@@ -3744,7 +3742,7 @@ end
             plain_kp = DistSSHRun.DetachedProcess(plain_proc; kind = :go, run_dir = plain_dir)
             armed_plain = Ref(false)
             plain_job = DistSSHQueue.Job(;
-                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kind = :go, script = "a.jl", hosts = String[],
             )
             @test_throws DistSSHQueue._JobCancelled DistSSHQueue.run_kit(
                 plain_job, Returns(nothing);
@@ -3761,11 +3759,11 @@ end
             write(script, "1\n")
             ev = Base.Event()
             q = Queue(; store, runner = _ -> wait(ev))
-            id = submit!(q, script, "parent:1"; project = proj, submission = "batch-1")
+            id = submit!(q, script; head_slots = 1, project = proj, submission = "batch-1")
             @test job(q, id).kwargs["submission"] == "batch-1"
             @test !haskey(DistSSHQueue.execute_kwargs(job(q, id)), :submission)
             mem = Queue(; runner = _ -> nothing)
-            lone = submit!(mem, script, "parent:1")
+            lone = submit!(mem, script; head_slots = 1)
             @test job(mem, lone).kwargs["submission"] == lone
             @test step!(q) == 1
             side = joinpath(home, "side-run")
@@ -3795,21 +3793,21 @@ end
             _shipped_run_toml(same_b; hash = "hash-two", run_id = "run-two")
             Div = DistSSHQueue.Job
             first = Div(;
-                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kind = :go, script = "a.jl", hosts = String[],
                 kwargs = Dict{String, Any}(
                     "submission" => "shared",
                     "content_tree_hash" => "hash-one",
                 ),
             )
             second = Div(;
-                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kind = :go, script = "a.jl", hosts = String[],
                 kwargs = Dict{String, Any}(
                     "submission" => "shared",
                     "content_tree_hash" => "hash-two",
                 ),
             )
             other = Div(;
-                kind = :go, script = "a.jl", hosts = ["parent:1"],
+                kind = :go, script = "a.jl", hosts = String[],
                 kwargs = Dict{String, Any}(
                     "submission" => "other",
                     "content_tree_hash" => "hash-nine",

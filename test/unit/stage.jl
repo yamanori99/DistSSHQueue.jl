@@ -39,7 +39,7 @@ end
         mkpath(stage)
         write(joinpath(stage, "keep.txt"), "x\n")
         j = DistSSHQueue.Job(;
-            id = id, kind = :go, script = "a.jl", hosts = ["parent:1"],
+            id = id, kind = :go, script = "a.jl", hosts = ["1*local"],
         )
         DistSSHQueue.save_jobs(store, [j])
         withenv("HOME" => home) do
@@ -61,14 +61,14 @@ end
         write(joinpath(stage, "keep.txt"), "x\n")
         withenv("HOME" => home, DistSSHQueue.JOB_ID_ENV => id) do
             @test_throws ArgumentError DistSSHQueue.submit_cli(
-                store, :go, script, ["parent:1"], Dict{String, Any}(),
+                store, :go, script, String[], Dict{String, Any}("head_slots" => 1),
             )
         end
         @test isfile(joinpath(stage, "keep.txt"))
         rm(store; force = true)
         withenv("HOME" => home, DistSSHQueue.JOB_ID_ENV => id) do
             @test_throws ArgumentError DistSSHQueue.submit_cli(
-                store, :go, script, ["parent:1"], Dict{String, Any}(),
+                store, :go, script, String[], Dict{String, Any}("head_slots" => 1),
             )
         end
         @test !ispath(stage)
@@ -81,7 +81,7 @@ end
         mkpath(stage)
         write(joinpath(stage, "keep.txt"), "x\n")
         j = DistSSHQueue.Job(;
-            id = id, kind = :go, script = "a.jl", hosts = ["parent:1"],
+            id = id, kind = :go, script = "a.jl", hosts = ["1*local"],
         )
         DistSSHQueue.save_jobs(store, [j])
         withenv("HOME" => home, DistSSHQueue.JOB_ID_ENV => id) do
@@ -107,18 +107,18 @@ end
         remote = "~/.distsshqueue/stage/abc"
         payload = [
             "go",
-            "child:w:1",
+            "1*w",
             "--output-dir",
             outdir,
             "S.jl",
         ]
         got = DistSSHQueue.rewrite_payload_paths(payload, proj, remote)
         @test got[1] == "go"
-        @test got[2] == "child:w:1"
+        @test got[2] == "1*w"
         @test got[3] == "--output-dir"
         @test got[4] == remote * "/out/x"
         @test got[5] == remote * "/S.jl"
-        @test DistSSHQueue.rewrite_one_path("parent:1", proj, remote) == "parent:1"
+        @test DistSSHQueue.rewrite_one_path("1*w", proj, remote) == "1*w"
         @test DistSSHQueue.remote_stage_root("abc") == remote
         k = DistSSHQueue.new_job_id()
         @test DistSSHQueue.new_job_id() != k
@@ -160,10 +160,10 @@ end
         @test isempty(String(take!(bufq)))
         @test !DistSSHQueue.rsync_progress_on(["--progress"])
     end
-    withenv("DISTSSH_QUIET" => nothing, "DISTSSH_PROGRESS" => "1") do
+    withenv("DISTSSH_QUIET" => 1, "DISTSSH_PROGRESS" => "1") do
         @test DistSSHQueue.rsync_progress_on()
     end
-    withenv("DISTSSH_QUIET" => nothing, "DISTSSH_PROGRESS" => nothing) do
+    withenv("DISTSSH_QUIET" => 1, "DISTSSH_PROGRESS" => 1) do
         @test !DistSSHQueue.rsync_progress_on()
         @test DistSSHQueue.rsync_progress_on(["go", "--progress", "S.jl"])
     end
@@ -448,9 +448,9 @@ end
 end
 
 @testset "kit_verb_and_args splits submit" begin
-    kit, args = DistSSHQueue.kit_verb_and_args("submit", ["go", "a.jl", "parent:1"])
+    kit, args = DistSSHQueue.kit_verb_and_args("submit", ["go", "--head-slots", "1", "a.jl"])
     @test kit == "go"
-    @test args == ["a.jl", "parent:1"]
+    @test args == ["--head-slots", "1", "a.jl"]
     kit2, args2 = DistSSHQueue.kit_verb_and_args("drive", ["job.jl"])
     @test kit2 == "drive"
     @test args2 == ["job.jl"]

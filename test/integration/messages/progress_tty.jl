@@ -23,7 +23,7 @@ using DistSSHQueue
             cfg,
             """
             store = $(repr(store))
-            hosts = ["parent", "child:host1", "child:host2"]
+            hosts = ["host1", "host2"]
             """,
         )
 
@@ -38,18 +38,17 @@ using DistSSHQueue
 
         # Queued job with enough hosts to trigger compact truncation (`_HOSTS_KEEP = 2`).
         many_hosts = String[
-            "parent:1",
-            "child:host1:1",
-            "child:host2:1",
-            "child:host3:1",
-            "child:host4:1",
+            "1*host1",
+            "1*host2",
+            "1*host3",
+            "1*host4",
         ]
         seed = DistSSHQueue.Job(;
             kind = :go,
             script = joinpath(jobdir, "a.jl"),
             hosts = many_hosts,
             state = :queued,
-            kwargs = Dict{String, Any}("project" => jobdir),
+            kwargs = Dict{String, Any}("project" => jobdir, "head_slots" => 1),
         )
         DistSSHQueue.save_jobs(store, DistSSHQueue.Job[seed])
         short_id = first(seed.id, 8)
@@ -57,10 +56,10 @@ using DistSSHQueue
         size_cmd = _queue_cli_cmd(["size", "parent", "--gb-per-worker", "0.5"])
         size_quiet_cmd = _queue_cli_cmd(["size", "-q", "parent", "--gb-per-worker", "0.5"])
         pool_cmd = _queue_cli_cmd(
-            ["pool", "parent", "child:host1", "child:host2"],
+            ["pool", "host1", "host2"],
         )
         pool_quiet_cmd = _queue_cli_cmd(
-            ["pool", "-q", "parent", "child:host1", "child:host2"],
+            ["pool", "-q", "host1", "host2"],
         )
         status_cmd = _queue_cli_cmd(["status"])
         status_verbose_cmd = _queue_cli_cmd(["status", "--verbose"])
@@ -186,10 +185,10 @@ using DistSSHQueue
             @test !occursin(r"Total:\s*\d+\s*workers", size_plain)
         end
 
-        @testset "pool parent local + two-host SSH failures on TTY" begin
+        @testset "pool head local + two-host SSH failures on TTY" begin
             pool_plain = _queue_tty_strip_ansi(pool_tty)
             pool_lines = _queue_tty_lines(pool_tty)
-            @test occursin("parent", pool_plain)
+            @test occursin("head", pool_plain)
             @test occursin("host1", pool_plain)
             @test occursin("host2", pool_plain)
             @test any(l -> _queue_host_fail_line(l, "host1"), pool_lines)
@@ -216,15 +215,15 @@ using DistSSHQueue
             @test occursin(short_id, status_plain)
             @test occursin("hosts", status_plain)
             @test occursin("+3", status_plain) || occursin("+ 3", status_plain)
-            @test !occursin("child:host4:1", status_plain)
+            @test !occursin("1*host4", status_plain)
 
             verbose_plain = _queue_tty_strip_ansi(status_verbose_tty)
-            @test occursin("child:host1:1", verbose_plain)
-            @test occursin("child:host4:1", verbose_plain)
+            @test occursin("1*host1", verbose_plain)
+            @test occursin("1*host4", verbose_plain)
             @test !occursin("+3", verbose_plain)
 
             progress_plain = _queue_tty_strip_ansi(status_progress_tty)
-            @test occursin("child:host4:1", progress_plain)
+            @test occursin("1*host4", progress_plain)
 
             quiet_plain = _queue_tty_strip_ansi(status_quiet_tty)
             @test occursin(short_id, quiet_plain)
@@ -279,7 +278,7 @@ using DistSSHQueue
             @test occursin("host2", pool_pipe.stdout)
             @test any(l -> _queue_host_fail_line(l, "host1"), pool_pipe_lines)
             @test any(l -> _queue_host_fail_line(l, "host2"), pool_pipe_lines)
-            @test occursin("parent", pool_pipe.stdout)
+            @test occursin("head", pool_pipe.stdout)
             @test !_queue_tty_has_screen_clear(pool_pipe.stdout)
             @test !occursin(r"\e\[[0-9]*[AJKH]", pool_pipe.stdout)
             @test occursin("host1", pool_quiet_pipe.stdout)
@@ -384,7 +383,7 @@ using DistSSHQueue
                 j = DistSSHQueue.Job(;
                     kind = :go,
                     script = joinpath(jobdir, "a.jl"),
-                    hosts = ["parent:1"],
+                    hosts = String[],
                     state = :queued,
                     kwargs = Dict{String, Any}("project" => jobdir),
                 )

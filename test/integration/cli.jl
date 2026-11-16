@@ -147,7 +147,7 @@ function cli_env(d::AbstractString; distsshrun::Bool = false)
     end
     write(joinpath(jobdir, "hello.jl"), "write(joinpath(@__DIR__, \"hello.ran\"), \"cli-local\\n\")\nprintln(\"cli-local\")\n")
     write(joinpath(jobdir, "hold.jl"), "while true; sleep(1); end\n")
-    write(cfg, "store = $(repr(store))\nhosts = [\"parent\"]\n\n[env]\nDISTSSH_YES = \"1\"\n")
+    write(cfg, "store = $(repr(store))\nhosts = []\n\n[env]\nDISTSSH_YES = \"1\"\n")
     env = Dict(
         "DISTSSHQUEUE_CONFIG" => cfg,
         "DISTSSHQUEUE_STORE" => store,
@@ -250,7 +250,7 @@ end
             proc = run(serve_cmd; wait = false)
             try
                 cd(jobdir) do
-                    id = strip(read_cli(["submit", "go", "parent:1", "hello.jl"], env; label = "submit hello"))
+                    id = strip(read_cli(["submit", "go", "--head-slots", "1", "hello.jl"], env; label = "submit hello"))
                     @test !isempty(id)
                     row = wait_job(env, id, (:done, :failed))
                     @test row.state === :done
@@ -284,7 +284,7 @@ end
                     hold_out = joinpath(d, "hold-queued-out")
                     id1 = strip(
                         read_cli(
-                            ["submit", "go", "parent:1", "--output-dir", hold_out, "hold.jl"],
+                            ["submit", "go", "--head-slots", "1", "--output-dir", hold_out, "hold.jl"],
                             env;
                             label = "submit hold",
                         )
@@ -295,7 +295,7 @@ end
                     @test row.state === :running
                     id2 = strip(
                         read_cli(
-                            ["submit", "go", "parent:1", "hello.jl"],
+                            ["submit", "go", "--head-slots", "1", "hello.jl"],
                             env;
                             label = "submit hello while hold runs",
                         )
@@ -323,7 +323,7 @@ end
                 cd(jobdir) do
                     id = strip(
                         read_cli(
-                            ["submit", "go", "parent:1", "hold.jl"],
+                            ["submit", "go", "--head-slots", "1", "hold.jl"],
                             env;
                             label = "submit running hold",
                         )
@@ -395,7 +395,7 @@ end
                         "--remote-julia", JULIA,
                         "go",
                         "--hosts",
-                        "child:w:2",
+                        "2*w",
                         "hello.jl",
                     ]
                 )
@@ -459,7 +459,7 @@ end
             mkpath(bindir)
             leftover = joinpath(bindir, "dskq")
             write(leftover, "#!/bin/sh\n")
-            withenv("DISTSSHQUEUE_CONFIG" => nothing, "DISTSSHQUEUE_STORE" => nothing) do
+            withenv("DISTSSHQUEUE_CONFIG" => 1, "DISTSSHQUEUE_STORE" => 1) do
                 @test DistSSHQueue.main(
                     [
                         "setup",
@@ -541,7 +541,7 @@ end
                     "PATH" => path,
                     "DISTSSH_QUIET" => "1",
                     "DISTSSHQUEUE_CONFIG" => joinpath(dir, "no-config.toml"),
-                    "DISTSSHQUEUE_HOST" => nothing,
+                    "DISTSSHQUEUE_HOST" => 1,
                     DistSSHQueue.NO_STAGE_ENV => "1",
                 ) do
                     f(dir)
