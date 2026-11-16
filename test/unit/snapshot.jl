@@ -48,7 +48,7 @@ function (p::_SnapProbe)(_, mode::Symbol; gitignore::Bool = true, run_id = nothi
 end
 
 # Live argv on Linux (`/proc`) and macOS (`ps`). `Process.cmd` is always
-# included so a finished child or a missing `/proc` still shows `--run-id`.
+# included so a finished child or a missing `/proc` still shows `--job-blob`.
 function _proc_cmdline(proc::Base.Process)::String
     parts = String[string(proc.cmd)]
     pid = Int(getpid(proc))
@@ -373,17 +373,17 @@ end
         kp = launched::DistSSHRun.DetachedProcess
         cmd = _proc_cmdline(kp.process)
         try
-            blob_m = match(r"--job-blob\s+(\S+)", cmd)
-            blob_path = blob_m === nothing ? nothing : only(blob_m.captures)::Union{Nothing, SubString{String}}
-            if blob_path isa AbstractString
-                blob_text = read(String(blob_path), String)
-                @test occursin(_SNAP_A, blob_text)
-                @test !occursin("run_id = \"$(loaded.id)\"", blob_text)
-            else
-                @test occursin("--run-id", cmd)
-                @test occursin(_SNAP_A, cmd)
-                @test !occursin("--run-id $(loaded.id)", cmd)
-            end
+            @test occursin("--job-blob", cmd)
+            @test !occursin("--run-id", cmd)
+            blob_m = match(r"--job-blob\s+(/[^\s\",]+?\.toml)", cmd)
+            @test blob_m !== nothing
+            caps = blob_m.captures
+            @test caps isa AbstractVector && !isempty(caps)
+            cap1 = caps[1]
+            @test cap1 isa AbstractString
+            blob_text = read(String(cap1), String)
+            @test occursin(_SNAP_A, blob_text)
+            @test !occursin("run_id = \"$(loaded.id)\"", blob_text)
             r = wait(kp)
             @test r.ok
             @test isfile(mark)
