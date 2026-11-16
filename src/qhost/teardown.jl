@@ -17,7 +17,7 @@ const _TEARDOWN_YES_REFUSAL =
     "  -y, --yes, and DISTSSH_YES do not authorize teardown. Nothing deleted. Pass --confirm-path PATH."
 
 function teardown_store(; home::AbstractString = homedir(), config::AbstractString = config_path(; home = home))::String
-    env = _process_env_value("DISTSSHQUEUE_STORE")
+    env = _env_path_override("DISTSSHQUEUE_STORE")
     if !isempty(env)
         _warn_tilde_store!(env)
         return env
@@ -32,7 +32,7 @@ function _teardown_config_file(;
         config::Union{Nothing, AbstractString},
     )::String
     config !== nothing && return String(config)
-    env = _process_env_value("DISTSSHQUEUE_CONFIG")
+    env = _env_path_override("DISTSSHQUEUE_CONFIG")
     return isempty(env) ? default_config_path(; home = home) : env
 end
 

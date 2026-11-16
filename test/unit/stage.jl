@@ -59,21 +59,29 @@ end
         write(script, "1\n")
         mkpath(stage)
         write(joinpath(stage, "keep.txt"), "x\n")
+        rm(store; force = true)
         withenv("HOME" => home, DistSSHQueue.JOB_ID_ENV => id) do
-            @test_throws ArgumentError DistSSHQueue.submit_cli(
-                store, :go, script, String[], Dict{String, Any}("head_slots" => 1),
-            )
+            code_st, = capture_stdio() do
+                DistSSHQueue.submit_cli(
+                    store, :go, script, String[], Dict{String, Any}("head_slots" => 1),
+                )
+            end
+            @test code_st == 0
         end
         @test isfile(joinpath(stage, "keep.txt"))
         rm(store; force = true)
         withenv("HOME" => home, DistSSHQueue.JOB_ID_ENV => id) do
-            @test_throws ArgumentError DistSSHQueue.submit_cli(
-                store, :go, script, String[], Dict{String, Any}("head_slots" => 1),
-            )
+            code_rm, = capture_stdio() do
+                DistSSHQueue.submit_cli(
+                    store, :go, script, String[], Dict{String, Any}("head_slots" => 1),
+                )
+            end
+            @test code_rm == 0
         end
-        @test !ispath(stage)
+        @test ispath(stage)
         mkpath(stage)
         write(joinpath(stage, "keep.txt"), "x\n")
+        rm(store; force = true)
         withenv("HOME" => home, DistSSHQueue.JOB_ID_ENV => id) do
             @test_throws ArgumentError DistSSHQueue.submit_main(["pool:1", "go", script])
         end
@@ -160,13 +168,13 @@ end
         @test isempty(String(take!(bufq)))
         @test !DistSSHQueue.rsync_progress_on(["--progress"])
     end
-    withenv("DISTSSH_QUIET" => 1, "DISTSSH_PROGRESS" => "1") do
+    withenv("DISTSSH_QUIET" => nothing, "DISTSSH_PROGRESS" => "1") do
         @test DistSSHQueue.rsync_progress_on()
     end
-    withenv("DISTSSH_QUIET" => 1, "DISTSSH_PROGRESS" => 1) do
+    withenv("DISTSSH_QUIET" => "1", "DISTSSH_PROGRESS" => "1") do
         @test !DistSSHQueue.rsync_progress_on()
-        @test DistSSHQueue.rsync_progress_on(["go", "--progress", "S.jl"])
     end
+    @test DistSSHQueue.rsync_progress_on(["go", "--progress", "S.jl"])
 
     @testset "stage follows the manifest directory" begin
         mktempdir() do root

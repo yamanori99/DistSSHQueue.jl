@@ -23,7 +23,7 @@ using DistSSHQueue
             cfg,
             """
             store = $(repr(store))
-            hosts = ["host1", "host2"]
+            hosts = ["1*host1", "1*host2"]
             """,
         )
 
@@ -214,7 +214,7 @@ using DistSSHQueue
             status_plain = _queue_tty_strip_ansi(status_tty)
             @test occursin(short_id, status_plain)
             @test occursin("hosts", status_plain)
-            @test occursin("+3", status_plain) || occursin("+ 3", status_plain)
+            @test occursin("+2", status_plain) || occursin("+ 2", status_plain)
             @test !occursin("1*host4", status_plain)
 
             verbose_plain = _queue_tty_strip_ansi(status_verbose_tty)
@@ -285,7 +285,7 @@ using DistSSHQueue
             @test occursin("host2", pool_quiet_pipe.stdout)
 
             @test occursin(short_id, status_pipe.stdout)
-            @test occursin("+3", status_pipe.stdout) || occursin("+ 3", status_pipe.stdout)
+            @test occursin("+2", status_pipe.stdout) || occursin("+ 2", status_pipe.stdout)
             @test !_queue_tty_has_csi(status_pipe.stdout)
 
             @test occursin("serve", watch_pipe.stdout)

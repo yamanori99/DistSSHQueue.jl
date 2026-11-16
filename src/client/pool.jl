@@ -16,12 +16,14 @@ function pool_hosts_from_allow(
     )::Tuple{Bool, Vector{String}}
     isempty(hosts) || return include_head, String[String(h) for h in hosts]
     include_head && return include_head, String[String(h) for h in hosts]
-    allow === nothing && throw(
-        ArgumentError(
-            "pool: pass SSH host names, or add-host first",
+    if allow === nothing || isempty(allow)
+        include_head || throw(
+            ArgumentError(
+                "pool: pass SSH host names, or add-host first",
+            )
         )
-    )
-    isempty(allow) && throw(ArgumentError("pool: hosts = []; add-host first"))
+        return true, String[]
+    end
     out = String[]
     for n in sorted_registry_hosts(allow)
         push!(out, n)
@@ -55,7 +57,7 @@ function pool_cli(args::Vector{String})::Cint
     tokens = String[
         format_machine_token(allow === nothing ? 1 : get(allow, h, 1), h) for h in hosts
     ]
-    if isempty(tokens)
+    if isempty(tokens) && !include_head
         DistSSHRun.show_pool_usage()
         return 0
     end

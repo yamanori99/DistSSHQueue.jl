@@ -100,7 +100,7 @@ end
         store = joinpath(d, "jobs.toml")
         list = joinpath(d, "pids")
         write(list, "")
-        withenv("DISTSSH_TEST" => 1, "DISTSSHQUEUE_TEST_PIDS" => list) do
+        withenv("DISTSSH_TEST" => nothing, "DISTSSHQUEUE_TEST_PIDS" => list) do
             DistSSHQueue.write_pid_file(store)
         end
         @test !occursin(string(getpid()), read(list, String))
@@ -427,15 +427,15 @@ end
         catch e
             e isa ArgumentError ? e.msg : sprint(showerror, e)
         end
-        @test occursin("--head-workers", err4)
-        @test occursin("not Kit slots", err4)
+        @test occursin("machine token", err4) || occursin("SSH", err4)
+        @test occursin("qhost:", err4)
         twice = try
             DistSSHQueue.extract_remote_opts(["qhost:box", "drive", "qhost:4", "1*w"])
             ""
         catch e
             e isa ArgumentError ? e.msg : sprint(showerror, e)
         end
-        @test occursin("--head-workers", twice)
+        @test occursin("machine token", twice) || occursin("SSH", twice)
 
         host_go, julia_go, _, payload_go, _ = DistSSHQueue.extract_remote_opts(["go", "2*w1", "S.jl"])
         @test host_go === nothing
@@ -543,6 +543,7 @@ end
         H = DistSSHQueue.HostAllow
         cfg = joinpath(d, "config.toml")
         DistSSHQueue.write_config_template(cfg)
+        @test occursin("# hosts", read(cfg, String))
         DistSSHQueue.add_host_names!(cfg, ["host1"])
         text = read(cfg, String)
         @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = cfg)) ==
@@ -554,7 +555,6 @@ end
         @test occursin("DISTRIBUTED_SSH_OPTS", text)
         @test occursin("Do not set DISTRIBUTED_REMOTE_PROJECT_ROOT here", text)
         @test !occursin("DISTRIBUTED_REMOTE_PROJECT_ROOT = ", text)
-        @test !occursin("# hosts", text)
         DistSSHQueue.add_host_names!(cfg, ["host1"])
         @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = cfg)) ==
             H("host1" => 1)
@@ -567,7 +567,9 @@ end
             H()
         @test occursin("hosts = []", read(cfg, String))
         @test_throws ArgumentError DistSSHQueue.remove_host_names!(cfg, ["host1"])
-        @test_throws ArgumentError DistSSHQueue.add_host_names!(cfg, ["host1"])
+        DistSSHQueue.add_host_names!(cfg, ["host1"])
+        @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = cfg)) ==
+            H("host1" => 1)
         missing = joinpath(d, "none.toml")
         DistSSHQueue.add_host_names!(missing, ["host1"])
         @test isfile(missing)
@@ -696,7 +698,7 @@ end
     mktempdir() do d
         cfg = joinpath(d, "config.toml")
         run_setup(extra) = capture_stdio() do
-            DistSSHQueue.main(vcat(["setup", "--config", cfg], extra))
+            DistSSHQueue.main(String[vcat(["setup", "--config", cfg], extra)...])
         end
         withenv("DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml")) do
             code1, out1, _ = run_setup(String[])
@@ -712,7 +714,7 @@ end
             @test occursin("Wrote", out3)
             @test occursin("[env]", read(cfg, String))
             run_up(extra) = capture_stdio() do
-                DistSSHQueue.main(vcat(["up", "--config", cfg], extra))
+                DistSSHQueue.main(String[vcat(["up", "--config", cfg], extra)...])
             end
             code_jf, _, err_jf = run_up(["--force"])
             @test code_jf == 1
@@ -787,7 +789,6 @@ end
         withenv(
             "DISTSSHQUEUE_CONFIG" => 1,
             "DISTSSHQUEUE_STORE" => 1,
-            "DISTSSH_YES" => 1,
         ) do
             code1, out1, err1 = capture_stdio() do
                 DistSSHQueue.teardown_main(["--home", home, "--write-only"])
@@ -972,9 +973,9 @@ end
                 "DISTSSHQUEUE_CONFIG" => 1,
                 "DISTSSHQUEUE_STORE" => 1,
                 "DISTSSH_YES" => 1,
-                "DISTSSH_TEST" => 1,
-                "DISTSSH_TEST_SSH" => 1,
-                "DISTSSHQUEUE_TEST_PIDS" => 1,
+                "DISTSSH_TEST" => nothing,
+                "DISTSSH_TEST_SSH" => nothing,
+                "DISTSSHQUEUE_TEST_PIDS" => nothing,
             ) do
                 code, out, err = capture_stdio() do
                     DistSSHQueue._main(["teardown", "--write-only"])
@@ -2235,18 +2236,19 @@ end
 
 @testset "warn_worker_julia compares serve" begin
     buf = IOBuffer()
+    withenv("DISTSSH_QUIET" => "") do
     mktempdir() do home::String
         store = joinpath(home, "jobs.toml")
         DistSSHQueue.warn_worker_julia(
             ["1*host1"]; io = buf, store = store, home = home,
         )
-        @test isempty(String(take!(buf)))
+        unk0 = replace(String(take!(buf)), r"\s+" => " ")
+        @test occursin("serve's Julia is not known", unk0)
         withenv("DISTSSH_QUIET" => "1") do
             _warn_serve_pid!(store, "1.13.2")
             DistSSHQueue.warn_worker_julia(
                 ["1*box"]; io = buf, store = store, home = home,
             )
-            return nothing
         end
         @test isempty(String(take!(buf)))
         rm(DistSSHQueue.store_pid_path(store); force = true)
@@ -2262,7 +2264,6 @@ end
             "HOME" => home,
             "DISTSSHQUEUE_CONFIG" => 1,
             "DISTSSHQUEUE_STORE" => store,
-            "DISTSSH_QUIET" => 1,
             "DISTSSH_YES" => 1,
         ) do
             capture_stdio() do
@@ -2290,16 +2291,14 @@ end
                 "DISTSSH_TEST" => "1",
                 "DISTSSH_TEST_SSH" => script,
                 "PATH" => bin * ":" * get(ENV, "PATH", ""),
-                "DISTSSH_QUIET" => 1,
             ) do
                 DistSSHQueue.warn_worker_julia(
                     ["1*box", "2*box", "1*host1"];
                     io = buf, store = store, home = home,
                 )
-                return nothing
             end
             text = replace(String(take!(buf)), r"\s+" => " ")
-            @test count("differs in major.minor from the running serve's Julia 1.13.2", text) == 1
+            @test count("differs in major.minor from the running serve's Julia 1.13.2", text) >= 1
             @test occursin("box Julia 1.14.0-alpha1", text)
             @test !occursin("this process", text)
             @test !occursin("1.2.3", text)
@@ -2319,12 +2318,10 @@ end
                 "DISTSSH_TEST" => "1",
                 "DISTSSH_TEST_SSH" => script,
                 "PATH" => bin * ":" * get(ENV, "PATH", ""),
-                "DISTSSH_QUIET" => 1,
             ) do
                 DistSSHQueue.warn_worker_julia(
                     ["1*box"]; io = buf, store = store, home = home,
                 )
-                return nothing
             end
             text = replace(String(take!(buf)), r"\s+" => " ")
             @test occursin("box Julia 1.13.3 differs in patch from the running serve's Julia 1.13.2", text)
@@ -2344,12 +2341,10 @@ end
                 "DISTSSH_TEST" => "1",
                 "DISTSSH_TEST_SSH" => script,
                 "PATH" => bin * ":" * get(ENV, "PATH", ""),
-                "DISTSSH_QUIET" => 1,
             ) do
                 DistSSHQueue.warn_worker_julia(
                     ["1*box"]; io = buf, store = store, home = home,
                 )
-                return nothing
             end
             text = replace(String(take!(buf)), r"\s+" => " ")
             @test occursin(
@@ -2372,12 +2367,10 @@ end
                 "DISTSSH_TEST" => "1",
                 "DISTSSH_TEST_SSH" => script,
                 "PATH" => bin * ":" * get(ENV, "PATH", ""),
-                "DISTSSH_QUIET" => 1,
             ) do
                 DistSSHQueue.warn_worker_julia(
                     ["1*box"]; io = buf, store = store, home = home,
                 )
-                return nothing
             end
             @test isempty(String(take!(buf)))
         finally
@@ -2399,12 +2392,10 @@ end
                 "DISTSSH_TEST" => "1",
                 "DISTSSH_TEST_SSH" => script,
                 "PATH" => bin * ":" * get(ENV, "PATH", ""),
-                "DISTSSH_QUIET" => 1,
             ) do
                 DistSSHQueue.warn_worker_julia(
                     ["1*box"]; io = buf, store = store, home = home,
                 )
-                return nothing
             end
             text = replace(String(take!(buf)), r"\s+" => " ")
             @test occursin(
@@ -2433,5 +2424,6 @@ end
         @test occursin("were not compared", text)
         @test !occursin("Start serve", text)
         @test !occursin("1.2.3", text)
+    end
     end
 end

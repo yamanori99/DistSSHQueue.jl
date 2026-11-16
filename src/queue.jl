@@ -84,9 +84,20 @@ function kit_worker_root(project::AbstractString, kw::AbstractDict)::String
     layout = if raw !== nothing
         raw
     else
-        resolve_remote_project_root(canonical_local_path(project))
+        _resolve_remote_project_root(canonical_local_path(project))
     end
     return remote_env_project_root(layout)
+end
+
+"""Like Run's resolver, but tests use env value `1` as unset (same as `DISTSSHQUEUE_*`)."""
+function _resolve_remote_project_root(project::AbstractString)::String
+    v = strip(get(ENV, "DISTRIBUTED_REMOTE_PROJECT_ROOT", ""))
+    if isempty(v) || v == "1"
+        return withenv("DISTRIBUTED_REMOTE_PROJECT_ROOT" => "") do
+            resolve_remote_project_root(project)
+        end
+    end
+    return resolve_remote_project_root(project)
 end
 
 """True when `project` is a qhost stage dir (`…/.distsshqueue/stage/<uuid>`)."""

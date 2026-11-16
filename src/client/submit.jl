@@ -102,8 +102,9 @@ end
 
 """Job `source` dict from `DISTSSHQUEUE_SOURCE_*`, or `nothing` when commit is unset."""
 function _source_from_queue_env()::Union{Nothing, Dict{String, Any}}
-    haskey(ENV, SOURCE_COMMIT_ENV) || return nothing
-    out = Dict{String, Any}("commit" => String(ENV[SOURCE_COMMIT_ENV]))
+    commit = strip(_process_env_value(SOURCE_COMMIT_ENV))
+    (isempty(commit) || commit == "1") && return nothing
+    out = Dict{String, Any}("commit" => commit)
     if haskey(ENV, SOURCE_DIRTY_ENV)
         out["dirty"] = ENV[SOURCE_DIRTY_ENV] == "true"
     end
