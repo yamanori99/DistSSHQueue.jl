@@ -2237,193 +2237,193 @@ end
 @testset "warn_worker_julia compares serve" begin
     buf = IOBuffer()
     withenv("DISTSSH_QUIET" => "") do
-    mktempdir() do home::String
-        store = joinpath(home, "jobs.toml")
-        DistSSHQueue.warn_worker_julia(
-            ["1*host1"]; io = buf, store = store, home = home,
-        )
-        unk0 = replace(String(take!(buf)), r"\s+" => " ")
-        @test occursin("serve's Julia is not known", unk0)
-        withenv("DISTSSH_QUIET" => "1") do
-            _warn_serve_pid!(store, "1.13.2")
+        mktempdir() do home::String
+            store = joinpath(home, "jobs.toml")
             DistSSHQueue.warn_worker_julia(
-                ["1*box"]; io = buf, store = store, home = home,
+                ["1*host1"]; io = buf, store = store, home = home,
             )
-        end
-        @test isempty(String(take!(buf)))
-        rm(DistSSHQueue.store_pid_path(store); force = true)
-        rm(DistSSHQueue.store_pid_julia_path(store); force = true)
-        DistSSHQueue.warn_worker_julia(
-            ["1*box"]; io = buf, store = store, home = home,
-        )
-        unknown = replace(String(take!(buf)), r"\s+" => " ")
-        @test occursin("serve's Julia is not known", unknown)
-        @test occursin("were not compared", unknown)
-        @test occursin("Start serve, or enable, and the next add-host or pool will compare.", unknown)
-        code, out, _ = withenv(
-            "HOME" => home,
-            "DISTSSHQUEUE_CONFIG" => 1,
-            "DISTSSHQUEUE_STORE" => store,
-            "DISTSSH_YES" => 1,
-        ) do
-            capture_stdio() do
-                DistSSHQueue.add_host_cli(["1*box"])
-            end
-        end
-        @test code == 0
-        told = replace(out, r"\s+" => " ")
-        @test occursin("serve's Julia is not known", told)
-        @test occursin("Start serve, or enable, and the next add-host or pool will compare.", told)
-    end
-    mktempdir() do d::String
-        store = joinpath(d, "jobs.toml")
-        home = joinpath(d, "home")
-        mkpath(home)
-        bin, script = _warn_worker_script(d, "1.14.0-alpha1")
-        _warn_serve_pid!(store, "1.13.2")
-        jl = joinpath(d, "next-julia")
-        write(jl, "#!/bin/sh\nprintf '%s\\n' 'julia version 1.2.3'\n")
-        chmod(jl, 0o755)
-        _warn_enable_unit!(home, jl)
-        try
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
-            withenv(
-                "DISTSSH_TEST" => "1",
-                "DISTSSH_TEST_SSH" => script,
-                "PATH" => bin * ":" * get(ENV, "PATH", ""),
-            ) do
-                DistSSHQueue.warn_worker_julia(
-                    ["1*box", "2*box", "1*host1"];
-                    io = buf, store = store, home = home,
-                )
-            end
-            text = replace(String(take!(buf)), r"\s+" => " ")
-            @test count("differs in major.minor from the running serve's Julia 1.13.2", text) >= 1
-            @test occursin("box Julia 1.14.0-alpha1", text)
-            @test !occursin("this process", text)
-            @test !occursin("1.2.3", text)
-        finally
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
-        end
-    end
-    mktempdir() do d::String
-        store = joinpath(d, "jobs.toml")
-        home = joinpath(d, "home")
-        mkpath(home)
-        bin, script = _warn_worker_script(d, "1.13.3")
-        _warn_serve_pid!(store, "1.13.2")
-        try
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
-            withenv(
-                "DISTSSH_TEST" => "1",
-                "DISTSSH_TEST_SSH" => script,
-                "PATH" => bin * ":" * get(ENV, "PATH", ""),
-            ) do
-                DistSSHQueue.warn_worker_julia(
-                    ["1*box"]; io = buf, store = store, home = home,
-                )
-            end
-            text = replace(String(take!(buf)), r"\s+" => " ")
-            @test occursin("box Julia 1.13.3 differs in patch from the running serve's Julia 1.13.2", text)
-        finally
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
-        end
-    end
-    mktempdir() do d::String
-        store = joinpath(d, "jobs.toml")
-        home = joinpath(d, "home")
-        mkpath(home)
-        bin, script = _warn_worker_script(d, "1.14.0-alpha2")
-        _warn_serve_pid!(store, "1.14.0-alpha1")
-        try
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
-            withenv(
-                "DISTSSH_TEST" => "1",
-                "DISTSSH_TEST_SSH" => script,
-                "PATH" => bin * ":" * get(ENV, "PATH", ""),
-            ) do
-                DistSSHQueue.warn_worker_julia(
-                    ["1*box"]; io = buf, store = store, home = home,
-                )
-            end
-            text = replace(String(take!(buf)), r"\s+" => " ")
-            @test occursin(
-                "box Julia 1.14.0-alpha2 differs in prerelease from the running serve's Julia 1.14.0-alpha1",
-                text,
-            )
-        finally
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
-        end
-    end
-    mktempdir() do d::String
-        store = joinpath(d, "jobs.toml")
-        home = joinpath(d, "home")
-        mkpath(home)
-        bin, script = _warn_worker_script(d, "1.13.2")
-        _warn_serve_pid!(store, "1.13.2+0.aarch64")
-        try
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
-            withenv(
-                "DISTSSH_TEST" => "1",
-                "DISTSSH_TEST_SSH" => script,
-                "PATH" => bin * ":" * get(ENV, "PATH", ""),
-            ) do
+            unk0 = replace(String(take!(buf)), r"\s+" => " ")
+            @test occursin("serve's Julia is not known", unk0)
+            withenv("DISTSSH_QUIET" => "1") do
+                _warn_serve_pid!(store, "1.13.2")
                 DistSSHQueue.warn_worker_julia(
                     ["1*box"]; io = buf, store = store, home = home,
                 )
             end
             @test isempty(String(take!(buf)))
-        finally
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
-        end
-    end
-    mktempdir() do d::String
-        store = joinpath(d, "jobs.toml")
-        home = joinpath(d, "home")
-        mkpath(home)
-        bin, script = _warn_worker_script(d, "1.13.3")
-        jl = joinpath(d, "next-julia")
-        write(jl, "#!/bin/sh\nprintf '%s\\n' 'julia version 1.13.2'\n")
-        chmod(jl, 0o755)
-        _warn_enable_unit!(home, jl)
-        try
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
-            withenv(
-                "DISTSSH_TEST" => "1",
-                "DISTSSH_TEST_SSH" => script,
-                "PATH" => bin * ":" * get(ENV, "PATH", ""),
-            ) do
-                DistSSHQueue.warn_worker_julia(
-                    ["1*box"]; io = buf, store = store, home = home,
-                )
-            end
-            text = replace(String(take!(buf)), r"\s+" => " ")
-            @test occursin(
-                "box Julia 1.13.3 differs in patch from the next serve's Julia 1.13.2",
-                text,
+            rm(DistSSHQueue.store_pid_path(store); force = true)
+            rm(DistSSHQueue.store_pid_julia_path(store); force = true)
+            DistSSHQueue.warn_worker_julia(
+                ["1*box"]; io = buf, store = store, home = home,
             )
-        finally
-            DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+            unknown = replace(String(take!(buf)), r"\s+" => " ")
+            @test occursin("serve's Julia is not known", unknown)
+            @test occursin("were not compared", unknown)
+            @test occursin("Start serve, or enable, and the next add-host or pool will compare.", unknown)
+            code, out, _ = withenv(
+                "HOME" => home,
+                "DISTSSHQUEUE_CONFIG" => 1,
+                "DISTSSHQUEUE_STORE" => store,
+                "DISTSSH_YES" => 1,
+            ) do
+                capture_stdio() do
+                    DistSSHQueue.add_host_cli(["1*box"])
+                end
+            end
+            @test code == 0
+            told = replace(out, r"\s+" => " ")
+            @test occursin("serve's Julia is not known", told)
+            @test occursin("Start serve, or enable, and the next add-host or pool will compare.", told)
         end
-    end
-    mktempdir() do d::String
-        store = joinpath(d, "jobs.toml")
-        home = joinpath(d, "home")
-        mkpath(home)
-        write(DistSSHQueue.store_pid_path(store), string(getpid()))
-        write(DistSSHQueue.store_pid_julia_path(store), "not a version\n")
-        jl = joinpath(d, "next-julia")
-        write(jl, "#!/bin/sh\nprintf '%s\\n' 'julia version 1.2.3'\n")
-        chmod(jl, 0o755)
-        _warn_enable_unit!(home, jl)
-        DistSSHQueue.warn_worker_julia(
-            ["1*box"]; io = buf, store = store, home = home,
-        )
-        text = replace(String(take!(buf)), r"\s+" => " ")
-        @test occursin("the running serve did not record its Julia", text)
-        @test occursin("were not compared", text)
-        @test !occursin("Start serve", text)
-        @test !occursin("1.2.3", text)
-    end
+        mktempdir() do d::String
+            store = joinpath(d, "jobs.toml")
+            home = joinpath(d, "home")
+            mkpath(home)
+            bin, script = _warn_worker_script(d, "1.14.0-alpha1")
+            _warn_serve_pid!(store, "1.13.2")
+            jl = joinpath(d, "next-julia")
+            write(jl, "#!/bin/sh\nprintf '%s\\n' 'julia version 1.2.3'\n")
+            chmod(jl, 0o755)
+            _warn_enable_unit!(home, jl)
+            try
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+                withenv(
+                    "DISTSSH_TEST" => "1",
+                    "DISTSSH_TEST_SSH" => script,
+                    "PATH" => bin * ":" * get(ENV, "PATH", ""),
+                ) do
+                    DistSSHQueue.warn_worker_julia(
+                        ["1*box", "2*box", "1*host1"];
+                        io = buf, store = store, home = home,
+                    )
+                end
+                text = replace(String(take!(buf)), r"\s+" => " ")
+                @test count("differs in major.minor from the running serve's Julia 1.13.2", text) >= 1
+                @test occursin("box Julia 1.14.0-alpha1", text)
+                @test !occursin("this process", text)
+                @test !occursin("1.2.3", text)
+            finally
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+            end
+        end
+        mktempdir() do d::String
+            store = joinpath(d, "jobs.toml")
+            home = joinpath(d, "home")
+            mkpath(home)
+            bin, script = _warn_worker_script(d, "1.13.3")
+            _warn_serve_pid!(store, "1.13.2")
+            try
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+                withenv(
+                    "DISTSSH_TEST" => "1",
+                    "DISTSSH_TEST_SSH" => script,
+                    "PATH" => bin * ":" * get(ENV, "PATH", ""),
+                ) do
+                    DistSSHQueue.warn_worker_julia(
+                        ["1*box"]; io = buf, store = store, home = home,
+                    )
+                end
+                text = replace(String(take!(buf)), r"\s+" => " ")
+                @test occursin("box Julia 1.13.3 differs in patch from the running serve's Julia 1.13.2", text)
+            finally
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+            end
+        end
+        mktempdir() do d::String
+            store = joinpath(d, "jobs.toml")
+            home = joinpath(d, "home")
+            mkpath(home)
+            bin, script = _warn_worker_script(d, "1.14.0-alpha2")
+            _warn_serve_pid!(store, "1.14.0-alpha1")
+            try
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+                withenv(
+                    "DISTSSH_TEST" => "1",
+                    "DISTSSH_TEST_SSH" => script,
+                    "PATH" => bin * ":" * get(ENV, "PATH", ""),
+                ) do
+                    DistSSHQueue.warn_worker_julia(
+                        ["1*box"]; io = buf, store = store, home = home,
+                    )
+                end
+                text = replace(String(take!(buf)), r"\s+" => " ")
+                @test occursin(
+                    "box Julia 1.14.0-alpha2 differs in prerelease from the running serve's Julia 1.14.0-alpha1",
+                    text,
+                )
+            finally
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+            end
+        end
+        mktempdir() do d::String
+            store = joinpath(d, "jobs.toml")
+            home = joinpath(d, "home")
+            mkpath(home)
+            bin, script = _warn_worker_script(d, "1.13.2")
+            _warn_serve_pid!(store, "1.13.2+0.aarch64")
+            try
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+                withenv(
+                    "DISTSSH_TEST" => "1",
+                    "DISTSSH_TEST_SSH" => script,
+                    "PATH" => bin * ":" * get(ENV, "PATH", ""),
+                ) do
+                    DistSSHQueue.warn_worker_julia(
+                        ["1*box"]; io = buf, store = store, home = home,
+                    )
+                end
+                @test isempty(String(take!(buf)))
+            finally
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+            end
+        end
+        mktempdir() do d::String
+            store = joinpath(d, "jobs.toml")
+            home = joinpath(d, "home")
+            mkpath(home)
+            bin, script = _warn_worker_script(d, "1.13.3")
+            jl = joinpath(d, "next-julia")
+            write(jl, "#!/bin/sh\nprintf '%s\\n' 'julia version 1.13.2'\n")
+            chmod(jl, 0o755)
+            _warn_enable_unit!(home, jl)
+            try
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+                withenv(
+                    "DISTSSH_TEST" => "1",
+                    "DISTSSH_TEST_SSH" => script,
+                    "PATH" => bin * ":" * get(ENV, "PATH", ""),
+                ) do
+                    DistSSHQueue.warn_worker_julia(
+                        ["1*box"]; io = buf, store = store, home = home,
+                    )
+                end
+                text = replace(String(take!(buf)), r"\s+" => " ")
+                @test occursin(
+                    "box Julia 1.13.3 differs in patch from the next serve's Julia 1.13.2",
+                    text,
+                )
+            finally
+                DistSSHRun.DistSSHBase.clear_detect_julia_path_cache!("box")
+            end
+        end
+        mktempdir() do d::String
+            store = joinpath(d, "jobs.toml")
+            home = joinpath(d, "home")
+            mkpath(home)
+            write(DistSSHQueue.store_pid_path(store), string(getpid()))
+            write(DistSSHQueue.store_pid_julia_path(store), "not a version\n")
+            jl = joinpath(d, "next-julia")
+            write(jl, "#!/bin/sh\nprintf '%s\\n' 'julia version 1.2.3'\n")
+            chmod(jl, 0o755)
+            _warn_enable_unit!(home, jl)
+            DistSSHQueue.warn_worker_julia(
+                ["1*box"]; io = buf, store = store, home = home,
+            )
+            text = replace(String(take!(buf)), r"\s+" => " ")
+            @test occursin("the running serve did not record its Julia", text)
+            @test occursin("were not compared", text)
+            @test !occursin("Start serve", text)
+            @test !occursin("1.2.3", text)
+        end
     end
 end
