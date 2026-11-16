@@ -153,6 +153,7 @@ function cli_env(d::AbstractString; distsshrun::Bool = false)
         "DISTSSHQUEUE_STORE" => store,
         "DISTRIBUTED_PROJECT_ROOT" => jobdir,
         "DISTSSH_YES" => "1",
+        "DISTSSH_QUIET" => "",
         DistSSHQueue.NO_STAGE_ENV => "1",
         DistSSHQueue.LOCAL_QUEUE_ENV => "1",
         DistSSHQueue.NO_KIT_SETUP_ENV => "1",
@@ -511,7 +512,11 @@ end
         mktempdir() do d
             store = joinpath(d, "jobs.toml")
             logf = joinpath(d, "watch.out")
-            env = Dict("DISTSSHQUEUE_STORE" => store, "DISTSSHQUEUE_CONFIG" => joinpath(d, "no.toml"))
+            env = Dict(
+                "DISTSSHQUEUE_STORE" => store,
+                "DISTSSHQUEUE_CONFIG" => joinpath(d, "no.toml"),
+                "DISTSSH_QUIET" => "",
+            )
             proc = spawn_to_file(qcli(["watch", "--interval", "0.2"]), env, logf)
             try
                 @test wait_output(logf, proc, "serve")

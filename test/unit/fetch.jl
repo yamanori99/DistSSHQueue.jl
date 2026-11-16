@@ -197,6 +197,7 @@ end
             kwargs = Dict{String, Any}(
                 "project" => String(d),
                 "setup_logs" => [setup],
+                "head_slots" => 1,
             ),
         )
         DistSSHQueue.save_jobs(store, [j])
@@ -241,6 +242,7 @@ end
             kwargs = Dict{String, Any}(
                 "project" => String(d),
                 "setup_logs" => [setup],
+                "head_slots" => 1,
             ),
         )
         DistSSHQueue.save_jobs(store, [j])

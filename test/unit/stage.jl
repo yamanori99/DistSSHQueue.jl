@@ -156,12 +156,15 @@ end
     @test ".distsshkit/" in opts
     @test ".git/" in opts
     @test "--info=progress2" in DistSSHQueue.stage_rsync_push_opts("ssh"; progress = true)
-    buf = IOBuffer()
-    DistSSHQueue.print_rsync_start("qh", "/Users/me/.distsshqueue/stage/abc"; io = buf)
-    @test occursin("rsync → qh:", String(take!(buf)))
-    buf2 = IOBuffer()
-    DistSSHQueue.print_rsync_start("qh", "/tmp/leaf"; pulling = true, io = buf2)
-    @test occursin("rsync ← qh:", String(take!(buf2)))
+    withenv("DISTSSH_QUIET" => "") do
+        buf = IOBuffer()
+        DistSSHQueue.print_rsync_start("qh", "/Users/me/.distsshqueue/stage/abc"; io = buf)
+        @test occursin("rsync → qh:", String(take!(buf)))
+        buf2 = IOBuffer()
+        DistSSHQueue.print_rsync_start("qh", "/tmp/leaf"; pulling = true, io = buf2)
+        @test occursin("rsync ← qh:", String(take!(buf2)))
+        @test DistSSHQueue.rsync_progress_on(["go", "--progress", "S.jl"])
+    end
     withenv("DISTSSH_QUIET" => "1") do
         bufq = IOBuffer()
         DistSSHQueue.print_rsync_start("qh", "/x"; io = bufq)
@@ -174,7 +177,6 @@ end
     withenv("DISTSSH_QUIET" => "1", "DISTSSH_PROGRESS" => "1") do
         @test !DistSSHQueue.rsync_progress_on()
     end
-    @test DistSSHQueue.rsync_progress_on(["go", "--progress", "S.jl"])
 
     @testset "stage follows the manifest directory" begin
         mktempdir() do root
