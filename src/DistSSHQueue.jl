@@ -20,11 +20,11 @@ using TOML
 import DistSSHRun
 using DistSSHRun.DistSSHBase
 using DistSSHRun.DistSSHBase: PARENT_HOST_NAME, _ssh_host_args, _test_doubles_on, cli_entry,
-    cli_heading, cli_m, cli_m_project, cli_qhost, cli_qhost_heading, format_placement_token,
+    cli_heading, cli_m, cli_m_project, cli_qhost, cli_qhost_heading, format_machine_token,
     get_remote_julia_version_full, is_local_state_dir_name, is_sigint, julia_project_rel,
-    local_state_dir_names, local_state_write_root, parse_julia_version_full,
-    parse_placement_token, remote_env_project_root, resolve_local_state_dir,
-    resolve_remote_julia, resolve_remote_project_root, shell_status, shield_sigint,
+    local_state_dir_names, local_state_write_root, machine_ssh_label, parse_julia_version_full,
+    parse_machine_token, remote_env_project_root, resolve_local_state_dir, resolve_remote_julia,
+    resolve_remote_project_root, shell_status, shield_sigint, throw_legacy_machine_token,
     with_cli_entry, without_cancel
 using DistSSHRun.DistSSHUp: juliaup_add_host!, juliaup_default_host!,
     juliaup_default_patch, juliaup_status_lines, juliaup_update_host!
@@ -196,9 +196,9 @@ end
 
 function _removed_inspect_message(sub::AbstractString)::String
     if sub == "size"
-        return "size: worker-count sizing was removed; pool reports cores and RAM. Submit with explicit parent:N / child:NAME:N (or pool:N)."
+        return "size: worker-count sizing was removed (parent:N is gone); pool reports cores and RAM. Submit with --head-workers / --head-slots and machine tokens (or pool:N)."
     elseif sub == "plan"
-        return "plan: script inspect was removed; enqueue with submit and explicit parent:N / child:NAME:N."
+        return "plan: script inspect was removed (parent:N is gone); enqueue with submit and Run 0.2 placement (or pool:N)."
     else
         return "$sub was removed"
     end

@@ -528,9 +528,9 @@ end
 """Queue wording in front of a known Kit line (status `error` and `Job.error`)."""
 function queue_explain_error(msg::AbstractString)::String
     s = String(msg)
-    startswith(s, "this job includes parent:N;") && return s
-    if occursin("is only for up (kit parent machine)", s)
-        return "this job includes parent:N; per-job setup! only rsyncs child: (the queue host is already here). " * s
+    startswith(s, "this job includes head workers;") && return s
+    if occursin("is only for up (kit head machine)", s)
+        return "this job includes head workers; per-job setup! only rsyncs remotes (the queue host is already here). " * s
     end
     return s
 end
@@ -667,13 +667,13 @@ function print_queue_client_usage(io::IO = stdout)
     print_help_lines(
         io,
         "  $(cli_m_project()) qhost:HOST status",
-        "  $(cli_m_project()) qhost:HOST submit drive parent:4 SCRIPT.jl",
+        "  $(cli_m_project()) qhost:HOST submit drive --head-workers 4 SCRIPT.jl",
     )
     print_help_blank(io)
     print_help_section("See DistSSHKit"; io = io)
     print_help_lines(
         io,
-        "  Same argv as DistSSHKit (go / ride / drive parent:4 child:NAME:N …).",
+        "  Same argv as DistSSHRun (go / ride / drive --head-workers N and machine tokens …). parent / child: / NAME:N were removed.",
         "  $(cli_m_project()) --help",
     )
     print_help_blank(io)
@@ -712,7 +712,7 @@ function print_queue_host_usage(io::IO = stdout)
         io,
         "  $(cli_m()) $(cli_qhost())setup",
         "  $(cli_m()) $(cli_qhost())up",
-        "  $(cli_m()) $(cli_qhost())add-host parent child:NAME",
+        "  $(cli_m()) $(cli_qhost())add-host 4*host1 host2",
         "  $(cli_m()) $(cli_qhost())serve",
     )
     print_help_blank(io)
@@ -806,8 +806,8 @@ function queue_command_help(verb::AbstractString)
             "  help submit go for DistSSHKit flags (same for ride / drive).",
         ), (h,),
     )
-    v == "add-host" && return (("  $(cli_m()) $(cli_qhost())add-host [parent] [child:NAME...]",), (h,))
-    v == "remove-host" && return (("  $(cli_m()) $(cli_qhost())remove-host [parent] [child:NAME...]",), (h,))
+    v == "add-host" && return (("  $(cli_m()) $(cli_qhost())add-host ['N*host' ...]",), (h,))
+    v == "remove-host" && return (("  $(cli_m()) $(cli_qhost())remove-host [host ...]",), (h,))
     v == "serve" && return (
         ("  $(cli_m()) $(cli_qhost())serve",), (
             ("--interval SEC", "Poll interval (default 0.2). Must be finite."),

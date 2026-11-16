@@ -20,7 +20,7 @@ function parse_qhost_token(raw::AbstractString)::String
     startswith(name, "-") && throw(ArgumentError("`qhost:` SSH name must not start with '-'"))
     occursin(r"^\d+$", name) && throw(
         ArgumentError(
-            "`qhost:` names the queue host (SSH), not Kit slots. Use `parent:$(name)`.",
+            "`qhost:` names the queue host (SSH), not a machine token. Use SSH config Host names.",
         )
     )
     return String(name)
@@ -50,8 +50,8 @@ const HOP_QUEUE_ENV_DEFAULT = "~/.distsshqueue/env"
 const HOP_QUEUE_ENV_NONE = "@"
 
 function qhost_default_from_env()::Union{Nothing, String}
-    v = strip(get(ENV, QHOST_DEFAULT_ENV, ""))
-    isempty(v) && return nothing
+    v = strip(_process_env_value(QHOST_DEFAULT_ENV))
+    (isempty(v) || v == "1") && return nothing
     startswith(v, "qhost:") && return parse_qhost_token(v)
     return String(v)
 end

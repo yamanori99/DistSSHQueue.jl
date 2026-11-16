@@ -1,4 +1,4 @@
-"""One table row. `hosts` are DistSSHKit placement tokens (`parent[:N]` / `child:NAME[:N]`).
+"""One table row. `hosts` are remote machine tokens (`N*host` / bare host); head uses kwargs.
 `kwargs` is an opaque bag for DistSSHRun `execute!` (`project` is the Kit project).
 `cancel` true means a running job was asked to stop and is still in setup.
 """
@@ -60,7 +60,16 @@ function Job(;
     is_kit_execute_kind(kind) || throw(ArgumentError("kind must be one of $KIT_EXECUTE_KINDS"))
     state in (:queued, :running, :done, :failed, :cancelled) ||
         throw(ArgumentError("bad job state $state"))
-    isempty(hosts) && throw(ArgumentError("job needs at least one host token"))
+    if isempty(hosts)
+        hw = get(kwargs, "head_workers", nothing)
+        hs = get(kwargs, "head_slots", nothing)
+        has_head = hw isa Integer && Int(hw) > 0 || hs isa Integer && Int(hs) > 0
+        (has_head || kind === :go) || throw(
+            ArgumentError(
+                "job needs remote machine tokens and/or head_workers / head_slots",
+            ),
+        )
+    end
     return Job(
         String(id),
         kind,

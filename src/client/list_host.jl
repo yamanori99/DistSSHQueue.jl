@@ -1,8 +1,8 @@
-# Read-only `list-host`: Kit names from config `hosts`, plus `ssh -G` connect.
+# Read-only `list-host`: registry machine tokens from config `hosts`, plus `ssh -G` connect.
 #
-# Prints host tokens (`parent` / `child:NAME`) for `submit`. Not Kit `--hosts`.
-# One row per host: NAME / TOKEN / MAX / JULIA / SSH.
-# SSH is `this machine` / `queue host` for `parent`, else `user@hostname:port`
+# Head is always listed first (not in config). Remote rows use Run machine tokens.
+# One row per host: NAME / TOKEN / WORKERS / JULIA / SSH.
+# SSH is `this machine` / `queue host` for the head row, else `user@hostname:port`
 # (`:port` omitted when 22). No private keys or IdentityFile.
 # JULIA is that host's `juliaup default` patch (`juliaup status` `*` row
 # Version column, e.g. `1.12.7`), or `-` if missing, SSH/`status` fails,
@@ -28,14 +28,13 @@ function ssh_g_connect(name::AbstractString)::Dict{String, String}
     return out
 end
 
-"""NAME column: queue-host hostname for `parent`, SSH Host for `child:`."""
+"""NAME column for a registry SSH host."""
 function _host_name_disp(name::AbstractString)::String
-    is_parent_host_name(name) && return gethostname()
     return String(name)
 end
 
-function _ssh_disp(name::AbstractString; hopped::Bool)::String
-    if is_parent_host_name(name)
+function _ssh_disp(name::AbstractString; hopped::Bool, head::Bool = false)::String
+    if head
         return hopped ? "queue host" : "this machine"
     end
     g = ssh_g_connect(name)
@@ -47,9 +46,8 @@ function _ssh_disp(name::AbstractString; hopped::Bool)::String
     return port == "22" || isempty(port) ? dest : "$(dest):$(port)"
 end
 
-function _host_token(name::AbstractString)::String
-    is_parent_host_name(name) && return "parent"
-    return "child:$(name)"
+function _host_token(name::AbstractString, workers::Int)::String
+    return format_machine_token(workers, String(name))
 end
 
 function _juliaup_default_disp(name::AbstractString)::String
@@ -89,35 +87,38 @@ function print_list_host(
         println(io, "  (no hosts= in config; add-host first)")
         return nothing
     end
-    if isempty(names)
-        println(io, "  (hosts = []; submit accepts none)")
-        return nothing
-    end
     hopped = !(qhost === nothing || isempty(String(qhost)))
-    rows = sorted_kit_ssh_names(names)
-    labels = String[_host_name_disp(n) for n in rows]
+    rows = sorted_registry_hosts(names)
+    head_name = gethostname()
+    head_token = "head"
+    head_workers = "-"
+    head_julia = juliaup_default_patch(head_name)
+    head_ssh = _ssh_disp(head_name; hopped = hopped, head = true)
+    labels = String[vcat([head_name], [_host_name_disp(n) for n in rows])...]
     nw = max(4, maximum(textwidth, labels))
-    tw = max(5, maximum(textwidth ∘ _host_token, rows))
-    maxs = String[names[n] === nothing ? "-" : string(names[n]) for n in rows]
+    tokens = String[vcat([head_token], [_host_token(n, names[n]) for n in rows])...]
+    tw = max(5, maximum(textwidth, tokens))
+    maxs = String[vcat([head_workers], [string(names[n]) for n in rows])...]
     mw = max(3, maximum(textwidth, maxs))
-    julias = String[_juliaup_default_disp(n) for n in rows]
+    julias = String[vcat([head_julia], [_juliaup_default_disp(n) for n in rows])...]
     jw = max(5, maximum(textwidth, julias))
-    sshes = String[_ssh_disp(n; hopped = hopped) for n in rows]
+    sshes = String[vcat([head_ssh], [_ssh_disp(n; hopped = hopped) for n in rows])...]
     n = cols > 0 ? max(24, cols) : cli_cols(io)
     nw, tw, mw, jw, _ssh_w = _list_host_fit(nw, tw, mw, jw, n)
     print_wrapped_row(
-        io, ["NAME", "TOKEN", "MAX", "JULIA"], Int[nw, tw, mw, jw], "SSH";
+        io, ["NAME", "TOKEN", "WORKERS", "JULIA"], Int[nw, tw, mw, jw], "SSH";
         cols = n, prefix_color = :light_black, tail_color = :light_black,
     )
-    for (i, host) in enumerate(rows)
+    for i in eachindex(labels)
         print_wrapped_row(
             io,
-            [labels[i], _host_token(host), maxs[i], julias[i]],
+            [labels[i], tokens[i], maxs[i], julias[i]],
             Int[nw, tw, mw, jw],
             sshes[i];
             cols = n,
         )
     end
+    isempty(rows) && println(io, "  (registry accepts none)")
     return nothing
 end
 

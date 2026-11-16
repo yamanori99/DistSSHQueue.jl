@@ -26,7 +26,7 @@ function up_main(args::Vector{String})::Cint
             throw(ArgumentError("unknown up option: $(a)"))
         elseif isempty(verb)
             throw(ArgumentError("$(cli_qhost())up needs add, default, update, or status"))
-        elseif channel === nothing && !startswith(a, "child:") && a != "parent" && !startswith(a, "parent:")
+        elseif channel === nothing && (occursin(r"^\d", a) || a in ("release", "lts", "alpha", "beta", "rc"))
             channel = a
             i += 1
         else
@@ -43,7 +43,7 @@ function up_main(args::Vector{String})::Cint
     (allow === nothing || isempty(allow)) && throw(
         ArgumentError("$(cli_qhost())up needs add-host first"),
     )
-    names = sorted_kit_ssh_names(allow)
+    names = sorted_registry_hosts(allow)
     confirm = verb == "default" && !_queue_env_on("DISTSSH_YES")
     return _up_run_on_hosts(names; verb = verb, channel = channel, confirm = confirm)
 end
@@ -75,7 +75,7 @@ function _up_run_on_hosts(
     end
     failed = 0
     for host in names
-        label = is_parent_host_name(host) ? PARENT_HOST_NAME : host
+        label = host
         try
             if v == "status"
                 lines = juliaup_status_lines(host; channel = ch)
