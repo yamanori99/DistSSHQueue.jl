@@ -187,7 +187,8 @@ end
             @test !DistSSHQueue.bootout_serve_unit!(; home = home, bootout! = fake)
         end
         @test called[] == 0
-        withenv(DistSSHQueue.NO_STOP_BOOTOUT_ENV => 1) do
+        # Empty clears runtests' default NO_STOP_BOOTOUT=1 so bootout can run on macOS.
+        withenv(DistSSHQueue.NO_STOP_BOOTOUT_ENV => "") do
             @test !DistSSHQueue.bootout_serve_unit!(; home = home, bootout! = fake)
             if Sys.isapple()
                 mkpath(joinpath(home, "Library", "LaunchAgents"))

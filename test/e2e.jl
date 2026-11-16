@@ -932,14 +932,15 @@ end
                     @test count("will require --interval > 0", ztext) == 1
 
                     @test capture_cli(addenv(qcmd(["add-host"]), env...))[1] == 0
+                    @test capture_cli(addenv(qcmd(["add-host", "1*e2e-local"]), env...))[1] == 0
                     decline = joinpath(d, "decline.txt")
                     write(decline, "no\n")
-                    code, out, _ = capture_cli(
+                    code, out, err = capture_cli(
                         addenv(qcmd(["up", "default", "1.13"]), env...);
                         stdin = decline,
                     )
                     @test code == 0
-                    @test count("will exit 1", out) == 1
+                    @test count("will exit 1", err) == 1
                     @test !occursin("✓ juliaup", out)
 
                     code, out, err = capture_cli(
