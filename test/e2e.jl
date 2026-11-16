@@ -935,7 +935,7 @@ end
                     @test capture_cli(addenv(qcmd(["add-host", "1*e2e-local"]), env...))[1] == 0
                     decline = joinpath(d, "decline.txt")
                     write(decline, "no\n")
-                    code, out, err = capture_cli(
+                    code, out, _ = capture_cli(
                         addenv(
                             qcmd(["up", "default", "1.13"]),
                             merge(env, Dict("DISTSSH_QUIET" => ""))...,
