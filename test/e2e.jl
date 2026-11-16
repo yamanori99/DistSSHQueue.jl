@@ -936,7 +936,10 @@ end
                     decline = joinpath(d, "decline.txt")
                     write(decline, "no\n")
                     code, out, err = capture_cli(
-                        addenv(qcmd(["up", "default", "1.13"]), env...);
+                        addenv(
+                            qcmd(["up", "default", "1.13"]),
+                            merge(env, Dict("DISTSSH_QUIET" => ""))...,
+                        );
                         stdin = decline,
                     )
                     @test code == 0
