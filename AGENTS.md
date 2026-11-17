@@ -1,10 +1,14 @@
 # Agents
 
+## Overview
+
 Users run `julia -m DistSSHKit`. This repository is DistSSHQueue.
 
-Library `teardown` deletes only when `confirm_paths` is exactly the set of existing targets. Use the CLI and `--confirm-path`.
+Destructive cleanup deletes only when every `--confirm-path` matches an existing target and together they cover exactly those targets. Use the CLI; pass `--confirm-path` for each path the command printed.
 
-Agents must not pass `-y`, `--yes`, or set `DISTSSH_YES` for `teardown`. Use `--confirm-path` with each path the command printed.
+Do not pass `-y`, `--yes`, or set `DISTSSH_YES` for destructive cleanup. Use `--confirm-path` instead.
+
+## Workflow
 
 Read [DistSSHKit releasing](https://github.com/yamanori99/DistSSHKit.jl/blob/main/docs/src/developers/releasing.md) before a pull request that raises the version or changes public behavior.
 
@@ -24,21 +28,21 @@ Do not write the Registrator register command in an issue, a pull request body, 
 
 ## Design principles
 
-- Fail closed by default; loosen only through an explicit flag or keyword argument (`--best-effort`, `best_effort=true`), never through environment variables.
-- No silent fallbacks or legacy remaps: removed keys and flags error with a rewrite hint to the supported form; no automatic migration.
-- One concept, one name: no aliases or dual syntaxes; tests assert only the current form and never accept both old and new.
-- Explicit shapes: missing values are recorded as typed reasons, not filled with defaults; versioned formats require `schema_version`.
-- CLI behavior follows [clap conventions](https://docs.rs/clap/latest/clap/struct.Command.html#method.arg_required_else_help): a subcommand that needs operands, run bare, prints help on stderr and exits 2; explicit `--help` prints help on stdout and exits 0; usage errors exit 2.
-- Breaking changes follow semver and match the `breaking` label rules above: ship them in the release they belong in and do not mix them with other work; purely additive features can land in follow-up releases.
-- Errors state what failed, where, why, and how to fix it.
+- **Fail closed by default**: loosen only through an explicit flag or keyword (`--best-effort`, `best_effort=true`), never through environment variables.
+- **No silent fallbacks or legacy remaps**: removed keys and flags error with a rewrite hint to the supported form; no automatic migration.
+- **One concept, one name**: no aliases or dual syntaxes; tests assert only the current form and never accept both old and new.
+- **Explicit shapes**: missing values are recorded as typed reasons, not filled with defaults; versioned formats require `schema_version`.
+- **CLI behavior** follows clap conventions: a subcommand that needs operands, run bare, prints help on stderr and exits 2; explicit `--help` prints help on stdout and exits 0; usage errors exit 2.
+- **Breaking changes** follow semver and match the `breaking` label rules above: ship them in the release they belong in and do not mix them with other work; purely additive features can land in follow-up releases.
+- **Actionable errors**: say what failed and what was checked, give the exact fix with real values; when the cause is uncertain, list likely causes with a one-line check each instead of guessing, and stop rather than fall back.
 
 ## Job entry principles
 
-Queue does not reimplement Run job logic. Submit and serve must reach the same normalize-and-core path as the CLI and bang APIs, not a forked keyword interpretation in this repository.
+Queue does not reimplement Run job logic. Queue-side entry must reach the same parse-and-run path as the CLI and library call sites, not a forked keyword interpretation in this repository.
 
 Jobs cross the process boundary as one versioned, serialized job description rather than ad-hoc kwargs, scattered env, or argv re-parse as the source of truth.
 
-Serve-side children must not re-read placement from process environment when the job description already carries it.
+Children started on the serve path must not re-read placement from process environment when the job description already carries it.
 
 A feature reachable from more than one entry between Queue and Run needs a parity test across those entries. Keep such tests out of PkgEval.
 
@@ -48,10 +52,13 @@ Cross-repo redesign work tracks each repository's main; do not rely on release t
 
 Cloud Agent environment builds run [`.cursor/install.sh`](.cursor/install.sh), which ends with [`.github/install-agent-tools.sh`](.github/install-agent-tools.sh) to install Runic and JETLS on Julia 1.13. Do not export `HOME` or `JULIA_DEPOT_PATH` in the shell profile for agent work; when you need an alternate depot or home, use per-command prefixes only (for example `HOME=/tmp/agent-home JULIA_DEPOT_PATH=/tmp/agent-depot julia +1.13 ...`).
 
-Before pushing, run the same static checks CI uses on Julia 1.13:
+On Julia **1.13**, before push:
 
-- **Runic** (equivalent to the `Runic` job in [`.github/workflows/CI.yml`](.github/workflows/CI.yml)): `git ls-files -- '*.jl' | xargs runic --check --diff`
-- **JETLS**: `./.github/jetls-check.sh` (same flags as [`.github/actions/jetls-check`](.github/actions/jetls-check/action.yml); pass `--progress=none` for quieter output)
-- **Targeted tests** for the area you changed, for example `julia +1.13 --project=test -e 'using Pkg; Pkg.test("DistSSHQueue"; test_args=[...])'`
+**Push gate** — commit first (clean tree). On the exact commit you will push, run all four; on any failure fix, commit, and rerun all four until one clean pass with no edits in between; push only that tree.
 
-Leave the full `Pkg.test` matrix across Julia versions, SSH E2E, and downstream jobs to CI.
+1. `runic --check --diff .`
+2. Trailing-newline audit on every file changed vs `origin/main` (exactly one final newline)
+3. `git diff --check origin/main...HEAD`
+4. `./.github/jetls-check.sh` (pass `--progress=none` for quieter output)
+
+Run targeted tests for the area you changed when needed, for example `julia +1.13 --project=test -e 'using Pkg; Pkg.test("DistSSHQueue"; test_args=[...])'`. Leave the full test matrix across Julia versions, SSH E2E, and downstream jobs to CI.
