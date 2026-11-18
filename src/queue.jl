@@ -1172,6 +1172,11 @@ function _queue_kit_setup!(
             _require_kit_setup_ok!(kit_setup!(session, :remote_root), "remote-root")
             _throw_if_cancelled(cancel_requested)
         end
+        # Local `Pkg.instantiate` before ship-tree so the active deploy record
+        # content_tree_hash matches the controller tree (Run 0.2 verify gate).
+        on_phase("instantiate")
+        _queue_local_instantiate!(String(proj))
+        _throw_if_cancelled(cancel_requested)
         on_phase("ship-tree")
         # Run 0.2 rejects `:rsync` and `gitignore=false`. `.gitignore` is the filter.
         shipped = kit_setup!(session, :ship_tree)
@@ -1180,8 +1185,6 @@ function _queue_kit_setup!(
         )
         _throw_if_cancelled(cancel_requested)
         _assert_run_id_context!(j, String(proj), session, children)
-        on_phase("instantiate")
-        _queue_local_instantiate!(String(proj))
         _require_kit_setup_ok!(
             kit_setup!(session, :instantiate; run_id = rid),
             "instantiate",

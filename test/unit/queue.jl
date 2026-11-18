@@ -505,7 +505,7 @@ end
                 cancel_requested = Returns(true),
             )
         end
-        @test modes == [:ship_tree]
+        @test isempty(modes)
         bare = DistSSHQueue.Job(;
             kind = :go,
             script = "a.jl",
@@ -1077,7 +1077,7 @@ end
             )
         end
         @test modes == [:remote_root, :ship_tree, :instantiate]
-        @test phases == ["remote-root", "ship-tree", "instantiate", "doctor"]
+        @test phases == ["remote-root", "instantiate", "ship-tree", "doctor"]
         @test DistSSHQueue._absolute_remote_path("/custom/root")
         @test DistSSHQueue._absolute_remote_path("  /custom/root")
         @test !DistSSHQueue._absolute_remote_path("jobs/app")
@@ -1140,7 +1140,7 @@ end
         got = _stage_rsync_setup!(stage)
         @test got.gitignore === true
         @test got.modes == [:remote_root, :ship_tree, :instantiate]
-        @test got.phases == ["remote-root", "ship-tree", "instantiate", "doctor"]
+        @test got.phases == ["remote-root", "instantiate", "ship-tree", "doctor"]
         @test got.manifest_at[:ship_tree] === true
         @test got.manifest_at[:instantiate] === true
     end
@@ -1149,7 +1149,7 @@ end
         got = _stage_rsync_setup!(d)
         @test got.gitignore === true
         @test got.modes == [:remote_root, :ship_tree, :instantiate]
-        @test got.phases == ["remote-root", "ship-tree", "instantiate", "doctor"]
+        @test got.phases == ["remote-root", "instantiate", "ship-tree", "doctor"]
     end
 end
 
