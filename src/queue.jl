@@ -783,7 +783,7 @@ function _absolute_remote_path(remote)::Bool
     return startswith(strip(String(remote)), "/")
 end
 
-"""Throw unless Kit `setup!` reported `ok` (instantiate / check)."""
+"""Throw unless Kit `setup!` / `doctor!` reported `ok`."""
 function _require_kit_setup_ok!(result, step::AbstractString)
     hasproperty(result, :ok) || return nothing
     getproperty(result, :ok) && return nothing
@@ -806,7 +806,7 @@ function _record_kit_setup_logs!(j::Job, proj::AbstractString)
     return nothing
 end
 
-"""Dicts `jobs.toml` can store, from a `:check` result. Empty when it has no `warnings`."""
+"""Dicts `jobs.toml` can store, from `doctor!` deploy warnings. Empty when it has no `warnings`."""
 function _setup_warning_dicts(result)::Vector{Dict{String, Any}}
     hasproperty(result, :warnings) || return Dict{String, Any}[]
     raw = getproperty(result, :warnings)
@@ -1146,6 +1146,7 @@ function _queue_kit_setup!(
         j::Job,
         on_phase;
         kit_setup! = DistSSHRun.setup!,
+        kit_doctor! = DistSSHRun.doctor!,
         cancel_requested = Returns(false),
         on_warnings = Returns(nothing),
         on_run_id = Returns(nothing),
@@ -1186,12 +1187,12 @@ function _queue_kit_setup!(
             "instantiate",
         )
         _throw_if_cancelled(cancel_requested)
-        on_phase("check")
-        checked = kit_setup!(session, :check)
+        on_phase("doctor")
+        checked = kit_doctor!(session; deploy = true, run_id = rid)
         added = _setup_warning_dicts(checked)
         _append_warning_dicts!(j, added)
         on_warnings(added)
-        _require_kit_setup_ok!(checked, "check")
+        _require_kit_setup_ok!(checked, "doctor --deploy")
         _throw_if_cancelled(cancel_requested)
     catch e
         e isa _JobCancelled && rethrow()

@@ -5,6 +5,13 @@ using DistSSHQueue
 const _SNAP_A = "20260101T000000Z-aaaaaa"
 const _SNAP_B = "20260102T000000Z-bbbbbb"
 
+function _snap_ok_doctor(session; deploy::Bool, run_id = nothing)
+    _ = session
+    _ = run_id
+    deploy || return DistSSHRun.DoctorReport(false, DistSSHRun.SetupWarning[])
+    return DistSSHRun.DoctorReport(true, DistSSHRun.SetupWarning[])
+end
+
 function _ok_ship(
         run_id::AbstractString = _SNAP_A;
         hosts = DistSSHRun.HostResult[],
@@ -79,18 +86,22 @@ end
             Symbol[], Union{Nothing, String}[], _ok_ship(_SNAP_A),
         )
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
-            DistSSHQueue._queue_kit_setup!(j, Returns(nothing); kit_setup! = probe)
+            DistSSHQueue._queue_kit_setup!(
+                j,
+                Returns(nothing);
+                kit_setup! = probe,
+                kit_doctor! = _snap_ok_doctor,
+            )
         end
         @test j.kwargs["run_id"] == _SNAP_A
         @test j.kwargs["run_id"] != j.id
         @test j.kwargs["ship_hosts"] == ["w1"]
         @test j.kwargs["ship_project"] == DistSSHQueue.canonical_local_path(d)
         @test j.kwargs["ship_deploy_root"] == "/deploy/a"
-        @test probe.modes == [:remote_root, :ship_tree, :instantiate, :check]
+        @test probe.modes == [:remote_root, :ship_tree, :instantiate]
         @test probe.run_ids[1] === nothing
         @test probe.run_ids[2] === nothing
         @test probe.run_ids[3] == _SNAP_A
-        @test probe.run_ids[4] === nothing
         kw = DistSSHQueue.execute_kwargs(j)
         @test kw.run_id == _SNAP_A
         @test !haskey(kw, :ship_hosts)
@@ -161,16 +172,20 @@ end
         b = _snap_job(d; remote = "/deploy/b")
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             DistSSHQueue._queue_kit_setup!(
-                a, Returns(nothing);
+                a,
+                Returns(nothing);
                 kit_setup! = _SnapProbe(
                     Symbol[], Union{Nothing, String}[], _ok_ship(_SNAP_A),
                 ),
+                kit_doctor! = _snap_ok_doctor,
             )
             DistSSHQueue._queue_kit_setup!(
-                b, Returns(nothing);
+                b,
+                Returns(nothing);
                 kit_setup! = _SnapProbe(
                     Symbol[], Union{Nothing, String}[], _ok_ship(_SNAP_B),
                 ),
+                kit_doctor! = _snap_ok_doctor,
             )
         end
         @test a.kwargs["run_id"] == _SNAP_A
