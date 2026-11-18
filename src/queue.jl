@@ -413,8 +413,8 @@ end
 
 """Keywords DistSSHRun `execute!(...; detached=true)` accepts, from the job bag.
 
-`yes` is always `true` (unattended child). `path_anchor` and other names are dropped.
-`job_id` is not taken from the bag; `run_kit` passes `Job.id`.
+`yes` and other dropped names are not forwarded (unattended children use Run's detached blob).
+`path_anchor` and other names are dropped. `job_id` is not taken from the bag; `run_kit` passes `Job.id`.
 Allow-list is DistSSHRun `execute_detached_accepts`.
 """
 function execute_kwargs(j::Job)
@@ -444,7 +444,6 @@ function execute_kwargs(j::Job)
         DistSSHRun.execute_detached_accepts(k; kind = j.kind) || continue
         push!(acc, k => v)
     end
-    push!(acc, :yes => true)
     kw = (; acc...)
     rid = _job_run_id(j)
     if rid !== nothing && !haskey(kw, :run_id)
@@ -677,7 +676,6 @@ function _kit_setup_session(j::Job, proj::AbstractString; workers = j.hosts)
         project = String(proj),
         workers = workers,
         remote = remote,
-        yes = true,
     )
 end
 
@@ -1311,6 +1309,12 @@ function _submit!(q::Queue, kind::Symbol, script::AbstractString, hosts; kwargs.
     toks = String[String(x) for x in hosts]
     fresh = q.follow_config ? config_host_names(load_config()) : nothing
     kw = Dict{String, Any}(String(k) => v for (k, v) in pairs(kwargs))
+    haskey(kw, "yes") && throw(
+        ArgumentError(
+            "submit! does not accept yes=; confirmation is CLI-only (pass -y/--yes to julia -m DistSSHKit). " *
+                "Unattended serve and API setup do not need yes=.",
+        ),
+    )
     script_path = resolve_script(script)
     return _with_store(q) do
         lock(q.lock) do

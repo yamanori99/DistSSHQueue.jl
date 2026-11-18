@@ -1644,9 +1644,10 @@ end
 
 @testset "execute_kwargs drops names execute! detached rejects" begin
     q = Queue(; runner = _ -> nothing)
-    gid = submit!(q, "g.jl"; head_slots = 1, path_anchor = "/x", yes = false, log_dir = "/logs", quiet = true)
+    @test_throws ArgumentError submit!(q, "g.jl"; head_slots = 1, yes = false)
+    gid = submit!(q, "g.jl"; head_slots = 1, path_anchor = "/x", log_dir = "/logs", quiet = true)
     gkw = DistSSHQueue.execute_kwargs(job(q, gid))
-    @test gkw.yes === true
+    @test !haskey(gkw, :yes)
     @test gkw.quiet === true
     @test !haskey(gkw, :path_anchor)
     @test !haskey(gkw, :job_id)
@@ -1655,7 +1656,7 @@ end
     dkw = DistSSHQueue.execute_kwargs(job(q, did))
     @test dkw.log_dir == "/logs"
     @test dkw.skip_hash_check === false
-    @test dkw.yes === true
+    @test !haskey(dkw, :yes)
     wid = submit!(q, "w.jl", "1*h1"; kind = :drive, workers = 4, mem_headroom = 0.5)
     wkw = DistSSHQueue.execute_kwargs(job(q, wid))
     @test wkw.workers == 4
@@ -3232,7 +3233,6 @@ end
             joinpath(d, "mark.jl"),
             String[];
             detached = true,
-            yes = true,
             job_id = "queue-slot-include",
             project = d,
             output_dir = joinpath(d, "out"),
