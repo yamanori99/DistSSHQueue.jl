@@ -70,9 +70,10 @@ function pool_cli(args::Vector{String})::Cint
         workers = tokens,
         quiet = opts.cli_session.quiet,
         verbosity = opts.cli_session.verbosity,
-        yes = opts.cli_session.yes,
         include_head_for_size = include_head,
     )
+    session.cli_session.yes = opts.cli_session.yes
+    DistSSHRun.apply_session_env!(session)
     result = DistSSHRun.pool!(session)
     DistSSHRun.print_pool(result)
     print_pool_inventory_notes!()

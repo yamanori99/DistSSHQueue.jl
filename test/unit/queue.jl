@@ -3,6 +3,13 @@ using Dates
 using DistSSHRun
 using DistSSHQueue
 
+function _ok_kit_doctor(session; deploy::Bool, run_id = nothing)
+    _ = session
+    _ = run_id
+    deploy || return DistSSHRun.DoctorReport(false, DistSSHRun.SetupWarning[])
+    return DistSSHRun.DoctorReport(true, DistSSHRun.SetupWarning[])
+end
+
 struct _KitOdd end
 Base.hasproperty(::_KitOdd, s::Symbol) = s === :ok
 Base.getproperty(::_KitOdd, ::Symbol) = throw(KeyError(:ok))
@@ -34,6 +41,27 @@ function (p::_KitSetupOk)(_, mode::Symbol; gitignore::Bool = true, run_id = noth
     return (; ok = true, gitignore, run_id)
 end
 
+mutable struct _KitDoctorRunIdProbe
+    instantiate_run_id::Union{Nothing, String}
+    doctor_run_id::Union{Nothing, String}
+end
+
+_KitDoctorRunIdProbe() = _KitDoctorRunIdProbe(nothing, nothing)
+
+function (p::_KitDoctorRunIdProbe)(_, mode::Symbol; gitignore::Bool = true, run_id = nothing)
+    mode === :ship_tree && return _ship_sync_ok()
+    mode === :instantiate &&
+        (p.instantiate_run_id = run_id === nothing ? nothing : String(run_id))
+    return (; ok = true, gitignore)
+end
+
+function (p::_KitDoctorRunIdProbe)(session; deploy::Bool, run_id = nothing)
+    _ = session
+    deploy || throw(ArgumentError("expected deploy=true"))
+    p.doctor_run_id = run_id === nothing ? nothing : String(run_id)
+    return DistSSHRun.DoctorReport(true, DistSSHRun.SetupWarning[])
+end
+
 struct _KitSetupFail
     bad::Symbol
     throw_on_bad::Bool
@@ -62,10 +90,20 @@ struct _KitSetupWarn
 end
 
 function (p::_KitSetupWarn)(_, mode::Symbol; gitignore::Bool = true, run_id = nothing)
+    _ = p
     _ = run_id
     mode === :ship_tree && return _ship_sync_ok()
-    mode === :check || return (; ok = true, gitignore)
-    return (; ok = p.ok, gitignore, warnings = p.warnings)
+    return (; ok = true, gitignore)
+end
+
+function (p::_KitSetupWarn)(session; deploy::Bool, run_id = nothing)
+    _ = session
+    _ = run_id
+    deploy || return DistSSHRun.DoctorReport(false, DistSSHRun.SetupWarning[])
+    warns = [
+        DistSSHRun.SetupWarning(String(w.host), w.kind, String(w.message)) for w in p.warnings
+    ]
+    return DistSSHRun.DoctorReport(p.ok, warns)
 end
 
 struct _StageRsyncProbe
@@ -109,6 +147,7 @@ function _stage_rsync_setup!(proj::String)
             j,
             ph -> ph isa AbstractString && push!(phases, String(ph));
             kit_setup! = _StageRsyncProbe(modes, gitignore, manifest_at, manifest),
+            kit_doctor! = _ok_kit_doctor,
         )
     end
     return (; modes, phases, gitignore = only(gitignore), manifest_at)
@@ -462,10 +501,11 @@ end
                 j,
                 Returns(nothing);
                 kit_setup! = _KitSetupOk(modes),
+                kit_doctor! = _ok_kit_doctor,
                 cancel_requested = Returns(true),
             )
         end
-        @test modes == [:ship_tree]
+        @test isempty(modes)
         bare = DistSSHQueue.Job(;
             kind = :go,
             script = "a.jl",
@@ -1011,7 +1051,7 @@ end
     @test_throws ErrorException DistSSHQueue._require_kit_setup_ok!((; ok = false), "check")
 end
 
-@testset "kit setup always runs :check after instantiate" begin
+@testset "kit setup always runs doctor --deploy after instantiate" begin
     mktempdir() do d
         write_shippable_project!(d)
         script = joinpath(d, "s.jl")
@@ -1033,10 +1073,11 @@ end
                 j,
                 ph -> ph isa AbstractString && push!(phases, String(ph));
                 kit_setup! = _KitSetupOk(modes),
+                kit_doctor! = _ok_kit_doctor,
             )
         end
-        @test modes == [:remote_root, :ship_tree, :instantiate, :check]
-        @test phases == ["remote-root", "ship-tree", "instantiate", "check"]
+        @test modes == [:remote_root, :ship_tree, :instantiate]
+        @test phases == ["remote-root", "instantiate", "ship-tree", "doctor"]
         @test DistSSHQueue._absolute_remote_path("/custom/root")
         @test DistSSHQueue._absolute_remote_path("  /custom/root")
         @test !DistSSHQueue._absolute_remote_path("jobs/app")
@@ -1052,10 +1093,42 @@ end
         rel_modes = Symbol[]
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             DistSSHQueue._queue_kit_setup!(
-                rel, Returns(nothing); kit_setup! = _KitSetupOk(rel_modes),
+                rel,
+                Returns(nothing);
+                kit_setup! = _KitSetupOk(rel_modes),
+                kit_doctor! = _ok_kit_doctor,
             )
         end
-        @test rel_modes == [:ship_tree, :instantiate, :check]
+        @test rel_modes == [:ship_tree, :instantiate]
+    end
+end
+
+@testset "kit setup doctor --deploy receives pinned run_id (Run 0.2)" begin
+    mktempdir() do d
+        write_shippable_project!(d)
+        script = joinpath(d, "s.jl")
+        write(script, "1\n")
+        j = DistSSHQueue.Job(;
+            kind = :go,
+            script = script,
+            hosts = ["1*w1"],
+            kwargs = Dict{String, Any}(
+                "project" => String(d),
+                "remote" => "/custom/root",
+            ),
+        )
+        stamp_enqueue_verify!(j)
+        probe = _KitDoctorRunIdProbe()
+        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+            DistSSHQueue._queue_kit_setup!(
+                j,
+                Returns(nothing);
+                kit_setup! = probe,
+                kit_doctor! = probe,
+            )
+        end
+        @test probe.instantiate_run_id == _TEST_SNAP_A
+        @test probe.doctor_run_id == _TEST_SNAP_A
     end
 end
 
@@ -1066,8 +1139,8 @@ end
         write_shippable_project!(stage)
         got = _stage_rsync_setup!(stage)
         @test got.gitignore === true
-        @test got.modes == [:remote_root, :ship_tree, :instantiate, :check]
-        @test got.phases == ["remote-root", "ship-tree", "instantiate", "check"]
+        @test got.modes == [:remote_root, :ship_tree, :instantiate]
+        @test got.phases == ["remote-root", "instantiate", "ship-tree", "doctor"]
         @test got.manifest_at[:ship_tree] === true
         @test got.manifest_at[:instantiate] === true
     end
@@ -1075,8 +1148,8 @@ end
         write_shippable_project!(d)
         got = _stage_rsync_setup!(d)
         @test got.gitignore === true
-        @test got.modes == [:remote_root, :ship_tree, :instantiate, :check]
-        @test got.phases == ["remote-root", "ship-tree", "instantiate", "check"]
+        @test got.modes == [:remote_root, :ship_tree, :instantiate]
+        @test got.phases == ["remote-root", "instantiate", "ship-tree", "doctor"]
     end
 end
 
@@ -1199,8 +1272,10 @@ end
         note = (host = "box", kind = :julia_patch, message = "Julia patch version differs")
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             DistSSHQueue._queue_kit_setup!(
-                snap, Returns(nothing);
+                snap,
+                Returns(nothing);
                 kit_setup! = _KitSetupWarn(true, [note]),
+                kit_doctor! = _KitSetupWarn(true, [note]),
                 on_warnings = entries -> DistSSHQueue._persist_job_warnings!(q, id, entries),
             )
         end
@@ -1221,8 +1296,10 @@ end
         note = (host = "box", kind = :git_dirty, message = "Git has uncommitted changes")
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             @test_throws ErrorException DistSSHQueue._queue_kit_setup!(
-                snap, Returns(nothing);
+                snap,
+                Returns(nothing);
                 kit_setup! = _KitSetupWarn(false, [note]),
+                kit_doctor! = _KitSetupWarn(false, [note]),
                 on_warnings = entries -> DistSSHQueue._persist_job_warnings!(q, id, entries),
             )
         end
@@ -1234,7 +1311,10 @@ end
         _, _, snap, _ = _running_setup_job(d)
         withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
             DistSSHQueue._queue_kit_setup!(
-                snap, Returns(nothing); kit_setup! = _KitSetupOk(Symbol[]),
+                snap,
+                Returns(nothing);
+                kit_setup! = _KitSetupOk(Symbol[]),
+                kit_doctor! = _ok_kit_doctor,
             )
         end
         @test length(snap.kwargs["warnings"]) == 1
@@ -1644,9 +1724,10 @@ end
 
 @testset "execute_kwargs drops names execute! detached rejects" begin
     q = Queue(; runner = _ -> nothing)
-    gid = submit!(q, "g.jl"; head_slots = 1, path_anchor = "/x", yes = false, log_dir = "/logs", quiet = true)
+    @test_throws ArgumentError submit!(q, "g.jl"; head_slots = 1, yes = false)
+    gid = submit!(q, "g.jl"; head_slots = 1, path_anchor = "/x", log_dir = "/logs", quiet = true)
     gkw = DistSSHQueue.execute_kwargs(job(q, gid))
-    @test gkw.yes === true
+    @test !haskey(gkw, :yes)
     @test gkw.quiet === true
     @test !haskey(gkw, :path_anchor)
     @test !haskey(gkw, :job_id)
@@ -1655,7 +1736,7 @@ end
     dkw = DistSSHQueue.execute_kwargs(job(q, did))
     @test dkw.log_dir == "/logs"
     @test dkw.skip_hash_check === false
-    @test dkw.yes === true
+    @test !haskey(dkw, :yes)
     wid = submit!(q, "w.jl", "1*h1"; kind = :drive, workers = 4, mem_headroom = 0.5)
     wkw = DistSSHQueue.execute_kwargs(job(q, wid))
     @test wkw.workers == 4
@@ -3232,7 +3313,6 @@ end
             joinpath(d, "mark.jl"),
             String[];
             detached = true,
-            yes = true,
             job_id = "queue-slot-include",
             project = d,
             output_dir = joinpath(d, "out"),

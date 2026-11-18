@@ -270,7 +270,6 @@ function enqueue_kit!(q, kind::Symbol, script::AbstractString, token::AbstractSt
         output_dir = out,
         julia = "auto",
         args = args,
-        yes = true,
         quiet = true,
     )
 end
@@ -639,7 +638,6 @@ end
                 project = JOB_PROJECT,
                 workers = ["$(h)" for h in HOSTS],
                 remote = REMOTE_ROOT,
-                yes = true,
                 quiet = true,
             )
             # Multi-mode `setup!` rejects keyword arguments, so `:delete`
@@ -839,7 +837,6 @@ end
                     output_dir = out_a,
                     julia = "auto",
                     args = String[],
-                    yes = true,
                     quiet = true,
                 )
                 b = enqueue_kit!(h, :go, echo, token; out = out_b, args = GO_N)

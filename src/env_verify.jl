@@ -85,6 +85,20 @@ function _assert_controller_for_queue!(project::AbstractString)
     return nothing
 end
 
+"""Manifest, sysimage, and load-identity gates without a stale in-process ship record.
+
+Serve may run several jobs per process; the active deploy record from an earlier
+`ship_tree` is not valid until this job's setup ships again.
+"""
+function _assert_controller_gates_without_shipped_tree!(project::AbstractString)
+    proj = String(project)
+    DistSSHRun.assert_controller_manifest_for_environment_verify!(proj)
+    DistSSHRun.assert_controller_manifest_current!(proj)
+    DistSSHRun.assert_controller_default_sysimage!()
+    DistSSHRun.assert_controller_loaded_identity!()
+    return nothing
+end
+
 function _resolve_enqueue_project(kw::Dict{String, Any}, script::AbstractString)::String
     raw = get(kw, "project", nothing)
     start = if raw isa AbstractString && !isempty(strip(String(raw)))
@@ -160,7 +174,7 @@ function _assert_enqueue_tree_unchanged!(j::Job)
     proj isa AbstractString || throw(
         ErrorException("job $(j.id) has no enqueue project path"),
     )
-    _assert_controller_for_queue!(String(proj))
+    _assert_controller_gates_without_shipped_tree!(String(proj))
     current = _current_enqueue_tree_hash(String(proj), j.script)
     stored == current || throw(_tree_hash_changed_error(j, stored, current))
     return nothing

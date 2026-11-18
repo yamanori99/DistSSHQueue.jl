@@ -413,8 +413,8 @@ end
 
 """Keywords DistSSHRun `execute!(...; detached=true)` accepts, from the job bag.
 
-`yes` is always `true` (unattended child). `path_anchor` and other names are dropped.
-`job_id` is not taken from the bag; `run_kit` passes `Job.id`.
+`yes` and other dropped names are not forwarded (unattended children use Run's detached blob).
+`path_anchor` and other names are dropped. `job_id` is not taken from the bag; `run_kit` passes `Job.id`.
 Allow-list is DistSSHRun `execute_detached_accepts`.
 """
 function execute_kwargs(j::Job)
@@ -444,7 +444,6 @@ function execute_kwargs(j::Job)
         DistSSHRun.execute_detached_accepts(k; kind = j.kind) || continue
         push!(acc, k => v)
     end
-    push!(acc, :yes => true)
     kw = (; acc...)
     rid = _job_run_id(j)
     if rid !== nothing && !haskey(kw, :run_id)
@@ -677,7 +676,6 @@ function _kit_setup_session(j::Job, proj::AbstractString; workers = j.hosts)
         project = String(proj),
         workers = workers,
         remote = remote,
-        yes = true,
     )
 end
 
@@ -785,7 +783,7 @@ function _absolute_remote_path(remote)::Bool
     return startswith(strip(String(remote)), "/")
 end
 
-"""Throw unless Kit `setup!` reported `ok` (instantiate / check)."""
+"""Throw unless Kit `setup!` / `doctor!` reported `ok`."""
 function _require_kit_setup_ok!(result, step::AbstractString)
     hasproperty(result, :ok) || return nothing
     getproperty(result, :ok) && return nothing
@@ -808,7 +806,7 @@ function _record_kit_setup_logs!(j::Job, proj::AbstractString)
     return nothing
 end
 
-"""Dicts `jobs.toml` can store, from a `:check` result. Empty when it has no `warnings`."""
+"""Dicts `jobs.toml` can store, from `doctor!` deploy warnings. Empty when it has no `warnings`."""
 function _setup_warning_dicts(result)::Vector{Dict{String, Any}}
     hasproperty(result, :warnings) || return Dict{String, Any}[]
     raw = getproperty(result, :warnings)
@@ -1148,6 +1146,7 @@ function _queue_kit_setup!(
         j::Job,
         on_phase;
         kit_setup! = DistSSHRun.setup!,
+        kit_doctor! = DistSSHRun.doctor!,
         cancel_requested = Returns(false),
         on_warnings = Returns(nothing),
         on_run_id = Returns(nothing),
@@ -1173,6 +1172,11 @@ function _queue_kit_setup!(
             _require_kit_setup_ok!(kit_setup!(session, :remote_root), "remote-root")
             _throw_if_cancelled(cancel_requested)
         end
+        # Local `Pkg.instantiate` before ship-tree so the active deploy record
+        # content_tree_hash matches the controller tree (Run 0.2 verify gate).
+        on_phase("instantiate")
+        _queue_local_instantiate!(String(proj))
+        _throw_if_cancelled(cancel_requested)
         on_phase("ship-tree")
         # Run 0.2 rejects `:rsync` and `gitignore=false`. `.gitignore` is the filter.
         shipped = kit_setup!(session, :ship_tree)
@@ -1181,19 +1185,17 @@ function _queue_kit_setup!(
         )
         _throw_if_cancelled(cancel_requested)
         _assert_run_id_context!(j, String(proj), session, children)
-        on_phase("instantiate")
-        _queue_local_instantiate!(String(proj))
         _require_kit_setup_ok!(
             kit_setup!(session, :instantiate; run_id = rid),
             "instantiate",
         )
         _throw_if_cancelled(cancel_requested)
-        on_phase("check")
-        checked = kit_setup!(session, :check; run_id = rid)
+        on_phase("doctor")
+        checked = kit_doctor!(session; deploy = true, run_id = rid)
         added = _setup_warning_dicts(checked)
         _append_warning_dicts!(j, added)
         on_warnings(added)
-        _require_kit_setup_ok!(checked, "check")
+        _require_kit_setup_ok!(checked, "doctor --deploy")
         _throw_if_cancelled(cancel_requested)
     catch e
         e isa _JobCancelled && rethrow()
@@ -1311,6 +1313,12 @@ function _submit!(q::Queue, kind::Symbol, script::AbstractString, hosts; kwargs.
     toks = String[String(x) for x in hosts]
     fresh = q.follow_config ? config_host_names(load_config()) : nothing
     kw = Dict{String, Any}(String(k) => v for (k, v) in pairs(kwargs))
+    haskey(kw, "yes") && throw(
+        ArgumentError(
+            "submit! does not accept yes=; confirmation is CLI-only (pass -y/--yes to julia -m DistSSHKit). " *
+                "Unattended serve and API setup do not need yes=.",
+        ),
+    )
     script_path = resolve_script(script)
     return _with_store(q) do
         lock(q.lock) do
