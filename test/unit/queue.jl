@@ -3,7 +3,7 @@ using Dates
 using DistSSHRun
 using DistSSHQueue
 
-function _ok_kit_doctor(session; deploy::Bool, run_id = nothing, kwargs...)
+function _ok_kit_doctor(session; deploy::Bool, run_id = nothing)
     _ = session
     _ = run_id
     deploy || return DistSSHRun.DoctorReport(false, DistSSHRun.SetupWarning[])
@@ -55,7 +55,7 @@ function (p::_KitDoctorRunIdProbe)(_, mode::Symbol; gitignore::Bool = true, run_
     return (; ok = true, gitignore)
 end
 
-function (p::_KitDoctorRunIdProbe)(session; deploy::Bool, run_id = nothing, kwargs...)
+function (p::_KitDoctorRunIdProbe)(session; deploy::Bool, run_id = nothing)
     _ = session
     deploy || throw(ArgumentError("expected deploy=true"))
     p.doctor_run_id = run_id === nothing ? nothing : String(run_id)
@@ -90,12 +90,13 @@ struct _KitSetupWarn
 end
 
 function (p::_KitSetupWarn)(_, mode::Symbol; gitignore::Bool = true, run_id = nothing)
+    _ = p
     _ = run_id
     mode === :ship_tree && return _ship_sync_ok()
     return (; ok = true, gitignore)
 end
 
-function (p::_KitSetupWarn)(session; deploy::Bool, run_id = nothing, kwargs...)
+function (p::_KitSetupWarn)(session; deploy::Bool, run_id = nothing)
     _ = session
     _ = run_id
     deploy || return DistSSHRun.DoctorReport(false, DistSSHRun.SetupWarning[])
