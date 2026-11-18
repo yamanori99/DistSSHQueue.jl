@@ -90,7 +90,7 @@ end
         @test probe.run_ids[1] === nothing
         @test probe.run_ids[2] === nothing
         @test probe.run_ids[3] == _SNAP_A
-        @test probe.run_ids[4] == _SNAP_A
+        @test probe.run_ids[4] === nothing
         kw = DistSSHQueue.execute_kwargs(j)
         @test kw.run_id == _SNAP_A
         @test !haskey(kw, :ship_hosts)

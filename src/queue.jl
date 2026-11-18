@@ -1187,7 +1187,7 @@ function _queue_kit_setup!(
         )
         _throw_if_cancelled(cancel_requested)
         on_phase("check")
-        checked = kit_setup!(session, :check; run_id = rid)
+        checked = kit_setup!(session, :check)
         added = _setup_warning_dicts(checked)
         _append_warning_dicts!(j, added)
         on_warnings(added)

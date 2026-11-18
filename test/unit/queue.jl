@@ -34,6 +34,25 @@ function (p::_KitSetupOk)(_, mode::Symbol; gitignore::Bool = true, run_id = noth
     return (; ok = true, gitignore, run_id)
 end
 
+mutable struct _KitSetupRunIdProbe
+    modes::Vector{Symbol}
+    instantiate_run_id::Union{Nothing, String}
+    check_saw_run_id::Bool
+end
+
+_KitSetupRunIdProbe() = _KitSetupRunIdProbe(Symbol[], nothing, false)
+
+function (p::_KitSetupRunIdProbe)(_, mode::Symbol; gitignore::Bool = true, run_id = nothing)
+    push!(p.modes, mode)
+    mode === :ship_tree && return _ship_sync_ok()
+    if mode === :instantiate
+        p.instantiate_run_id = run_id === nothing ? nothing : String(run_id)
+    elseif mode === :check
+        p.check_saw_run_id = run_id !== nothing
+    end
+    return (; ok = true, gitignore)
+end
+
 struct _KitSetupFail
     bad::Symbol
     throw_on_bad::Bool
@@ -1056,6 +1075,30 @@ end
             )
         end
         @test rel_modes == [:ship_tree, :instantiate, :check]
+    end
+end
+
+@testset "kit setup :check does not pass run_id (Run 0.2)" begin
+    mktempdir() do d
+        write_shippable_project!(d)
+        script = joinpath(d, "s.jl")
+        write(script, "1\n")
+        j = DistSSHQueue.Job(;
+            kind = :go,
+            script = script,
+            hosts = ["1*w1"],
+            kwargs = Dict{String, Any}(
+                "project" => String(d),
+                "remote" => "/custom/root",
+            ),
+        )
+        stamp_enqueue_verify!(j)
+        probe = _KitSetupRunIdProbe()
+        withenv(DistSSHQueue.NO_KIT_SETUP_ENV => nothing) do
+            DistSSHQueue._queue_kit_setup!(j, Returns(nothing); kit_setup! = probe)
+        end
+        @test probe.instantiate_run_id == _TEST_SNAP_A
+        @test !probe.check_saw_run_id
     end
 end
 
