@@ -712,10 +712,15 @@ end
                         ),
                     )
                 end
-                if _E2E_RIDE_SUPPORTED
-                    @e2e_plan "pi_file" "pi_echo" "square_file" "square_echo" "map_echo"
-                else
-                    @e2e_plan "pi_file" "pi_echo" "square_file" "square_echo"
+                for lab in (
+                    "pi_file",
+                    "pi_echo",
+                    "square_file",
+                    "square_echo",
+                    _E2E_RIDE_SUPPORTED ? "map_echo" : nothing,
+                )
+                    lab === nothing && continue
+                    _e2e_push!(lab)
                 end
                 for (kind, script, label, args, artifact, needle) in cases
                     @testset "$label" begin
