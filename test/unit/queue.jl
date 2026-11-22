@@ -2187,8 +2187,8 @@ end
                 code_ride, _, _ = capture_stdio() do
                     DistSSHQueue.main(["submit", "ride", "--no-spi-check", "--head-workers", "1", "map.jl"])
                 end
-                @test code_ride == 0
                 rows = DistSSHQueue.read_jobs(p)
+                @test code_ride == 0
                 @test rows[end].kind === :ride
                 @test DistSSHQueue.execute_kwargs(rows[end]).spi_check === false
                 code_w, _, _ = capture_stdio() do

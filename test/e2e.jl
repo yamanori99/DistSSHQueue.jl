@@ -662,7 +662,7 @@ end
             token = "1*$(host)"
 
             @testset "Kit go/drive/ride demos through serve" begin
-                cases = (
+                cases = [
                     (
                         :go,
                         joinpath(JOB_PROJECT, "demos", "without_kit", "pi_file.jl"),
@@ -703,8 +703,16 @@ end
                         nothing,
                         "1,4,9,16,25,36,49,64",
                     ),
-                )
-                @e2e_plan "pi_file" "pi_echo" "square_file" "square_echo" "map_echo"
+                ]
+                for lab in (
+                        "pi_file",
+                        "pi_echo",
+                        "square_file",
+                        "square_echo",
+                        "map_echo",
+                    )
+                    _e2e_push!(lab)
+                end
                 for (kind, script, label, args, artifact, needle) in cases
                     @testset "$label" begin
                         _e2e_print(label)
