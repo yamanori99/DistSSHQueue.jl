@@ -400,6 +400,12 @@ end
 """Field conversion only. A `MethodError` inside `Job` still propagates."""
 function _job_row(row, path::AbstractString)::Job
     row isa AbstractDict || throw(_jobs_store_bad_row(path))
+    kind_raw = get(row, "kind", nothing)
+    if kind_raw isa AbstractString && String(kind_raw) == "ride"
+        id_raw = get(row, "id", "?")
+        id = id_raw isa AbstractString ? String(id_raw) : "?"
+        throw(_jobs_store_removed_ride_kind(path, id))
+    end
     try
         hosts = row["hosts"]
         hosts isa AbstractVector || throw(_jobs_store_bad_row(path))

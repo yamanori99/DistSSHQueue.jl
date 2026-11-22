@@ -1368,7 +1368,7 @@ function _submit!(q::Queue, kind::Symbol, script::AbstractString, hosts; kwargs.
     end
 end
 
-"""Enqueue. `kind` is a DistSSHRun `execute!` kind in `KIT_EXECUTE_KINDS` (`:go`, `:ride`, `:drive`).
+"""Enqueue. `kind` is a DistSSHRun `execute!` kind in `KIT_EXECUTE_KINDS` (`:go`, `:drive`).
 
 `hosts` are remote machine tokens (`N*host` or bare host). Head uses kwargs `head_workers` / `head_slots`.
 Missing `project` uses `job_project()` (cwd / `DISTRIBUTED_PROJECT_ROOT`), not the

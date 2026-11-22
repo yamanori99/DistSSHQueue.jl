@@ -1,5 +1,5 @@
 """
-DistSSHQueue — FIFO `serve` for DistSSHKit (`go` / `ride` / `drive`).
+DistSSHQueue — FIFO `serve` for DistSSHKit (`go` / `drive`).
 
 Package entry: exports, `include`s, `main` (`@main` on Julia 1.13+).
 FIFO core: `src/job.jl`, `src/store.jl`, `src/paths.jl`, `src/config.jl`, `src/queue.jl`.
@@ -199,13 +199,15 @@ function _removed_inspect_message(sub::AbstractString)::String
         return "size: worker-count sizing was removed (parent:N is gone); pool reports cores and RAM. Submit with --head-workers / --head-slots and machine tokens (or pool:N)."
     elseif sub == "plan"
         return "plan: script inspect was removed (parent:N is gone); enqueue with submit and Run 0.2 placement (or pool:N)."
+    elseif sub == "ride"
+        return "ride: the experimental map/filter execute kind was removed in Run 0.2; enqueue with submit go or submit drive (or pool:N)."
     else
         return "$sub was removed"
     end
 end
 
 function _reject_subcommand(sub::AbstractString)::Cint
-    if sub in ("size", "plan")
+    if sub in ("size", "plan", "ride")
         DistSSHRun.print_cli_error(_removed_inspect_message(sub))
         return 1
     end
@@ -232,7 +234,7 @@ function _help_command_argv(after::Vector{String})::Vector{String}
     verb = String(after[2])
     verb in QUEUE_COMMAND_HELP || return after
     rest = String[String(a) for a in after[3:end]]
-    if verb == "submit" && !isempty(rest) && rest[1] in ("go", "ride", "drive")
+    if verb == "submit" && !isempty(rest) && rest[1] in ("go", "drive")
         return String[verb, rest[1], "--help", rest[2:end]...]
     end
     return String[verb, "--help", rest...]
@@ -282,7 +284,7 @@ function _main(args::Vector{String})::Cint
         after = _help_command_argv(after)
         if isempty(after) || after[1] in ("-h", "--help", "help")
             topic = length(after) >= 2 ? String(after[2]) : nothing
-            topic in ("size", "plan") && return _reject_subcommand(topic)
+            topic in ("size", "plan", "ride") && return _reject_subcommand(topic)
             print_queue_usage(; topic = topic)
             return 0
         end
@@ -291,7 +293,7 @@ function _main(args::Vector{String})::Cint
             return 0
         end
         sub, rest = String(after[1]), String[String(a) for a in after[2:end]]
-        if sub in ("size", "plan")
+        if sub in ("size", "plan", "ride")
             return _reject_subcommand(sub)
         end
         if command_help_argv(sub, rest)

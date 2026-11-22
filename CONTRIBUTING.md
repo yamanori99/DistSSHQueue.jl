@@ -5,7 +5,7 @@ Internals of this repo.
 - Users: [stable docs](https://yamanori99.github.io/DistSSHQueue.jl/stable/) (`docs/`), [README.md](README.md), [README.ja.md](README.ja.md), [NEWS.md](NEWS.md)
 - Dev docs: [dev](https://yamanori99.github.io/DistSSHQueue.jl/dev/) ([docs/README.md](docs/README.md))
 
-This is a **separate** package from DistSSHKit: FIFO `serve` in front of one Kit `go` / `ride` / `drive`, not a bigger Kit. Placement tokens, `execute!`, `kit.pid` / `kit.result`, `terminate_run!`, demo argv, and rsync/collect are Kit's. Queue records table state and the path Kit already wrote.
+This is a **separate** package from DistSSHKit: FIFO `serve` in front of one Kit `go` / `drive`, not a bigger Kit. Placement tokens, `execute!`, `kit.pid` / `kit.result`, `terminate_run!`, demo argv, and rsync/collect are Kit's. Queue records table state and the path Kit already wrote.
 
 CI names Julia versions in the job (`1.13`, `1.14-pre`, `nightly`). SSH E2E is this repo's `testenv/docker-ssh` (Kit-shaped workers). CI is `Pkg.test` (unit + child CLI / `parent:1`), JETLS, Aqua, Linux SSH E2E on Julia **1.13** (`test/e2e.jl`: `serve` API, queue-host CLI, `qhost:` over loopback OpenSSH) on path-filtered PRs / **main** / a `Project.toml` version increase / weekly / dispatch, Gitleaks, light **Runic** `--check` (soft on PRs; monthly on `main`), schedule-only **E2E weekly** (Linux / macOS Intel / WSL), and schedule-only **CI weekly**.
 
@@ -280,8 +280,7 @@ FIFO enqueue calls DistSSHRun `execute!` for the kinds in Queue's
 ([src/job.jl](src/job.jl)).
 `kit_parse_args`
 ([src/client/submit.jl](src/client/submit.jl))
-turns that argv into Run's `parse_go_args`, `parse_drive_args`, or
-`parse_ride_args`. A new kind needs a row in `kit_parse_args`, an entry
+turns that argv into Run's `parse_go_args` or `parse_drive_args`. A new kind needs a row in `kit_parse_args`, an entry
 in `KIT_EXECUTE_KINDS`, the Queue CLI, and that kind already on Run
 `execute!`. Inspect `pool` does not enqueue; copy
 [src/client/pool.jl](src/client/pool.jl). Do not add a Queue `hostinfo`

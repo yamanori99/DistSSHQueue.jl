@@ -578,7 +578,7 @@ Public, not exported. The promise is this binding. The strings are help
 text. DistSSHKit prints these lines.
 """
 const CLIENT_COMMAND_LINES = (
-    help_verb_line("submit", "Enqueue go / ride / drive"),
+    help_verb_line("submit", "Enqueue go / drive"),
     help_verb_line("status", "Snapshot of the store"),
     help_verb_line("watch", "Live status"),
     help_verb_line("cancel", "Drop queued or stop running"),
@@ -673,7 +673,7 @@ function print_queue_client_usage(io::IO = stdout)
     print_help_section("See DistSSHKit"; io = io)
     print_help_lines(
         io,
-        "  Same argv as DistSSHRun (go / ride / drive --head-workers N and machine tokens …). parent / child: / NAME:N were removed.",
+        "  Same argv as DistSSHRun (go / drive --head-workers N and machine tokens …). parent / child: / NAME:N were removed.",
         "  $(cli_m_project()) --help",
     )
     print_help_blank(io)
@@ -799,11 +799,10 @@ function queue_command_help(verb::AbstractString)
     )
     v == "submit" && return (
         (
-            "  submit go|ride|drive …",
+            "  submit go|drive …",
             help_verb_line("go", "Run an as-is complete job"),
-            help_verb_line("ride", "Experimental auto-split of map / filter"),
             help_verb_line("drive", "Distributed workers + collect"),
-            "  help submit go for DistSSHKit flags (same for ride / drive).",
+            "  help submit go for DistSSHKit flags (same for drive).",
         ), (h,),
     )
     v == "add-host" && return (("  $(cli_m()) $(cli_qhost())add-host ['N*host' ...]",), (h,))
