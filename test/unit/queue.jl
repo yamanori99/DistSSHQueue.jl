@@ -1751,6 +1751,12 @@ end
     @test rkw.spi_check === false
     @test !haskey(rkw, :repeat)
     @test_throws ArgumentError submit!(q, "x.jl"; head_slots = 1, kind = :pipeline)
+    env_row = job(q, gid)
+    env_row.kwargs["env"] = Dict("DISTSSH_TOPOLOGY" => "master_worker")
+    @test_throws ArgumentError DistSSHQueue.execute_kwargs(env_row)
+    env_row.kwargs["env_allow"] = ["DISTSSH_TOPOLOGY"]
+    delete!(env_row.kwargs, "env")
+    @test_throws ArgumentError DistSSHQueue.execute_kwargs(env_row)
 end
 
 @testset "result_path from runner and kwargs" begin

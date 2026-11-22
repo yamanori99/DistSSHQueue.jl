@@ -56,6 +56,14 @@ end
 
 # Live argv on Linux (`/proc`) and macOS (`ps`). `Process.cmd` is always
 # included so a finished child or a missing `/proc` still shows `--job-blob`.
+function _proc_environ(proc::Base.Process)::Vector{String}
+    Sys.islinux() || return String[]
+    pid = Int(getpid(proc))
+    path = "/proc/$(pid)/environ"
+    isfile(path) || return String[]
+    return split(String(read(path)), '\0'; keepempty = false)
+end
+
 function _proc_cmdline(proc::Base.Process)::String
     parts = String[string(proc.cmd)]
     pid = Int(getpid(proc))
@@ -388,17 +396,79 @@ end
         kp = launched::DistSSHRun.DetachedProcess
         cmd = _proc_cmdline(kp.process)
         try
-            @test occursin("--job-blob", cmd)
             @test !occursin("--run-id", cmd)
+            bootstrap = DistSSHQueue.detached_run_bootstrap_argv(kp.process; kind = loaded.kind)
             blob_m = match(r"--job-blob\s+(/[^\s\",]+?\.toml)", cmd)
             @test blob_m !== nothing
             caps = blob_m.captures
             @test caps isa AbstractVector && !isempty(caps)
             cap1 = caps[1]
             @test cap1 isa AbstractString
-            blob_text = read(String(cap1), String)
+            blob_path = String(cap1)
+            @test bootstrap == String["-y", "--job-blob", blob_path]
+            DistSSHRun.assert_detached_job_blob_bootstrap_argv!(bootstrap)
+            env_lines = _proc_environ(kp.process)
+            if !isempty(env_lines)
+                blob_prefix = DistSSHRun.DETACHED_JOB_BLOB_ENV * "="
+                found_blob_env = false
+                for line in env_lines
+                    if startswith(line, blob_prefix)
+                        found_blob_env = true
+                        break
+                    end
+                end
+                @test !found_blob_env
+            end
+            blob_text = read(blob_path, String)
             @test occursin(_SNAP_A, blob_text)
             @test !occursin("run_id = \"$(loaded.id)\"", blob_text)
+            r = wait(kp)
+            @test r.ok
+            @test isfile(mark)
+        catch
+            process_running(kp.process) && kill(kp.process)
+            try
+                wait(kp.process)
+            catch
+            end
+            rethrow()
+        end
+    end
+end
+
+@testset "serve detached launcher bootstrap argv is blob-only" begin
+    let d = durable_tmpdir(; prefix = "distsshqueue-boot-go-")
+        copy_registry_distsshrun_project!(d)
+        mark = joinpath(d, "RAN")
+        write(joinpath(d, "mark.jl"), "write($(repr(mark)), \"go\")\n")
+        kp = DistSSHRun.execute!(
+            :go,
+            joinpath(d, "mark.jl"),
+            String[];
+            detached = true,
+            head_slots = 1,
+            project = d,
+            output_dir = joinpath(d, "out"),
+        )::DistSSHRun.DetachedProcess
+        bootstrap = DistSSHQueue.detached_run_bootstrap_argv(kp.process; kind = :go)
+        try
+            @test bootstrap == String["-y", "--job-blob", bootstrap[3]]
+            @test isfile(bootstrap[3])
+            DistSSHRun.assert_detached_job_blob_bootstrap_argv!(bootstrap)
+            if process_running(kp.process)
+                env_lines = _proc_environ(kp.process)
+                if !isempty(env_lines)
+                    blob_prefix = DistSSHRun.DETACHED_JOB_BLOB_ENV * "="
+                    found_blob_env = false
+                    for line in env_lines
+                        if startswith(line, blob_prefix)
+                            found_blob_env = true
+                            break
+                        end
+                    end
+                    @test !found_blob_env
+                end
+            end
             r = wait(kp)
             @test r.ok
             @test isfile(mark)

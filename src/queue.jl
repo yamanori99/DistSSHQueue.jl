@@ -411,14 +411,44 @@ function require_kit_ok(result)
     throw(ErrorException(msg))
 end
 
+"""Argv after `julia -m … go|drive` on a detached Run child (`-y` / `--yes`, `--job-blob PATH`)."""
+function detached_run_bootstrap_argv(cmd::Cmd; kind::Symbol)::Vector{String}
+    kind === :go || kind === :drive || throw(
+        ArgumentError("detached_run_bootstrap_argv: kind must be :go or :drive, got $(repr(kind))"),
+    )
+    parts = String[string(x) for x in cmd.exec]
+    kind_s = String(kind)
+    idx = findlast(==(kind_s), parts)
+    idx === nothing && throw(
+        ArgumentError("detached child cmdline has no $(kind_s) subcommand: $(join(parts, " "))"),
+    )
+    idx >= length(parts) &&
+        throw(ArgumentError("detached child cmdline has no argv after $(kind_s)"))
+    return copy(parts[(idx + 1):end])
+end
+
+detached_run_bootstrap_argv(proc::Base.Process; kind::Symbol) =
+    detached_run_bootstrap_argv(proc.cmd; kind = kind)
+
 """Keywords DistSSHRun `execute!(...; detached=true)` accepts, from the job bag.
 
 `yes` and other dropped names are not forwarded (unattended children use Run's detached blob).
+`env` and `env_allow` are rejected: job settings belong in Run's `job.toml`, not the child process env.
 `path_anchor` and other names are dropped. `job_id` is not taken from the bag; `run_kit` passes `Job.id`.
 Allow-list is DistSSHRun `execute_detached_accepts`.
 """
 function execute_kwargs(j::Job)
     raw = kit_kwargs(j.kwargs)
+    haskey(raw, :env) && throw(
+        ArgumentError(
+            "job $(j.id) has env= in kwargs; detached execute! reads settings from Run's job blob only",
+        ),
+    )
+    haskey(raw, :env_allow) && throw(
+        ArgumentError(
+            "job $(j.id) has env_allow= in kwargs; detached execute! reads settings from Run's job blob only",
+        ),
+    )
     acc = Pair{Symbol, Any}[]
     for (k, v) in pairs(raw)
         k === :yes && continue
