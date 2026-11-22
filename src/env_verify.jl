@@ -26,6 +26,21 @@ function _jobs_store_format_mismatch(path::AbstractString, found)::ArgumentError
     )
 end
 
+function _jobs_store_removed_ride_kind(path::AbstractString, id::AbstractString)::ArgumentError
+    p = abspath(String(path))
+    return ArgumentError(
+        join(
+            [
+                "what: job kind ride was removed with DistSSHRun 0.2 and DistSSHQueue 0.10",
+                "where: queue store $(p); job id $(id)",
+                "why: serve must not run or retain queued ride jobs from older clients",
+                "fix: cancel or manually remove the job row from jobs.toml, then enqueue with submit go or submit drive",
+            ],
+            "\n",
+        ),
+    )
+end
+
 function _jobs_store_legacy_job(path::AbstractString, id::AbstractString)::ArgumentError
     p = abspath(String(path))
     return ArgumentError(

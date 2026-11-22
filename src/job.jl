@@ -21,10 +21,10 @@ end
 Public, not exported. The promise is this binding. Inspect `pool` is
 not this list.
 """
-const KIT_EXECUTE_KINDS = (:go, :drive, :ride)
+const KIT_EXECUTE_KINDS = (:go, :drive)
 public KIT_EXECUTE_KINDS
 
-is_kit_execute_kind(k::Symbol)::Bool = k === :go || k === :drive || k === :ride
+is_kit_execute_kind(k::Symbol)::Bool = k === :go || k === :drive
 
 new_job_id()::String = string(Base.UUID(rand(UInt128)))
 

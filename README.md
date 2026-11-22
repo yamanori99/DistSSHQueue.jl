@@ -76,7 +76,7 @@ For everything else, see the
        |    qhost:NAME                    serve    now, this terminal
        |    submit | status | list-host   enable   again after reboot
        |    watch | cancel | fetch | ...
-       +--------------------------------> then go / ride / drive
+       +--------------------------------> then go / drive
                                           -> workers (host tokens)
 ```
 
@@ -87,21 +87,21 @@ on that box: put `qhost:HOST` on the command line.
 Omit `qhost:` (this box's cwd is the job tree; placement is still
 `parent` / `child:`). Local trial:
 `DISTSSHQUEUE_LOCAL=1`. `--hosts` / `--julia` stay on `go` /
-`ride` / `drive`.
+`drive`.
 
-Host tokens, `go` / `ride` / `drive` flags, and remote setup are in the
+Host tokens, `go` / `drive` flags, and remote setup are in the
 [DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/stable/).
 
 ### submit
 
 One argv, four nested pieces. `submit` leaves the job on the queue
-host. After it, the line is `go` / `ride` / `drive` and the
+host. After it, the line is `go` / `drive` and the
 rest. The same argv, started on this machine now, is in the
 [DistSSHKit manual](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/).
 
 ```bash
 julia --project=. -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
-#──────────── Julia ────────────┘  └─ qhost ──┘  submit  └── go / ride / drive ──┘
+#──────────── Julia ────────────┘  └─ qhost ──┘  submit  └── go / drive ──┘
 ```
 
 ```bash

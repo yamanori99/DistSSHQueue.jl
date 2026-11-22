@@ -3,8 +3,8 @@
 #
 # Copies testenv/example-job to its own git root and stages DistSSHRun `demos/`
 # there. The Queue repo `.gitignore` does not apply to that root. Then setup!
-# to the workers and enqueue Kit go/drive/ride jobs through Queue `serve`
-# (same as CLI `submit go` / `submit drive` / `submit ride`). `serve` runs
+# to the workers and enqueue Kit go/drive jobs through Queue `serve`
+# (same as CLI `submit go` / `submit drive`). `serve` runs
 # DistSSHRun `execute!(…; detached=true)` for kinds in `KIT_EXECUTE_KINDS`.
 #
 # Also: `julia -m DistSSHKit` on the queue host (omit `qhost:HOST`) and as a
@@ -18,7 +18,7 @@
 # Not a client-as-`parent:N` topology. `enable` / `disable` / `teardown` use
 # `--write-only` (no user systemd / launchctl).
 #
-# Table jobs are the four *file*/*echo* demos plus `ride/map_echo.jl`.
+# Table jobs are the four *file*/*echo* demos.
 # `pipeline_pi.jl` / `pipeline_square.jl` call `go!` / `pipeline!` themselves —
 # not Queue rows. One `go` uses `2*HOST` (`go_manifest.txt` `slots=2`).
 # `pool` lists every worker in the hosts file.
@@ -128,7 +128,6 @@ function stage_kit_demos!(proj::AbstractString)
     for (subdir, names) in (
             ("without_kit", ("pi_file.jl", "pi_echo.jl")),
             ("with_kit", ("square_file.jl", "square_echo.jl")),
-            ("ride", ("map_echo.jl",)),
         )
         dest = joinpath(proj, "demos", subdir)
         mkpath(dest)
@@ -203,7 +202,6 @@ const _E2E_DEMO_RELS = (
     "demos/without_kit/pi_echo.jl",
     "demos/with_kit/square_file.jl",
     "demos/with_kit/square_echo.jl",
-    "demos/ride/map_echo.jl",
 )
 
 """True when `setup!` rejected a per-host `confirm_path` Dict.
@@ -661,7 +659,7 @@ end
             host = HOSTS[1]
             token = "1*$(host)"
 
-            @testset "Kit go/drive/ride demos through serve" begin
+            @testset "Kit go/drive demos through serve" begin
                 cases = (
                     (
                         :go,
@@ -695,16 +693,8 @@ end
                         nothing,
                         nothing,
                     ),
-                    (
-                        :ride,
-                        joinpath(JOB_PROJECT, "demos", "ride", "map_echo.jl"),
-                        "map_echo",
-                        String[],
-                        nothing,
-                        "1,4,9,16,25,36,49,64",
-                    ),
                 )
-                @e2e_plan "pi_file" "pi_echo" "square_file" "square_echo" "map_echo"
+                @e2e_plan "pi_file" "pi_echo" "square_file" "square_echo"
                 for (kind, script, label, args, artifact, needle) in cases
                     @testset "$label" begin
                         _e2e_print(label)

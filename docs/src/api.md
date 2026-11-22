@@ -12,7 +12,7 @@ The longer guide is the
 REPL help also works (`?DistSSHQueue.submit!`).
 
 Submitters `using DistSSHQueue`. Queue-host code `using DistSSHKit`.
-Job files for `go` / `ride` still do not call DistSSHKit.
+Job files for `go` still do not call DistSSHKit.
 
 Prefer the CLI. From a client: `qhost:HOST` on the command line (not
 `--hosts`). `DISTSSHQUEUE_HOST` alone does not hop. CLI `submit` uses `follow_config`; library

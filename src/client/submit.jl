@@ -1,4 +1,4 @@
-# Client `submit go` / `submit ride` / `submit drive` (Kit parsers). After `qhost:` ssh, on the staged tree.
+# Client `submit go` / `submit drive` (Kit parsers). After `qhost:` ssh, on the staged tree.
 function drop_nothing(d::Dict{String, Any})
     out = Dict{String, Any}()
     for (k, v) in d
@@ -244,22 +244,20 @@ end
 function kit_parse_args(kind::Symbol, args::Vector{String})
     kind === :go && return DistSSHRun.parse_go_args(args)
     kind === :drive && return DistSSHRun.parse_drive_args(args)
-    kind === :ride && return DistSSHRun.parse_ride_args(args)
-    throw(ArgumentError("submit: unknown kit command $(repr(kind))"))
+    throw(ArgumentError("submit: unknown kit command $(repr(kind)) (want go or drive)"))
 end
 
 function kit_show_usage(kind::Symbol)
     kind === :go && return DistSSHRun.show_go_usage()
     kind === :drive && return DistSSHRun.show_drive_usage()
-    kind === :ride && return DistSSHRun.show_ride_usage()
-    throw(ArgumentError("submit: unknown kit command $(repr(kind))"))
+    throw(ArgumentError("submit: unknown kit command $(repr(kind)) (want go or drive)"))
 end
 
 function kit_kind_from_cli(name::AbstractString)::Symbol
     k = Symbol(String(name))
     is_kit_execute_kind(k) || throw(
         ArgumentError(
-            "submit: unknown kit command $(repr(name)) (want go, ride, or drive)",
+            "submit: unknown kit command $(repr(name)) (want go or drive)",
         )
     )
     return k
@@ -337,9 +335,9 @@ end
 
 function submit_main(args::Vector{String})::Cint
     try
-        isempty(args) && throw(ArgumentError("submit: need `go`, `ride`, or `drive`"))
+        isempty(args) && throw(ArgumentError("submit: need `go` or `drive`"))
         rest, slots = peel_submit_pool(args)
-        isempty(rest) && throw(ArgumentError("submit: need `go`, `ride`, or `drive`"))
+        isempty(rest) && throw(ArgumentError("submit: need `go` or `drive`"))
         kit, rest2 = String(rest[1]), String[String(a) for a in rest[2:end]]
         kit in ("-h", "--help") && (show_usage(; command = "submit"); return 0)
         return submit_kind(kit_kind_from_cli(kit), rest2; pool_slots = slots)

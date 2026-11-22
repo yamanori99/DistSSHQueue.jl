@@ -126,7 +126,7 @@ end
 
 function kit_verb_and_args(sub::AbstractString, payload::Vector{String})
     if sub == "submit"
-        isempty(payload) && throw(ArgumentError("submit: need `go`, `ride`, or `drive`"))
+        isempty(payload) && throw(ArgumentError("submit: need `go` or `drive`"))
         kit = String(payload[1])
         kit_kind_from_cli(kit)
         return kit, String[String(a) for a in payload[2:end]]
@@ -147,7 +147,7 @@ end
 function rewrite_one_path(arg::AbstractString, local_proj::AbstractString, remote_root::AbstractString)::String
     a = String(arg)
     startswith(a, "-") && return a
-    a in ("go", "drive", "ride", "submit") && return a
+    a in ("go", "drive", "submit") && return a
     looks_like_host_token(a) && return a
     lp = abspath(local_proj)
     in_proj = joinpath(lp, a)

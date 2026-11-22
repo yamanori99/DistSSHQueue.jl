@@ -74,7 +74,7 @@ julia> import Pkg; Pkg.add("DistSSHQueue")
        |    qhost:NAME                    serve    now, this terminal
        |    submit | status | list-host   enable   again after reboot
        |    watch | cancel | fetch | ...
-       +--------------------------------> then go / ride / drive
+       +--------------------------------> then go / drive
                                           -> workers (host tokens)
 ```
 
@@ -83,23 +83,23 @@ julia> import Pkg; Pkg.add("DistSSHQueue")
 `qhost:HOST` を付ける。`DISTSSHQUEUE_HOST` だけではそこへ SSH しない。
 すでにそのマシンにログインしていれば `qhost:` を省略する (このマシンの cwd
 がジョブの木。配置はこれまでどおり `parent` / `child:`)。手元の試行:
-`DISTSSHQUEUE_LOCAL=1`。`--hosts` / `--julia` は `go` / `ride` / `drive` のまま。
+`DISTSSHQUEUE_LOCAL=1`。`--hosts` / `--julia` は `go` / `drive` のまま。
 
-ホストトークン、`go` / `ride` / `drive` のフラグ、リモートの準備は
+ホストトークン、`go` / `drive` のフラグ、リモートの準備は
 [DistSSHKit のマニュアル](https://yamanori99.github.io/DistSSHKit.jl/stable/)
 にある。
 
 ### submit
 
 1つのargvに4つの入れ子がある。`submit` はキューホストにジョブを置く。
-その後ろは `go` / `ride` / `drive` とその先である。同じ argv をこのマシンで
+その後ろは `go` / `drive` とその先である。同じ argv をこのマシンで
 今走らせる説明は
 [DistSSHKit のマニュアル](https://yamanori99.github.io/DistSSHKit.jl/stable/manual/)
 にある。
 
 ```bash
 julia --project=. -m DistSSHQueue  [qhost:HOST]  submit  drive  parent:4  SCRIPT.jl
-#──────────── Julia ────────────┘  └─ qhost ──┘  submit  └── go / ride / drive ──┘
+#──────────── Julia ────────────┘  └─ qhost ──┘  submit  └── go / drive ──┘
 ```
 
 ```bash

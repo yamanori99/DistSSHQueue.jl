@@ -1000,8 +1000,7 @@ end
     g = job(q, gid)
     @test g.kind === :go
     @test !haskey(g.kwargs, "path_anchor")
-    rid = submit!(q, "m.jl"; head_workers = 1, kind = :ride)
-    @test job(q, rid).kind === :ride
+    @test_throws ArgumentError submit!(q, "m.jl"; head_workers = 1, kind = :ride)
 end
 
 @testset "kit setup session uses job remote" begin
@@ -1746,10 +1745,7 @@ end
     @test DistSSHQueue.execute_kwargs(job(q, rid)).repeat == 8
     didr = submit!(q, "rd.jl"; head_workers = 1, kind = :drive, repeat = 8)
     @test !haskey(DistSSHQueue.execute_kwargs(job(q, didr)), :repeat)
-    ride = submit!(q, "m.jl"; head_workers = 2, kind = :ride, spi_check = false, repeat = 8)
-    rkw = DistSSHQueue.execute_kwargs(job(q, ride))
-    @test rkw.spi_check === false
-    @test !haskey(rkw, :repeat)
+    @test_throws ArgumentError submit!(q, "m.jl"; head_workers = 2, kind = :ride)
     @test_throws ArgumentError submit!(q, "x.jl"; head_slots = 1, kind = :pipeline)
 end
 
@@ -1879,7 +1875,7 @@ end
                 @test !occursin("size", client_h)
                 @test !occursin("plan", client_h)
                 @test occursin("pool", client_h)
-                @test occursin("ride", client_h)
+                @test !occursin("ride", client_h)
                 @test occursin("See DistSSHKit", client_h)
                 @test occursin("-m DistSSHKit --help", client_h)
                 @test occursin("--head-workers", client_h)
@@ -1998,11 +1994,10 @@ end
                     DistSSHQueue.main(["submit", "-h"])
                 end
                 @test code_sub_h == 0
-                @test occursin("submit go|ride|drive", out_sub_h)
+                @test occursin("submit go|drive", out_sub_h)
                 @test occursin("help submit go", out_sub_h)
                 @test !occursin("submit go --help", out_sub_h)
                 @test occursin(DistSSHQueue.help_verb_line("go", "Run an as-is complete job"), out_sub_h)
-                @test occursin(DistSSHQueue.help_verb_line("ride", "Experimental auto-split of map / filter"), out_sub_h)
                 @test occursin(DistSSHQueue.help_verb_line("drive", "Distributed workers + collect"), out_sub_h)
                 @test occursin("--help / -h", out_sub_h)
                 @test !occursin("add-host", out_sub_h)
@@ -2021,7 +2016,7 @@ end
                     DistSSHQueue.main(["submit"])
                 end
                 @test code_need == 1
-                @test occursin("need `go`, `ride`, or `drive`", err_need)
+                @test occursin("need `go` or `drive`", err_need)
                 code_word_help, _, err_word_help = capture_stdio() do
                     DistSSHQueue.main(["status", "help"])
                 end
@@ -2046,15 +2041,12 @@ end
                 @test code_help_go == 0
                 @test out_help_go == out_sh
                 @test isempty(err_help_go)
-                code_ride_h, out_ride_h, _ = capture_stdio() do
+                code_ride_h, _, err_ride_h = capture_stdio() do
                     DistSSHQueue.main(["submit", "ride", "--help"])
                 end
-                code_help_ride, out_help_ride, _ = capture_stdio() do
-                    DistSSHQueue.main(["help", "submit", "ride"])
-                end
-                @test code_ride_h == 0
-                @test code_help_ride == 0
-                @test out_help_ride == out_ride_h
+                @test code_ride_h == 1
+                @test occursin("unknown kit command", err_ride_h)
+                @test occursin("go or drive", err_ride_h)
                 code_hop_help, out_hop_help, err_hop_help = capture_stdio() do
                     DistSSHQueue.main(["qhost:no-such-host", "help", "submit"])
                 end
@@ -2184,13 +2176,12 @@ end
                 @test rows[2].hosts == String[]
                 @test rows[2].kwargs["head_workers"] == 2
                 @test rows[2].kwargs["project"] == proj
-                code_ride, _, _ = capture_stdio() do
+                code_ride, _, err_ride = capture_stdio() do
                     DistSSHQueue.main(["submit", "ride", "--no-spi-check", "--head-workers", "1", "map.jl"])
                 end
-                @test code_ride == 0
-                rows = DistSSHQueue.read_jobs(p)
-                @test rows[end].kind === :ride
-                @test DistSSHQueue.execute_kwargs(rows[end]).spi_check === false
+                @test code_ride == 1
+                @test occursin("unknown kit command", err_ride)
+                @test length(DistSSHQueue.read_jobs(p)) == 2
                 code_w, _, _ = capture_stdio() do
                     DistSSHQueue.main(["submit", "drive", "--head-workers", "4", "1*host1", "drv.jl"])
                 end
@@ -2405,15 +2396,18 @@ end
                 @test out == out_go
                 @test err == ""
             end
-            for kind in ("ride", "drive")
-                code, out, err = capture_stdio() do
-                    DistSSHQueue.main(["submit", kind, "--help"])
-                end
-                @test code == 0
-                @test err == ""
-                @test occursin(kind, out)
-                @test out != out_go
+            code_drv, out_drv, err_drv = capture_stdio() do
+                DistSSHQueue.main(["submit", "drive", "--help"])
             end
+            @test code_drv == 0
+            @test err_drv == ""
+            @test occursin("drive", out_drv)
+            @test out_drv != out_go
+            code_ride_help, _, err_ride_help = capture_stdio() do
+                DistSSHQueue.main(["submit", "ride", "--help"])
+            end
+            @test code_ride_help == 1
+            @test occursin("unknown kit command", err_ride_help)
             code_page, out_page, err_page = capture_stdio() do
                 DistSSHQueue.main(["submit", "pool:2", "--help"])
             end
@@ -2824,6 +2818,61 @@ end
         String[],
         DistSSHQueue.HostAllow(),
     )
+end
+
+@testset "ride is removed" begin
+    code_top, _, err_top = capture_stdio() do
+        DistSSHQueue.main(["ride", "-h"])
+    end
+    @test code_top == 1
+    @test occursin("was removed", err_top)
+    @test occursin("submit go or submit drive", err_top)
+    code_help, _, err_help = capture_stdio() do
+        DistSSHQueue.main(["help", "ride"])
+    end
+    @test code_help == 1
+    @test occursin("was removed", err_help)
+    code_sub, _, err_sub = capture_stdio() do
+        DistSSHQueue.main(["submit", "ride", "m.jl"])
+    end
+    @test code_sub == 1
+    @test occursin("unknown kit command", err_sub)
+    @test occursin("go or drive", err_sub)
+    mktempdir() do d
+        p = joinpath(d, "jobs.toml")
+        open(p, "w") do io
+            println(
+                io,
+                """
+                store_format_version = 1
+
+                [[jobs]]
+                id = "ride-job-id"
+                job_format_version = 1
+                kind = "ride"
+                script = "m.jl"
+                hosts = []
+                state = "queued"
+                queued_at = "2020-01-01T00:00:00"
+                started_at = ""
+                finished_at = ""
+                error = ""
+                result_path = ""
+                [jobs.kwargs]
+                job_format_version = 1
+                """,
+            )
+        end
+        err = nothing
+        try
+            DistSSHQueue.read_jobs(p)
+        catch e
+            err = e
+        end
+        @test err isa ArgumentError
+        @test occursin("what: job kind ride was removed", err.msg)
+        @test occursin("submit go or submit drive", err.msg)
+    end
 end
 
 @testset "size and plan report the removed contract" begin
