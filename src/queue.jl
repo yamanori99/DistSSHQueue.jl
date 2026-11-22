@@ -421,6 +421,11 @@ Run writes settings into `job.toml` and starts the Kit child with bootstrap argv
 Allow-list is DistSSHRun `execute_detached_accepts`.
 """
 function execute_kwargs(j::Job)
+    j.kind === :ride && !isdefined(DistSSHRun, :parse_ride_args) && throw(
+        ErrorException(
+            "job $(j.id) is kind :ride; DistSSHRun on main removed ride (use go or drive)",
+        ),
+    )
     raw = kit_kwargs(j.kwargs)
     acc = Pair{Symbol, Any}[]
     for (k, v) in pairs(raw)

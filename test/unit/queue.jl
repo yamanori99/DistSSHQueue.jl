@@ -1746,10 +1746,15 @@ end
     @test DistSSHQueue.execute_kwargs(job(q, rid)).repeat == 8
     didr = submit!(q, "rd.jl"; head_workers = 1, kind = :drive, repeat = 8)
     @test !haskey(DistSSHQueue.execute_kwargs(job(q, didr)), :repeat)
-    ride = submit!(q, "m.jl"; head_workers = 2, kind = :ride, spi_check = false, repeat = 8)
-    rkw = DistSSHQueue.execute_kwargs(job(q, ride))
-    @test rkw.spi_check === false
-    @test !haskey(rkw, :repeat)
+    if isdefined(DistSSHRun, :parse_ride_args)
+        ride = submit!(q, "m.jl"; head_workers = 2, kind = :ride, spi_check = false, repeat = 8)
+        rkw = DistSSHQueue.execute_kwargs(job(q, ride))
+        @test rkw.spi_check === false
+        @test !haskey(rkw, :repeat)
+    else
+        rid = submit!(q, "m.jl"; head_workers = 2, kind = :ride, spi_check = false, repeat = 8)
+        @test_throws ErrorException DistSSHQueue.execute_kwargs(job(q, rid))
+    end
     @test_throws ArgumentError submit!(q, "x.jl"; head_slots = 1, kind = :pipeline)
 end
 
