@@ -413,6 +413,9 @@ end
 
 """Keywords DistSSHRun `execute!(...; detached=true)` accepts, from the job bag.
 
+Run writes settings into `job.toml` and starts the Kit child with bootstrap argv only
+(`-y` / `--yes` and `--job-blob PATH`). This bag is not re-encoded as extra argv or
+`DISTSSH_JOB_BLOB` on the child.
 `yes` and other dropped names are not forwarded (unattended children use Run's detached blob).
 `path_anchor` and other names are dropped. `job_id` is not taken from the bag; `run_kit` passes `Job.id`.
 Allow-list is DistSSHRun `execute_detached_accepts`.

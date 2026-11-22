@@ -78,6 +78,72 @@ function _proc_cmdline(proc::Base.Process)::String
     return join(parts, " ")
 end
 
+function _proc_cmdline_parts(proc::Base.Process)::Vector{String}
+    pid = Int(getpid(proc))
+    linux = "/proc/$(pid)/cmdline"
+    isfile(linux) && return String[split(String(read(linux)), '\0'; keepempty = false)...]
+    text = try
+        strip(
+            read(
+                addenv(`ps -ww -o args= -p $(pid)`, "LC_ALL" => "C"),
+                String,
+            ),
+        )
+    catch
+        ""
+    end
+    isempty(text) && return String[string(proc.cmd)...]
+    return String[split(text, " ")...]
+end
+
+"""`DistSSHRun` argv after `-m DistSSHRun` on a detached Kit child."""
+function _detached_kit_argv(proc::Base.Process)::Vector{String}
+    parts = _proc_cmdline_parts(proc)
+    m_idx = findfirst(==("-m"), parts)
+    m_idx === nothing && error("detached child argv missing -m DistSSHRun: $(join(parts, " "))")
+    length(parts) >= m_idx + 2 || error("detached child argv truncated after -m")
+    parts[m_idx + 1] == "DistSSHRun" ||
+        error("detached child expected -m DistSSHRun, got -m $(parts[m_idx + 1])")
+    return String[parts[(m_idx + 2):end]...]
+end
+
+function _proc_environ(proc::Base.Process)::String
+    pid = Int(getpid(proc))
+    path = "/proc/$(pid)/environ"
+    isfile(path) || return ""
+    return String(read(path))
+end
+
+"""Assert Run #571 detached bootstrap (`kind -y --job-blob PATH` only; no `DISTSSH_JOB_BLOB`)."""
+function _assert_detached_bootstrap!(proc::Base.Process, kind::Symbol)
+    argv = _detached_kit_argv(proc)
+    @test argv[1] == String(kind)
+    @test argv[2] in ("-y", "--yes")
+    @test findfirst(==("--job-blob"), argv) == 3
+    length(argv) == 4 ||
+        error("unexpected detached argv: $(join(argv, " ")); want $(kind) -y/--yes --job-blob PATH only")
+    env = _proc_environ(proc)
+    @test !occursin("DISTSSH_JOB_BLOB=", env)
+    if isdefined(DistSSHRun, :assert_detached_job_blob_bootstrap_argv!)
+        # Child argv is `go|drive -y --job-blob PATH`; Run's assert matches CLI args after the verb.
+        DistSSHRun.assert_detached_job_blob_bootstrap_argv!(argv[2:end])
+    end
+    return argv
+end
+
+function _finish_detached_or_kill!(kp::DistSSHRun.DetachedProcess)
+    try
+        return wait(kp)
+    catch
+        process_running(kp.process) && kill(kp.process)
+        try
+            wait(kp.process)
+        catch
+        end
+        rethrow()
+    end
+end
+
 @testset "ship run_id is pinned and not the job id" begin
     mktempdir() do d
         write(joinpath(d, "Project.toml"), "[deps]\n")
@@ -350,7 +416,62 @@ end
     end
 end
 
-@testset "persisted run_id reaches detached execute argv" begin
+@testset "detached Kit child bootstrap argv (Run #571)" begin
+    isdefined(DistSSHRun, :assert_detached_job_blob_bootstrap_argv!) || error(
+        "DistSSHRun.assert_detached_job_blob_bootstrap_argv! missing; lockstep with DistSSHRun PR 571",
+    )
+    let d = durable_tmpdir(; prefix = "distsshqueue-bootstrap-go-")
+        copy_registry_distsshrun_project!(d)
+        mark = joinpath(d, "RAN")
+        write(joinpath(d, "mark.jl"), "write($(repr(mark)), \"yes\")\n")
+        withenv("DISTSSH_TOPOLOGY" => "master_worker", "DISTSSH_QUIET" => "1") do
+            launched = DistSSHRun.execute!(
+                :go,
+                joinpath(d, "mark.jl"),
+                String[];
+                detached = true,
+                job_id = "queue-bootstrap-go",
+                project = d,
+                output_dir = joinpath(d, "out"),
+                quiet = true,
+            )
+            argv = _assert_detached_bootstrap!(launched.process, :go)
+            blob = argv[4]
+            @test isfile(blob)
+            blob_text = read(blob, String)
+            @test occursin("quiet = true", blob_text)
+            @test !occursin("-q", join(_proc_cmdline_parts(launched.process), " "))
+            r = _finish_detached_or_kill!(launched)
+            @test r.ok
+            @test isfile(mark)
+        end
+    end
+    let d = durable_tmpdir(; prefix = "distsshqueue-bootstrap-drive-")
+        copy_registry_distsshrun_project!(d)
+        mark = joinpath(d, "RAN")
+        write(joinpath(d, "mark.jl"), "write($(repr(mark)), \"yes\")\n")
+        launched = DistSSHRun.execute!(
+            :drive,
+            joinpath(d, "mark.jl"),
+            String[];
+            detached = true,
+            job_id = "queue-bootstrap-drive",
+            project = d,
+            output_dir = joinpath(d, "out"),
+            head_workers = 1,
+            log_dir = joinpath(d, "logs"),
+            skip_hash_check = true,
+        )
+        _assert_detached_bootstrap!(launched.process, :drive)
+        @test !occursin("--head-workers", _proc_cmdline(launched.process))
+        @test !occursin("--log-dir", _proc_cmdline(launched.process))
+        r = _finish_detached_or_kill!(launched)
+        @test r.ok
+        @test isfile(mark)
+    end
+end
+
+@testset "persisted run_id reaches detached job blob" begin
     isdefined(DistSSHRun, :result_remote_run_id) || error(
         "DistSSHRun.result_remote_run_id missing; DistSSHRun PR 402 is required",
     )
@@ -386,29 +507,20 @@ end
         )
         launched isa DistSSHRun.DetachedProcess || error("detached execute! did not return DetachedProcess")
         kp = launched::DistSSHRun.DetachedProcess
+        _assert_detached_bootstrap!(kp.process, :go)
         cmd = _proc_cmdline(kp.process)
-        try
-            @test occursin("--job-blob", cmd)
-            @test !occursin("--run-id", cmd)
-            blob_m = match(r"--job-blob\s+(/[^\s\",]+?\.toml)", cmd)
-            @test blob_m !== nothing
-            caps = blob_m.captures
-            @test caps isa AbstractVector && !isempty(caps)
-            cap1 = caps[1]
-            @test cap1 isa AbstractString
-            blob_text = read(String(cap1), String)
-            @test occursin(_SNAP_A, blob_text)
-            @test !occursin("run_id = \"$(loaded.id)\"", blob_text)
-            r = wait(kp)
-            @test r.ok
-            @test isfile(mark)
-        catch
-            process_running(kp.process) && kill(kp.process)
-            try
-                wait(kp.process)
-            catch
-            end
-            rethrow()
-        end
+        @test !occursin("--run-id", cmd)
+        blob_m = match(r"--job-blob\s+(/[^\s\",]+?\.toml)", cmd)
+        @test blob_m !== nothing
+        caps = blob_m.captures
+        @test caps isa AbstractVector && !isempty(caps)
+        cap1 = caps[1]
+        @test cap1 isa AbstractString
+        blob_text = read(String(cap1), String)
+        @test occursin(_SNAP_A, blob_text)
+        @test !occursin("run_id = \"$(loaded.id)\"", blob_text)
+        r = _finish_detached_or_kill!(kp)
+        @test r.ok
+        @test isfile(mark)
     end
 end
