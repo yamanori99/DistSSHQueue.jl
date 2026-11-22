@@ -713,12 +713,12 @@ end
                     )
                 end
                 for lab in (
-                    "pi_file",
-                    "pi_echo",
-                    "square_file",
-                    "square_echo",
-                    _E2E_RIDE_SUPPORTED ? "map_echo" : nothing,
-                )
+                        "pi_file",
+                        "pi_echo",
+                        "square_file",
+                        "square_echo",
+                        _E2E_RIDE_SUPPORTED ? "map_echo" : nothing,
+                    )
                     lab === nothing && continue
                     _e2e_push!(lab)
                 end
