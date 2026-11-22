@@ -257,7 +257,10 @@ function _submit_requests_help(rest::Vector{String})::Bool
     head = String(peeled[1])
     head in ("-h", "--help") && return true
     kind = Symbol(head)
-    is_kit_execute_kind(kind) || return false
+    if !is_kit_execute_kind(kind)
+        tail = String[String(a) for a in peeled[2:end]]
+        return length(tail) >= 1 && tail[1] in ("-h", "--help")
+    end
     parsed = try
         kit_parse_args(kind, String[String(a) for a in peeled[2:end]])
     catch e
