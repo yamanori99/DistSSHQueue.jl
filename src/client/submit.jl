@@ -240,32 +240,18 @@ function script_arg(path::AbstractString, ::AbstractString)::String
     )
 end
 
-const _RIDE_REMOVED = !isdefined(DistSSHRun, :parse_ride_args)
-
-function _ride_removed_error()::ArgumentError
-    return ArgumentError(
-        "submit ride was removed with DistSSHRun 0.2 on main; use submit go or submit drive",
-    )
-end
-
 """Parse Kit execute argv. One table: add a kind here, in `KIT_EXECUTE_KINDS`, and in `main`."""
 function kit_parse_args(kind::Symbol, args::Vector{String})
     kind === :go && return DistSSHRun.parse_go_args(args)
     kind === :drive && return DistSSHRun.parse_drive_args(args)
-    if kind === :ride
-        _RIDE_REMOVED && throw(_ride_removed_error())
-        return getfield(DistSSHRun, :parse_ride_args)(args)
-    end
+    kind === :ride && return DistSSHRun.parse_ride_args(args)
     throw(ArgumentError("submit: unknown kit command $(repr(kind))"))
 end
 
 function kit_show_usage(kind::Symbol)
     kind === :go && return DistSSHRun.show_go_usage()
     kind === :drive && return DistSSHRun.show_drive_usage()
-    if kind === :ride
-        _RIDE_REMOVED && throw(_ride_removed_error())
-        return getfield(DistSSHRun, :show_ride_usage)()
-    end
+    kind === :ride && return DistSSHRun.show_ride_usage()
     throw(ArgumentError("submit: unknown kit command $(repr(kind))"))
 end
 

@@ -3,8 +3,6 @@ using Dates
 using DistSSHRun
 using DistSSHQueue
 
-const _RIDE_SUPPORTED = isdefined(DistSSHRun, :parse_ride_args)
-
 function _ok_kit_doctor(session; deploy::Bool, run_id = nothing)
     _ = session
     _ = run_id
@@ -1002,10 +1000,8 @@ end
     g = job(q, gid)
     @test g.kind === :go
     @test !haskey(g.kwargs, "path_anchor")
-    if _RIDE_SUPPORTED
-        rid = submit!(q, "m.jl"; head_workers = 1, kind = :ride)
-        @test job(q, rid).kind === :ride
-    end
+    rid = submit!(q, "m.jl"; head_workers = 1, kind = :ride)
+    @test job(q, rid).kind === :ride
 end
 
 @testset "kit setup session uses job remote" begin
@@ -1750,15 +1746,10 @@ end
     @test DistSSHQueue.execute_kwargs(job(q, rid)).repeat == 8
     didr = submit!(q, "rd.jl"; head_workers = 1, kind = :drive, repeat = 8)
     @test !haskey(DistSSHQueue.execute_kwargs(job(q, didr)), :repeat)
-    if _RIDE_SUPPORTED
-        ride = submit!(q, "m.jl"; head_workers = 2, kind = :ride, spi_check = false, repeat = 8)
-        rkw = DistSSHQueue.execute_kwargs(job(q, ride))
-        @test rkw.spi_check === false
-        @test !haskey(rkw, :repeat)
-    else
-        rid = submit!(q, "m.jl"; head_workers = 2, kind = :ride, spi_check = false, repeat = 8)
-        @test_throws ErrorException DistSSHQueue.execute_kwargs(job(q, rid))
-    end
+    ride = submit!(q, "m.jl"; head_workers = 2, kind = :ride, spi_check = false, repeat = 8)
+    rkw = DistSSHQueue.execute_kwargs(job(q, ride))
+    @test rkw.spi_check === false
+    @test !haskey(rkw, :repeat)
     @test_throws ArgumentError submit!(q, "x.jl"; head_slots = 1, kind = :pipeline)
 end
 
@@ -2055,22 +2046,15 @@ end
                 @test code_help_go == 0
                 @test out_help_go == out_sh
                 @test isempty(err_help_go)
-                code_ride_h, out_ride_h, err_ride_h = capture_stdio() do
+                code_ride_h, out_ride_h, _ = capture_stdio() do
                     DistSSHQueue.main(["submit", "ride", "--help"])
                 end
-                code_help_ride, out_help_ride, err_help_ride = capture_stdio() do
+                code_help_ride, out_help_ride, _ = capture_stdio() do
                     DistSSHQueue.main(["help", "submit", "ride"])
                 end
-                if _RIDE_SUPPORTED
-                    @test code_ride_h == 0
-                    @test code_help_ride == 0
-                    @test out_help_ride == out_ride_h
-                else
-                    @test code_ride_h != 0
-                    @test code_help_ride != 0
-                    combined = err_ride_h * out_ride_h * err_help_ride * out_help_ride
-                    @test occursin("submit ride was removed", combined)
-                end
+                @test code_ride_h == 0
+                @test code_help_ride == 0
+                @test out_help_ride == out_ride_h
                 code_hop_help, out_hop_help, err_hop_help = capture_stdio() do
                     DistSSHQueue.main(["qhost:no-such-host", "help", "submit"])
                 end
@@ -2200,19 +2184,13 @@ end
                 @test rows[2].hosts == String[]
                 @test rows[2].kwargs["head_workers"] == 2
                 @test rows[2].kwargs["project"] == proj
-                code_ride, _, err_ride = capture_stdio() do
+                code_ride, _, _ = capture_stdio() do
                     DistSSHQueue.main(["submit", "ride", "--no-spi-check", "--head-workers", "1", "map.jl"])
                 end
                 rows = DistSSHQueue.read_jobs(p)
-                if _RIDE_SUPPORTED
-                    @test code_ride == 0
-                    @test rows[end].kind === :ride
-                    @test DistSSHQueue.execute_kwargs(rows[end]).spi_check === false
-                else
-                    @test code_ride != 0
-                    @test occursin("submit ride was removed", err_ride)
-                    @test length(rows) == 2
-                end
+                @test code_ride == 0
+                @test rows[end].kind === :ride
+                @test DistSSHQueue.execute_kwargs(rows[end]).spi_check === false
                 code_w, _, _ = capture_stdio() do
                     DistSSHQueue.main(["submit", "drive", "--head-workers", "4", "1*host1", "drv.jl"])
                 end
@@ -2431,15 +2409,10 @@ end
                 code, out, err = capture_stdio() do
                     DistSSHQueue.main(["submit", kind, "--help"])
                 end
-                if kind == "ride" && !_RIDE_SUPPORTED
-                    @test code != 0
-                    @test occursin("submit ride was removed", err * out)
-                else
-                    @test code == 0
-                    @test err == ""
-                    @test occursin(kind, out)
-                    @test out != out_go
-                end
+                @test code == 0
+                @test err == ""
+                @test occursin(kind, out)
+                @test out != out_go
             end
             code_page, out_page, err_page = capture_stdio() do
                 DistSSHQueue.main(["submit", "pool:2", "--help"])

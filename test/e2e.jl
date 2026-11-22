@@ -123,16 +123,13 @@ function kit_root()::String
     return dirname(dirname(String(p)))
 end
 
-const _E2E_RIDE_SUPPORTED = isdefined(DistSSHRun, :parse_ride_args)
-
 function stage_kit_demos!(proj::AbstractString)
     kit = kit_root()
-    subdirs = [
-        ("without_kit", ("pi_file.jl", "pi_echo.jl")),
-        ("with_kit", ("square_file.jl", "square_echo.jl")),
-    ]
-    _E2E_RIDE_SUPPORTED && push!(subdirs, ("ride", ("map_echo.jl",)))
-    for (subdir, names) in subdirs
+    for (subdir, names) in (
+            ("without_kit", ("pi_file.jl", "pi_echo.jl")),
+            ("with_kit", ("square_file.jl", "square_echo.jl")),
+            ("ride", ("map_echo.jl",)),
+        )
         dest = joinpath(proj, "demos", subdir)
         mkpath(dest)
         for name in names
@@ -698,28 +695,22 @@ end
                         nothing,
                         nothing,
                     ),
+                    (
+                        :ride,
+                        joinpath(JOB_PROJECT, "demos", "ride", "map_echo.jl"),
+                        "map_echo",
+                        String[],
+                        nothing,
+                        "1,4,9,16,25,36,49,64",
+                    ),
                 ]
-                if _E2E_RIDE_SUPPORTED
-                    push!(
-                        cases,
-                        (
-                            :ride,
-                            joinpath(JOB_PROJECT, "demos", "ride", "map_echo.jl"),
-                            "map_echo",
-                            String[],
-                            nothing,
-                            "1,4,9,16,25,36,49,64",
-                        ),
-                    )
-                end
                 for lab in (
                         "pi_file",
                         "pi_echo",
                         "square_file",
                         "square_echo",
-                        _E2E_RIDE_SUPPORTED ? "map_echo" : nothing,
+                        "map_echo",
                     )
-                    lab === nothing && continue
                     _e2e_push!(lab)
                 end
                 for (kind, script, label, args, artifact, needle) in cases
