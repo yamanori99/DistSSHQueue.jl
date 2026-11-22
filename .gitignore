@@ -1,6 +1,5 @@
 # Julia / Pkg
 Manifest.toml
-!bench/compile/fixtures/jobenv/Manifest.toml
 docs/Manifest.toml
 !docs/src/assets/logo/Manifest.toml
 docs/build/
