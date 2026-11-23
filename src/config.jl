@@ -410,9 +410,9 @@ function default_config_body(; store::AbstractString = default_store_path())::St
     # hosts = ["4*host1", "host2"]   # Run machine-file tokens; head omitted
 
     [env]
-    # DISTRIBUTED_SSH_OPTS = "-F /path/to/ssh_config"
+    # DISTSSH_SSH_OPTS = "-F /path/to/ssh_config"
     # DISTSSH_YES = "1"   # up default only; not teardown
-    # Do not set DISTRIBUTED_REMOTE_PROJECT_ROOT here on a shared queue host:
+    # Do not set DISTSSH_REMOTE_PROJECT_ROOT here on a shared queue host:
     # every job would deploy to that one worker path. Kit default is
     # ~/basename(parent)/basename(project) from the queue-host clone.
     """

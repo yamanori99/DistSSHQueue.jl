@@ -24,8 +24,8 @@ using DistSSHRun.DistSSHBase: PARENT_HOST_NAME, _ssh_host_args, _test_doubles_on
     get_remote_julia_version_full, is_local_state_dir_name, is_sigint, julia_project_rel,
     local_state_dir_names, local_state_write_root, machine_ssh_label, parse_julia_version_full,
     parse_machine_token, remote_env_project_root, resolve_local_state_dir, resolve_remote_julia,
-    resolve_remote_project_root, shell_status, shield_sigint, throw_legacy_machine_token,
-    with_cli_entry, without_cancel
+    resolve_remote_project_root, shell_status, shield_sigint, throw_if_legacy_env!,
+    throw_legacy_machine_token, with_cli_entry, without_cancel
 using DistSSHRun.DistSSHUp: juliaup_add_host!, juliaup_default_host!,
     juliaup_default_patch, juliaup_status_lines, juliaup_update_host!
 

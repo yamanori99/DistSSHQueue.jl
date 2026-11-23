@@ -161,7 +161,7 @@ rsync が各ディレクトリの `.gitignore` を使う。`.distsshqueue-backup
 
 `~/.distsshqueue` はキューを持つ。`qhost:` のジョブツリーは
 `stage/<uuid>/`。`parent` はこの stage をこのマシン上で使う。共有
-config では `DISTRIBUTED_REMOTE_PROJECT_ROOT` を設定しない。`child:`
+config では `DISTSSH_REMOTE_PROJECT_ROOT` を設定しない。`child:`
 へのコピーは `~/stage/<uuid>` のまま分かれる。store はローカルディスク
 （APFS、ext4、WSL2 の Linux ファイルシステム）に置く。NFS と、`/mnt/c`
 のような WSL drvfs は store の場所にしない。
@@ -207,7 +207,7 @@ rsync し、実行前にそこで instantiate する。
 
 - `~/.distsshqueue` も `jobs.toml` も無い。
 - `qhost:` ならコピー先は `~/stage/<uuid>` でジョブごとに違う。共有
-  `config.toml` に `DISTRIBUTED_REMOTE_PROJECT_ROOT` は書かない。
+  `config.toml` に `DISTSSH_REMOTE_PROJECT_ROOT` は書かない。
 - 成果物はここに残らない。キューホストへ収集する。既定 leaf は
   上の `.distssh/<kind>/` だが、custom な `output_dir` はその先へ
   落ち、そのパスは `result_path` として残る (fetch は

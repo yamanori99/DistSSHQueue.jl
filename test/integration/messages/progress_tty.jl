@@ -72,7 +72,7 @@ using DistSSHQueue
             "DISTSSHQUEUE_CONFIG" => cfg,
             "DISTSSHQUEUE_STORE" => store,
             "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
-            "DISTRIBUTED_PROJECT_ROOT" => jobdir,
+            "DISTSSH_PROJECT_ROOT" => jobdir,
             "DISTSSH_TEST" => "1",
             "DISTSSH_TEST_SSH" => fail_ssh,
             DistSSHQueue.LOCAL_QUEUE_ENV => "1",
@@ -95,7 +95,7 @@ using DistSSHQueue
                 export DISTSSHQUEUE_CONFIG=$(_queue_sh_quote(cfg))
                 export DISTSSHQUEUE_STORE=$(_queue_sh_quote(store))
                 export DISTSSHQUEUE_NO_AUTOSERVE=1
-                export DISTRIBUTED_PROJECT_ROOT=$(_queue_sh_quote(jobdir))
+                export DISTSSH_PROJECT_ROOT=$(_queue_sh_quote(jobdir))
                 export DISTSSH_TEST=1
                 export DISTSSH_TEST_SSH=$(_queue_sh_quote(fail_ssh))
                 export $(DistSSHQueue.LOCAL_QUEUE_ENV)=1
@@ -311,7 +311,7 @@ using DistSSHQueue
                 export DISTSSHQUEUE_CONFIG=$(_queue_sh_quote(cfg))
                 export DISTSSHQUEUE_STORE=$(_queue_sh_quote(store))
                 export DISTSSHQUEUE_NO_AUTOSERVE=1
-                export DISTRIBUTED_PROJECT_ROOT=$(_queue_sh_quote(jobdir))
+                export DISTSSH_PROJECT_ROOT=$(_queue_sh_quote(jobdir))
                 export DISTSSH_TEST=1
                 export $(DistSSHQueue.LOCAL_QUEUE_ENV)=1
                 export $(DistSSHQueue.NO_KIT_SETUP_ENV)=1

@@ -249,7 +249,7 @@ end
         write(joinpath(b, "x.jl"), "1\n")
         q = Queue(; runner = _ -> nothing)
         shared = "/tmp/distsshqueue-shared-remote"
-        withenv("DISTRIBUTED_REMOTE_PROJECT_ROOT" => shared) do
+        withenv("DISTSSH_REMOTE_PROJECT_ROOT" => shared) do
             id = submit!(q, joinpath(a, "x.jl"); head_slots = 1, project = a)
             @test DistSSHQueue.canonical_local_path(String(job(q, id).kwargs["project"])) ==
                 DistSSHQueue.canonical_local_path(a)
@@ -292,7 +292,7 @@ end
         write_shippable_project!(s2; name = "Stage2")
         write(joinpath(s1, "x.jl"), "1\n")
         write(joinpath(s2, "x.jl"), "1\n")
-        withenv("DISTRIBUTED_REMOTE_PROJECT_ROOT" => 1) do
+        withenv("DISTSSH_REMOTE_PROJECT_ROOT" => 1) do
             q = Queue(; runner = _ -> nothing)
             id1 = submit!(q, joinpath(s1, "x.jl"); head_slots = 1, project = s1)
             id2 = submit!(q, joinpath(s2, "x.jl"); head_slots = 1, project = s2)
@@ -302,7 +302,7 @@ end
             @test r1 != r2
         end
         shared = "/tmp/distsshqueue-shared-remote"
-        withenv("DISTRIBUTED_REMOTE_PROJECT_ROOT" => shared) do
+        withenv("DISTSSH_REMOTE_PROJECT_ROOT" => shared) do
             q = Queue(; runner = _ -> nothing)
             id1 = submit!(q, joinpath(s1, "x.jl"); head_slots = 1, project = s1)
             id2 = submit!(q, joinpath(s2, "x.jl"); head_slots = 1, project = s2)
@@ -1581,7 +1581,7 @@ end
         @test get(j.kwargs, "output_dir", nothing) === nothing
         mod = Module()
         Base.include(mod, script)
-        got = withenv("DISTRIBUTED_OUTPUT_DIR" => "") do
+        got = withenv("DISTSSH_OUTPUT_DIR" => "") do
             @eval mod init_output_dir!(String[])
         end
         @test DistSSHQueue.canonical_local_path(got) ==
@@ -1816,7 +1816,7 @@ end
             "DISTSSHQUEUE_STORE" => p,
             "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
             "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
-            "DISTRIBUTED_PROJECT_ROOT" => 1,
+            "DISTSSH_PROJECT_ROOT" => 1,
         ) do
             cd(jobdir) do
                 proj = DistSSHQueue.canonical_local_path(pwd())
@@ -2852,7 +2852,7 @@ end
             "DISTSSHQUEUE_STORE" => p,
             "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
             "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
-            "DISTRIBUTED_PROJECT_ROOT" => 1,
+            "DISTSSH_PROJECT_ROOT" => 1,
         ) do
             code, _, err = capture_stdio() do
                 DistSSHQueue.main(["plan", "echo.jl"])
@@ -2873,7 +2873,7 @@ end
             "DISTSSHQUEUE_STORE" => p,
             "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
             "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
-            "DISTRIBUTED_PROJECT_ROOT" => 1,
+            "DISTSSH_PROJECT_ROOT" => 1,
         ) do
             code, out, _ = capture_stdio() do
                 DistSSHQueue.main(["pool", "-h"])
@@ -2952,7 +2952,7 @@ end
             "DISTSSHQUEUE_STORE" => p,
             "DISTSSHQUEUE_CONFIG" => joinpath(d, "config.toml"),
             "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
-            "DISTRIBUTED_PROJECT_ROOT" => 1,
+            "DISTSSH_PROJECT_ROOT" => 1,
             "DISTSSHQUEUE_WATCH_TICKS" => "1",
         ) do
             cd(jobdir) do
@@ -3061,7 +3061,7 @@ end
             "DISTSSHQUEUE_STORE" => p,
             "DISTSSHQUEUE_CONFIG" => joinpath(d, "missing.toml"),
             "DISTSSHQUEUE_NO_AUTOSERVE" => "1",
-            "DISTRIBUTED_PROJECT_ROOT" => 1,
+            "DISTSSH_PROJECT_ROOT" => 1,
         ) do
             cd(jobdir) do
                 code, _, err = capture_stdio() do

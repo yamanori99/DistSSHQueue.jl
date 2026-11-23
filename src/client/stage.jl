@@ -1,6 +1,6 @@
 # Client `qhost:` submit: rsync the job tree onto the queue host.
 #
-# Omit `qhost:` is unchanged (cwd / `DISTRIBUTED_PROJECT_ROOT` on this box).
+# Omit `qhost:` is unchanged (cwd / `DISTSSH_PROJECT_ROOT` on this box).
 # Kit still copies queue host → workers. Inside a git work tree the file list
 # is DistSSHRun's `git_send_list` (the same list as `setup --rsync`). Outside
 # one, rsync keeps its per-directory `.gitignore` filter. `.distsshqueue/`
@@ -531,7 +531,7 @@ end
 
 """Rsync the Manifest directory to `~/.distsshqueue/stage/<uuid>` on `host`.
 
-`DISTRIBUTED_PROJECT_ROOT` is the staged project directory, which is a
+`DISTSSH_PROJECT_ROOT` is the staged project directory, which is a
 subdirectory when the job project is a workspace member.
 """
 function stage_job_tree!(
@@ -564,7 +564,7 @@ function stage_job_tree!(
         staged = String[a == raw ? want : a for a in staged]
     end
     env = Dict{String, String}(
-        "DISTRIBUTED_PROJECT_ROOT" => layout.remote_proj,
+        "DISTSSH_PROJECT_ROOT" => layout.remote_proj,
         JOB_ID_ENV => key,
     )
     merge!(env, source_env)
