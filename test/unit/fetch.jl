@@ -65,7 +65,7 @@ end
         write(script, "1\n")
         queued_store = joinpath(d, "queued.toml")
         q = Queue(; store = queued_store, runner = _ -> nothing)
-        queued = withenv("DISTRIBUTED_PROJECT_ROOT" => proj) do
+        queued = withenv("DISTSSH_PROJECT_ROOT" => proj) do
             submit!(q, script; head_slots = 1, project = proj)
         end
         @test_throws ArgumentError DistSSHQueue.fetch_source(queued; store = queued_store)
@@ -80,7 +80,7 @@ end
                 return leaf[]
             end
         )
-        running = withenv("DISTRIBUTED_PROJECT_ROOT" => proj) do
+        running = withenv("DISTSSH_PROJECT_ROOT" => proj) do
             submit!(q2, script; head_slots = 1, project = proj)
         end
         leaf[] = joinpath(d, ".distsshkit", "go", "S_" * first(running, 8))
@@ -116,7 +116,7 @@ end
         stray_store = joinpath(d, "stray.toml")
         stray_id = Ref{String}()
         q3 = Queue(; store = stray_store, runner = _ -> "/tmp/go/S_" * first(stray_id[], 8))
-        stray_id[] = withenv("DISTRIBUTED_PROJECT_ROOT" => proj) do
+        stray_id[] = withenv("DISTSSH_PROJECT_ROOT" => proj) do
             submit!(q3, script; head_slots = 1, project = proj)
         end
         @test step!(q3) == 1
@@ -281,7 +281,7 @@ end
             "DISTSSHQUEUE_HOST" => 1,
             "DISTSSHQUEUE_NO_STAGE" => "1",
             DistSSHQueue.LOCAL_QUEUE_ENV => "1",
-            "DISTRIBUTED_PROJECT_ROOT" => proj,
+            "DISTSSH_PROJECT_ROOT" => proj,
             "DISTSSH_TEST_SSH" => 1,
         ) do
             code, out, err = capture_stdio() do
@@ -427,7 +427,7 @@ end
         @test into == dest
         @test force
         @test progress
-        withenv("DISTRIBUTED_PROJECT_ROOT" => d) do
+        withenv("DISTSSH_PROJECT_ROOT" => d) do
             rel = DistSSHQueue.resolve_into_path("data/payoff")
             @test rel == DistSSHQueue.canonical_local_path(joinpath(d, "data", "payoff"))
             abs = DistSSHQueue.resolve_into_path(joinpath(d, "outside"))

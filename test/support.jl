@@ -52,7 +52,7 @@ function with_submit_project(f)
         write_shippable_project!(d)
         script = joinpath(d, "job.jl")
         write(script, "1\n")
-        withenv("DISTRIBUTED_PROJECT_ROOT" => d) do
+        withenv("DISTSSH_PROJECT_ROOT" => d) do
             return f(d, script)
         end
     end
@@ -72,7 +72,7 @@ function ensure_global_submit_project!()
         end
         _GLOBAL_SUBMIT_ROOT[] = root
     end
-    ENV["DISTRIBUTED_PROJECT_ROOT"] = root
+    ENV["DISTSSH_PROJECT_ROOT"] = root
     return root
 end
 

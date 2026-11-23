@@ -110,8 +110,8 @@ const DRIVE_WAIT_TRIES = wait_tries(:drive_job, 0.2)
 const SSH_ENV = Dict(
     "DISTSSH_YES" => "1",
     "DISTSSH_QUIET" => get(ENV, "DISTSSH_QUIET", "1"),
-    "DISTRIBUTED_SSH_OPTS" => "-F $(SSH_CONFIG)",
-    "DISTRIBUTED_REMOTE_PROJECT_ROOT" => REMOTE_ROOT,
+    "DISTSSH_SSH_OPTS" => "-F $(SSH_CONFIG)",
+    "DISTSSH_REMOTE_PROJECT_ROOT" => REMOTE_ROOT,
     # E2E already runs Kit setup! in its own testset. Per-job setup! would
     # redo rsync/instantiate/:check.
     DistSSHQueue.NO_KIT_SETUP_ENV => "1",
@@ -1119,12 +1119,12 @@ end
                     "DISTSSH_YES" => "1",
                     "DISTSSH_QUIET" => get(ENV, "DISTSSH_QUIET", "1"),
                     "DISTSSHQUEUE_WATCH_TICKS" => "1",
-                    "DISTRIBUTED_SSH_OPTS" => "-F $(SSH_CONFIG)",
+                    "DISTSSH_SSH_OPTS" => "-F $(SSH_CONFIG)",
                     # Kit project is the example job, not the CLI's cwd. Over `qhost:`
                     # the ssh command lands in the login HOME, so `job_project()`
                     # cannot infer it; pin it like the API tests pass `project=`.
-                    "DISTRIBUTED_PROJECT_ROOT" => JOB_PROJECT,
-                    "DISTRIBUTED_REMOTE_PROJECT_ROOT" => REMOTE_ROOT,
+                    "DISTSSH_PROJECT_ROOT" => JOB_PROJECT,
+                    "DISTSSH_REMOTE_PROJECT_ROOT" => REMOTE_ROOT,
                     DistSSHQueue.NO_KIT_SETUP_ENV => "1",
                 )
 
@@ -1247,15 +1247,15 @@ end
                             "DISTSSHQUEUE_STORE" => qh_store,
                             "DISTSSH_YES" => "1",
                             "DISTSSH_QUIET" => get(ENV, "DISTSSH_QUIET", "1"),
-                            "DISTRIBUTED_SSH_OPTS" => "-F $(SSH_CONFIG)",
-                            "DISTRIBUTED_REMOTE_PROJECT_ROOT" => REMOTE_ROOT,
+                            "DISTSSH_SSH_OPTS" => "-F $(SSH_CONFIG)",
+                            "DISTSSH_REMOTE_PROJECT_ROOT" => REMOTE_ROOT,
                         )
                         wrapper = write_remote_julia(joinpath(d, "remote-julia"), remote_env)
                         client_env = Dict{String, String}(
                             "DISTSSH_YES" => "1",
                             "DISTSSHQUEUE_WATCH_TICKS" => "1",
-                            "DISTRIBUTED_SSH_OPTS" => "-F $ssh_cfg",
-                            "DISTRIBUTED_PROJECT_ROOT" => JOB_PROJECT,
+                            "DISTSSH_SSH_OPTS" => "-F $ssh_cfg",
+                            "DISTSSH_PROJECT_ROOT" => JOB_PROJECT,
                         )
                         qh(rest) = qcmd(["qhost:distsshqueue-qh", "--remote-julia", wrapper, "--queue-env", test_project, rest...])
 

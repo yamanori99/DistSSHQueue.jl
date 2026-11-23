@@ -142,7 +142,7 @@ end
         @test !DistSSHQueue.should_stage("submit", ["go", "S.jl"])
         @test DistSSHQueue.should_submit_ticket("submit", ["go", "S.jl"])
     end
-    withenv("DISTRIBUTED_SSH_OPTS" => "-F \"/tmp/cfg dir/config\" -o BatchMode=yes") do
+    withenv("DISTSSH_SSH_OPTS" => "-F \"/tmp/cfg dir/config\" -o BatchMode=yes") do
         t = DistSSHQueue._ssh_transport()
         @test startswith(t, "ssh ")
         @test occursin(Base.shell_escape("/tmp/cfg dir/config"), t)
@@ -574,7 +574,7 @@ end
             DistSSHQueue._RSYNC_VER_READY[] = false
         end
         @test any(s -> startswith(s, "/tmp/fakehome/.distsshqueue/stage/"), staged)
-        @test startswith(extra["DISTRIBUTED_PROJECT_ROOT"], "/tmp/fakehome/.distsshqueue/stage/")
+        @test startswith(extra["DISTSSH_PROJECT_ROOT"], "/tmp/fakehome/.distsshqueue/stage/")
         @test haskey(extra, DistSSHQueue.JOB_ID_ENV)
         @test !haskey(extra, DistSSHQueue.SOURCE_COMMIT_ENV)
         @test occursin("/tmp/fakehome/.distsshqueue/stage/", read(rsynclog, String))

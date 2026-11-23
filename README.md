@@ -164,7 +164,7 @@ reach `child:` as well, except `.git/` and local state dirs (`.distssh/`, legacy
 
 `~/.distsshqueue` holds the queue. Each `qhost:` job is a project
 under `stage/<uuid>/`. `parent` runs from that stage on this box. Leave
-`DISTRIBUTED_REMOTE_PROJECT_ROOT` unset in shared config so each
+`DISTSSH_REMOTE_PROJECT_ROOT` unset in shared config so each
 `child:` copy stays `~/stage/<uuid>`. The store is a local disk (APFS,
 ext4, or the WSL2 Linux filesystem). NFS and a WSL drvfs mount such as
 `/mnt/c` are not a store location.
@@ -210,7 +210,7 @@ and instantiated before the run:
 
 - No `~/.distsshqueue`, no `jobs.toml`.
 - After `qhost:` the copy is `~/stage/<uuid>` (unique per job). Do not
-  pin a shared `DISTRIBUTED_REMOTE_PROJECT_ROOT` in `config.toml`.
+  pin a shared `DISTSSH_REMOTE_PROJECT_ROOT` in `config.toml`.
 - Artifacts do not stay here: results are collected back to the queue
   host. The default leaf is `.distssh/<kind>/` shown above; a custom
   `output_dir` lands wherever it points, and that path is stored as

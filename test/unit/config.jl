@@ -553,9 +553,9 @@ end
         @test occursin("host1", text)
         @test occursin("[env]", text)
         @test occursin("# DistSSHQueue", text)
-        @test occursin("DISTRIBUTED_SSH_OPTS", text)
-        @test occursin("Do not set DISTRIBUTED_REMOTE_PROJECT_ROOT here", text)
-        @test !occursin("DISTRIBUTED_REMOTE_PROJECT_ROOT = ", text)
+        @test occursin("DISTSSH_SSH_OPTS", text)
+        @test occursin("Do not set DISTSSH_REMOTE_PROJECT_ROOT here", text)
+        @test !occursin("DISTSSH_REMOTE_PROJECT_ROOT = ", text)
         DistSSHQueue.add_host_names!(cfg, ["host1"])
         @test DistSSHQueue.config_host_names(DistSSHQueue.load_config(; path = cfg)) ==
             H("host1" => 1)
@@ -1190,20 +1190,40 @@ end
 end
 
 @testset "ssh_opts keeps a quoted path" begin
-    withenv("DISTRIBUTED_SSH_OPTS" => "-F \"/tmp/cfg dir/config\" -o BatchMode=yes") do
+    withenv("DISTSSH_SSH_OPTS" => "-F \"/tmp/cfg dir/config\" -o BatchMode=yes") do
         opts = DistSSHQueue.ssh_opts()
         @test startswith(opts[1], "-F")
         @test length(opts) > 4
         @test opts[1:2] == ["-F", "/tmp/cfg dir/config"]
         @test "BatchMode=yes" in opts
     end
-    withenv("DISTRIBUTED_SSH_OPTS" => "-F \"unterminated") do
+    withenv("DISTSSH_SSH_OPTS" => "-F \"unterminated") do
         @test_throws ArgumentError DistSSHQueue.ssh_opts()
     end
-    withenv("DISTRIBUTED_SSH_OPTS" => nothing) do
+    withenv("DISTSSH_SSH_OPTS" => nothing) do
         opts = DistSSHQueue.ssh_opts()
         @test length(opts) > 4
         @test "BatchMode=yes" in opts
+    end
+end
+
+@testset "legacy DISTRIBUTED_ env names error" begin
+    withenv("DISTRIBUTED_PROJECT_ROOT" => "/tmp/old-proj") do
+        err = try
+            DistSSHQueue.job_project()
+            nothing
+        catch e
+            e
+        end
+        @test err isa ArgumentError
+        @test occursin("DISTRIBUTED_PROJECT_ROOT", err.msg)
+        @test occursin("DISTSSH_PROJECT_ROOT", err.msg)
+    end
+    withenv("DISTRIBUTED_REMOTE_PROJECT_ROOT" => "/tmp/old-remote") do
+        @test_throws ArgumentError DistSSHQueue._resolve_remote_project_root(pwd())
+    end
+    withenv("DISTRIBUTED_SSH_OPTS" => "-F /tmp/cfg") do
+        @test_throws ArgumentError DistSSHQueue.ssh_opts()
     end
 end
 

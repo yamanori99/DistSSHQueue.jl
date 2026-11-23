@@ -55,12 +55,14 @@ function _resolve_id(jobs::Vector{Job}, token::AbstractString)::String
     return hits[1]
 end
 
-"""Kit project: `DISTRIBUTED_PROJECT_ROOT`, else the `Project.toml` above `cwd`, else `cwd`.
+"""Kit project: `DISTSSH_PROJECT_ROOT`, else the `Project.toml` above `cwd`, else `cwd`.
 
 Not the Julia `--project=` that loaded DistSSHQueue.
+A leftover `DISTRIBUTED_PROJECT_ROOT` is an error (Run 0.2.0 rename).
 """
 function job_project(; cwd::AbstractString = pwd())::String
-    env = strip(get(ENV, "DISTRIBUTED_PROJECT_ROOT", ""))
+    throw_if_legacy_env!()
+    env = strip(get(ENV, "DISTSSH_PROJECT_ROOT", ""))
     isempty(env) || return canonical_local_path(env)
     host = resolve_pkg_project_dir(cwd)
     root = isfile(joinpath(host, "Project.toml")) ? String(host) : String(cwd)
@@ -71,7 +73,7 @@ end
 
 Matches DistSSHRun detached `execute!` (`remote_env_project_root`; the DistSSHKit 0.4.2 layout):
 `~…` stays a remote-shell layout; an absolute path is canonical. Empty `remote=`
-falls through to Kit's default / `DISTRIBUTED_REMOTE_PROJECT_ROOT`.
+falls through to Kit's default / `DISTSSH_REMOTE_PROJECT_ROOT`.
 """
 function kit_worker_root(project::AbstractString, kw::AbstractDict)::String
     r = get(kw, "remote", nothing)
@@ -89,11 +91,15 @@ function kit_worker_root(project::AbstractString, kw::AbstractDict)::String
     return remote_env_project_root(layout)
 end
 
-"""Like Run's resolver, but tests use env value `1` as unset (same as `DISTSSHQUEUE_*`)."""
+"""Like Run's resolver, but tests use env value `1` as unset (same as `DISTSSHQUEUE_*`).
+
+A leftover `DISTRIBUTED_REMOTE_PROJECT_ROOT` is an error (Run 0.2.0 rename).
+"""
 function _resolve_remote_project_root(project::AbstractString)::String
-    v = strip(get(ENV, "DISTRIBUTED_REMOTE_PROJECT_ROOT", ""))
+    throw_if_legacy_env!()
+    v = strip(get(ENV, "DISTSSH_REMOTE_PROJECT_ROOT", ""))
     if isempty(v) || v == "1"
-        return withenv("DISTRIBUTED_REMOTE_PROJECT_ROOT" => "") do
+        return withenv("DISTSSH_REMOTE_PROJECT_ROOT" => "") do
             resolve_remote_project_root(project)
         end
     end
@@ -111,7 +117,7 @@ end
 
 Does not rename. Does not `setup --delete`. Same project (re-submit) is fine.
 Terminal rows do not occupy workers. Two `qhost:` stage UUID dirs may share a
-pinned `DISTRIBUTED_REMOTE_PROJECT_ROOT` (per-job copies of one client tree).
+pinned `DISTSSH_REMOTE_PROJECT_ROOT` (per-job copies of one client tree).
 """
 function reject_worker_root_collision!(jobs::Vector{Job}, project::AbstractString, kw::AbstractDict)
     proj = canonical_local_path(project)
@@ -127,7 +133,7 @@ function reject_worker_root_collision!(jobs::Vector{Job}, project::AbstractStrin
         throw(
             ArgumentError(
                 "project $(proj) and $(op) both deploy to $(root) on workers. " *
-                    "Use a unique ~/parent/Repo.jl; do not pin DISTRIBUTED_REMOTE_PROJECT_ROOT in shared config. " *
+                    "Use a unique ~/parent/Repo.jl; do not pin DISTSSH_REMOTE_PROJECT_ROOT in shared config. " *
                     "Queue does not rename or setup --delete.",
             )
         )
@@ -1371,7 +1377,7 @@ end
 """Enqueue. `kind` is a DistSSHRun `execute!` kind in `KIT_EXECUTE_KINDS` (`:go`, `:ride`, `:drive`).
 
 `hosts` are remote machine tokens (`N*host` or bare host). Head uses kwargs `head_workers` / `head_slots`.
-Missing `project` uses `job_project()` (cwd / `DISTRIBUTED_PROJECT_ROOT`), not the
+Missing `project` uses `job_project()` (cwd / `DISTSSH_PROJECT_ROOT`), not the
 serve env (`enable --queue-env` / Julia `--project=` that loaded Queue). Same verb as CLI `submit`.
 
 `q.allowed` is the inventory (`Queue(; allowed=…)`), names plus optional max `:N`.
